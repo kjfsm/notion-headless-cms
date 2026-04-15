@@ -1,0 +1,17 @@
+{
+	"name": "notion-headless-cms",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"dependencies": {
+		"@notionhq/client": "^5.18.0",
+		"marked": "^15.0.0",
+		"notion-to-md": "4.0.0-alpha.7"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20260410.1"
+	}
+}

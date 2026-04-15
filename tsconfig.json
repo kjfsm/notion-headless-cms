@@ -1,0 +1,15 @@
+{
+	"compilerOptions": {
+		"composite": true,
+		"strict": true,
+		"noEmit": true,
+		"lib": ["ES2022"],
+		"types": ["@cloudflare/workers-types"],
+		"target": "ES2022",
+		"module": "ES2022",
+		"moduleResolution": "bundler",
+		"verbatimModuleSyntax": true,
+		"skipLibCheck": true
+	},
+	"include": ["src/**/*"]
+}
