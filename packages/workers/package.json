@@ -1,0 +1,26 @@
+{
+  "name": "@kjfsm/notion-workers",
+  "version": "0.0.1",
+  "description": "Cloudflare Workers integration for Notion headless CMS",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "lint": "biome lint src",
+    "format": "biome format src --write",
+    "type-check": "tsc --noEmit",
+    "prepublishOnly": "pnpm build"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "dependencies": {
+    "@kjfsm/notion-core": "workspace:*",
+    "@kjfsm/notion-cache": "workspace:*"
+  },
+  "devDependencies": {}
+}

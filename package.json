@@ -1,24 +1,14 @@
 {
   "name": "@kjfsm/notion-headless-cms",
   "version": "0.0.1",
-  "description": "Notion headless CMS toolkit",
+  "description": "Notion headless CMS toolkit (monorepo)",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "files": [
-    "dist"
-  ],
+  "private": true,
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts",
-    "prepublishOnly": "pnpm build"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
-  },
-  "dependencies": {
-    "@notionhq/client": "^5.18.0",
-    "marked": "^15.0.0",
-    "notion-to-md": "4.0.0-alpha.7"
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "format": "pnpm -r format",
+    "type-check": "pnpm -r type-check"
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.12",

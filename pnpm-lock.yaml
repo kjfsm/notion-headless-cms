@@ -7,16 +7,6 @@ settings:
 importers:
 
   .:
-    dependencies:
-      '@notionhq/client':
-        specifier: ^5.18.0
-        version: 5.18.0
-      marked:
-        specifier: ^15.0.0
-        version: 15.0.12
-      notion-to-md:
-        specifier: 4.0.0-alpha.7
-        version: 4.0.0-alpha.7(@notionhq/client@5.18.0)(@types/node@25.6.0)(typescript@5.9.3)
     devDependencies:
       '@biomejs/biome':
         specifier: ^2.4.12
@@ -30,6 +20,33 @@ importers:
       typescript:
         specifier: ^5
         version: 5.9.3
+
+  packages/cache:
+    dependencies:
+      '@kjfsm/notion-core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/core:
+    dependencies:
+      '@notionhq/client':
+        specifier: ^5.18.0
+        version: 5.18.0
+      marked:
+        specifier: ^15.0.0
+        version: 15.0.12
+      notion-to-md:
+        specifier: 4.0.0-alpha.7
+        version: 4.0.0-alpha.7(@notionhq/client@5.18.0)(@types/node@25.6.0)(typescript@5.9.3)
+
+  packages/workers:
+    dependencies:
+      '@kjfsm/notion-cache':
+        specifier: workspace:*
+        version: link:../cache
+      '@kjfsm/notion-core':
+        specifier: workspace:*
+        version: link:../core
 
 packages:
 

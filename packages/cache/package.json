@@ -1,0 +1,25 @@
+{
+  "name": "@kjfsm/notion-cache",
+  "version": "0.0.1",
+  "description": "R2-based persistent caching for Notion content",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "lint": "biome lint src",
+    "format": "biome format src --write",
+    "type-check": "tsc --noEmit",
+    "prepublishOnly": "pnpm build"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "dependencies": {
+    "@kjfsm/notion-core": "workspace:*"
+  },
+  "devDependencies": {}
+}

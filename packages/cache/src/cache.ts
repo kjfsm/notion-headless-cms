@@ -1,16 +1,4 @@
-import type { Post } from "./notion";
-
-export interface CachedPostList {
-	posts: Post[];
-	cachedAt: number; // Unix ms timestamp
-}
-
-export interface CachedPost {
-	html: string;
-	post: Post;
-	notionLastEdited: string;
-	cachedAt: number; // Unix ms timestamp
-}
+import type { CachedPost, CachedPostList, Post } from "@kjfsm/notion-core";
 
 const POSTS_KEY = "posts.json";
 const postKey = (slug: string) => `post/${slug}.json`;

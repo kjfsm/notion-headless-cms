@@ -1,12 +1,7 @@
 import { marked, Renderer } from "marked";
-import {
-	type CachedPost,
-	getCachedImage,
-	setCachedImage,
-	sha256Hex,
-} from "./cache";
-import { getPostMarkdown, type Post } from "./notion";
-import type { NotionCacheEnv } from "./types";
+import type { CachedPost, NotionCacheEnv } from "./types";
+import type { Post } from "./notion";
+import { getPostMarkdown } from "./notion";
 
 // 画像配信エンドポイントの設定オプション。
 export interface BuildOptions {
@@ -33,6 +28,9 @@ async function fetchAndCacheImage(
 	bucket: R2Bucket,
 	notionUrl: string,
 ): Promise<string> {
+	const { getCachedImage, setCachedImage, sha256Hex } = await import(
+		"@kjfsm/notion-cache" as any
+	);
 	const hash = await sha256Hex(notionUrl);
 
 	const existing = await getCachedImage(bucket, hash);

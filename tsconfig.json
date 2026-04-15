@@ -7,7 +7,9 @@
 		"module": "ESNext",
 		"moduleResolution": "bundler",
 		"verbatimModuleSyntax": true,
-		"skipLibCheck": true
-	},
-	"include": ["src"]
+		"skipLibCheck": true,
+		"declaration": true,
+		"declarationMap": true,
+		"sourceMap": true
+	}
 }
