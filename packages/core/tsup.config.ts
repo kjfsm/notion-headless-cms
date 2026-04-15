@@ -4,5 +4,4 @@ export default defineConfig({
 	entry: ["src/index.ts"],
 	format: ["esm", "cjs"],
 	dts: true,
-	external: ["@kjfsm/notion-cache"],
 });

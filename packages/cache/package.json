@@ -1,15 +1,27 @@
 {
   "name": "@kjfsm/notion-cache",
   "version": "0.0.1",
-  "description": "R2-based persistent caching for Notion content",
+  "description": "R2-based caching and content processing for Notion content",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    }
+  },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "build": "tsup",
     "lint": "biome lint src",
     "format": "biome format src --write",
     "type-check": "tsc --noEmit",
@@ -19,7 +31,8 @@
     "registry": "https://npm.pkg.github.com"
   },
   "dependencies": {
-    "@kjfsm/notion-core": "workspace:*"
+    "@kjfsm/notion-core": "workspace:*",
+    "marked": "^15.0.0"
   },
   "devDependencies": {}
 }

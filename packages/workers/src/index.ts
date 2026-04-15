@@ -1,9 +1,8 @@
 // Cloudflare Workers integration - re-exports from core and cache packages
 
 // Core exports
-export type { BuildOptions, NotionCacheEnv, NotionEnv, Post } from "@kjfsm/notion-core";
+export type { NotionEnv, Post } from "@kjfsm/notion-core";
 export {
-	buildCachedPost,
 	getBlocks,
 	getNotion,
 	getPostBySlug,
@@ -12,8 +11,14 @@ export {
 } from "@kjfsm/notion-core";
 
 // Cache exports
-export type { CachedPost, CachedPostList } from "@kjfsm/notion-cache";
+export type {
+	BuildOptions,
+	CachedPost,
+	CachedPostList,
+	NotionCacheEnv,
+} from "@kjfsm/notion-cache";
 export {
+	buildCachedPost,
 	getCachedImage,
 	getCachedPost,
 	getCachedPostList,

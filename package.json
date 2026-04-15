@@ -4,6 +4,7 @@
   "description": "Notion headless CMS toolkit (monorepo)",
   "type": "module",
   "private": true,
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "build": "pnpm -r build",
     "lint": "pnpm -r lint",
