@@ -1,17 +1,30 @@
 {
-	"name": "notion-headless-cms",
-	"version": "0.1.0",
-	"private": true,
-	"type": "module",
-	"exports": {
-		".": "./src/index.ts"
-	},
-	"dependencies": {
-		"@notionhq/client": "^5.18.0",
-		"marked": "^15.0.0",
-		"notion-to-md": "4.0.0-alpha.7"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20260410.1"
-	}
+  "name": "@kjfsm/notion-headless-cms",
+  "version": "0.0.1",
+  "description": "Notion headless CMS toolkit",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "prepublishOnly": "pnpm build"
+  },
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
+  "dependencies": {
+    "@notionhq/client": "^5.18.0",
+    "marked": "^15.0.0",
+    "notion-to-md": "4.0.0-alpha.7"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.12",
+    "@cloudflare/workers-types": "^4.20260410.1",
+    "tsup": "^8",
+    "typescript": "^5"
+  }
 }
