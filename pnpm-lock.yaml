@@ -26,15 +26,15 @@ importers:
       '@kjfsm/notion-core':
         specifier: workspace:*
         version: link:../core
+      marked:
+        specifier: ^15.0.0
+        version: 15.0.12
 
   packages/core:
     dependencies:
       '@notionhq/client':
         specifier: ^5.18.0
         version: 5.18.0
-      marked:
-        specifier: ^15.0.0
-        version: 15.0.12
       notion-to-md:
         specifier: 4.0.0-alpha.7
         version: 4.0.0-alpha.7(@notionhq/client@5.18.0)(@types/node@25.6.0)(typescript@5.9.3)

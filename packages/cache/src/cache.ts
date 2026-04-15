@@ -1,4 +1,5 @@
-import type { CachedPost, CachedPostList, Post } from "@kjfsm/notion-core";
+import type { Post } from "@kjfsm/notion-core";
+import type { CachedPost, CachedPostList } from "./types";
 
 const POSTS_KEY = "posts.json";
 const postKey = (slug: string) => `post/${slug}.json`;

@@ -1,9 +1,8 @@
-// Notion API integration and content processing
+// Notion API integration
 
 // Types
 export type { Post } from "./notion";
-export type { CachedPost, CachedPostList, NotionCacheEnv, NotionEnv } from "./types";
-export type { BuildOptions } from "./content";
+export type { NotionEnv } from "./types";
 
 // Notion API
 export {
@@ -13,6 +12,3 @@ export {
 	getPostMarkdown,
 	getPosts,
 } from "./notion";
-
-// Content processing
-export { buildCachedPost } from "./content";
