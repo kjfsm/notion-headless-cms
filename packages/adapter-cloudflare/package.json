@@ -1,0 +1,56 @@
+{
+	"name": "@notion-headless-cms/adapter-cloudflare",
+	"version": "0.0.1",
+	"description": "Cloudflare Workers adapter for notion-headless-cms — injects R2 storage and environment bindings",
+	"keywords": [
+		"notion",
+		"headless-cms",
+		"cloudflare",
+		"cloudflare-workers",
+		"workers",
+		"adapter",
+		"typescript"
+	],
+	"license": "MIT",
+	"homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
+	"bugs": {
+		"url": "https://github.com/kjfsm/notion-headless-cms/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/kjfsm/notion-headless-cms.git",
+		"directory": "packages/adapter-cloudflare"
+	},
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"files": [
+		"dist"
+	],
+	"engines": {
+		"node": ">=18"
+	},
+	"scripts": {
+		"build": "tsup src/index.ts --format esm --dts --out-dir dist",
+		"typecheck": "tsc --noEmit"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org",
+		"access": "public",
+		"exports": {
+			".": {
+				"import": "./dist/index.js",
+				"types": "./dist/index.d.ts"
+			}
+		}
+	},
+	"dependencies": {
+		"@notion-headless-cms/core": "workspace:*",
+		"@notion-headless-cms/cache-r2": "workspace:*"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20250620.0"
+	}
+}

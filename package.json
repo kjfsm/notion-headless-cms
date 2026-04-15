@@ -1,0 +1,25 @@
+{
+	"name": "notion-headless-cms",
+	"private": true,
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/kjfsm/notion-headless-cms.git"
+	},
+	"type": "module",
+	"scripts": {
+		"build": "pnpm -r run build",
+		"typecheck": "pnpm -r run typecheck",
+		"test": "vitest run",
+		"format": "biome check --write",
+		"changeset": "changeset",
+		"version": "changeset version",
+		"release": "pnpm build && pnpm -r publish --no-git-checks --access public"
+	},
+	"devDependencies": {
+		"@biomejs/biome": "2.4.11",
+		"@changesets/cli": "^2.31.0",
+		"tsup": "^8.5.0",
+		"typescript": "5.9.3",
+		"vitest": "^4.1.4"
+	}
+}

@@ -1,0 +1,50 @@
+{
+	"name": "@notion-headless-cms/fetcher",
+	"version": "0.0.1",
+	"description": "Notion API client wrapper — fetches pages and blocks from Notion databases",
+	"keywords": [
+		"notion",
+		"notion-api",
+		"headless-cms",
+		"cms",
+		"typescript"
+	],
+	"license": "MIT",
+	"homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
+	"bugs": {
+		"url": "https://github.com/kjfsm/notion-headless-cms/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/kjfsm/notion-headless-cms.git",
+		"directory": "packages/fetcher"
+	},
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"files": [
+		"dist"
+	],
+	"engines": {
+		"node": ">=18"
+	},
+	"scripts": {
+		"build": "tsup src/index.ts --format esm --dts --out-dir dist",
+		"typecheck": "tsc --noEmit"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org",
+		"access": "public",
+		"exports": {
+			".": {
+				"import": "./dist/index.js",
+				"types": "./dist/index.d.ts"
+			}
+		}
+	},
+	"dependencies": {
+		"@notionhq/client": "^5.18.0"
+	}
+}

@@ -1,0 +1,56 @@
+{
+	"name": "@notion-headless-cms/cache-r2",
+	"version": "0.0.1",
+	"description": "Cloudflare R2 StorageAdapter implementation for notion-headless-cms cache layer",
+	"keywords": [
+		"notion",
+		"headless-cms",
+		"cloudflare",
+		"cloudflare-r2",
+		"r2",
+		"cache",
+		"workers",
+		"typescript"
+	],
+	"license": "MIT",
+	"homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
+	"bugs": {
+		"url": "https://github.com/kjfsm/notion-headless-cms/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/kjfsm/notion-headless-cms.git",
+		"directory": "packages/cache-r2"
+	},
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"files": [
+		"dist"
+	],
+	"engines": {
+		"node": ">=18"
+	},
+	"scripts": {
+		"build": "tsup src/index.ts --format esm --dts --out-dir dist",
+		"typecheck": "tsc --noEmit"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org",
+		"access": "public",
+		"exports": {
+			".": {
+				"import": "./dist/index.js",
+				"types": "./dist/index.d.ts"
+			}
+		}
+	},
+	"dependencies": {
+		"@notion-headless-cms/core": "workspace:*"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20250620.0"
+	}
+}

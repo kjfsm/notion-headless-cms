@@ -1,0 +1,60 @@
+{
+	"name": "@notion-headless-cms/renderer",
+	"version": "0.0.1",
+	"description": "Markdown to HTML renderer using remark/rehype for notion-headless-cms",
+	"keywords": [
+		"notion",
+		"headless-cms",
+		"markdown",
+		"html",
+		"remark",
+		"rehype",
+		"unified",
+		"typescript"
+	],
+	"license": "MIT",
+	"homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
+	"bugs": {
+		"url": "https://github.com/kjfsm/notion-headless-cms/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/kjfsm/notion-headless-cms.git",
+		"directory": "packages/renderer"
+	},
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"files": [
+		"dist"
+	],
+	"engines": {
+		"node": ">=18"
+	},
+	"scripts": {
+		"build": "tsup src/index.ts --format esm --dts --out-dir dist",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org",
+		"access": "public",
+		"exports": {
+			".": {
+				"import": "./dist/index.js",
+				"types": "./dist/index.d.ts"
+			}
+		}
+	},
+	"dependencies": {
+		"@types/hast": "^3.0.4",
+		"rehype-stringify": "^10.0.1",
+		"remark-gfm": "^4.0.1",
+		"remark-parse": "^11.0.0",
+		"remark-rehype": "^11.1.2",
+		"unified": "^11.0.5",
+		"unist-util-visit": "^5.0.0"
+	}
+}
