@@ -2,7 +2,6 @@
   "name": "@kjfsm/notion-headless-cms",
   "version": "0.0.1",
   "description": "Notion headless CMS toolkit",
-  "private": true,
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
