@@ -1,5 +1,5 @@
 {
-	"name": "@notion-headless-cms/renderer",
+	"name": "@kjfsm/notion-headless-cms-renderer",
 	"version": "0.1.0",
 	"description": "Markdown → HTML renderer using remark/rehype for notion-headless-cms",
 	"keywords": [
@@ -12,6 +12,20 @@
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts"
+	},
+	"scripts": {
+		"build": "tsup src/index.ts --format esm --dts --out-dir dist",
+		"typecheck": "tsc --noEmit"
+	},
+	"publishConfig": {
+		"registry": "https://npm.pkg.github.com",
+		"access": "restricted",
+		"exports": {
+			".": {
+				"import": "./dist/index.js",
+				"types": "./dist/index.d.ts"
+			}
+		}
 	},
 	"dependencies": {
 		"@types/hast": "^3.0.4",

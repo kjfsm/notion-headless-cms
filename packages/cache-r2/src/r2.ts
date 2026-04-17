@@ -1,4 +1,7 @@
-import type { StorageAdapter, StorageBinary } from "@notion-headless-cms/core";
+import type {
+	StorageAdapter,
+	StorageBinary,
+} from "@kjfsm/notion-headless-cms-core";
 
 /** Cloudflare R2Bucket を StorageAdapter として実装するキャッシュ層。 */
 export class CloudflareR2StorageAdapter implements StorageAdapter {

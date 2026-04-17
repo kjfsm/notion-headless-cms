@@ -2,9 +2,9 @@ import {
 	createClient,
 	queryAllPages,
 	queryPageBySlug,
-} from "@notion-headless-cms/fetcher";
-import { renderMarkdown } from "@notion-headless-cms/renderer";
-import { Transformer } from "@notion-headless-cms/transformer";
+} from "@kjfsm/notion-headless-cms-fetcher";
+import { renderMarkdown } from "@kjfsm/notion-headless-cms-renderer";
+import { Transformer } from "@kjfsm/notion-headless-cms-transformer";
 import type { Client } from "@notionhq/client";
 import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { CacheStore, isStale } from "./cache";

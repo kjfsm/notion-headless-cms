@@ -1,5 +1,5 @@
-import type { RendererFn } from "@notion-headless-cms/renderer";
-import type { BlockHandler } from "@notion-headless-cms/transformer";
+import type { RendererFn } from "@kjfsm/notion-headless-cms-renderer";
+import type { BlockHandler } from "@kjfsm/notion-headless-cms-transformer";
 import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import type { PluggableList } from "unified";
 
