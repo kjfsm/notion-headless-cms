@@ -1,0 +1,17 @@
+{
+	"name": "@notion-headless-cms/fetcher",
+	"version": "0.1.0",
+	"description": "Notion API fetching layer for notion-headless-cms",
+	"keywords": [
+		"notion",
+		"headless-cms"
+	],
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"dependencies": {
+		"@notionhq/client": "^5.18.0"
+	}
+}

@@ -1,0 +1,22 @@
+"$schema" = "node_modules/wrangler/config-schema.json"
+name = "euphoric-band-site"
+compatibility_date = "2025-10-08"
+main = "./workers/app.ts"
+upload_source_maps = true
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+VALUE_FROM_CLOUDFLARE = "Hello from Hono/CF"
+
+[[r2_buckets]]
+binding = "CACHE_BUCKET"
+bucket_name = "euphoric-band-cache"
+
+[secrets]
+required = ["NOTION_TOKEN", "NOTION_DATA_SOURCE_ID"]
+
+[observability]
+enabled = true
+
+[placement]
+mode = "smart"

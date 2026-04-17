@@ -1,0 +1,25 @@
+{
+	"name": "@notion-headless-cms/renderer",
+	"version": "0.1.0",
+	"description": "Markdown → HTML renderer using remark/rehype for notion-headless-cms",
+	"keywords": [
+		"notion",
+		"headless-cms",
+		"remark",
+		"rehype"
+	],
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"dependencies": {
+		"@types/hast": "^3.0.4",
+		"rehype-stringify": "^10.0.1",
+		"remark-gfm": "^4.0.1",
+		"remark-parse": "^11.0.0",
+		"remark-rehype": "^11.1.2",
+		"unified": "^11.0.5",
+		"unist-util-visit": "^5.0.0"
+	}
+}

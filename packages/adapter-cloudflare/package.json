@@ -1,0 +1,20 @@
+{
+	"name": "@notion-headless-cms/adapter-cloudflare",
+	"version": "0.1.0",
+	"description": "Cloudflare Workers serving adapter for notion-headless-cms",
+	"keywords": [
+		"notion",
+		"headless-cms",
+		"cloudflare",
+		"workers"
+	],
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"dependencies": {
+		"@notion-headless-cms/core": "workspace:*",
+		"@notion-headless-cms/cache-r2": "workspace:*"
+	}
+}

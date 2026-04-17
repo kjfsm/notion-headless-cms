@@ -1,38 +1,22 @@
 {
-  "name": "@kjfsm/notion-core",
-  "version": "0.0.1",
-  "description": "Pure Notion API client wrapper",
-  "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "exports": {
-    ".": {
-      "import": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "require": {
-        "types": "./dist/index.d.cts",
-        "default": "./dist/index.cjs"
-      }
-    }
-  },
-  "files": [
-    "dist"
-  ],
-  "scripts": {
-    "build": "tsup",
-    "lint": "biome lint src",
-    "format": "biome format src --write",
-    "type-check": "tsc --noEmit",
-    "prepublishOnly": "pnpm build"
-  },
-  "publishConfig": {
-    "registry": "https://npm.pkg.github.com"
-  },
-  "dependencies": {
-    "@notionhq/client": "^5.18.0",
-    "notion-to-md": "4.0.0-alpha.7"
-  },
-  "devDependencies": {}
+	"name": "@notion-headless-cms/core",
+	"version": "0.1.0",
+	"description": "Core CMS engine for notion-headless-cms",
+	"keywords": [
+		"notion",
+		"headless-cms"
+	],
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"dependencies": {
+		"@notion-headless-cms/fetcher": "workspace:*",
+		"@notion-headless-cms/transformer": "workspace:*",
+		"@notion-headless-cms/renderer": "workspace:*",
+		"@notionhq/client": "^5.18.0",
+		"unified": "^11.0.5",
+		"zod": "^4.1.12"
+	}
 }

@@ -1,0 +1,19 @@
+{
+	"name": "@notion-headless-cms/cache-r2",
+	"version": "0.1.0",
+	"description": "Cloudflare R2 storage adapter (cache layer) for notion-headless-cms",
+	"keywords": [
+		"notion",
+		"headless-cms",
+		"cloudflare",
+		"r2"
+	],
+	"license": "MIT",
+	"type": "module",
+	"exports": {
+		".": "./src/index.ts"
+	},
+	"dependencies": {
+		"@notion-headless-cms/core": "workspace:*"
+	}
+}

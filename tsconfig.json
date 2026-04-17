@@ -1,15 +1,14 @@
 {
+	"files": [],
+	"references": [
+		{ "path": "./tsconfig.node.json" },
+		{ "path": "./tsconfig.cloudflare.json" }
+	],
 	"compilerOptions": {
-		"strict": true,
-		"lib": ["ES2022"],
-		"types": ["@cloudflare/workers-types"],
-		"target": "ES2022",
-		"module": "ESNext",
-		"moduleResolution": "bundler",
+		"checkJs": true,
 		"verbatimModuleSyntax": true,
 		"skipLibCheck": true,
-		"declaration": true,
-		"declarationMap": true,
-		"sourceMap": true
+		"strict": true,
+		"noEmit": true
 	}
 }
