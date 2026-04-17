@@ -1,5 +1,5 @@
 {
-	"name": "@notion-headless-cms/adapter-cloudflare",
+	"name": "@kjfsm/notion-headless-cms-adapter-cloudflare",
 	"version": "0.1.0",
 	"description": "Cloudflare Workers serving adapter for notion-headless-cms",
 	"keywords": [
@@ -13,8 +13,25 @@
 	"exports": {
 		".": "./src/index.ts"
 	},
+	"scripts": {
+		"build": "tsup src/index.ts --format esm --dts --out-dir dist",
+		"typecheck": "tsc --noEmit"
+	},
+	"publishConfig": {
+		"registry": "https://npm.pkg.github.com",
+		"access": "restricted",
+		"exports": {
+			".": {
+				"import": "./dist/index.js",
+				"types": "./dist/index.d.ts"
+			}
+		}
+	},
 	"dependencies": {
-		"@notion-headless-cms/core": "workspace:*",
-		"@notion-headless-cms/cache-r2": "workspace:*"
+		"@kjfsm/notion-headless-cms-core": "workspace:*",
+		"@kjfsm/notion-headless-cms-cache-r2": "workspace:*"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20250620.0"
 	}
 }

@@ -191,13 +191,5 @@ dist
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,node,git
 
-### Wrangler ###
-.wrangler/
-.env*
-!.env.example
-.dev.vars*
-!.dev.vars.example
-
-### React Router ###
-.react-router/
-/build/
+### Build output ###
+packages/*/dist/

@@ -1,5 +1,5 @@
 {
-	"name": "@notion-headless-cms/core",
+	"name": "@kjfsm/notion-headless-cms-core",
 	"version": "0.1.0",
 	"description": "Core CMS engine for notion-headless-cms",
 	"keywords": [
@@ -11,10 +11,24 @@
 	"exports": {
 		".": "./src/index.ts"
 	},
+	"scripts": {
+		"build": "tsup src/index.ts --format esm --dts --out-dir dist",
+		"typecheck": "tsc --noEmit"
+	},
+	"publishConfig": {
+		"registry": "https://npm.pkg.github.com",
+		"access": "restricted",
+		"exports": {
+			".": {
+				"import": "./dist/index.js",
+				"types": "./dist/index.d.ts"
+			}
+		}
+	},
 	"dependencies": {
-		"@notion-headless-cms/fetcher": "workspace:*",
-		"@notion-headless-cms/transformer": "workspace:*",
-		"@notion-headless-cms/renderer": "workspace:*",
+		"@kjfsm/notion-headless-cms-fetcher": "workspace:*",
+		"@kjfsm/notion-headless-cms-transformer": "workspace:*",
+		"@kjfsm/notion-headless-cms-renderer": "workspace:*",
 		"@notionhq/client": "^5.18.0",
 		"unified": "^11.0.5",
 		"zod": "^4.1.12"
