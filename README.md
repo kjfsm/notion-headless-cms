@@ -1,65 +1,149 @@
-# euphoric-band-site
+# notion-headless-cms
 
-* **CMS**
+Notion をヘッドレス CMS として利用するための TypeScript ライブラリ群。  
+Cloudflare Workers + R2 での利用を前提に設計されており、pnpm モノリポで管理されている。
 
-  * Notion を編集UIとして利用
-  * 記事は Notion Database + Page blocks で管理（Title / Slug / Status / Date / Tags）
+## パッケージ構成
 
-* **取得・変換**
+| パッケージ | 役割 |
+|---|---|
+| [`@kjfsm/notion-headless-cms-core`](./packages/core) | CMS エンジン本体（取得・変換・キャッシュを統合） |
+| [`@kjfsm/notion-headless-cms-fetcher`](./packages/fetcher) | Notion API クライアントラッパー |
+| [`@kjfsm/notion-headless-cms-transformer`](./packages/transformer) | Notion ブロック → Markdown 変換 |
+| [`@kjfsm/notion-headless-cms-renderer`](./packages/renderer) | Markdown → HTML レンダリング（remark/rehype） |
+| [`@kjfsm/notion-headless-cms-cache-r2`](./packages/cache-r2) | Cloudflare R2 ストレージアダプター |
+| [`@kjfsm/notion-headless-cms-adapter-cloudflare`](./packages/adapter-cloudflare) | Cloudflare Workers 向けファクトリー |
 
-  * Cloudflare Workers が Notion API を取得
-  * blocks を取得 → Markdown/HTML に変換
-  * 最終的に **HTMLまでレンダリング**
+## アーキテクチャ
 
-* **キャッシュ**
+```
+Notion DB
+  └─ fetcher（API取得）
+       └─ transformer（ブロック → Markdown）
+            └─ renderer（Markdown → HTML）
+                 └─ core / CMS（キャッシュ統合・更新検知）
+                      └─ cache-r2（R2 ストレージ）
+                           └─ adapter-cloudflare（Workers 注入）
+                                └─ Cloudflare Workers → ブラウザ
+```
 
-  * HTMLを生成して **ストレージ（例：R2）にキャッシュ**
-  * キャッシュ内容
+### キャッシュ戦略（Stale-While-Revalidate）
 
-    * `posts.json`（記事一覧）
-    * `post/{slug}.html`（記事本文）
-    * `images/*`（画像）
+- 初回: Notion から取得してレンダリングし、R2 にキャッシュ
+- 以降: キャッシュを即返し、TTL 切れなら裏で非同期更新
+- Notion の `last_edited_time` を比較し、変更があれば HTML を再生成
 
-* **表示**
+### 画像処理
 
-  * React Router は
+- Notion 画像 URL は期限付きのため Workers でプロキシ
+- SHA256 ハッシュキーで R2 に永続保存（`/api/images/{hash}` で配信）
 
-    * Workers APIから **キャッシュされたHTMLを取得**
-    * `dangerouslySetInnerHTML` で表示
-    * `marked` 自体にはHTMLサニタイズ機能がないため、**HTMLを生成する入力は信頼済み（Notion由来）を前提**とする
+## インストール
 
-## notion-backend の信頼境界（Trust Boundary）
+### 認証設定
 
-* `packages/notion-backend/src/renderer.ts` の `renderer.image` は、`href/title/text` をHTML属性向けにエスケープして埋め込む。
-* `href` が空、または `http/https` 以外の不正スキーム（`javascript:` など）の場合は `<img>` を生成しない。
-* `data-notion-src` はエスケープ済み値として扱い、置換時にデコードしてから `src` に再エスケープして書き戻す。
-* 本リポジトリでは **Notion APIから取得したコンテンツを信頼境界内** とみなす。外部ユーザー入力をMarkdownに混在させる場合は、別途HTMLサニタイズ層（例: DOMPurify等）を追加すること。
+`@kjfsm` スコープは GitHub Packages（プライベート）で公開されている。  
+プロジェクトの `.npmrc` に以下を追加し、`read:packages` 権限を持つ GitHub PAT を設定する。
 
-* **更新検知**
+```
+@kjfsm:registry=https://npm.pkg.github.com
+//npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT
+```
 
-  * Notionの `last_edited_time` を利用
-  * キャッシュの編集時刻と比較し、**新しければ再生成**
+### パッケージのインストール
 
-* **更新方式**
+Cloudflare Workers プロジェクトで利用する場合はアダプターをインストールする。
 
-  * 基本は **Stale-While-Revalidate**
+```bash
+npm install @kjfsm/notion-headless-cms-adapter-cloudflare
+```
 
-    * まずキャッシュ表示
-    * 裏で更新チェック
+## クイックスタート（Cloudflare Workers）
 
-* **画像**
+### wrangler.toml
 
-  * Notion画像URLは期限付き
-  * Workersで **画像プロキシ → 永続キャッシュ**
+```toml
+[[r2_buckets]]
+binding = "CACHE_BUCKET"
+bucket_name = "my-cms-cache"
+```
 
-* **API負荷対策**
+### Workers エントリーポイント
 
-  * 記事一覧 (`posts.json`) は **TTLキャッシュ**
-  * 通常アクセスでは **Notion APIを叩かない**
+```typescript
+import { createCloudflareCMS } from "@kjfsm/notion-headless-cms-adapter-cloudflare";
 
-* **結果**
+export default {
+  async fetch(request: Request, env: Env): Promise<Response> {
+    const cms = createCloudflareCMS(env, {
+      schema: {
+        publishedStatuses: ["公開"],
+        accessibleStatuses: ["公開", "下書き"],
+      },
+      cache: { ttlMs: 5 * 60 * 1000 },
+    });
 
-  * 編集：Notionで簡単（スマホ可）
-  * 表示：静的サイト並みの速度
-  * コスト：ほぼ無料
-  * 構成：Notion → Workers → Cache → React Router
+    const url = new URL(request.url);
+
+    if (url.pathname === "/posts") {
+      const { items } = await cms.getItems(env);
+      return Response.json(items);
+    }
+
+    const slug = url.pathname.replace("/posts/", "");
+    const cached = await cms.getItemBySlug(slug, env);
+    if (!cached) return new Response("Not Found", { status: 404 });
+
+    return new Response(cached.html, {
+      headers: { "Content-Type": "text/html" },
+    });
+  },
+};
+```
+
+### 環境変数
+
+```bash
+wrangler secret put NOTION_TOKEN
+wrangler secret put NOTION_DATA_SOURCE_ID
+```
+
+## 開発
+
+### 必要なツール
+
+- Node.js 22
+- pnpm 10
+
+### コマンド
+
+```bash
+pnpm install          # 依存関係インストール
+pnpm build            # 全パッケージをビルド（tsup）
+pnpm typecheck        # 全パッケージの型チェック
+pnpm format           # Biome でフォーマット・Lint
+```
+
+### 個別パッケージ
+
+```bash
+cd packages/core
+pnpm build
+pnpm typecheck
+```
+
+## リリース・公開
+
+GitHub Packages への公開は CI（`.github/workflows/publish.yml`）が自動処理する。
+
+```bash
+# バージョンタグを打つと CI がトリガーされる
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+手動公開も `workflow_dispatch` で実行できる（GitHub Actions の UI から）。
+
+## ライセンス
+
+MIT

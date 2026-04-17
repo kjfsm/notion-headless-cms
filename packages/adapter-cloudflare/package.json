@@ -9,6 +9,11 @@
 		"workers"
 	],
 	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/kjfsm/notion-headless-cms.git",
+		"directory": "packages/adapter-cloudflare"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts"

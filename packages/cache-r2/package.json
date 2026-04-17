@@ -9,6 +9,11 @@
 		"r2"
 	],
 	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/kjfsm/notion-headless-cms.git",
+		"directory": "packages/cache-r2"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts"

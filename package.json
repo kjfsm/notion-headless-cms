@@ -1,6 +1,10 @@
 {
 	"name": "notion-headless-cms",
 	"private": true,
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/kjfsm/notion-headless-cms.git"
+	},
 	"type": "module",
 	"scripts": {
 		"build": "pnpm -r run build",
