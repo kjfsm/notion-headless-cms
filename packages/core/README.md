@@ -1,24 +1,24 @@
-# @kjfsm/notion-headless-cms-core
+# @notion-headless-cms/core
 
 CMS エンジン本体。Notion からのコンテンツ取得・変換・キャッシュを統合管理する。
 
 ## インストール
 
 ```bash
-npm install @kjfsm/notion-headless-cms-core
+npm install @notion-headless-cms/core
 ```
 
-Cloudflare Workers で使う場合は [`@kjfsm/notion-headless-cms-adapter-cloudflare`](../adapter-cloudflare) の利用を推奨する。
+Cloudflare Workers で使う場合は [`@notion-headless-cms/adapter-cloudflare`](../adapter-cloudflare) の利用を推奨する。
 
 ## 使い方
 
 ```typescript
-import { CMS } from "@kjfsm/notion-headless-cms-core";
+import { CMS } from "@notion-headless-cms/core";
 
 const cms = new CMS({
   schema: {
     publishedStatuses: ["公開"],
-    properties: { title: "Title", slug: "Slug" },
+    properties: { slug: "Slug" },
   },
   cache: { ttlMs: 5 * 60 * 1000 },
 });
@@ -36,7 +36,7 @@ console.log(cached?.html);
 `BaseContentItem` を拡張することで任意のプロパティを追加できる。
 
 ```typescript
-import type { BaseContentItem, CMSConfig } from "@kjfsm/notion-headless-cms-core";
+import type { BaseContentItem, CMSConfig } from "@notion-headless-cms/core";
 import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
 interface MyPost extends BaseContentItem {
@@ -75,18 +75,17 @@ const config: CMSConfig<MyPost> = {
 | `CacheStore` | JSON/バイナリストレージの抽象ラッパー |
 | `isStale(cachedAt, ttlMs)` | TTL 切れ判定 |
 | `sha256Hex(data)` | SHA256 ハッシュ生成（画像キー生成に使用） |
-| `NotionHeadlessCMSError` | カスタムエラークラス |
+| `CMSError` | カスタムエラークラス |
 
 ## 主要な型
 
 - `CMSConfig<T>` — CMS 設定オブジェクト
-- `ContentItem` — デフォルトコンテンツ型
-- `BaseContentItem` — カスタム型の基底インターフェース
+- `BaseContentItem` — デフォルト・カスタム型の基底インターフェース
 - `CachedItem<T>` — キャッシュ済みコンテンツ（HTML + メタデータ）
 - `StorageAdapter` — ストレージ抽象インターフェース
 - `CMSEnv` — 必須環境変数の型
 
 ## 関連パッケージ
 
-- [`@kjfsm/notion-headless-cms-adapter-cloudflare`](../adapter-cloudflare) — Cloudflare Workers 向けファクトリー
-- [`@kjfsm/notion-headless-cms-cache-r2`](../cache-r2) — R2 ストレージ実装
+- [`@notion-headless-cms/adapter-cloudflare`](../adapter-cloudflare) — Cloudflare Workers 向けファクトリー
+- [`@notion-headless-cms/cache-r2`](../cache-r2) — R2 ストレージ実装

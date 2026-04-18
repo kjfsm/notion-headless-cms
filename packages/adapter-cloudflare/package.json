@@ -1,5 +1,5 @@
 {
-	"name": "@kjfsm/notion-headless-cms-adapter-cloudflare",
+	"name": "@notion-headless-cms/adapter-cloudflare",
 	"version": "0.0.1",
 	"description": "Cloudflare Workers adapter for notion-headless-cms — injects R2 storage and environment bindings",
 	"keywords": [
@@ -47,8 +47,8 @@
 		}
 	},
 	"dependencies": {
-		"@kjfsm/notion-headless-cms-core": "workspace:*",
-		"@kjfsm/notion-headless-cms-cache-r2": "workspace:*"
+		"@notion-headless-cms/core": "workspace:*",
+		"@notion-headless-cms/cache-r2": "workspace:*"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20250620.0"

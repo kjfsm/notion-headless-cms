@@ -1,6 +1,6 @@
-import { createCloudflareR2StorageAdapter } from "@kjfsm/notion-headless-cms-cache-r2";
-import type { CMSConfig, CMSEnv } from "@kjfsm/notion-headless-cms-core";
-import { CMS } from "@kjfsm/notion-headless-cms-core";
+import { createCloudflareR2StorageAdapter } from "@notion-headless-cms/cache-r2";
+import type { CMSConfig, CMSEnv } from "@notion-headless-cms/core";
+import { CMS } from "@notion-headless-cms/core";
 
 export interface CloudflareCMSEnv extends CMSEnv {
 	CACHE_BUCKET?: R2Bucket;

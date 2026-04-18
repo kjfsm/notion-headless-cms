@@ -1,11 +1,18 @@
-import type { RendererFn } from "@kjfsm/notion-headless-cms-renderer";
-import type { BlockHandler } from "@kjfsm/notion-headless-cms-transformer";
+import type { RendererFn } from "@notion-headless-cms/renderer";
+import type { BlockHandler } from "@notion-headless-cms/transformer";
 import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import type { PluggableList } from "unified";
 
 /**
  * ライブラリが動作するために必須なフィールド。
- * カスタムコンテンツ型はこのインターフェースを拡張する。
+ * 利用者はこのインターフェースを拡張して独自のコンテンツ型を定義する。
+ *
+ * @example
+ * interface Post extends BaseContentItem {
+ *   title: string;
+ *   author: string;
+ * }
+ * createCMS<Post>({ schema: { mapItem: (page) => ... } })
  */
 export interface BaseContentItem {
 	id: string;
@@ -15,16 +22,8 @@ export interface BaseContentItem {
 	updatedAt: string;
 }
 
-/**
- * デフォルトのコンテンツ型。ブログ記事など一般的なユースケース向け。
- */
-export interface ContentItem extends BaseContentItem {
-	title: string;
-	author: string;
-}
-
 /** ストレージにキャッシュされたレンダリング済みコンテンツ。 */
-export interface CachedItem<T extends BaseContentItem = ContentItem> {
+export interface CachedItem<T extends BaseContentItem = BaseContentItem> {
 	html: string;
 	item: T;
 	notionUpdatedAt: string;
@@ -32,7 +31,7 @@ export interface CachedItem<T extends BaseContentItem = ContentItem> {
 }
 
 /** ストレージにキャッシュされたコンテンツ一覧。 */
-export interface CachedItemList<T extends BaseContentItem = ContentItem> {
+export interface CachedItemList<T extends BaseContentItem = BaseContentItem> {
 	items: T[];
 	cachedAt: number;
 }
@@ -63,23 +62,19 @@ export interface CMSEnv {
 
 /** Notionのプロパティ名マッピング（すべてオプション）。 */
 export interface CMSSchemaProperties {
-	/** Notionのタイトルプロパティ名。デフォルト: 'Title' */
-	title?: string;
 	/** Notionのスラッグプロパティ名。デフォルト: 'Slug' */
 	slug?: string;
 	/** Notionのステータスプロパティ名。デフォルト: 'Status' */
 	status?: string;
-	/** Notionの著者プロパティ名。デフォルト: 'Author' */
-	author?: string;
 	/** Notionの公開日プロパティ名。デフォルト: 'CreatedAt' */
 	date?: string;
 }
 
 /**
  * CMSの設定オブジェクト。
- * ジェネリクス型 T にカスタムコンテンツ型を指定できる（デフォルト: ContentItem）。
+ * ジェネリクス型 T にカスタムコンテンツ型を指定できる（デフォルト: BaseContentItem）。
  */
-export interface CMSConfig<T extends BaseContentItem = ContentItem> {
+export interface CMSConfig<T extends BaseContentItem = BaseContentItem> {
 	/** キャッシュ/画像保存用ストレージ。未設定時はキャッシュ機能を無効化。 */
 	storage?: StorageAdapter;
 	schema?: {

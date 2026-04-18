@@ -1,14 +1,14 @@
-# @kjfsm/notion-headless-cms-fetcher
+# @notion-headless-cms/fetcher
 
 Notion API クライアントラッパー。データベースのクエリとページブロックの取得を担当する。
 
 ## インストール
 
 ```bash
-npm install @kjfsm/notion-headless-cms-fetcher
+npm install @notion-headless-cms/fetcher
 ```
 
-通常は [`@kjfsm/notion-headless-cms-core`](../core) 経由で利用される。  
+通常は [`@notion-headless-cms/core`](../core) 経由で利用される。  
 低レベル API を直接使いたい場合にのみインストールする。
 
 ## 使い方
@@ -18,7 +18,7 @@ import {
   createNotionClient,
   fetchDatabase,
   fetchBlocks,
-} from "@kjfsm/notion-headless-cms-fetcher";
+} from "@notion-headless-cms/fetcher";
 
 const client = createNotionClient("notion_api_token");
 
@@ -39,5 +39,5 @@ const blocks = await fetchBlocks(client, pages[0].id);
 
 ## 関連パッケージ
 
-- [`@kjfsm/notion-headless-cms-core`](../core) — CMS エンジン（このパッケージを内部で使用）
-- [`@kjfsm/notion-headless-cms-transformer`](../transformer) — 取得したブロックを Markdown に変換
+- [`@notion-headless-cms/core`](../core) — CMS エンジン（このパッケージを内部で使用）
+- [`@notion-headless-cms/transformer`](../transformer) — 取得したブロックを Markdown に変換

@@ -1,4 +1,4 @@
-export type NotionHeadlessCMSErrorCode =
+export type CMSErrorCode =
 	| "CONFIG_INVALID"
 	| "NOTION_ITEM_SCHEMA_INVALID"
 	| "NOTION_FETCH_ITEMS_FAILED"
@@ -8,7 +8,7 @@ export type NotionHeadlessCMSErrorCode =
 	| "IMAGE_CACHE_FAILED"
 	| "RENDERER_FAILED";
 
-export interface NotionHeadlessCMSErrorContext {
+export interface CMSErrorContext {
 	operation: string;
 	slug?: string;
 	dataSourceId?: string;
@@ -16,27 +16,25 @@ export interface NotionHeadlessCMSErrorContext {
 	[key: string]: string | number | boolean | null | undefined;
 }
 
-export class NotionHeadlessCMSError extends Error {
-	readonly code: NotionHeadlessCMSErrorCode;
+export class CMSError extends Error {
+	readonly code: CMSErrorCode;
 	override readonly cause?: unknown;
-	readonly context: NotionHeadlessCMSErrorContext;
+	readonly context: CMSErrorContext;
 
 	constructor(params: {
-		code: NotionHeadlessCMSErrorCode;
+		code: CMSErrorCode;
 		message: string;
 		cause?: unknown;
-		context: NotionHeadlessCMSErrorContext;
+		context: CMSErrorContext;
 	}) {
 		super(params.message, { cause: params.cause });
-		this.name = "NotionHeadlessCMSError";
+		this.name = "CMSError";
 		this.code = params.code;
 		this.cause = params.cause;
 		this.context = params.context;
 	}
 }
 
-export function isNotionHeadlessCMSError(
-	error: unknown,
-): error is NotionHeadlessCMSError {
-	return error instanceof NotionHeadlessCMSError;
+export function isCMSError(error: unknown): error is CMSError {
+	return error instanceof CMSError;
 }

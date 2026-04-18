@@ -1,5 +1,5 @@
 import { sha256Hex } from "./cache";
-import { NotionHeadlessCMSError } from "./errors";
+import { CMSError } from "./errors";
 import type { StorageBinary } from "./types";
 
 interface ImageStore {
@@ -49,7 +49,7 @@ async function fetchAndCacheImage(
 		);
 		await store.setImage(hash, data, contentType);
 	} catch (err) {
-		throw new NotionHeadlessCMSError({
+		throw new CMSError({
 			code: "IMAGE_CACHE_FAILED",
 			message: "Failed to fetch or cache Notion image.",
 			cause: err,

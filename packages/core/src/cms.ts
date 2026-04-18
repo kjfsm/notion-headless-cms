@@ -2,13 +2,13 @@ import {
 	createClient,
 	queryAllPages,
 	queryPageBySlug,
-} from "@kjfsm/notion-headless-cms-fetcher";
-import { renderMarkdown } from "@kjfsm/notion-headless-cms-renderer";
-import { Transformer } from "@kjfsm/notion-headless-cms-transformer";
+} from "@notion-headless-cms/fetcher";
+import { renderMarkdown } from "@notion-headless-cms/renderer";
+import { Transformer } from "@notion-headless-cms/transformer";
 import type { Client } from "@notionhq/client";
 import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { CacheStore, isStale } from "./cache";
-import { isNotionHeadlessCMSError, NotionHeadlessCMSError } from "./errors";
+import { CMSError, isCMSError } from "./errors";
 import { buildCacheImageFn } from "./image";
 import { mapItem } from "./mapper";
 import type {
@@ -18,15 +18,12 @@ import type {
 	CMSConfig,
 	CMSEnv,
 	CMSSchemaProperties,
-	ContentItem,
 	StorageBinary,
 } from "./types";
 
 const DEFAULT_PROPERTIES: Required<CMSSchemaProperties> = {
-	title: "Title",
 	slug: "Slug",
 	status: "Status",
-	author: "Author",
 	date: "CreatedAt",
 };
 
@@ -41,7 +38,7 @@ function buildListVersion<T extends BaseContentItem>(items: T[]): string {
 
 function validateEnv(env: CMSEnv): { dataSourceId: string } {
 	if (!env.NOTION_TOKEN || !env.NOTION_DATA_SOURCE_ID) {
-		throw new NotionHeadlessCMSError({
+		throw new CMSError({
 			code: "CONFIG_INVALID",
 			message:
 				"NOTION_TOKEN and NOTION_DATA_SOURCE_ID are required to use Notion CMS APIs.",
@@ -63,7 +60,7 @@ function validateEnv(env: CMSEnv): { dataSourceId: string } {
  *   schema: { properties: { slug: 'Slug' }, publishedStatuses: ['Published'] }
  * });
  */
-export class CMS<T extends BaseContentItem = ContentItem> {
+export class CMS<T extends BaseContentItem = BaseContentItem> {
 	private readonly itemMapper: (page: PageObjectResponse) => T;
 	private readonly slugPropName: string;
 	private readonly publishedStatuses: string[];
@@ -128,8 +125,8 @@ export class CMS<T extends BaseContentItem = ContentItem> {
 					new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
 			);
 		} catch (err) {
-			if (isNotionHeadlessCMSError(err)) throw err;
-			throw new NotionHeadlessCMSError({
+			if (isCMSError(err)) throw err;
+			throw new CMSError({
 				code: "NOTION_FETCH_ITEMS_FAILED",
 				message: "Failed to fetch items from Notion data source.",
 				cause: err,
@@ -159,8 +156,8 @@ export class CMS<T extends BaseContentItem = ContentItem> {
 			}
 			return item;
 		} catch (err) {
-			if (isNotionHeadlessCMSError(err)) throw err;
-			throw new NotionHeadlessCMSError({
+			if (isCMSError(err)) throw err;
+			throw new CMSError({
 				code: "NOTION_FETCH_ITEM_BY_SLUG_FAILED",
 				message: "Failed to fetch item by slug from Notion data source.",
 				cause: err,
@@ -206,8 +203,8 @@ export class CMS<T extends BaseContentItem = ContentItem> {
 			}
 			return this.buildCachedItem(client, item);
 		} catch (err) {
-			if (isNotionHeadlessCMSError(err)) throw err;
-			throw new NotionHeadlessCMSError({
+			if (isCMSError(err)) throw err;
+			throw new CMSError({
 				code: "NOTION_FETCH_ITEM_BY_SLUG_FAILED",
 				message: "Failed to fetch item by slug from Notion data source.",
 				cause: err,
@@ -343,8 +340,8 @@ export class CMS<T extends BaseContentItem = ContentItem> {
 		try {
 			markdown = await transformer.transform(client, item.id);
 		} catch (err) {
-			if (isNotionHeadlessCMSError(err)) throw err;
-			throw new NotionHeadlessCMSError({
+			if (isCMSError(err)) throw err;
+			throw new CMSError({
 				code: "NOTION_MARKDOWN_FETCH_FAILED",
 				message: "Failed to load markdown from Notion.",
 				cause: err,
@@ -370,8 +367,8 @@ export class CMS<T extends BaseContentItem = ContentItem> {
 				render: this.rendererConfig?.render,
 			});
 		} catch (err) {
-			if (isNotionHeadlessCMSError(err)) throw err;
-			throw new NotionHeadlessCMSError({
+			if (isCMSError(err)) throw err;
+			throw new CMSError({
 				code: "RENDERER_FAILED",
 				message: "Failed to render markdown.",
 				cause: err,
@@ -393,7 +390,7 @@ export class CMS<T extends BaseContentItem = ContentItem> {
 }
 
 /** 設定済みのCMSインスタンスを生成するファクトリ関数。 */
-export function createCMS<T extends BaseContentItem = ContentItem>(
+export function createCMS<T extends BaseContentItem = BaseContentItem>(
 	config?: CMSConfig<T>,
 ): CMS<T> {
 	return new CMS<T>(config);

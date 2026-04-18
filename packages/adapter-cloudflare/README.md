@@ -1,4 +1,4 @@
-# @kjfsm/notion-headless-cms-adapter-cloudflare
+# @notion-headless-cms/adapter-cloudflare
 
 Cloudflare Workers 向け CMS ファクトリー。  
 `env.CACHE_BUCKET`（R2Bucket）を受け取り、`CMS` インスタンスを生成して返す。
@@ -6,14 +6,7 @@ Cloudflare Workers 向け CMS ファクトリー。
 ## インストール
 
 ```bash
-npm install @kjfsm/notion-headless-cms-adapter-cloudflare
-```
-
-`.npmrc` に以下を追加する（GitHub Packages 認証）:
-
-```
-@kjfsm:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT
+npm install @notion-headless-cms/adapter-cloudflare
 ```
 
 ## 使い方
@@ -29,7 +22,7 @@ bucket_name = "my-cms-cache"
 ### Workers エントリーポイント
 
 ```typescript
-import { createCloudflareCMS } from "@kjfsm/notion-headless-cms-adapter-cloudflare";
+import { createCloudflareCMS } from "@notion-headless-cms/adapter-cloudflare";
 
 interface Env {
   NOTION_TOKEN: string;
@@ -85,9 +78,9 @@ wrangler secret put NOTION_DATA_SOURCE_ID
 | `env` | `CloudflareCMSEnv` | Workers バインディング（`NOTION_TOKEN`, `NOTION_DATA_SOURCE_ID`, オプションで `CACHE_BUCKET`） |
 | `config` | `Omit<CMSConfig, "storage">` | CMS の設定（`schema`, `cache`, `transformer`, `renderer`） |
 
-戻り値: `CMS`（`@kjfsm/notion-headless-cms-core`）
+戻り値: `CMS`（`@notion-headless-cms/core`）
 
 ## 関連パッケージ
 
-- [`@kjfsm/notion-headless-cms-core`](../core) — CMS エンジン本体
-- [`@kjfsm/notion-headless-cms-cache-r2`](../cache-r2) — R2 ストレージアダプター（内部で使用）
+- [`@notion-headless-cms/core`](../core) — CMS エンジン本体
+- [`@notion-headless-cms/cache-r2`](../cache-r2) — R2 ストレージアダプター（内部で使用）

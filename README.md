@@ -7,12 +7,12 @@ Cloudflare Workers + R2 での利用を前提に設計されており、pnpm モ
 
 | パッケージ | 役割 |
 |---|---|
-| [`@kjfsm/notion-headless-cms-core`](./packages/core) | CMS エンジン本体（取得・変換・キャッシュを統合） |
-| [`@kjfsm/notion-headless-cms-fetcher`](./packages/fetcher) | Notion API クライアントラッパー |
-| [`@kjfsm/notion-headless-cms-transformer`](./packages/transformer) | Notion ブロック → Markdown 変換 |
-| [`@kjfsm/notion-headless-cms-renderer`](./packages/renderer) | Markdown → HTML レンダリング（remark/rehype） |
-| [`@kjfsm/notion-headless-cms-cache-r2`](./packages/cache-r2) | Cloudflare R2 ストレージアダプター |
-| [`@kjfsm/notion-headless-cms-adapter-cloudflare`](./packages/adapter-cloudflare) | Cloudflare Workers 向けファクトリー |
+| [`@notion-headless-cms/core`](./packages/core) | CMS エンジン本体（取得・変換・キャッシュを統合） |
+| [`@notion-headless-cms/fetcher`](./packages/fetcher) | Notion API クライアントラッパー |
+| [`@notion-headless-cms/transformer`](./packages/transformer) | Notion ブロック → Markdown 変換 |
+| [`@notion-headless-cms/renderer`](./packages/renderer) | Markdown → HTML レンダリング（remark/rehype） |
+| [`@notion-headless-cms/cache-r2`](./packages/cache-r2) | Cloudflare R2 ストレージアダプター |
+| [`@notion-headless-cms/adapter-cloudflare`](./packages/adapter-cloudflare) | Cloudflare Workers 向けファクトリー |
 
 ## アーキテクチャ
 
@@ -40,22 +40,13 @@ Notion DB
 
 ## インストール
 
-### 認証設定
-
-`@kjfsm` スコープは GitHub Packages（プライベート）で公開されている。  
-プロジェクトの `.npmrc` に以下を追加し、`read:packages` 権限を持つ GitHub PAT を設定する。
-
-```
-@kjfsm:registry=https://npm.pkg.github.com
-//npm.pkg.github.com/:_authToken=YOUR_GITHUB_PAT
-```
-
-### パッケージのインストール
+`@notion-headless-cms` スコープは npm 公開リポジトリから公開されている。  
+通常の `npm install` で取得できる（追加の認証設定は不要）。
 
 Cloudflare Workers プロジェクトで利用する場合はアダプターをインストールする。
 
 ```bash
-npm install @kjfsm/notion-headless-cms-adapter-cloudflare
+npm install @notion-headless-cms/adapter-cloudflare
 ```
 
 ## クイックスタート（Cloudflare Workers）
@@ -71,7 +62,7 @@ bucket_name = "my-cms-cache"
 ### Workers エントリーポイント
 
 ```typescript
-import { createCloudflareCMS } from "@kjfsm/notion-headless-cms-adapter-cloudflare";
+import { createCloudflareCMS } from "@notion-headless-cms/adapter-cloudflare";
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
@@ -134,7 +125,7 @@ pnpm typecheck
 
 ## リリース・公開
 
-GitHub Packages への公開は CI（`.github/workflows/publish.yml`）が自動処理する。
+npm への公開は CI（`.github/workflows/publish.yml`）が自動処理する。
 
 ```bash
 # バージョンタグを打つと CI がトリガーされる

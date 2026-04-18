@@ -3,15 +3,9 @@
 // ── ユーティリティ ────────────────────────────────────────────────────────
 export { CacheStore, isStale, sha256Hex } from "./cache";
 export { CMS, createCMS } from "./cms";
-export type {
-	NotionHeadlessCMSErrorCode,
-	NotionHeadlessCMSErrorContext,
-} from "./errors";
+export type { CMSErrorCode, CMSErrorContext } from "./errors";
 // ── エラー ────────────────────────────────────────────────────────────────
-export {
-	isNotionHeadlessCMSError,
-	NotionHeadlessCMSError,
-} from "./errors";
+export { CMSError, isCMSError } from "./errors";
 
 // ── 低レベルAPI ───────────────────────────────────────────────────────────
 export { getPlainText, mapItem } from "./mapper";
@@ -24,7 +18,6 @@ export type {
 	CMSConfig,
 	CMSEnv,
 	CMSSchemaProperties,
-	ContentItem,
 	StorageAdapter,
 	StorageBinary,
 } from "./types";

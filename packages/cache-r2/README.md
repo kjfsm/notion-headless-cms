@@ -1,21 +1,21 @@
-# @kjfsm/notion-headless-cms-cache-r2
+# @notion-headless-cms/cache-r2
 
 Cloudflare R2 ストレージアダプター。`StorageAdapter` インターフェースの R2 実装。
 
 ## インストール
 
 ```bash
-npm install @kjfsm/notion-headless-cms-cache-r2
+npm install @notion-headless-cms/cache-r2
 ```
 
-Cloudflare Workers 環境では [`@kjfsm/notion-headless-cms-adapter-cloudflare`](../adapter-cloudflare) を使うと  
+Cloudflare Workers 環境では [`@notion-headless-cms/adapter-cloudflare`](../adapter-cloudflare) を使うと  
 このパッケージを直接インストールせずに済む。
 
 ## 使い方
 
 ```typescript
-import { createCloudflareR2StorageAdapter } from "@kjfsm/notion-headless-cms-cache-r2";
-import { CMS } from "@kjfsm/notion-headless-cms-core";
+import { createCloudflareR2StorageAdapter } from "@notion-headless-cms/cache-r2";
+import { CMS } from "@notion-headless-cms/core";
 
 // Workers の fetch ハンドラー内
 const storage = createCloudflareR2StorageAdapter(env.CACHE_BUCKET);
@@ -33,11 +33,11 @@ const cms = new CMS({ storage });
 |---|---|---|
 | `bucket` | `R2Bucket \| undefined` | Cloudflare R2 バインディング |
 
-戻り値: `StorageAdapter`（`@kjfsm/notion-headless-cms-core`）
+戻り値: `StorageAdapter`（`@notion-headless-cms/core`）
 
 `bucket` が `undefined` のとき、すべての `get` が `null` を返し `put` は何もしない no-op アダプターを返す。
 
 ## 関連パッケージ
 
-- [`@kjfsm/notion-headless-cms-core`](../core) — `StorageAdapter` インターフェース定義
-- [`@kjfsm/notion-headless-cms-adapter-cloudflare`](../adapter-cloudflare) — このパッケージを内部で使用する Workers ファクトリー
+- [`@notion-headless-cms/core`](../core) — `StorageAdapter` インターフェース定義
+- [`@notion-headless-cms/adapter-cloudflare`](../adapter-cloudflare) — このパッケージを内部で使用する Workers ファクトリー

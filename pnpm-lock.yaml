@@ -26,10 +26,10 @@ importers:
 
   packages/adapter-cloudflare:
     dependencies:
-      '@kjfsm/notion-headless-cms-cache-r2':
+      '@notion-headless-cms/cache-r2':
         specifier: workspace:*
         version: link:../cache-r2
-      '@kjfsm/notion-headless-cms-core':
+      '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
@@ -39,7 +39,7 @@ importers:
 
   packages/cache-r2:
     dependencies:
-      '@kjfsm/notion-headless-cms-core':
+      '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core
     devDependencies:
@@ -49,13 +49,13 @@ importers:
 
   packages/core:
     dependencies:
-      '@kjfsm/notion-headless-cms-fetcher':
+      '@notion-headless-cms/fetcher':
         specifier: workspace:*
         version: link:../fetcher
-      '@kjfsm/notion-headless-cms-renderer':
+      '@notion-headless-cms/renderer':
         specifier: workspace:*
         version: link:../renderer
-      '@kjfsm/notion-headless-cms-transformer':
+      '@notion-headless-cms/transformer':
         specifier: workspace:*
         version: link:../transformer
       '@notionhq/client':

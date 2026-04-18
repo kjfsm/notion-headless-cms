@@ -1,5 +1,5 @@
 {
-	"name": "@kjfsm/notion-headless-cms-core",
+	"name": "@notion-headless-cms/core",
 	"version": "0.0.1",
 	"description": "Core CMS engine for notion-headless-cms — fetch, transform, cache with stale-while-revalidate strategy",
 	"keywords": [
@@ -47,9 +47,9 @@
 		}
 	},
 	"dependencies": {
-		"@kjfsm/notion-headless-cms-fetcher": "workspace:*",
-		"@kjfsm/notion-headless-cms-transformer": "workspace:*",
-		"@kjfsm/notion-headless-cms-renderer": "workspace:*",
+		"@notion-headless-cms/fetcher": "workspace:*",
+		"@notion-headless-cms/transformer": "workspace:*",
+		"@notion-headless-cms/renderer": "workspace:*",
 		"@notionhq/client": "^5.18.0",
 		"unified": "^11.0.5",
 		"zod": "^4.1.12"

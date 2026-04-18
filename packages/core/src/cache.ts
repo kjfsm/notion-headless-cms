@@ -2,7 +2,6 @@ import type {
 	BaseContentItem,
 	CachedItem,
 	CachedItemList,
-	ContentItem,
 	StorageAdapter,
 	StorageBinary,
 } from "./types";
@@ -26,7 +25,7 @@ export function isStale(cachedAt: number, ttlMs?: number): boolean {
 }
 
 /** ストレージキャッシュ操作をまとめたヘルパークラス。キープレフィックスは設定で変更可能。 */
-export class CacheStore<T extends BaseContentItem = ContentItem> {
+export class CacheStore<T extends BaseContentItem = BaseContentItem> {
 	private readonly storage?: StorageAdapter;
 	private readonly listKey: string;
 	private readonly itemPrefix: string;

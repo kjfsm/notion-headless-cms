@@ -7,16 +7,16 @@
 ## プロジェクト概要
 
 Notion をヘッドレス CMS として利用するための TypeScript ライブラリ群。  
-pnpm モノリポで管理され、npm（`@kjfsm` スコープ）としてパブリック公開される。
+pnpm モノリポで管理され、npm（`@notion-headless-cms` スコープ）としてパブリック公開される。
 
 ```
 Notion DB
-  └─ @kjfsm/notion-headless-cms-fetcher（API取得）
-       └─ @kjfsm/notion-headless-cms-transformer（ブロック→Markdown）
-            └─ @kjfsm/notion-headless-cms-renderer（Markdown→HTML）
-                 └─ @kjfsm/notion-headless-cms-core（CMS統合・キャッシュ）
-                      └─ @kjfsm/notion-headless-cms-cache-r2（R2ストレージ）
-                           └─ @kjfsm/notion-headless-cms-adapter-cloudflare（Workers注入）
+  └─ @notion-headless-cms/fetcher（API取得）
+       └─ @notion-headless-cms/transformer（ブロック→Markdown）
+            └─ @notion-headless-cms/renderer（Markdown→HTML）
+                 └─ @notion-headless-cms/core（CMS統合・キャッシュ）
+                      └─ @notion-headless-cms/cache-r2（R2ストレージ）
+                           └─ @notion-headless-cms/adapter-cloudflare（Workers注入）
 ```
 
 ## 技術スタック
@@ -41,8 +41,8 @@ packages/
     src/
       cms.ts          # CMS クラス・createCMS()
       cache.ts        # CacheStore・isStale・sha256Hex
-      types.ts        # 公開型定義（CMSConfig, ContentItem など）
-      errors.ts       # NotionHeadlessCMSError
+      types.ts        # 公開型定義（CMSConfig, BaseContentItem など）
+      errors.ts       # CMSError
       mapper.ts       # Notionプロパティマッピング
       image.ts        # 画像フェッチ・キャッシュ
       index.ts        # 公開 API

@@ -1,5 +1,5 @@
 {
-	"name": "@kjfsm/notion-headless-cms-cache-r2",
+	"name": "@notion-headless-cms/cache-r2",
 	"version": "0.0.1",
 	"description": "Cloudflare R2 StorageAdapter implementation for notion-headless-cms cache layer",
 	"keywords": [
@@ -48,7 +48,7 @@
 		}
 	},
 	"dependencies": {
-		"@kjfsm/notion-headless-cms-core": "workspace:*"
+		"@notion-headless-cms/core": "workspace:*"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20250620.0"
