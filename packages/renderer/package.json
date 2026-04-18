@@ -20,7 +20,8 @@
 	},
 	"scripts": {
 		"build": "tsup src/index.ts --format esm --dts --out-dir dist",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run"
 	},
 	"publishConfig": {
 		"registry": "https://npm.pkg.github.com",
