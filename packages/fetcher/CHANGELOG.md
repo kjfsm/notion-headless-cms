@@ -1,5 +1,11 @@
 # @notion-headless-cms/fetcher
 
+## 0.0.3
+
+### Patch Changes
+
+- b46fc98: update test
+
 ## 0.0.2
 
 ### Patch Changes
