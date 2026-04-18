@@ -27,11 +27,11 @@ importers:
   packages/adapter-cloudflare:
     dependencies:
       '@notion-headless-cms/cache-r2':
-        specifier: latest
-        version: 0.0.4(typescript@5.9.3)
+        specifier: workspace:*
+        version: link:../cache-r2
       '@notion-headless-cms/core':
-        specifier: latest
-        version: 0.0.4(typescript@5.9.3)
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20250620.0
@@ -40,8 +40,8 @@ importers:
   packages/cache-r2:
     dependencies:
       '@notion-headless-cms/core':
-        specifier: latest
-        version: 0.0.4(typescript@5.9.3)
+        specifier: workspace:*
+        version: link:../core
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^4.20250620.0
@@ -50,14 +50,14 @@ importers:
   packages/core:
     dependencies:
       '@notion-headless-cms/fetcher':
-        specifier: latest
-        version: 0.0.3
+        specifier: workspace:*
+        version: link:../fetcher
       '@notion-headless-cms/renderer':
-        specifier: latest
-        version: 0.0.3
+        specifier: workspace:*
+        version: link:../renderer
       '@notion-headless-cms/transformer':
-        specifier: latest
-        version: 0.0.3(typescript@5.9.3)
+        specifier: workspace:*
+        version: link:../transformer
       '@notionhq/client':
         specifier: ^5.18.0
         version: 5.19.0
@@ -445,26 +445,6 @@ packages:
   '@nodelib/fs.walk@1.2.8':
     resolution: {integrity: sha512-oGB+UxlgWcgQkgwo8GcEGwemoTFt3FIO9ababBmaGwXIoBKZ+GTy0pP185beGg7Llih/NSHSV2XAs1lnznocSg==}
     engines: {node: '>= 8'}
-
-  '@notion-headless-cms/cache-r2@0.0.4':
-    resolution: {integrity: sha512-B58+le52ULO8SO1r0Ri5xHjuZOClCUbZ4hrjEWuVWHAYfKVDnj/TcASUkM5i8XIK5gU8OjY6I3YSXVEHzQynrA==}
-    engines: {node: '>=18'}
-
-  '@notion-headless-cms/core@0.0.4':
-    resolution: {integrity: sha512-iYY3Nioxbo7Te5DCUb+6Wh0fnDObYu7GLBbRLM8H7IvFjEUlJtxiJ5jTpiBEH+ajlpSfaVUdSztjWKGb7+xfAA==}
-    engines: {node: '>=18'}
-
-  '@notion-headless-cms/fetcher@0.0.3':
-    resolution: {integrity: sha512-Otk6Ur3e2MT/EtYI2i7x5pxQWstBdMlxKD82y5NYUU1MUNKipdtvwbq67yX9dCb5jN9+Qb/oyNM7Bvv+7iY74w==}
-    engines: {node: '>=18'}
-
-  '@notion-headless-cms/renderer@0.0.3':
-    resolution: {integrity: sha512-1FuQu17Jmot57OkJXuRCIz/eypJxurfj/oAqGG6zqsmaNQ+D3U7E7qTpWwB+e3hi+WS5cHdE8KunAcg56wHR8w==}
-    engines: {node: '>=18'}
-
-  '@notion-headless-cms/transformer@0.0.3':
-    resolution: {integrity: sha512-qRibUj/re5nxaVMDE2VNvSFc/d1aesEq/2cVW2d2bVOv0OrZHZmlpVC9n/pAenaN465/AUU8caciFNTnDBg4Fg==}
-    engines: {node: '>=18'}
 
   '@notionhq/client@5.19.0':
     resolution: {integrity: sha512-9R93Yt6/OB3MP5h29WhnvIBWYVq4mzxOYn9oh0Ut642NWxOTTouv7vkwKnMj5LGAYTlot0fhmL8OK5Su5zEzCw==}
@@ -2134,60 +2114,6 @@ snapshots:
     dependencies:
       '@nodelib/fs.scandir': 2.1.5
       fastq: 1.20.1
-
-  '@notion-headless-cms/cache-r2@0.0.4(typescript@5.9.3)':
-    dependencies:
-      '@notion-headless-cms/core': 0.0.4(typescript@5.9.3)
-    transitivePeerDependencies:
-      - '@swc/core'
-      - '@swc/wasm'
-      - '@types/node'
-      - encoding
-      - supports-color
-      - typescript
-
-  '@notion-headless-cms/core@0.0.4(typescript@5.9.3)':
-    dependencies:
-      '@notion-headless-cms/fetcher': 0.0.3
-      '@notion-headless-cms/renderer': 0.0.3
-      '@notion-headless-cms/transformer': 0.0.3(typescript@5.9.3)
-      '@notionhq/client': 5.19.0
-      unified: 11.0.5
-      zod: 4.3.6
-    transitivePeerDependencies:
-      - '@swc/core'
-      - '@swc/wasm'
-      - '@types/node'
-      - encoding
-      - supports-color
-      - typescript
-
-  '@notion-headless-cms/fetcher@0.0.3':
-    dependencies:
-      '@notionhq/client': 5.19.0
-
-  '@notion-headless-cms/renderer@0.0.3':
-    dependencies:
-      '@types/hast': 3.0.4
-      rehype-stringify: 10.0.1
-      remark-gfm: 4.0.1
-      remark-parse: 11.0.0
-      remark-rehype: 11.1.2
-      unified: 11.0.5
-      unist-util-visit: 5.1.0
-    transitivePeerDependencies:
-      - supports-color
-
-  '@notion-headless-cms/transformer@0.0.3(typescript@5.9.3)':
-    dependencies:
-      '@notionhq/client': 5.19.0
-      notion-to-md: 4.0.0-alpha.7(@notionhq/client@5.19.0)(@types/node@12.20.55)(typescript@5.9.3)
-    transitivePeerDependencies:
-      - '@swc/core'
-      - '@swc/wasm'
-      - '@types/node'
-      - encoding
-      - typescript
 
   '@notionhq/client@5.19.0': {}
 
