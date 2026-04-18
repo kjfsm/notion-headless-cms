@@ -41,5 +41,7 @@ jobs:
 
       - name: バージョン更新PRの作成 または npm 公開
         uses: changesets/action@v1
+        with:
+          publish: "pnpm release"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
