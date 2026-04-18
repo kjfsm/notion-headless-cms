@@ -51,7 +51,7 @@
 		}
 	},
 	"dependencies": {
-		"@notion-headless-cms/core": "workspace:*"
+		"@notion-headless-cms/core": "latest"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20250620.0"

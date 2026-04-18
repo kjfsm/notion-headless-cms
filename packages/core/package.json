@@ -50,9 +50,9 @@
 		}
 	},
 	"dependencies": {
-		"@notion-headless-cms/fetcher": "workspace:*",
-		"@notion-headless-cms/transformer": "workspace:*",
-		"@notion-headless-cms/renderer": "workspace:*",
+		"@notion-headless-cms/fetcher": "latest",
+		"@notion-headless-cms/transformer": "latest",
+		"@notion-headless-cms/renderer": "latest",
 		"@notionhq/client": "^5.18.0",
 		"unified": "^11.0.5",
 		"zod": "^4.1.12"

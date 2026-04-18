@@ -50,8 +50,8 @@
 		}
 	},
 	"dependencies": {
-		"@notion-headless-cms/core": "workspace:*",
-		"@notion-headless-cms/cache-r2": "workspace:*"
+		"@notion-headless-cms/core": "latest",
+		"@notion-headless-cms/cache-r2": "latest"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20250620.0"
