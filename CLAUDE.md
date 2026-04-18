@@ -54,7 +54,8 @@ packages/
 
 .github/
   workflows/
-    publish.yml       # npm 自動公開（v* タグトリガー）
+    ci.yml            # PR・main push 時に build / typecheck / test を実行
+    release.yml       # main push 時に changesets/action で PR 作成または npm 公開
 ```
 
 ## コマンド
@@ -63,6 +64,7 @@ packages/
 # ルート（全パッケージ一括）
 pnpm build            # 全パッケージをビルド
 pnpm typecheck        # 全パッケージの型チェック
+pnpm test             # core・renderer のユニットテスト（vitest）
 pnpm format           # Biome でフォーマット・Lint自動修正
 
 # 個別パッケージ（例: core）
@@ -109,20 +111,26 @@ Biome の設定に従う（biome.json 参照）。
 
 ## npm 公開フロー
 
+changesets を使ったセマンティックバージョン管理で自動公開される。
+
 ```bash
-# バージョンタグを打つと .github/workflows/publish.yml が自動実行される
-git tag v0.2.0
-git push origin v0.2.0
+# 1. 変更内容を記録する changeset を作成
+pnpm changeset
+
+# 2. main にマージすると release.yml が起動し、
+#    "Version Packages" PR を自動作成する
+
+# 3. その PR をマージすると npm に自動公開される
 ```
 
-- ワークフローは typecheck → test → `pnpm -r run build` → `pnpm -r publish --access public` を実行
-- `NPM_TOKEN` シークレットで認証（リポジトリの Settings > Secrets に設定が必要）
-- 手動公開は GitHub Actions UI の `workflow_dispatch` から実行できる
+- `release.yml` は build → typecheck → test の後に `changesets/action` を実行
+- `NPM_TOKEN` と `GITHUB_TOKEN` シークレットが必要（リポジトリ Settings > Secrets）
+- アクセス設定は `.changeset/config.json` の `"access": "public"` で制御
 
 ## ワークフロー
 
 1. **実装前**: Plan Mode で関連ファイルを確認してから実装する
-2. **実装後**: `pnpm typecheck` && `pnpm format` を通してからコミット
+2. **実装後**: `pnpm typecheck` && `pnpm test` && `pnpm format` を通してからコミット
 3. **コミットメッセージ**: 日本語で変更の「なぜ」を記述する
 4. **changeset**: ライブラリを更新したら `pnpm changeset` を実行して changeset を作成する
-5. **リリース**: バージョンタグを打ち、CI に公開を任せる
+5. **リリース**: main にマージすると release.yml が "Version Packages" PR を作成し、その PR をマージすると npm に公開される
