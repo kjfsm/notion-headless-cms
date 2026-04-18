@@ -7,6 +7,11 @@
 		"headless-cms"
 	],
 	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/kjfsm/notion-headless-cms.git",
+		"directory": "packages/fetcher"
+	},
 	"type": "module",
 	"exports": {
 		".": "./src/index.ts"

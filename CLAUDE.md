@@ -6,52 +6,72 @@
 
 ## プロジェクト概要
 
-バンドサイト。Notion を CMS として利用し、Cloudflare Workers + R2 でキャッシュ・配信、React Router でSSRレンダリングする構成。
+Notion をヘッドレス CMS として利用するための TypeScript ライブラリ群。  
+pnpm モノリポで管理され、GitHub Packages（`@kjfsm` スコープ）としてプライベート公開される。
 
 ```
-Notion → Workers/notion.ts → Workers/content.ts → R2 (posts.json / post/{slug}.json / images/*) → React Router loader → ブラウザ
+Notion DB
+  └─ @kjfsm/notion-headless-cms-fetcher（API取得）
+       └─ @kjfsm/notion-headless-cms-transformer（ブロック→Markdown）
+            └─ @kjfsm/notion-headless-cms-renderer（Markdown→HTML）
+                 └─ @kjfsm/notion-headless-cms-core（CMS統合・キャッシュ）
+                      └─ @kjfsm/notion-headless-cms-cache-r2（R2ストレージ）
+                           └─ @kjfsm/notion-headless-cms-adapter-cloudflare（Workers注入）
 ```
 
 ## 技術スタック
 
 | 層 | 技術 |
 |---|---|
-| フロントエンド | React 19 + React Router 7 (SSR) |
-| バックエンド | Hono 4 on Cloudflare Workers |
-| CMS | Notion API (@notionhq/client) |
-| Markdown変換 | notion-to-md → marked |
-| キャッシュ | Cloudflare R2 |
-| スタイル | Tailwind CSS 4 + @tailwindcss/typography |
+| ビルド | tsup（ESM + TypeScript declarations） |
+| 型チェック | TypeScript 5.9（strict） |
+| Notion API | @notionhq/client |
+| Markdown変換 | notion-to-md |
+| HTMLレンダリング | remark / rehype（unified） |
+| キャッシュストレージ | Cloudflare R2 |
+| バリデーション | Zod |
 | リンター/フォーマッター | Biome |
+| パッケージ管理 | pnpm ワークスペース |
 
 ## ディレクトリ構成
 
 ```
-app/
-  routes/          # React Router ファイルベースルート
-    _index.tsx     # ホームページ
-    blog.tsx       # ブログレイアウト
-    blog._index.tsx # ブログ一覧（Stale-While-Revalidate）
-    blog.$slug.tsx  # 記事詳細（Stale-While-Revalidate + Notion更新検知）
-  root.tsx         # ルートレイアウト
-workers/
-  app.ts           # Hono メインエントリー
-  notion.ts        # Notion API 取得
-  cache.ts         # R2 キャッシュ操作
-  content.ts       # Markdown→HTML変換・画像処理
+packages/
+  core/               # CMSエンジン本体（取得・変換・キャッシュ統合）
+    src/
+      cms.ts          # CMS クラス・createCMS()
+      cache.ts        # CacheStore・isStale・sha256Hex
+      types.ts        # 公開型定義（CMSConfig, ContentItem など）
+      errors.ts       # NotionHeadlessCMSError
+      mapper.ts       # Notionプロパティマッピング
+      image.ts        # 画像フェッチ・キャッシュ
+      index.ts        # 公開 API
+  fetcher/            # Notion API クライアントラッパー
+  transformer/        # Notion ブロック → Markdown 変換
+  renderer/           # Markdown → HTML レンダリング
+  cache-r2/           # Cloudflare R2 StorageAdapter 実装
+  adapter-cloudflare/ # createCloudflareCMS() ファクトリー
+
+.github/
+  workflows/
+    publish.yml       # GitHub Packages 自動公開（v* タグトリガー）
 ```
 
 ## コマンド
 
 ```bash
-npm run dev        # ローカル開発サーバー起動
-npm run build      # プロダクションビルド
-npm run deploy     # ビルド → Cloudflare Workers デプロイ
-npm run typecheck  # 型チェック（wrangler types 生成 → tsc）
-npm run format     # Biome でフォーマット・Lint自動修正
+# ルート（全パッケージ一括）
+pnpm build            # 全パッケージをビルド
+pnpm typecheck        # 全パッケージの型チェック
+pnpm format           # Biome でフォーマット・Lint自動修正
+
+# 個別パッケージ（例: core）
+cd packages/core
+pnpm build
+pnpm typecheck
 ```
 
-コード変更後は必ず `npm run typecheck` を実行する。
+コード変更後は必ず `pnpm typecheck` を実行する。
 
 ## コードスタイル
 
@@ -65,27 +85,43 @@ Biome の設定に従う（biome.json 参照）。
 ## アーキテクチャ上の重要な注意点
 
 ### キャッシュ戦略（Stale-While-Revalidate）
-- まずキャッシュを返し、TTL（5分）切れなら裏で非同期更新
-- `workers/cache.ts` の `POSTS_TTL_MS` が有効期間
-- 開発環境（`CACHE_BUCKET` 未設定時）は Notion API を直接呼ぶ
+- まずキャッシュを返し、TTL 切れなら裏で非同期更新
+- `CMSConfig.cache.ttlMs` が有効期間
+- `storage` 未設定時はキャッシュなしで動作（ローカル開発向け）
 
 ### Notion 更新検知
 - `last_edited_time` でキャッシュと比較し、差分があれば HTML 再生成
-- 変更なければ `cachedAt` のみ更新（TTL延長）
+- 変更なければ `cachedAt` のみ更新（TTL 延長）
 
 ### 画像処理
-- Notion 画像URLは期限付きのため、Workers で fetch → SHA256 ハッシュキーで R2 に永続保存
-- `content.ts` の `fetchAndCacheImage` が担当
-- フロントエンドには `/api/images/{hash}` で配信（1年不変キャッシュ）
+- Notion 画像 URL は期限付きのため、Workers で fetch → SHA256 ハッシュキーで R2 に永続保存
+- `core/src/image.ts` の `fetchAndCacheImage` が担当
+- フロントエンドには `{imageProxyBase}/{hash}` で配信（デフォルト: `/api/images`）
+
+### ストレージ抽象
+- `StorageAdapter` インターフェース（`core/src/types.ts`）を実装すれば R2 以外に差し替え可能
+- `cache-r2` が Cloudflare R2 実装、`adapter-cloudflare` が Workers 向け注入を担当
 
 ### 環境変数（シークレット）
 - `NOTION_TOKEN`: Notion API キー
 - `NOTION_DATA_SOURCE_ID`: Notion データベース ID
 - これらは `wrangler secret put` で設定する。コードにハードコードしない
 
+## GitHub Packages 公開フロー
+
+```bash
+# バージョンタグを打つと .github/workflows/publish.yml が自動実行される
+git tag v0.2.0
+git push origin v0.2.0
+```
+
+- ワークフローは `pnpm -r run build` → `pnpm -r publish --access restricted` を実行
+- `GITHUB_TOKEN` で認証（設定不要）
+- 手動公開は GitHub Actions UI の `workflow_dispatch` から実行できる
+
 ## ワークフロー
 
-1. **機能追加・修正前**: Plan Mode で関連ファイルを確認してから実装する
-2. **実装後**: `npm run typecheck` && `npm run format` を通してからコミット
+1. **実装前**: Plan Mode で関連ファイルを確認してから実装する
+2. **実装後**: `pnpm typecheck` && `pnpm format` を通してからコミット
 3. **コミットメッセージ**: 日本語で変更の「なぜ」を記述する
-4. **デプロイ**: `npm run deploy` 前に必ずビルドが通ることを確認する
+4. **リリース**: バージョンタグを打ち、CI に公開を任せる
