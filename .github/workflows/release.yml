@@ -1,9 +1,12 @@
-name: リリース
+name: Release
 
 on:
   push:
     branches:
       - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
 
 permissions:
   contents: write
@@ -14,7 +17,7 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -38,8 +41,5 @@ jobs:
 
       - name: バージョン更新PRの作成 または npm 公開
         uses: changesets/action@v1
-        with:
-          publish: pnpm changeset publish
-          createGithubReleases: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
