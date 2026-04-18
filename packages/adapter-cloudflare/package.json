@@ -1,6 +1,6 @@
 {
 	"name": "@notion-headless-cms/adapter-cloudflare",
-	"version": "0.0.4",
+	"version": "0.0.5",
 	"description": "Cloudflare Workers adapter for notion-headless-cms — injects R2 storage and environment bindings",
 	"keywords": [
 		"notion",

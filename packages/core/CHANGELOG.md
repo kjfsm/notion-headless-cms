@@ -1,5 +1,11 @@
 # @notion-headless-cms/core
 
+## 0.0.5
+
+### Patch Changes
+
+- 0b25275: update dependencies versions
+
 ## 0.0.4
 
 ### Patch Changes
