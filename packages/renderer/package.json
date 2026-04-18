@@ -1,22 +1,37 @@
 {
 	"name": "@kjfsm/notion-headless-cms-renderer",
-	"version": "0.1.0",
-	"description": "Markdown → HTML renderer using remark/rehype for notion-headless-cms",
+	"version": "0.0.1",
+	"description": "Markdown to HTML renderer using remark/rehype for notion-headless-cms",
 	"keywords": [
 		"notion",
 		"headless-cms",
+		"markdown",
+		"html",
 		"remark",
-		"rehype"
+		"rehype",
+		"unified",
+		"typescript"
 	],
 	"license": "MIT",
+	"homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
+	"bugs": {
+		"url": "https://github.com/kjfsm/notion-headless-cms/issues"
+	},
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/kjfsm/notion-headless-cms.git",
 		"directory": "packages/renderer"
 	},
 	"type": "module",
+	"sideEffects": false,
 	"exports": {
 		".": "./src/index.ts"
+	},
+	"files": [
+		"dist"
+	],
+	"engines": {
+		"node": ">=18"
 	},
 	"scripts": {
 		"build": "tsup src/index.ts --format esm --dts --out-dir dist",
@@ -24,8 +39,8 @@
 		"test": "vitest run"
 	},
 	"publishConfig": {
-		"registry": "https://npm.pkg.github.com",
-		"access": "restricted",
+		"registry": "https://registry.npmjs.org",
+		"access": "public",
 		"exports": {
 			".": {
 				"import": "./dist/index.js",
