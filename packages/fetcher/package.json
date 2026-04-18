@@ -1,6 +1,6 @@
 {
 	"name": "@notion-headless-cms/fetcher",
-	"version": "0.0.3",
+	"version": "0.0.4",
 	"description": "Notion API client wrapper — fetches pages and blocks from Notion databases",
 	"keywords": [
 		"notion",

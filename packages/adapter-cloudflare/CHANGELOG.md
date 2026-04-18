@@ -1,5 +1,12 @@
 # @notion-headless-cms/adapter-cloudflare
 
+## 0.0.6
+
+### Patch Changes
+
+- @notion-headless-cms/core@0.0.6
+- @notion-headless-cms/cache-r2@0.0.6
+
 ## 0.0.5
 
 ### Patch Changes

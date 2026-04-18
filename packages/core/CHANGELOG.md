@@ -1,5 +1,14 @@
 # @notion-headless-cms/core
 
+## 0.0.6
+
+### Patch Changes
+
+- Updated dependencies [ac73f36]
+  - @notion-headless-cms/fetcher@0.0.4
+  - @notion-headless-cms/renderer@0.0.4
+  - @notion-headless-cms/transformer@0.0.4
+
 ## 0.0.5
 
 ### Patch Changes
