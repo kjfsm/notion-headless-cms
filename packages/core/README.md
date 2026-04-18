@@ -16,6 +16,10 @@ Cloudflare Workers で使う場合は [`@notion-headless-cms/adapter-cloudflare`
 import { CMS } from "@notion-headless-cms/core";
 
 const cms = new CMS({
+  env: {
+    NOTION_TOKEN: process.env.NOTION_TOKEN!,
+    NOTION_DATA_SOURCE_ID: process.env.NOTION_DATA_SOURCE_ID!,
+  },
   schema: {
     publishedStatuses: ["公開"],
     properties: { slug: "Slug" },
@@ -23,11 +27,11 @@ const cms = new CMS({
   cache: { ttlMs: 5 * 60 * 1000 },
 });
 
-// コンテンツ一覧を取得（R2 から返すか Notion API を呼ぶかはキャッシュ状態に依存）
-const { items } = await cms.getItems(env);
+// コンテンツ一覧を取得
+const { items } = await cms.getItems();
 
 // スラッグで個別コンテンツを取得（HTML 付き）
-const cached = await cms.getItemBySlug("my-post", env);
+const cached = await cms.getItemBySlug("my-post");
 console.log(cached?.html);
 ```
 
@@ -45,6 +49,10 @@ interface MyPost extends BaseContentItem {
 }
 
 const config: CMSConfig<MyPost> = {
+  env: {
+    NOTION_TOKEN: process.env.NOTION_TOKEN!,
+    NOTION_DATA_SOURCE_ID: process.env.NOTION_DATA_SOURCE_ID!,
+  },
   schema: {
     mapItem: (page: PageObjectResponse): MyPost => ({
       id: page.id,
@@ -65,8 +73,14 @@ const config: CMSConfig<MyPost> = {
 
 | メソッド | 説明 |
 |---|---|
-| `getItems(env)` | コンテンツ一覧を返す（キャッシュ優先） |
-| `getItemBySlug(slug, env)` | スラッグで個別コンテンツを返す（HTML 付き） |
+| `getItems()` | コンテンツ一覧を返す |
+| `getItemBySlug(slug)` | スラッグで個別コンテンツを返す |
+| `renderItem(item)` | アイテムをレンダリングして `CachedItem` を返す |
+| `renderItemBySlug(slug)` | スラッグで取得してレンダリングする |
+| `getItemsCachedFirst(options?)` | キャッシュ優先でコンテンツ一覧を返す（SWR） |
+| `getItemCachedFirst(slug, options?)` | キャッシュ優先で個別コンテンツを返す（SWR） |
+| `checkItemsUpdate(clientVersion)` | 一覧の更新有無を確認する |
+| `checkItemUpdate(slug, lastEdited)` | 個別コンテンツの更新有無を確認する |
 
 ### ユーティリティ
 
@@ -79,7 +93,7 @@ const config: CMSConfig<MyPost> = {
 
 ## 主要な型
 
-- `CMSConfig<T>` — CMS 設定オブジェクト
+- `CMSConfig<T>` — CMS 設定オブジェクト（`env` フィールドで認証情報を渡す）
 - `BaseContentItem` — デフォルト・カスタム型の基底インターフェース
 - `CachedItem<T>` — キャッシュ済みコンテンツ（HTML + メタデータ）
 - `StorageAdapter` — ストレージ抽象インターフェース
