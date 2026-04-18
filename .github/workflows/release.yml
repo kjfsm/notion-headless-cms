@@ -32,13 +32,9 @@ jobs:
           cache: "pnpm"
 
       - run: pnpm install --frozen-lockfile
-
+      - run: pnpm build
       - run: pnpm typecheck
-
       - run: pnpm test
-
-      - run: pnpm -r run build
-
       - name: バージョン更新PRの作成 または npm 公開
         uses: changesets/action@v1
         with:
