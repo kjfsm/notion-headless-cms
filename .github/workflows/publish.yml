@@ -28,7 +28,7 @@ jobs:
 
       - run: pnpm typecheck
 
-      - run: pnpm -r run test
+      - run: pnpm test
 
       - run: pnpm -r run build
 
