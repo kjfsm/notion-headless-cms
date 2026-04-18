@@ -13,7 +13,7 @@
 		"format": "biome check --write",
 		"changeset": "changeset",
 		"version": "changeset version",
-		"release": "pnpm build && pnpm -r publish --no-git-checks --access public"
+		"release": "changeset publish"
 	},
 	"devDependencies": {
 		"@biomejs/biome": "2.4.11",
