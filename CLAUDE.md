@@ -7,7 +7,7 @@
 ## プロジェクト概要
 
 Notion をヘッドレス CMS として利用するための TypeScript ライブラリ群。  
-pnpm モノリポで管理され、GitHub Packages（`@kjfsm` スコープ）としてプライベート公開される。
+pnpm モノリポで管理され、npm（`@kjfsm` スコープ）としてパブリック公開される。
 
 ```
 Notion DB
@@ -54,7 +54,7 @@ packages/
 
 .github/
   workflows/
-    publish.yml       # GitHub Packages 自動公開（v* タグトリガー）
+    publish.yml       # npm 自動公開（v* タグトリガー）
 ```
 
 ## コマンド
@@ -107,7 +107,7 @@ Biome の設定に従う（biome.json 参照）。
 - `NOTION_DATA_SOURCE_ID`: Notion データベース ID
 - これらは `wrangler secret put` で設定する。コードにハードコードしない
 
-## GitHub Packages 公開フロー
+## npm 公開フロー
 
 ```bash
 # バージョンタグを打つと .github/workflows/publish.yml が自動実行される
@@ -115,8 +115,8 @@ git tag v0.2.0
 git push origin v0.2.0
 ```
 
-- ワークフローは `pnpm -r run build` → `pnpm -r publish --access restricted` を実行
-- `GITHUB_TOKEN` で認証（設定不要）
+- ワークフローは typecheck → test → `pnpm -r run build` → `pnpm -r publish --access public` を実行
+- `NPM_TOKEN` シークレットで認証（リポジトリの Settings > Secrets に設定が必要）
 - 手動公開は GitHub Actions UI の `workflow_dispatch` から実行できる
 
 ## ワークフロー
