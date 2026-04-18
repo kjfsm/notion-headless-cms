@@ -1,4 +1,4 @@
-name: Release
+name: リリース
 
 on:
   push:
@@ -23,16 +23,19 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          registry-url: 'https://registry.npmjs.org'
-          cache: 'pnpm'
+          node-version: "22"
+          registry-url: "https://registry.npmjs.org"
+          cache: "pnpm"
 
       - run: pnpm install --frozen-lockfile
-      - run: pnpm typecheck
-      - run: pnpm test
-      - run: pnpm build
 
-      - name: Create Version Packages PR or Publish
+      - run: pnpm typecheck
+
+      - run: pnpm test
+
+      - run: pnpm -r run build
+
+      - name: バージョン更新PRの作成 または npm 公開
         uses: changesets/action@v1
         with:
           publish: pnpm changeset publish
