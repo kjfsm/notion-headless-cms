@@ -44,13 +44,13 @@ export default {
 
     // コンテンツ一覧
     if (url.pathname === "/posts") {
-      const { items } = await cms.getItems(env);
+      const { items } = await cms.getItems();
       return Response.json(items);
     }
 
     // 個別コンテンツ
     const slug = url.pathname.replace("/posts/", "");
-    const cached = await cms.getItemBySlug(slug, env);
+    const cached = await cms.getItemBySlug(slug);
     if (!cached) return new Response("Not Found", { status: 404 });
 
     return new Response(cached.html, {
@@ -76,7 +76,7 @@ wrangler secret put NOTION_DATA_SOURCE_ID
 | 引数 | 型 | 説明 |
 |---|---|---|
 | `env` | `CloudflareCMSEnv` | Workers バインディング（`NOTION_TOKEN`, `NOTION_DATA_SOURCE_ID`, オプションで `CACHE_BUCKET`） |
-| `config` | `Omit<CMSConfig, "storage">` | CMS の設定（`schema`, `cache`, `transformer`, `renderer`） |
+| `config` | `Omit<CMSConfig, "storage" \| "env">` | CMS の設定（`schema`, `cache`, `transformer`, `renderer`） |
 
 戻り値: `CMS`（`@notion-headless-cms/core`）
 

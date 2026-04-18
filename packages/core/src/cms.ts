@@ -57,8 +57,10 @@ function validateEnv(env: CMSEnv): { dataSourceId: string } {
  *
  * @example
  * const cms = createCMS({
- *   schema: { properties: { slug: 'Slug' }, publishedStatuses: ['Published'] }
+ *   env: { NOTION_TOKEN: '...', NOTION_DATA_SOURCE_ID: '...' },
+ *   schema: { publishedStatuses: ['Published'] }
  * });
+ * const items = await cms.getItems();
  */
 export class CMS<T extends BaseContentItem = BaseContentItem> {
 	private readonly itemMapper: (page: PageObjectResponse) => T;
@@ -71,6 +73,8 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 	private readonly store: CacheStore<T>;
 	private readonly hasStorage: boolean;
 	private readonly ttlMs: number | undefined;
+	private readonly client: Client | undefined;
+	private readonly dataSourceId: string | undefined;
 
 	constructor(config?: CMSConfig<T>) {
 		const props: Required<CMSSchemaProperties> = {
@@ -99,20 +103,33 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 			config?.cache?.itemPrefix ?? DEFAULT_ITEM_PREFIX,
 			config?.cache?.imagePrefix ?? DEFAULT_IMAGE_PREFIX,
 		);
+
+		if (config?.env) {
+			const { dataSourceId } = validateEnv(config.env);
+			this.client = createClient(config.env);
+			this.dataSourceId = dataSourceId;
+		}
 	}
 
-	// ── Notionクライアント生成 ───────────────────────────────────────────────
+	// ── プライベートヘルパー（認証） ──────────────────────────────────────
 
-	createClient(env: Pick<CMSEnv, "NOTION_TOKEN">): Client {
-		return createClient(env);
+	private requireClient(): { client: Client; dataSourceId: string } {
+		if (!this.client || !this.dataSourceId) {
+			throw new CMSError({
+				code: "CONFIG_INVALID",
+				message:
+					"NOTION_TOKEN と NOTION_DATA_SOURCE_ID は CMS の設定に必要です。",
+				context: { operation: "requireClient" },
+			});
+		}
+		return { client: this.client, dataSourceId: this.dataSourceId };
 	}
 
 	// ── コンテンツ取得 ────────────────────────────────────────────────────
 
 	/** 公開済みコンテンツ一覧を Notion から直接取得する。 */
-	async getItems(env: CMSEnv): Promise<T[]> {
-		const { dataSourceId } = validateEnv(env);
-		const client = createClient(env);
+	async getItems(): Promise<T[]> {
+		const { client, dataSourceId } = this.requireClient();
 		try {
 			const pages = await queryAllPages(client, dataSourceId);
 			const items = pages.map(this.itemMapper);
@@ -136,9 +153,8 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 	}
 
 	/** スラッグでコンテンツを Notion から直接取得する。 */
-	async getItemBySlug(env: CMSEnv, slug: string): Promise<T | null> {
-		const { dataSourceId } = validateEnv(env);
-		const client = createClient(env);
+	async getItemBySlug(slug: string): Promise<T | null> {
+		const { client, dataSourceId } = this.requireClient();
 		try {
 			const page = await queryPageBySlug(
 				client,
@@ -173,19 +189,14 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 	}
 
 	/** コンテンツをMarkdown→HTMLにレンダリングし、CachedItemとして返す。 */
-	async renderItem(env: CMSEnv, item: T): Promise<CachedItem<T>> {
-		validateEnv(env);
-		const client = createClient(env);
+	async renderItem(item: T): Promise<CachedItem<T>> {
+		const { client } = this.requireClient();
 		return this.buildCachedItem(client, item);
 	}
 
 	/** スラッグでコンテンツを取得してMarkdown→HTMLにレンダリングする。 */
-	async renderItemBySlug(
-		env: CMSEnv,
-		slug: string,
-	): Promise<CachedItem<T> | null> {
-		const { dataSourceId } = validateEnv(env);
-		const client = createClient(env);
+	async renderItemBySlug(slug: string): Promise<CachedItem<T> | null> {
+		const { client, dataSourceId } = this.requireClient();
 		try {
 			const page = await queryPageBySlug(
 				client,
@@ -246,10 +257,9 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 
 	// ── キャッシュ優先取得（Stale-While-Revalidate） ─────────────────────
 
-	async getItemsCachedFirst(
-		env: CMSEnv,
-		options?: { waitUntil?: (promise: Promise<void>) => void },
-	): Promise<{ items: T[]; listVersion: string }> {
+	async getItemsCachedFirst(options?: {
+		waitUntil?: (promise: Promise<void>) => void;
+	}): Promise<{ items: T[]; listVersion: string }> {
 		const cached = await this.store.getItemList();
 		if (cached && !isStale(cached.cachedAt, this.ttlMs)) {
 			return {
@@ -258,7 +268,7 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 			};
 		}
 
-		const items = await this.getItems(env);
+		const items = await this.getItems();
 		const save = this.store.setItemList(items);
 		if (options?.waitUntil) {
 			options.waitUntil(save);
@@ -269,14 +279,13 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 	}
 
 	async getItemCachedFirst(
-		env: CMSEnv,
 		slug: string,
 		options?: { waitUntil?: (promise: Promise<void>) => void },
 	): Promise<CachedItem<T> | null> {
 		const cached = await this.store.getItem(slug);
 		if (cached && !isStale(cached.cachedAt, this.ttlMs)) return cached;
 
-		const entry = await this.renderItemBySlug(env, slug);
+		const entry = await this.renderItemBySlug(slug);
 		if (!entry) return null;
 
 		const save = this.store.setItem(slug, entry);
@@ -289,10 +298,9 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 	}
 
 	async checkItemsUpdate(
-		env: CMSEnv,
 		clientVersion: string,
 	): Promise<{ changed: false } | { changed: true; items: T[] }> {
-		const items = await this.getItems(env);
+		const items = await this.getItems();
 		const serverVersion = buildListVersion(items);
 		if (serverVersion === clientVersion) return { changed: false };
 		await this.store.setItemList(items);
@@ -300,19 +308,18 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 	}
 
 	async checkItemUpdate(
-		env: CMSEnv,
 		slug: string,
 		lastEdited: string,
 	): Promise<
 		| { changed: false }
 		| { changed: true; html: string; item: T; notionUpdatedAt: string }
 	> {
-		const item = await this.getItemBySlug(env, slug);
+		const item = await this.getItemBySlug(slug);
 		if (!item) return { changed: false };
 		if (!this.isPublished(item)) return { changed: false };
 		if (item.updatedAt === lastEdited) return { changed: false };
 
-		const entry = await this.renderItemBySlug(env, slug);
+		const entry = await this.renderItemBySlug(slug);
 		if (!entry) return { changed: false };
 		await this.store.setItem(slug, entry);
 

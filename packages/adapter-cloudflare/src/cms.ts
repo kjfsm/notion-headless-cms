@@ -13,10 +13,14 @@ export interface CloudflareCMSEnv extends CMSEnv {
  */
 export function createCloudflareCMS(
 	env: CloudflareCMSEnv,
-	config?: Omit<CMSConfig, "storage">,
+	config?: Omit<CMSConfig, "storage" | "env">,
 ): CMS {
 	return new CMS({
 		...config,
+		env: {
+			NOTION_TOKEN: env.NOTION_TOKEN,
+			NOTION_DATA_SOURCE_ID: env.NOTION_DATA_SOURCE_ID,
+		},
 		storage: createCloudflareR2StorageAdapter(env.CACHE_BUCKET),
 	});
 }

@@ -75,6 +75,8 @@ export interface CMSSchemaProperties {
  * ジェネリクス型 T にカスタムコンテンツ型を指定できる（デフォルト: BaseContentItem）。
  */
 export interface CMSConfig<T extends BaseContentItem = BaseContentItem> {
+	/** Notion API 認証情報。コンストラクタでクライアントを事前生成するために使用。 */
+	env?: CMSEnv;
 	/** キャッシュ/画像保存用ストレージ。未設定時はキャッシュ機能を無効化。 */
 	storage?: StorageAdapter;
 	schema?: {
