@@ -1,4 +1,2 @@
-export {
-	CloudflareR2StorageAdapter,
-	createCloudflareR2StorageAdapter,
-} from "./r2";
+export type { R2CacheOptions } from "./r2-cache";
+export { r2Cache } from "./r2-cache";

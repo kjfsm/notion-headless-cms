@@ -1,6 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
-import { CacheStore, isStale, sha256Hex } from "../cache";
-import type { StorageAdapter } from "../types";
+import { describe, expect, it } from "vitest";
+import { isStale, sha256Hex } from "../cache";
 
 describe("sha256Hex", () => {
 	it("空文字列のSHA-256ハッシュを返す", async () => {
@@ -46,107 +45,5 @@ describe("isStale", () => {
 
 	it("ちょうど TTL の境界値は true を返す", () => {
 		expect(isStale(Date.now() - 5_001, 5_000)).toBe(true);
-	});
-});
-
-describe("CacheStore", () => {
-	const makeMockStorage = (): StorageAdapter => ({
-		get: vi.fn().mockResolvedValue(null),
-		put: vi.fn().mockResolvedValue(undefined),
-		json: vi.fn().mockResolvedValue(null),
-		binary: vi.fn().mockResolvedValue(null),
-	});
-
-	describe("ストレージなし", () => {
-		const store = new CacheStore(undefined, "list.json", "content/", "images/");
-
-		it("getItemList は null を返す", async () => {
-			expect(await store.getItemList()).toBeNull();
-		});
-
-		it("getItem は null を返す", async () => {
-			expect(await store.getItem("slug")).toBeNull();
-		});
-
-		it("getImage は null を返す", async () => {
-			expect(await store.getImage("hash")).toBeNull();
-		});
-
-		it("setItemList は何もせず解決する", async () => {
-			await expect(store.setItemList([])).resolves.toBeUndefined();
-		});
-
-		it("setItem は何もせず解決する", async () => {
-			await expect(
-				store.setItem("slug", {
-					html: "",
-					item: {
-						id: "1",
-						slug: "s",
-						status: "p",
-						publishedAt: "2024-01-01",
-						updatedAt: "2024-01-01",
-					},
-					notionUpdatedAt: "",
-					cachedAt: 0,
-				}),
-			).resolves.toBeUndefined();
-		});
-	});
-
-	describe("ストレージあり", () => {
-		it("getItemList はリストキーで json() を呼ぶ", async () => {
-			const storage = makeMockStorage();
-			const store = new CacheStore(storage, "list.json", "content/", "images/");
-			await store.getItemList();
-			expect(storage.json).toHaveBeenCalledWith("list.json");
-		});
-
-		it("getItem はプレフィックス付きキーで json() を呼ぶ", async () => {
-			const storage = makeMockStorage();
-			const store = new CacheStore(storage, "list.json", "content/", "images/");
-			await store.getItem("my-slug");
-			expect(storage.json).toHaveBeenCalledWith("content/my-slug.json");
-		});
-
-		it("getImage はプレフィックス付きキーで binary() を呼ぶ", async () => {
-			const storage = makeMockStorage();
-			const store = new CacheStore(storage, "list.json", "content/", "images/");
-			await store.getImage("abc123");
-			expect(storage.binary).toHaveBeenCalledWith("images/abc123");
-		});
-
-		it("setItemList は JSON をシリアライズして put する", async () => {
-			const storage = makeMockStorage();
-			const store = new CacheStore(storage, "list.json", "content/", "images/");
-			await store.setItemList([]);
-			expect(storage.put).toHaveBeenCalledWith(
-				"list.json",
-				expect.stringContaining('"items":[]'),
-				{ contentType: "application/json" },
-			);
-		});
-
-		it("setItem はスラッグをキーに JSON を put する", async () => {
-			const storage = makeMockStorage();
-			const store = new CacheStore(storage, "list.json", "content/", "images/");
-			await store.setItem("my-slug", {
-				html: "<p>test</p>",
-				item: {
-					id: "1",
-					slug: "my-slug",
-					status: "published",
-					publishedAt: "2024-01-01",
-					updatedAt: "2024-01-01",
-				},
-				notionUpdatedAt: "2024-01-01T00:00:00.000Z",
-				cachedAt: 0,
-			});
-			expect(storage.put).toHaveBeenCalledWith(
-				"content/my-slug.json",
-				expect.stringContaining('"html":"<p>test</p>"'),
-				{ contentType: "application/json" },
-			);
-		});
 	});
 });

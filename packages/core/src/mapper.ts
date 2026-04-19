@@ -4,7 +4,7 @@ import type {
 } from "@notionhq/client/build/src/api-endpoints";
 import { z } from "zod";
 import { CMSError } from "./errors";
-import type { BaseContentItem, CMSSchemaProperties } from "./types";
+import type { BaseContentItem, CMSSchemaProperties } from "./types/index";
 
 const baseContentItemSchema = z.object({
 	id: z.string().min(1),

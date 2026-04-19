@@ -1,13 +1,12 @@
 {
-	"name": "@notion-headless-cms/adapter-cloudflare",
-	"version": "0.0.6",
-	"description": "Cloudflare Workers adapter for notion-headless-cms — injects R2 storage and environment bindings",
+	"name": "@notion-headless-cms/adapter-next",
+	"version": "0.1.0",
+	"description": "Next.js App Router adapter for notion-headless-cms — image route handler and revalidate webhook",
 	"keywords": [
 		"notion",
 		"headless-cms",
-		"cloudflare",
-		"cloudflare-workers",
-		"workers",
+		"nextjs",
+		"next",
 		"adapter",
 		"typescript"
 	],
@@ -19,7 +18,7 @@
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/kjfsm/notion-headless-cms.git",
-		"directory": "packages/adapter-cloudflare"
+		"directory": "packages/adapter-next"
 	},
 	"type": "module",
 	"sideEffects": false,
@@ -37,7 +36,8 @@
 	},
 	"scripts": {
 		"build": "tsup src/index.ts --format esm --dts --out-dir dist",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run"
 	},
 	"publishConfig": {
 		"registry": "https://registry.npmjs.org",
@@ -49,12 +49,10 @@
 			}
 		}
 	},
-	"dependencies": {
-		"@notion-headless-cms/core": "workspace:*",
-		"@notion-headless-cms/cache-r2": "workspace:*",
-		"@notion-headless-cms/source-notion": "workspace:*"
+	"peerDependencies": {
+		"next": ">=14.0.0"
 	},
-	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20250620.0"
+	"dependencies": {
+		"@notion-headless-cms/core": "workspace:*"
 	}
 }
