@@ -1,10 +1,10 @@
 ---
-"@notion-headless-cms/core": major
-"@notion-headless-cms/cache-r2": major
-"@notion-headless-cms/adapter-cloudflare": major
-"@notion-headless-cms/source-notion": minor
-"@notion-headless-cms/cache-next": minor
-"@notion-headless-cms/adapter-next": minor
+"@notion-headless-cms/core": patch
+"@notion-headless-cms/cache-r2": patch
+"@notion-headless-cms/adapter-cloudflare": patch
+"@notion-headless-cms/source-notion": patch
+"@notion-headless-cms/cache-next": patch
+"@notion-headless-cms/adapter-next": patch
 ---
 
 データソース・キャッシュ責務を分離し、core API を破壊的に刷新した。
