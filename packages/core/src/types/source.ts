@@ -8,6 +8,8 @@ export interface DataSourceAdapter<
 	T extends BaseContentItem = BaseContentItem,
 > {
 	readonly name: string;
+	readonly publishedStatuses?: readonly string[];
+	readonly accessibleStatuses?: readonly string[];
 	list(opts?: { publishedStatuses?: readonly string[] }): Promise<T[]>;
 	findBySlug(slug: string): Promise<T | null>;
 	loadMarkdown(item: T): Promise<string>;

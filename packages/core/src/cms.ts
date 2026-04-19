@@ -65,8 +65,12 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		this.imgCache = resolveImageCache(opts.cache);
 		this.hasImageCache = !!opts.cache?.image;
 		this.ttlMs = opts.cache?.ttlMs;
-		this.publishedStatuses = opts.schema?.publishedStatuses ?? [];
-		this.accessibleStatuses = opts.schema?.accessibleStatuses ?? [];
+		this.publishedStatuses =
+			opts.schema?.publishedStatuses ??
+			(opts.source.publishedStatuses ? [...opts.source.publishedStatuses] : []);
+		this.accessibleStatuses =
+			opts.schema?.accessibleStatuses ??
+			(opts.source.accessibleStatuses ? [...opts.source.accessibleStatuses] : []);
 		this.imageProxyBase =
 			opts.content?.imageProxyBase ?? DEFAULT_IMAGE_PROXY_BASE;
 		this.contentConfig = opts.content;

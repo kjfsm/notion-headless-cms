@@ -12,6 +12,7 @@ import {
 import type { BlockHandler } from "@notion-headless-cms/transformer";
 import { Transformer } from "@notion-headless-cms/transformer";
 import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import type { NotionSchema } from "./schema";
 
 const DEFAULT_PROPERTIES: Required<CMSSchemaProperties> = {
 	slug: "Slug",
@@ -32,6 +33,8 @@ export interface NotionAdapterOptions<
 	mapItem?: (page: PageObjectResponse) => T;
 	/** カスタムブロックハンドラーのマップ。 */
 	blocks?: Record<string, BlockHandler>;
+	/** 宣言的スキーマ定義。指定時は properties / mapItem より優先される。 */
+	schema?: NotionSchema<T>;
 }
 
 /** Notion を DataSourceAdapter として実装するアダプタ。 */
@@ -39,6 +42,8 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 	implements DataSourceAdapter<T>
 {
 	readonly name = "notion";
+	readonly publishedStatuses?: readonly string[];
+	readonly accessibleStatuses?: readonly string[];
 	private readonly client: ReturnType<typeof createClient>;
 	private readonly dataSourceId: string;
 	private readonly itemMapper: (page: PageObjectResponse) => T;
@@ -50,16 +55,24 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 		this.dataSourceId = opts.dataSourceId;
 		this.blocksConfig = opts.blocks;
 
-		const props: Required<CMSSchemaProperties> = {
-			...DEFAULT_PROPERTIES,
-			...opts.properties,
-		};
-		this.slugPropName = props.slug;
-
-		if (opts.mapItem) {
-			this.itemMapper = opts.mapItem;
+		if (opts.schema) {
+			this.itemMapper = opts.schema.mapItem;
+			this.publishedStatuses = opts.schema.publishedStatuses;
+			this.accessibleStatuses = opts.schema.accessibleStatuses;
+			// schema 経由でも slug プロパティ名を取得（_columns.slug.notion）
+			const slugCol = opts.schema._columns.slug;
+			this.slugPropName = slugCol.notion;
 		} else {
-			this.itemMapper = (page) => mapItem(page, props) as unknown as T;
+			const props: Required<CMSSchemaProperties> = {
+				...DEFAULT_PROPERTIES,
+				...opts.properties,
+			};
+			this.slugPropName = props.slug;
+			if (opts.mapItem) {
+				this.itemMapper = opts.mapItem;
+			} else {
+				this.itemMapper = (page) => mapItem(page, props) as unknown as T;
+			}
 		}
 	}
 
