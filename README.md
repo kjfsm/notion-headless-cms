@@ -3,51 +3,129 @@
 Notion をヘッドレス CMS として利用するための TypeScript ライブラリ群。  
 Cloudflare Workers + R2 での利用を前提に設計されており、pnpm モノリポで管理されている。
 
-## パッケージ構成
+## データフロー
 
-| パッケージ | 役割 |
-|---|---|
-| [`@notion-headless-cms/core`](./packages/core) | CMS エンジン本体（取得・変換・キャッシュを統合） |
-| [`@notion-headless-cms/fetcher`](./packages/fetcher) | Notion API クライアントラッパー |
-| [`@notion-headless-cms/transformer`](./packages/transformer) | Notion ブロック → Markdown 変換 |
-| [`@notion-headless-cms/renderer`](./packages/renderer) | Markdown → HTML レンダリング（remark/rehype） |
-| [`@notion-headless-cms/cache-r2`](./packages/cache-r2) | Cloudflare R2 ストレージアダプター |
-| [`@notion-headless-cms/adapter-cloudflare`](./packages/adapter-cloudflare) | Cloudflare Workers 向けファクトリー |
+```mermaid
+flowchart LR
+  notion[(Notion DB)]
 
-## アーキテクチャ
+  subgraph pipeline["パイプライン（core が統合）"]
+    direction LR
+    fetcher["fetcher\nAPI 取得"]
+    transformer["transformer\nblocks → Markdown"]
+    renderer["renderer\nMarkdown → HTML"]
+  end
 
+  cache[(R2 / メモリ\nキャッシュ)]
+  output["Cloudflare Workers\n/ Node.js スクリプト"]
+
+  notion -->|"blocks"| fetcher
+  fetcher --> transformer
+  transformer --> renderer
+  renderer -->|"HTML"| pipeline
+  pipeline <-->|"SWR"| cache
+  pipeline --> output
 ```
-Notion DB
-  └─ fetcher（API取得）
-       └─ transformer（ブロック → Markdown）
-            └─ renderer（Markdown → HTML）
-                 └─ core / CMS（キャッシュ統合・更新検知）
-                      └─ cache-r2（R2 ストレージ）
-                           └─ adapter-cloudflare（Workers 注入）
-                                └─ Cloudflare Workers → ブラウザ
-```
 
-### キャッシュ戦略（Stale-While-Revalidate）
+> **SWR（Stale-While-Revalidate）**: キャッシュを即返し、TTL 切れなら裏で非同期更新。  
+> Notion の `last_edited_time` を比較し、変更があれば HTML を再生成する。
 
-- 初回: Notion から取得してレンダリングし、R2 にキャッシュ
-- 以降: キャッシュを即返し、TTL 切れなら裏で非同期更新
-- Notion の `last_edited_time` を比較し、変更があれば HTML を再生成
+## パッケージ一覧
 
-### 画像処理
+### コアパイプライン
 
-- Notion 画像 URL は期限付きのため Workers でプロキシ
-- SHA256 ハッシュキーで R2 に永続保存（`/api/images/{hash}` で配信）
+#### [`@notion-headless-cms/source-notion`](./packages/source-notion)
+Notion データベースを CMS データソースとして利用するためのアダプター。型安全なスキーマ定義ヘルパー付き。
+- `notionAdapter(opts)` — DataSourceAdapter を返すファクトリー
+- `defineSchema(columns)` / `col.*` — 型安全なカラム定義
 
-## インストール
+#### [`@notion-headless-cms/fetcher`](./packages/fetcher)
+Notion API クライアントラッパー。データベース全ページとページ全ブロックを再帰取得する。
+- `createNotionClient(token)`
+- `fetchDatabase(client, databaseId)`
+- `fetchBlocks(client, pageId)`
 
-`@notion-headless-cms` スコープは npm 公開リポジトリから公開されている。  
-通常の `npm install` で取得できる（追加の認証設定は不要）。
+#### [`@notion-headless-cms/transformer`](./packages/transformer)
+Notion ブロック → Markdown 変換器。`notion-to-md` ベースで、カスタムブロックハンドラーを追加できる。
+- `createTransformer(client, handlers?)`
+- `transformBlocks(transformer, pageId)`
 
-Cloudflare Workers プロジェクトで利用する場合はアダプターをインストールする。
+#### [`@notion-headless-cms/renderer`](./packages/renderer)
+Markdown → HTML レンダラー。remark/rehype パイプラインで変換し、GFM と画像 URL のプロキシ書き換えをサポート。
+- `createRenderer(options?)`
+- `renderMarkdown(renderer, markdown)`
+
+#### [`@notion-headless-cms/core`](./packages/core)
+CMS エンジン本体。上記パイプラインを統合し、Stale-While-Revalidate キャッシュと Notion 更新検知を管理する。
+- `createCMS(options)` — CMS インスタンス生成
+- `cms.list()` / `cms.renderBySlug(slug)` — 一覧・記事取得
+- `memoryCache()` / `memoryImageCache()` — インメモリキャッシュ
+
+---
+
+### アダプター（デプロイ環境別）
+
+#### [`@notion-headless-cms/adapter-cloudflare`](./packages/adapter-cloudflare)
+Cloudflare Workers 向けファクトリー。R2 バケットと環境変数を自動注入した CMS インスタンスを生成する。
+- `createCloudflareCMS(env, config?)`
+
+#### [`@notion-headless-cms/adapter-next`](./packages/adapter-next)
+Next.js App Router 向けルートハンドラー。画像プロキシ配信と Notion Webhook によるキャッシュ再検証を提供する。
+- `createImageRouteHandler(cms)` — `/api/images/[hash]/route.ts` 用
+- `createRevalidateRouteHandler(cms, opts)` — Webhook 受信・ISR 再検証用
+
+---
+
+### キャッシュ実装
+
+#### [`@notion-headless-cms/cache-r2`](./packages/cache-r2)
+Cloudflare R2 StorageAdapter 実装。core の `StorageAdapter` インターフェースを R2 バケットで実装する。
+- `createCloudflareR2StorageAdapter(bucket?)`
+
+#### [`@notion-headless-cms/cache-next`](./packages/cache-next)
+Next.js の `unstable_cache` / `revalidateTag` を利用した DocumentCacheAdapter 実装。ISR に対応する。
+- `nextCache(opts?)` — Next.js 用 DocumentCacheAdapter ファクトリー
+
+## クイックスタート（Node.js）
+
+Notion トークンとデータベース ID があれば、Node.js スクリプトとして最小構成で動かせる。
+
+### インストール
 
 ```bash
-npm install @notion-headless-cms/adapter-cloudflare
+npm install @notion-headless-cms/core @notion-headless-cms/source-notion
 ```
+
+### スクリプト例
+
+```ts
+// fetch-posts.ts
+import { createCMS } from "@notion-headless-cms/core";
+import { notionAdapter } from "@notion-headless-cms/source-notion";
+
+const cms = createCMS({
+  source: notionAdapter({
+    token: process.env.NOTION_TOKEN!,
+    dataSourceId: process.env.NOTION_DATA_SOURCE_ID!,
+  }),
+  schema: { publishedStatuses: ["公開"] },
+});
+
+// 記事一覧を取得
+const posts = await cms.list();
+console.log(posts);
+
+// スラッグで HTML を取得
+const rendered = await cms.renderBySlug("my-first-post");
+console.log(rendered?.html);
+```
+
+```bash
+NOTION_TOKEN=xxx NOTION_DATA_SOURCE_ID=yyy npx tsx fetch-posts.ts
+```
+
+> R2 キャッシュ不要のローカル開発・バッチ処理向け。  
+> Cloudflare Workers + R2 を使った本番構成は次節を参照。
 
 ## クイックスタート（Cloudflare Workers）
 
