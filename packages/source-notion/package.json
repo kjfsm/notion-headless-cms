@@ -1,13 +1,13 @@
 {
-	"name": "@notion-headless-cms/adapter-cloudflare",
-	"version": "0.0.6",
-	"description": "Cloudflare Workers adapter for notion-headless-cms — injects R2 storage and environment bindings",
+	"name": "@notion-headless-cms/source-notion",
+	"version": "0.1.0",
+	"description": "Notion DataSourceAdapter for notion-headless-cms — fetches pages from Notion databases",
 	"keywords": [
 		"notion",
+		"notion-api",
 		"headless-cms",
-		"cloudflare",
-		"cloudflare-workers",
-		"workers",
+		"cms",
+		"datasource",
 		"adapter",
 		"typescript"
 	],
@@ -19,7 +19,7 @@
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/kjfsm/notion-headless-cms.git",
-		"directory": "packages/adapter-cloudflare"
+		"directory": "packages/source-notion"
 	},
 	"type": "module",
 	"sideEffects": false,
@@ -37,7 +37,8 @@
 	},
 	"scripts": {
 		"build": "tsup src/index.ts --format esm --dts --out-dir dist",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run"
 	},
 	"publishConfig": {
 		"registry": "https://registry.npmjs.org",
@@ -51,10 +52,8 @@
 	},
 	"dependencies": {
 		"@notion-headless-cms/core": "workspace:*",
-		"@notion-headless-cms/cache-r2": "workspace:*",
-		"@notion-headless-cms/source-notion": "workspace:*"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20250620.0"
+		"@notion-headless-cms/fetcher": "workspace:*",
+		"@notion-headless-cms/transformer": "workspace:*",
+		"@notionhq/client": "^5.18.0"
 	}
 }

@@ -1,185 +1,99 @@
-import {
-	createClient,
-	queryAllPages,
-	queryPageBySlug,
-} from "@notion-headless-cms/fetcher";
 import { renderMarkdown } from "@notion-headless-cms/renderer";
-import { Transformer } from "@notion-headless-cms/transformer";
-import type { Client } from "@notionhq/client";
-import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
-import { CacheStore, isStale } from "./cache";
+import { isStale } from "./cache";
+import { noopDocumentCache, noopImageCache } from "./cache/noop";
 import { CMSError, isCMSError } from "./errors";
 import { buildCacheImageFn } from "./image";
-import { mapItem } from "./mapper";
 import type {
 	BaseContentItem,
+	CacheConfig,
 	CachedItem,
 	CachedItemList,
-	CMSConfig,
-	CMSEnv,
-	CMSSchemaProperties,
+	CreateCMSOptions,
+	DataSourceAdapter,
+	DocumentCacheAdapter,
+	ImageCacheAdapter,
 	StorageBinary,
-} from "./types";
-
-const DEFAULT_PROPERTIES: Required<CMSSchemaProperties> = {
-	slug: "Slug",
-	status: "Status",
-	date: "CreatedAt",
-};
+} from "./types/index";
 
 const DEFAULT_IMAGE_PROXY_BASE = "/api/images";
-const DEFAULT_LIST_KEY = "content.json";
-const DEFAULT_ITEM_PREFIX = "content/";
-const DEFAULT_IMAGE_PREFIX = "images/";
 
 function buildListVersion<T extends BaseContentItem>(items: T[]): string {
 	return items.map((item) => `${item.id}:${item.updatedAt}`).join("|");
 }
 
-function validateEnv(env: CMSEnv): { dataSourceId: string } {
-	if (!env.NOTION_TOKEN || !env.NOTION_DATA_SOURCE_ID) {
-		throw new CMSError({
-			code: "CONFIG_INVALID",
-			message:
-				"NOTION_TOKEN and NOTION_DATA_SOURCE_ID are required to use Notion CMS APIs.",
-			context: {
-				operation: "validateEnv",
-				hasNotionToken: !!env.NOTION_TOKEN,
-				hasNotionDataSourceId: !!env.NOTION_DATA_SOURCE_ID,
-			},
-		});
+function resolveDocumentCache<T extends BaseContentItem>(
+	cache: CacheConfig<T> | undefined,
+): DocumentCacheAdapter<T> {
+	if (!cache || cache.document === false || cache.document === undefined) {
+		return noopDocumentCache<T>();
 	}
-	return { dataSourceId: env.NOTION_DATA_SOURCE_ID };
+	return cache.document;
+}
+
+function resolveImageCache(cache: CacheConfig | undefined): ImageCacheAdapter {
+	if (!cache || cache.image === false || cache.image === undefined) {
+		return noopImageCache();
+	}
+	return cache.image;
 }
 
 /**
- * Notion をバックエンドとして使う汎用ヘッドレス CMSクラス。
+ * Notion をバックエンドとして使う汎用ヘッドレス CMS クラス。
  *
  * @example
  * const cms = createCMS({
- *   env: { NOTION_TOKEN: '...', NOTION_DATA_SOURCE_ID: '...' },
- *   schema: { publishedStatuses: ['Published'] }
+ *   source: notionAdapter({ token: '...', dataSourceId: '...' }),
+ *   schema: { publishedStatuses: ['公開'] },
  * });
- * const items = await cms.getItems();
+ * const items = await cms.list();
  */
 export class CMS<T extends BaseContentItem = BaseContentItem> {
-	private readonly itemMapper: (page: PageObjectResponse) => T;
-	private readonly slugPropName: string;
+	private readonly source: DataSourceAdapter<T>;
+	private readonly docCache: DocumentCacheAdapter<T>;
+	private readonly imgCache: ImageCacheAdapter;
+	private readonly hasImageCache: boolean;
+	private readonly ttlMs: number | undefined;
 	private readonly publishedStatuses: string[];
 	private readonly accessibleStatuses: string[];
 	private readonly imageProxyBase: string;
-	private readonly transformerConfig: CMSConfig<T>["transformer"];
-	private readonly rendererConfig: CMSConfig<T>["renderer"];
-	private readonly store: CacheStore<T>;
-	private readonly hasStorage: boolean;
-	private readonly ttlMs: number | undefined;
-	private readonly client: Client | undefined;
-	private readonly dataSourceId: string | undefined;
+	private readonly contentConfig: CreateCMSOptions<T>["content"];
+	private readonly waitUntil: ((p: Promise<unknown>) => void) | undefined;
 
-	constructor(config?: CMSConfig<T>) {
-		const props: Required<CMSSchemaProperties> = {
-			...DEFAULT_PROPERTIES,
-			...config?.schema?.properties,
-		};
-		this.slugPropName = props.slug;
-
-		if (config?.schema?.mapItem) {
-			this.itemMapper = config.schema.mapItem;
-		} else {
-			this.itemMapper = (page) => mapItem(page, props) as unknown as T;
-		}
-
-		this.publishedStatuses = config?.schema?.publishedStatuses ?? [];
-		this.accessibleStatuses = config?.schema?.accessibleStatuses ?? [];
+	constructor(opts: CreateCMSOptions<T>) {
+		this.source = opts.source;
+		this.docCache = resolveDocumentCache(opts.cache);
+		this.imgCache = resolveImageCache(opts.cache);
+		this.hasImageCache = !!opts.cache?.image;
+		this.ttlMs = opts.cache?.ttlMs;
+		this.publishedStatuses = opts.schema?.publishedStatuses ?? [];
+		this.accessibleStatuses = opts.schema?.accessibleStatuses ?? [];
 		this.imageProxyBase =
-			config?.renderer?.imageProxyBase ?? DEFAULT_IMAGE_PROXY_BASE;
-		this.transformerConfig = config?.transformer;
-		this.rendererConfig = config?.renderer;
-		this.hasStorage = !!config?.storage;
-		this.ttlMs = config?.cache?.ttlMs;
-		this.store = new CacheStore<T>(
-			config?.storage,
-			config?.cache?.listKey ?? DEFAULT_LIST_KEY,
-			config?.cache?.itemPrefix ?? DEFAULT_ITEM_PREFIX,
-			config?.cache?.imagePrefix ?? DEFAULT_IMAGE_PREFIX,
-		);
-
-		if (config?.env) {
-			const { dataSourceId } = validateEnv(config.env);
-			this.client = createClient(config.env);
-			this.dataSourceId = dataSourceId;
-		}
+			opts.content?.imageProxyBase ?? DEFAULT_IMAGE_PROXY_BASE;
+		this.contentConfig = opts.content;
+		this.waitUntil = opts.waitUntil;
 	}
 
-	// ── プライベートヘルパー（認証） ──────────────────────────────────────
+	// ── コンテンツ取得 ──────────────────────────────────────────────────────
 
-	private requireClient(): { client: Client; dataSourceId: string } {
-		if (!this.client || !this.dataSourceId) {
-			throw new CMSError({
-				code: "CONFIG_INVALID",
-				message:
-					"NOTION_TOKEN と NOTION_DATA_SOURCE_ID は CMS の設定に必要です。",
-				context: { operation: "requireClient" },
-			});
-		}
-		return { client: this.client, dataSourceId: this.dataSourceId };
+	/** 公開済みコンテンツ一覧をソースから直接取得する。 */
+	list(): Promise<T[]> {
+		return this.source.list({
+			publishedStatuses:
+				this.publishedStatuses.length > 0 ? this.publishedStatuses : undefined,
+		});
 	}
 
-	// ── コンテンツ取得 ────────────────────────────────────────────────────
-
-	/** 公開済みコンテンツ一覧を Notion から直接取得する。 */
-	async getItems(): Promise<T[]> {
-		const { client, dataSourceId } = this.requireClient();
-		try {
-			const pages = await queryAllPages(client, dataSourceId);
-			const items = pages.map(this.itemMapper);
-			const filtered =
-				this.publishedStatuses.length > 0
-					? items.filter((item) => this.publishedStatuses.includes(item.status))
-					: items;
-			return filtered.sort(
-				(a, b) =>
-					new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
-			);
-		} catch (err) {
-			if (isCMSError(err)) throw err;
-			throw new CMSError({
-				code: "NOTION_FETCH_ITEMS_FAILED",
-				message: "Failed to fetch items from Notion data source.",
-				cause: err,
-				context: { operation: "getItems", dataSourceId },
-			});
+	/** スラッグでコンテンツをソースから直接取得する。 */
+	async findBySlug(slug: string): Promise<T | null> {
+		const item = await this.source.findBySlug(slug);
+		if (!item) return null;
+		if (
+			this.accessibleStatuses.length > 0 &&
+			!this.accessibleStatuses.includes(item.status)
+		) {
+			return null;
 		}
-	}
-
-	/** スラッグでコンテンツを Notion から直接取得する。 */
-	async getItemBySlug(slug: string): Promise<T | null> {
-		const { client, dataSourceId } = this.requireClient();
-		try {
-			const page = await queryPageBySlug(
-				client,
-				dataSourceId,
-				slug,
-				this.slugPropName,
-			);
-			if (!page) return null;
-			const item = this.itemMapper(page);
-			if (
-				this.accessibleStatuses.length > 0 &&
-				!this.accessibleStatuses.includes(item.status)
-			) {
-				return null;
-			}
-			return item;
-		} catch (err) {
-			if (isCMSError(err)) throw err;
-			throw new CMSError({
-				code: "NOTION_FETCH_ITEM_BY_SLUG_FAILED",
-				message: "Failed to fetch item by slug from Notion data source.",
-				cause: err,
-				context: { operation: "getItemBySlug", dataSourceId, slug },
-			});
-		}
+		return item;
 	}
 
 	/** アイテムが publishedStatuses に含まれるステータスかどうかを返す。 */
@@ -188,79 +102,146 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		return this.publishedStatuses.includes(item.status);
 	}
 
-	/** コンテンツをMarkdown→HTMLにレンダリングし、CachedItemとして返す。 */
-	async renderItem(item: T): Promise<CachedItem<T>> {
-		const { client } = this.requireClient();
-		return this.buildCachedItem(client, item);
+	/** コンテンツを Markdown → HTML にレンダリングし、CachedItem として返す。 */
+	async render(item: T): Promise<CachedItem<T>> {
+		return this.buildCachedItem(item);
 	}
 
-	/** スラッグでコンテンツを取得してMarkdown→HTMLにレンダリングする。 */
-	async renderItemBySlug(slug: string): Promise<CachedItem<T> | null> {
-		const { client, dataSourceId } = this.requireClient();
+	/** スラッグでコンテンツを取得して Markdown → HTML にレンダリングする。 */
+	async renderBySlug(slug: string): Promise<CachedItem<T> | null> {
 		try {
-			const page = await queryPageBySlug(
-				client,
-				dataSourceId,
-				slug,
-				this.slugPropName,
-			);
-			if (!page) return null;
-			const item = this.itemMapper(page);
-			if (
-				this.accessibleStatuses.length > 0 &&
-				!this.accessibleStatuses.includes(item.status)
-			) {
-				return null;
-			}
-			return this.buildCachedItem(client, item);
+			const item = await this.findBySlug(slug);
+			if (!item) return null;
+			return this.buildCachedItem(item);
 		} catch (err) {
 			if (isCMSError(err)) throw err;
 			throw new CMSError({
 				code: "NOTION_FETCH_ITEM_BY_SLUG_FAILED",
 				message: "Failed to fetch item by slug from Notion data source.",
 				cause: err,
-				context: { operation: "renderItemBySlug", dataSourceId, slug },
+				context: { operation: "renderBySlug", slug },
 			});
 		}
 	}
 
-	// ── キャッシュ操作 ─────────────────────────────────────────────────────
+	// ── 便利 API ───────────────────────────────────────────────────────────
 
-	getCachedItemList(): Promise<CachedItemList<T> | null> {
-		return this.store.getItemList();
+	/** ステータスでフィルタリングした一覧を返す。 */
+	async listByStatus(status: string | readonly string[]): Promise<T[]> {
+		const statuses = Array.isArray(status) ? status : [status];
+		const all = await this.source.list();
+		return all.filter((item) => statuses.includes(item.status));
 	}
 
-	setCachedItemList(items: T[]): Promise<void> {
-		return this.store.setItemList(items);
+	/** 任意の条件でフィルタリングした一覧を返す。 */
+	async where(predicate: (item: T) => boolean): Promise<T[]> {
+		const items = await this.list();
+		return items.filter(predicate);
 	}
 
-	getCachedItem(slug: string): Promise<CachedItem<T> | null> {
-		return this.store.getItem(slug);
+	/** ページネーション付き一覧を返す。 */
+	async paginate(opts: { page: number; perPage: number }): Promise<{
+		items: T[];
+		total: number;
+		page: number;
+		perPage: number;
+		hasNext: boolean;
+	}> {
+		const all = await this.list();
+		const total = all.length;
+		const start = (opts.page - 1) * opts.perPage;
+		const items = all.slice(start, start + opts.perPage);
+		return {
+			items,
+			total,
+			page: opts.page,
+			perPage: opts.perPage,
+			hasNext: start + opts.perPage < total,
+		};
 	}
 
-	setCachedItem(slug: string, data: CachedItem<T>): Promise<void> {
-		return this.store.setItem(slug, data);
+	/** 指定スラッグの前後コンテンツを返す。 */
+	async getAdjacent(slug: string): Promise<{ prev: T | null; next: T | null }> {
+		const items = await this.list();
+		const idx = items.findIndex((item) => item.slug === slug);
+		if (idx === -1) return { prev: null, next: null };
+		return {
+			prev: idx > 0 ? items[idx - 1] : null,
+			next: idx < items.length - 1 ? items[idx + 1] : null,
+		};
 	}
 
-	getCachedImage(hash: string): Promise<StorageBinary | null> {
-		return this.store.getImage(hash);
+	/** 全コンテンツを事前レンダリングしてキャッシュに保存する。 */
+	async prefetchAll(opts?: {
+		concurrency?: number;
+		onProgress?: (done: number, total: number) => void;
+	}): Promise<{ ok: number; failed: number }> {
+		const items = await this.list();
+		const concurrency = opts?.concurrency ?? 3;
+		let ok = 0;
+		let failed = 0;
+
+		for (let i = 0; i < items.length; i += concurrency) {
+			const chunk = items.slice(i, i + concurrency);
+			await Promise.all(
+				chunk.map(async (item) => {
+					try {
+						const rendered = await this.buildCachedItem(item);
+						await this.docCache.setItem(item.slug, rendered);
+						ok++;
+					} catch {
+						failed++;
+					}
+				}),
+			);
+			opts?.onProgress?.(Math.min(i + concurrency, items.length), items.length);
+		}
+
+		await this.docCache.setList({ items, cachedAt: Date.now() });
+		return { ok, failed };
 	}
 
-	async createCachedImageResponse(hash: string): Promise<Response | null> {
-		const object = await this.store.getImage(hash);
-		if (!object) return null;
-		const headers = new Headers();
-		if (object.contentType) headers.set("content-type", object.contentType);
-		headers.set("cache-control", "public, max-age=31536000, immutable");
-		return new Response(object.data, { headers });
+	/** 静的生成用のスラッグ一覧を返す。 */
+	async getStaticSlugs(): Promise<string[]> {
+		const items = await this.list();
+		return items.map((item) => item.slug);
+	}
+
+	/** 指定スコープのキャッシュを無効化する。 */
+	async revalidate(scope?: "all" | { slug: string }): Promise<void> {
+		if (!this.docCache.invalidate) return;
+		await this.docCache.invalidate(scope ?? "all");
+	}
+
+	/** Webhook ペイロードを元にキャッシュを同期する。 */
+	async syncFromWebhook(payload?: {
+		slug?: string;
+	}): Promise<{ updated: string[] }> {
+		const updated: string[] = [];
+
+		if (payload?.slug) {
+			const item = await this.findBySlug(payload.slug);
+			if (item) {
+				const rendered = await this.buildCachedItem(item);
+				await this.docCache.setItem(item.slug, rendered);
+				updated.push(item.slug);
+			}
+		} else {
+			const result = await this.prefetchAll();
+			if (result.ok > 0) {
+				const items = await this.list();
+				for (const item of items) updated.push(item.slug);
+			}
+		}
+
+		return { updated };
 	}
 
 	// ── キャッシュ優先取得（Stale-While-Revalidate） ─────────────────────
 
-	async getItemsCachedFirst(options?: {
-		waitUntil?: (promise: Promise<void>) => void;
-	}): Promise<{ items: T[]; listVersion: string }> {
-		const cached = await this.store.getItemList();
+	/** キャッシュ優先でコンテンツ一覧を返す（SWR）。 */
+	async getList(): Promise<{ items: T[]; listVersion: string }> {
+		const cached = await this.docCache.getList();
 		if (cached && !isStale(cached.cachedAt, this.ttlMs)) {
 			return {
 				items: cached.items,
@@ -268,42 +249,40 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 			};
 		}
 
-		const items = await this.getItems();
-		const save = this.store.setItemList(items);
-		if (options?.waitUntil) {
-			options.waitUntil(save);
+		const items = await this.list();
+		const save = this.docCache.setList({ items, cachedAt: Date.now() });
+		if (this.waitUntil) {
+			this.waitUntil(save);
 		} else {
 			await save;
 		}
 		return { items, listVersion: buildListVersion(items) };
 	}
 
-	async getItemCachedFirst(
-		slug: string,
-		options?: { waitUntil?: (promise: Promise<void>) => void },
-	): Promise<CachedItem<T> | null> {
-		const cached = await this.store.getItem(slug);
+	/** キャッシュ優先で単一コンテンツを返す（SWR）。 */
+	async getItem(slug: string): Promise<CachedItem<T> | null> {
+		const cached = await this.docCache.getItem(slug);
 		if (cached && !isStale(cached.cachedAt, this.ttlMs)) return cached;
 
-		const entry = await this.renderItemBySlug(slug);
+		const entry = await this.renderBySlug(slug);
 		if (!entry) return null;
 
-		const save = this.store.setItem(slug, entry);
-		if (options?.waitUntil) {
-			options.waitUntil(save);
+		const save = this.docCache.setItem(slug, entry);
+		if (this.waitUntil) {
+			this.waitUntil(save);
 		} else {
 			await save;
 		}
 		return entry;
 	}
 
-	async checkItemsUpdate(
-		clientVersion: string,
+	async checkListUpdate(
+		version: string,
 	): Promise<{ changed: false } | { changed: true; items: T[] }> {
-		const items = await this.getItems();
+		const items = await this.list();
 		const serverVersion = buildListVersion(items);
-		if (serverVersion === clientVersion) return { changed: false };
-		await this.store.setItemList(items);
+		if (serverVersion === version) return { changed: false };
+		await this.docCache.setList({ items, cachedAt: Date.now() });
 		return { changed: true, items };
 	}
 
@@ -314,14 +293,14 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		| { changed: false }
 		| { changed: true; html: string; item: T; notionUpdatedAt: string }
 	> {
-		const item = await this.getItemBySlug(slug);
+		const item = await this.findBySlug(slug);
 		if (!item) return { changed: false };
 		if (!this.isPublished(item)) return { changed: false };
 		if (item.updatedAt === lastEdited) return { changed: false };
 
-		const entry = await this.renderItemBySlug(slug);
+		const entry = await this.renderBySlug(slug);
 		if (!entry) return { changed: false };
-		await this.store.setItem(slug, entry);
+		await this.docCache.setItem(slug, entry);
 
 		return {
 			changed: true,
@@ -331,37 +310,45 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		};
 	}
 
-	// ── プライベートヘルパー ───────────────────────────────────────────────
+	// ── 画像配信 ───────────────────────────────────────────────────────────
 
-	private async buildCachedItem(
-		client: Client,
-		item: T,
-	): Promise<CachedItem<T>> {
-		const transformer = new Transformer(
-			this.transformerConfig?.blocks
-				? { blocks: this.transformerConfig.blocks }
-				: undefined,
-		);
+	/** ハッシュキーでキャッシュ画像を取得する。 */
+	getCachedImage(hash: string): Promise<StorageBinary | null> {
+		return this.imgCache.get(hash);
+	}
 
+	/** ハッシュキーでキャッシュ画像を Response として返す。 */
+	async createCachedImageResponse(hash: string): Promise<Response | null> {
+		const object = await this.imgCache.get(hash);
+		if (!object) return null;
+		const headers = new Headers();
+		if (object.contentType) headers.set("content-type", object.contentType);
+		headers.set("cache-control", "public, max-age=31536000, immutable");
+		return new Response(object.data, { headers });
+	}
+
+	// ── プライベートヘルパー ────────────────────────────────────────────────
+
+	private async buildCachedItem(item: T): Promise<CachedItem<T>> {
 		let markdown: string;
 		try {
-			markdown = await transformer.transform(client, item.id);
+			markdown = await this.source.loadMarkdown(item);
 		} catch (err) {
 			if (isCMSError(err)) throw err;
 			throw new CMSError({
 				code: "NOTION_MARKDOWN_FETCH_FAILED",
-				message: "Failed to load markdown from Notion.",
+				message: "Failed to load markdown from source.",
 				cause: err,
 				context: {
-					operation: "buildCachedItem:transform",
+					operation: "buildCachedItem:loadMarkdown",
 					pageId: item.id,
 					slug: item.slug,
 				},
 			});
 		}
 
-		const cacheImage = this.hasStorage
-			? buildCacheImageFn(this.store, this.imageProxyBase)
+		const cacheImage = this.hasImageCache
+			? buildCacheImageFn(this.imgCache, this.imageProxyBase)
 			: undefined;
 
 		let html: string;
@@ -369,9 +356,9 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 			html = await renderMarkdown(markdown, {
 				imageProxyBase: this.imageProxyBase,
 				cacheImage,
-				remarkPlugins: this.rendererConfig?.remarkPlugins,
-				rehypePlugins: this.rendererConfig?.rehypePlugins,
-				render: this.rendererConfig?.render,
+				remarkPlugins: this.contentConfig?.remarkPlugins,
+				rehypePlugins: this.contentConfig?.rehypePlugins,
+				render: this.contentConfig?.render,
 			});
 		} catch (err) {
 			if (isCMSError(err)) throw err;
@@ -396,9 +383,9 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 	}
 }
 
-/** 設定済みのCMSインスタンスを生成するファクトリ関数。 */
+/** 設定済みの CMS インスタンスを生成するファクトリ関数。 */
 export function createCMS<T extends BaseContentItem = BaseContentItem>(
-	config?: CMSConfig<T>,
+	opts: CreateCMSOptions<T>,
 ): CMS<T> {
-	return new CMS<T>(config);
+	return new CMS<T>(opts);
 }

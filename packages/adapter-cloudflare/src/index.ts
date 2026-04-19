@@ -1,2 +1,2 @@
-export type { CloudflareCMSEnv } from "./cms";
+export type { CloudfareCMSEnv, CreateCloudflareCMSOptions } from "./cms";
 export { createCloudflareCMS } from "./cms";

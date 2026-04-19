@@ -1,119 +1,19 @@
-import type { RendererFn } from "@notion-headless-cms/renderer";
-import type { BlockHandler } from "@notion-headless-cms/transformer";
-import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
-import type { PluggableList } from "unified";
-
-/**
- * ライブラリが動作するために必須なフィールド。
- * 利用者はこのインターフェースを拡張して独自のコンテンツ型を定義する。
- *
- * @example
- * interface Post extends BaseContentItem {
- *   title: string;
- *   author: string;
- * }
- * createCMS<Post>({ schema: { mapItem: (page) => ... } })
- */
-export interface BaseContentItem {
-	id: string;
-	slug: string;
-	status: string;
-	publishedAt: string;
-	updatedAt: string;
-}
-
-/** ストレージにキャッシュされたレンダリング済みコンテンツ。 */
-export interface CachedItem<T extends BaseContentItem = BaseContentItem> {
-	html: string;
-	item: T;
-	notionUpdatedAt: string;
-	cachedAt: number;
-}
-
-/** ストレージにキャッシュされたコンテンツ一覧。 */
-export interface CachedItemList<T extends BaseContentItem = BaseContentItem> {
-	items: T[];
-	cachedAt: number;
-}
-
-/** ストレージから取得したバイナリオブジェクト。 */
-export interface StorageBinary {
-	data: ArrayBuffer;
-	contentType?: string;
-}
-
-/** CMSコアが依存するストレージ抽象。 */
-export interface StorageAdapter {
-	get(key: string): Promise<ArrayBuffer | null>;
-	put(
-		key: string,
-		data: ArrayBuffer | ArrayBufferView | string,
-		options?: { contentType?: string },
-	): Promise<void>;
-	json<T>(key: string): Promise<T | null>;
-	binary(key: string): Promise<StorageBinary | null>;
-}
-
-/** ライブラリが必要とする最小限の環境バインディング。 */
-export interface CMSEnv {
-	NOTION_TOKEN: string;
-	NOTION_DATA_SOURCE_ID: string;
-}
-
-/** Notionのプロパティ名マッピング（すべてオプション）。 */
-export interface CMSSchemaProperties {
-	/** Notionのスラッグプロパティ名。デフォルト: 'Slug' */
-	slug?: string;
-	/** Notionのステータスプロパティ名。デフォルト: 'Status' */
-	status?: string;
-	/** Notionの公開日プロパティ名。デフォルト: 'CreatedAt' */
-	date?: string;
-}
-
-/**
- * CMSの設定オブジェクト。
- * ジェネリクス型 T にカスタムコンテンツ型を指定できる（デフォルト: BaseContentItem）。
- */
-export interface CMSConfig<T extends BaseContentItem = BaseContentItem> {
-	/** Notion API 認証情報。コンストラクタでクライアントを事前生成するために使用。 */
-	env?: CMSEnv;
-	/** キャッシュ/画像保存用ストレージ。未設定時はキャッシュ機能を無効化。 */
-	storage?: StorageAdapter;
-	schema?: {
-		/**
-		 * Notionページをコンテンツ型 T にマッピングするカスタム関数。
-		 * 指定した場合 properties の設定は無視される（slug プロパティ名のみ例外）。
-		 */
-		mapItem?: (page: PageObjectResponse) => T;
-		/** mapItem 未使用時のプロパティ名マッピング。 */
-		properties?: CMSSchemaProperties;
-		/** getItems() で返す「公開済み」ステータス値の配列。デフォルト: [] （全件返す） */
-		publishedStatuses?: string[];
-		/** getItemBySlug() でアクセス可能なステータス値の配列。デフォルト: [] （全件許可） */
-		accessibleStatuses?: string[];
-	};
-	transformer?: {
-		/** カスタムブロックハンドラーのマップ。Notionブロックタイプをキーとする。 */
-		blocks?: Record<string, BlockHandler>;
-	};
-	renderer?: {
-		/** 画像プロキシのベースURL。デフォルト: '/api/images' */
-		imageProxyBase?: string;
-		/** 追加する remark プラグイン。 */
-		remarkPlugins?: PluggableList;
-		/** 追加する rehype プラグイン。 */
-		rehypePlugins?: PluggableList;
-		/** デフォルトのパイプラインを置き換えるカスタムレンダラー。 */
-		render?: RendererFn;
-	};
-	cache?: {
-		/** コンテンツ一覧のキャッシュキー。デフォルト: 'content.json' */
-		listKey?: string;
-		/** 個別コンテンツのキャッシュキープレフィックス。デフォルト: 'content/' */
-		itemPrefix?: string;
-		/** 画像キャッシュのキープレフィックス。デフォルト: 'images/' */
-		imagePrefix?: string;
-		/** キャッシュの有効期間（ミリ秒）。未設定の場合はTTLなし。 */
-		ttlMs?: number;
-	};
-}
+// 旧 types.ts → types/ ディレクトリへ移行済み。後方互換のため再エクスポート。
+export type {
+	CacheConfig,
+	DocumentCacheAdapter,
+	ImageCacheAdapter,
+} from "./types/cache";
+export type {
+	ContentConfig,
+	CreateCMSOptions,
+	SchemaConfig,
+} from "./types/config";
+export type {
+	BaseContentItem,
+	CachedItem,
+	CachedItemList,
+	CMSSchemaProperties,
+	StorageBinary,
+} from "./types/content";
+export type { DataSourceAdapter } from "./types/source";
