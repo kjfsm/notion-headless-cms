@@ -30,16 +30,61 @@ flowchart LR
 > **SWR（Stale-While-Revalidate）**: キャッシュを即返し、TTL 切れなら裏で非同期更新。  
 > Notion の `last_edited_time` を比較し、変更があれば HTML を再生成する。
 
-## パッケージ構成
+## パッケージ一覧
 
-| パッケージ | 役割 |
-|---|---|
-| [`@notion-headless-cms/core`](./packages/core) | CMS エンジン本体（取得・変換・キャッシュを統合） |
-| [`@notion-headless-cms/fetcher`](./packages/fetcher) | Notion API クライアントラッパー |
-| [`@notion-headless-cms/transformer`](./packages/transformer) | Notion ブロック → Markdown 変換 |
-| [`@notion-headless-cms/renderer`](./packages/renderer) | Markdown → HTML レンダリング（remark/rehype） |
-| [`@notion-headless-cms/cache-r2`](./packages/cache-r2) | Cloudflare R2 ストレージアダプター |
-| [`@notion-headless-cms/adapter-cloudflare`](./packages/adapter-cloudflare) | Cloudflare Workers 向けファクトリー |
+### コアパイプライン
+
+#### [`@notion-headless-cms/source-notion`](./packages/source-notion)
+Notion データベースを CMS データソースとして利用するためのアダプター。型安全なスキーマ定義ヘルパー付き。
+- `notionAdapter(opts)` — DataSourceAdapter を返すファクトリー
+- `defineSchema(columns)` / `col.*` — 型安全なカラム定義
+
+#### [`@notion-headless-cms/fetcher`](./packages/fetcher)
+Notion API クライアントラッパー。データベース全ページとページ全ブロックを再帰取得する。
+- `createNotionClient(token)`
+- `fetchDatabase(client, databaseId)`
+- `fetchBlocks(client, pageId)`
+
+#### [`@notion-headless-cms/transformer`](./packages/transformer)
+Notion ブロック → Markdown 変換器。`notion-to-md` ベースで、カスタムブロックハンドラーを追加できる。
+- `createTransformer(client, handlers?)`
+- `transformBlocks(transformer, pageId)`
+
+#### [`@notion-headless-cms/renderer`](./packages/renderer)
+Markdown → HTML レンダラー。remark/rehype パイプラインで変換し、GFM と画像 URL のプロキシ書き換えをサポート。
+- `createRenderer(options?)`
+- `renderMarkdown(renderer, markdown)`
+
+#### [`@notion-headless-cms/core`](./packages/core)
+CMS エンジン本体。上記パイプラインを統合し、Stale-While-Revalidate キャッシュと Notion 更新検知を管理する。
+- `createCMS(options)` — CMS インスタンス生成
+- `cms.list()` / `cms.renderBySlug(slug)` — 一覧・記事取得
+- `memoryCache()` / `memoryImageCache()` — インメモリキャッシュ
+
+---
+
+### アダプター（デプロイ環境別）
+
+#### [`@notion-headless-cms/adapter-cloudflare`](./packages/adapter-cloudflare)
+Cloudflare Workers 向けファクトリー。R2 バケットと環境変数を自動注入した CMS インスタンスを生成する。
+- `createCloudflareCMS(env, config?)`
+
+#### [`@notion-headless-cms/adapter-next`](./packages/adapter-next)
+Next.js App Router 向けルートハンドラー。画像プロキシ配信と Notion Webhook によるキャッシュ再検証を提供する。
+- `createImageRouteHandler(cms)` — `/api/images/[hash]/route.ts` 用
+- `createRevalidateRouteHandler(cms, opts)` — Webhook 受信・ISR 再検証用
+
+---
+
+### キャッシュ実装
+
+#### [`@notion-headless-cms/cache-r2`](./packages/cache-r2)
+Cloudflare R2 StorageAdapter 実装。core の `StorageAdapter` インターフェースを R2 バケットで実装する。
+- `createCloudflareR2StorageAdapter(bucket?)`
+
+#### [`@notion-headless-cms/cache-next`](./packages/cache-next)
+Next.js の `unstable_cache` / `revalidateTag` を利用した DocumentCacheAdapter 実装。ISR に対応する。
+- `nextCache(opts?)` — Next.js 用 DocumentCacheAdapter ファクトリー
 
 ## クイックスタート（Node.js）
 
