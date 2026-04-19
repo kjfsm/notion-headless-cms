@@ -1,0 +1,28 @@
+---
+import { createCMS } from "../lib/cms";
+
+const cms = createCMS(Astro.locals.runtime.env);
+const { items } = await cms.getList();
+---
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>Notion Blog</title>
+  </head>
+  <body>
+    <main>
+      <h1>記事一覧</h1>
+      <ul>
+        {items.map((post) => (
+          <li>
+            <a href={`/posts/${post.slug}`}>
+              <strong>{post.title || post.slug}</strong>
+              {post.publishedAt && <time>{post.publishedAt}</time>}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </main>
+  </body>
+</html>

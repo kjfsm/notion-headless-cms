@@ -1,0 +1,58 @@
+{
+	"name": "@notion-headless-cms/adapter-node",
+	"version": "0.1.0",
+	"description": "Node.js adapter for notion-headless-cms — createNodeCMS() factory with process.env support",
+	"keywords": [
+		"notion",
+		"headless-cms",
+		"node",
+		"nodejs",
+		"adapter",
+		"typescript"
+	],
+	"license": "MIT",
+	"homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
+	"bugs": {
+		"url": "https://github.com/kjfsm/notion-headless-cms/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/kjfsm/notion-headless-cms.git",
+		"directory": "packages/adapter-node"
+	},
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
+		}
+	},
+	"files": [
+		"dist"
+	],
+	"engines": {
+		"node": ">=18"
+	},
+	"scripts": {
+		"build": "tsup src/index.ts --format esm --dts --out-dir dist",
+		"typecheck": "tsc --noEmit"
+	},
+	"publishConfig": {
+		"registry": "https://registry.npmjs.org",
+		"access": "public",
+		"exports": {
+			".": {
+				"import": "./dist/index.js",
+				"types": "./dist/index.d.ts"
+			}
+		}
+	},
+	"dependencies": {
+		"@notion-headless-cms/core": "workspace:*",
+		"@notion-headless-cms/source-notion": "workspace:*"
+	},
+	"devDependencies": {
+		"@types/node": "^22.0.0"
+	}
+}

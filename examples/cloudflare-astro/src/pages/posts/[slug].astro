@@ -1,0 +1,30 @@
+---
+import { createCMS } from "../../lib/cms";
+
+const cms = createCMS(Astro.locals.runtime.env);
+const { slug } = Astro.params;
+const entry = await cms.getItemBySlug(slug!);
+
+if (!entry) return Astro.redirect("/404");
+
+const { html, item } = entry;
+---
+
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <title>{item.title || item.slug}</title>
+  </head>
+  <body>
+    <article>
+      <h1>{item.title}</h1>
+      {item.publishedAt && <time>{item.publishedAt}</time>}
+      {item.tags.length > 0 && (
+        <ul>
+          {item.tags.map((tag) => <li>{tag}</li>)}
+        </ul>
+      )}
+      <div set:html={html} />
+    </article>
+  </body>
+</html>

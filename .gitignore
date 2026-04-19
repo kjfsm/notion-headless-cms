@@ -193,3 +193,12 @@ dist
 
 ### Build output ###
 packages/*/dist/
+
+### examples（standalone プロジェクト） ###
+examples/*/node_modules/
+examples/*/.wrangler/
+examples/*/.next/
+examples/*/.svelte-kit/
+examples/*/dist/
+examples/*/build/
+examples/*/.vercel/
