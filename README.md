@@ -3,6 +3,33 @@
 Notion をヘッドレス CMS として利用するための TypeScript ライブラリ群。  
 Cloudflare Workers + R2 での利用を前提に設計されており、pnpm モノリポで管理されている。
 
+## データフロー
+
+```mermaid
+flowchart LR
+  notion[(Notion DB)]
+
+  subgraph pipeline["パイプライン（core が統合）"]
+    direction LR
+    fetcher["fetcher\nAPI 取得"]
+    transformer["transformer\nblocks → Markdown"]
+    renderer["renderer\nMarkdown → HTML"]
+  end
+
+  cache[(R2 / メモリ\nキャッシュ)]
+  output["Cloudflare Workers\n/ Node.js スクリプト"]
+
+  notion -->|"blocks"| fetcher
+  fetcher --> transformer
+  transformer --> renderer
+  renderer -->|"HTML"| pipeline
+  pipeline <-->|"SWR"| cache
+  pipeline --> output
+```
+
+> **SWR（Stale-While-Revalidate）**: キャッシュを即返し、TTL 切れなら裏で非同期更新。  
+> Notion の `last_edited_time` を比較し、変更があれば HTML を再生成する。
+
 ## パッケージ構成
 
 | パッケージ | 役割 |
@@ -14,40 +41,46 @@ Cloudflare Workers + R2 での利用を前提に設計されており、pnpm モ
 | [`@notion-headless-cms/cache-r2`](./packages/cache-r2) | Cloudflare R2 ストレージアダプター |
 | [`@notion-headless-cms/adapter-cloudflare`](./packages/adapter-cloudflare) | Cloudflare Workers 向けファクトリー |
 
-## アーキテクチャ
+## クイックスタート（Node.js）
 
-```
-Notion DB
-  └─ fetcher（API取得）
-       └─ transformer（ブロック → Markdown）
-            └─ renderer（Markdown → HTML）
-                 └─ core / CMS（キャッシュ統合・更新検知）
-                      └─ cache-r2（R2 ストレージ）
-                           └─ adapter-cloudflare（Workers 注入）
-                                └─ Cloudflare Workers → ブラウザ
-```
+Notion トークンとデータベース ID があれば、Node.js スクリプトとして最小構成で動かせる。
 
-### キャッシュ戦略（Stale-While-Revalidate）
-
-- 初回: Notion から取得してレンダリングし、R2 にキャッシュ
-- 以降: キャッシュを即返し、TTL 切れなら裏で非同期更新
-- Notion の `last_edited_time` を比較し、変更があれば HTML を再生成
-
-### 画像処理
-
-- Notion 画像 URL は期限付きのため Workers でプロキシ
-- SHA256 ハッシュキーで R2 に永続保存（`/api/images/{hash}` で配信）
-
-## インストール
-
-`@notion-headless-cms` スコープは npm 公開リポジトリから公開されている。  
-通常の `npm install` で取得できる（追加の認証設定は不要）。
-
-Cloudflare Workers プロジェクトで利用する場合はアダプターをインストールする。
+### インストール
 
 ```bash
-npm install @notion-headless-cms/adapter-cloudflare
+npm install @notion-headless-cms/core @notion-headless-cms/source-notion
 ```
+
+### スクリプト例
+
+```ts
+// fetch-posts.ts
+import { createCMS } from "@notion-headless-cms/core";
+import { notionAdapter } from "@notion-headless-cms/source-notion";
+
+const cms = createCMS({
+  source: notionAdapter({
+    token: process.env.NOTION_TOKEN!,
+    dataSourceId: process.env.NOTION_DATA_SOURCE_ID!,
+  }),
+  schema: { publishedStatuses: ["公開"] },
+});
+
+// 記事一覧を取得
+const posts = await cms.list();
+console.log(posts);
+
+// スラッグで HTML を取得
+const rendered = await cms.renderBySlug("my-first-post");
+console.log(rendered?.html);
+```
+
+```bash
+NOTION_TOKEN=xxx NOTION_DATA_SOURCE_ID=yyy npx tsx fetch-posts.ts
+```
+
+> R2 キャッシュ不要のローカル開発・バッチ処理向け。  
+> Cloudflare Workers + R2 を使った本番構成は次節を参照。
 
 ## クイックスタート（Cloudflare Workers）
 
