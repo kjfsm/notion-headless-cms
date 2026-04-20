@@ -5,12 +5,12 @@ const app = express();
 const port = process.env.PORT ?? 3000;
 
 app.get("/posts", async (_req, res) => {
-	const { items } = await cms.getList();
+	const { items } = await cms.cached.list();
 	res.json({ items });
 });
 
 app.get("/posts/:slug", async (req, res) => {
-	const entry = await cms.getItemBySlug(req.params.slug);
+	const entry = await cms.cached.get(req.params.slug);
 	if (!entry) {
 		res.status(404).json({ error: "Not Found" });
 		return;

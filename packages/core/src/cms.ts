@@ -2,24 +2,25 @@ import { renderMarkdown } from "@notion-headless-cms/renderer";
 import { isStale } from "./cache";
 import { noopDocumentCache, noopImageCache } from "./cache/noop";
 import { CMSError, isCMSError } from "./errors";
+import { mergeHooks, mergeLoggers } from "./hooks";
 import { buildCacheImageFn } from "./image";
+import { QueryBuilder } from "./query";
+import type { RetryConfig } from "./retry";
+import { DEFAULT_RETRY_CONFIG, withRetry } from "./retry";
 import type {
 	BaseContentItem,
 	CacheConfig,
 	CachedItem,
-	CachedItemList,
+	CMSHooks,
 	CreateCMSOptions,
 	DataSourceAdapter,
 	DocumentCacheAdapter,
 	ImageCacheAdapter,
+	Logger,
 	StorageBinary,
 } from "./types/index";
 
 const DEFAULT_IMAGE_PROXY_BASE = "/api/images";
-
-function buildListVersion<T extends BaseContentItem>(items: T[]): string {
-	return items.map((item) => `${item.id}:${item.updatedAt}`).join("|");
-}
 
 function resolveDocumentCache<T extends BaseContentItem>(
 	cache: CacheConfig<T> | undefined,
@@ -37,13 +38,38 @@ function resolveImageCache(cache: CacheConfig | undefined): ImageCacheAdapter {
 	return cache.image;
 }
 
+/** キャッシュ優先アクセサ。 */
+interface CachedAccessor<T extends BaseContentItem> {
+	list(): Promise<{ items: T[]; isStale: boolean; cachedAt: number }>;
+	get(slug: string): Promise<CachedItem<T> | null>;
+}
+
+/** キャッシュ管理オペレーション。 */
+interface CacheManager<T extends BaseContentItem> {
+	prefetchAll(opts?: {
+		concurrency?: number;
+		onProgress?: (done: number, total: number) => void;
+	}): Promise<{ ok: number; failed: number }>;
+	revalidate(scope?: "all" | { slug: string }): Promise<void>;
+	sync(payload?: { slug?: string }): Promise<{ updated: string[] }>;
+	checkList(
+		version: string,
+	): Promise<{ changed: false } | { changed: true; items: T[] }>;
+	checkItem(
+		slug: string,
+		lastEdited: string,
+	): Promise<
+		| { changed: false }
+		| { changed: true; html: string; item: T; notionUpdatedAt: string }
+	>;
+}
+
 /**
  * Notion をバックエンドとして使う汎用ヘッドレス CMS クラス。
  *
  * @example
  * const cms = createCMS({
  *   source: notionAdapter({ token: '...', dataSourceId: '...' }),
- *   schema: { publishedStatuses: ['公開'] },
  * });
  * const items = await cms.list();
  */
@@ -58,6 +84,12 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 	private readonly imageProxyBase: string;
 	private readonly contentConfig: CreateCMSOptions<T>["content"];
 	private readonly waitUntil: ((p: Promise<unknown>) => void) | undefined;
+	private readonly hooks: CMSHooks<T>;
+	private readonly logger: Logger | undefined;
+	private readonly retryConfig: RetryConfig;
+
+	readonly cached: CachedAccessor<T>;
+	readonly cache: CacheManager<T>;
 
 	constructor(opts: CreateCMSOptions<T>) {
 		this.source = opts.source;
@@ -70,26 +102,62 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 			(opts.source.publishedStatuses ? [...opts.source.publishedStatuses] : []);
 		this.accessibleStatuses =
 			opts.schema?.accessibleStatuses ??
-			(opts.source.accessibleStatuses ? [...opts.source.accessibleStatuses] : []);
+			(opts.source.accessibleStatuses
+				? [...opts.source.accessibleStatuses]
+				: []);
 		this.imageProxyBase =
 			opts.content?.imageProxyBase ?? DEFAULT_IMAGE_PROXY_BASE;
 		this.contentConfig = opts.content;
 		this.waitUntil = opts.waitUntil;
+		this.hooks = mergeHooks(opts.plugins ?? [], opts.hooks);
+		this.logger = mergeLoggers(opts.plugins ?? [], opts.logger);
+		this.retryConfig = {
+			...DEFAULT_RETRY_CONFIG,
+			...(opts.rateLimiter as Partial<RetryConfig> | undefined),
+		};
+
+		this.cached = {
+			list: this.cachedList.bind(this),
+			get: this.cachedGet.bind(this),
+		};
+		this.cache = {
+			prefetchAll: this.prefetchAll.bind(this),
+			revalidate: this.revalidate.bind(this),
+			sync: this.syncFromWebhook.bind(this),
+			checkList: this.checkListUpdate.bind(this),
+			checkItem: this.checkItemUpdate.bind(this),
+		};
 	}
 
 	// ── コンテンツ取得 ──────────────────────────────────────────────────────
 
 	/** 公開済みコンテンツ一覧をソースから直接取得する。 */
 	list(): Promise<T[]> {
-		return this.source.list({
-			publishedStatuses:
-				this.publishedStatuses.length > 0 ? this.publishedStatuses : undefined,
-		});
+		return withRetry(
+			() =>
+				this.source.list({
+					publishedStatuses:
+						this.publishedStatuses.length > 0
+							? this.publishedStatuses
+							: undefined,
+				}),
+			{
+				...this.retryConfig,
+				onRetry: (attempt, status) => {
+					this.logger?.warn?.("list() リトライ中", { attempt, status });
+				},
+			},
+		);
 	}
 
 	/** スラッグでコンテンツをソースから直接取得する。 */
-	async findBySlug(slug: string): Promise<T | null> {
-		const item = await this.source.findBySlug(slug);
+	async find(slug: string): Promise<T | null> {
+		const item = await withRetry(() => this.source.findBySlug(slug), {
+			...this.retryConfig,
+			onRetry: (attempt, status) => {
+				this.logger?.warn?.("find() リトライ中", { attempt, status, slug });
+			},
+		});
 		if (!item) return null;
 		if (
 			this.accessibleStatuses.length > 0 &&
@@ -98,6 +166,11 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 			return null;
 		}
 		return item;
+	}
+
+	/** @deprecated find() を使用してください。 */
+	findBySlug(slug: string): Promise<T | null> {
+		return this.find(slug);
 	}
 
 	/** アイテムが publishedStatuses に含まれるステータスかどうかを返す。 */
@@ -111,68 +184,9 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		return this.buildCachedItem(item);
 	}
 
-	/** スラッグでコンテンツを取得して Markdown → HTML にレンダリングする。 */
-	async renderBySlug(slug: string): Promise<CachedItem<T> | null> {
-		try {
-			const item = await this.findBySlug(slug);
-			if (!item) return null;
-			return this.buildCachedItem(item);
-		} catch (err) {
-			if (isCMSError(err)) throw err;
-			throw new CMSError({
-				code: "NOTION_FETCH_ITEM_BY_SLUG_FAILED",
-				message: "Failed to fetch item by slug from Notion data source.",
-				cause: err,
-				context: { operation: "renderBySlug", slug },
-			});
-		}
-	}
-
-	// ── 便利 API ───────────────────────────────────────────────────────────
-
-	/** ステータスでフィルタリングした一覧を返す。 */
-	async listByStatus(status: string | readonly string[]): Promise<T[]> {
-		const statuses = Array.isArray(status) ? status : [status];
-		const all = await this.source.list();
-		return all.filter((item) => statuses.includes(item.status));
-	}
-
-	/** 任意の条件でフィルタリングした一覧を返す。 */
-	async where(predicate: (item: T) => boolean): Promise<T[]> {
-		const items = await this.list();
-		return items.filter(predicate);
-	}
-
-	/** ページネーション付き一覧を返す。 */
-	async paginate(opts: { page: number; perPage: number }): Promise<{
-		items: T[];
-		total: number;
-		page: number;
-		perPage: number;
-		hasNext: boolean;
-	}> {
-		const all = await this.list();
-		const total = all.length;
-		const start = (opts.page - 1) * opts.perPage;
-		const items = all.slice(start, start + opts.perPage);
-		return {
-			items,
-			total,
-			page: opts.page,
-			perPage: opts.perPage,
-			hasNext: start + opts.perPage < total,
-		};
-	}
-
-	/** 指定スラッグの前後コンテンツを返す。 */
-	async getAdjacent(slug: string): Promise<{ prev: T | null; next: T | null }> {
-		const items = await this.list();
-		const idx = items.findIndex((item) => item.slug === slug);
-		if (idx === -1) return { prev: null, next: null };
-		return {
-			prev: idx > 0 ? items[idx - 1] : null,
-			next: idx < items.length - 1 ? items[idx + 1] : null,
-		};
+	/** QueryBuilder を返す。ステータス・タグ・ページネーションなどを連鎖で指定できる。 */
+	query(): QueryBuilder<T> {
+		return new QueryBuilder(this.source, this.publishedStatuses);
 	}
 
 	/** 全コンテンツを事前レンダリングしてキャッシュに保存する。 */
@@ -224,7 +238,7 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		const updated: string[] = [];
 
 		if (payload?.slug) {
-			const item = await this.findBySlug(payload.slug);
+			const item = await this.find(payload.slug);
 			if (item) {
 				const rendered = await this.buildCachedItem(item);
 				await this.docCache.setItem(item.slug, rendered);
@@ -241,36 +255,44 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		return { updated };
 	}
 
-	// ── キャッシュ優先取得（Stale-While-Revalidate） ─────────────────────
+	// ── キャッシュ優先取得（Stale-While-Revalidate） ──────────────────────
 
 	/** キャッシュ優先でコンテンツ一覧を返す（SWR）。 */
-	async getList(): Promise<{ items: T[]; listVersion: string }> {
+	private async cachedList(): Promise<{
+		items: T[];
+		isStale: boolean;
+		cachedAt: number;
+	}> {
 		const cached = await this.docCache.getList();
 		if (cached && !isStale(cached.cachedAt, this.ttlMs)) {
-			return {
-				items: cached.items,
-				listVersion: buildListVersion(cached.items),
-			};
+			this.hooks.onListCacheHit?.(cached.items, cached.cachedAt);
+			return { items: cached.items, isStale: false, cachedAt: cached.cachedAt };
 		}
 
+		this.hooks.onListCacheMiss?.();
 		const items = await this.list();
-		const save = this.docCache.setList({ items, cachedAt: Date.now() });
+		const cachedAt = Date.now();
+		const save = this.docCache.setList({ items, cachedAt });
 		if (this.waitUntil) {
 			this.waitUntil(save);
 		} else {
 			await save;
 		}
-		return { items, listVersion: buildListVersion(items) };
+		return { items, isStale: !!cached, cachedAt };
 	}
 
 	/** キャッシュ優先で単一コンテンツを返す（SWR）。 */
-	async getItem(slug: string): Promise<CachedItem<T> | null> {
+	private async cachedGet(slug: string): Promise<CachedItem<T> | null> {
 		const cached = await this.docCache.getItem(slug);
-		if (cached && !isStale(cached.cachedAt, this.ttlMs)) return cached;
+		if (cached && !isStale(cached.cachedAt, this.ttlMs)) {
+			this.hooks.onCacheHit?.(slug, cached);
+			return cached;
+		}
 
-		const entry = await this.renderBySlug(slug);
-		if (!entry) return null;
-
+		this.hooks.onCacheMiss?.(slug);
+		const item = await this.find(slug);
+		if (!item) return null;
+		const entry = await this.buildCachedItem(item);
 		const save = this.docCache.setItem(slug, entry);
 		if (this.waitUntil) {
 			this.waitUntil(save);
@@ -297,13 +319,12 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		| { changed: false }
 		| { changed: true; html: string; item: T; notionUpdatedAt: string }
 	> {
-		const item = await this.findBySlug(slug);
+		const item = await this.find(slug);
 		if (!item) return { changed: false };
 		if (!this.isPublished(item)) return { changed: false };
 		if (item.updatedAt === lastEdited) return { changed: false };
 
-		const entry = await this.renderBySlug(slug);
-		if (!entry) return { changed: false };
+		const entry = await this.buildCachedItem(item);
 		await this.docCache.setItem(slug, entry);
 
 		return {
@@ -312,6 +333,69 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 			item: entry.item,
 			notionUpdatedAt: entry.notionUpdatedAt,
 		};
+	}
+
+	// ── 後方互換 SWR ────────────────────────────────────────────────────────
+
+	/** @deprecated cached.list() を使用してください。 */
+	async getList(): Promise<{ items: T[]; listVersion: string }> {
+		const result = await this.cachedList();
+		return { items: result.items, listVersion: buildListVersion(result.items) };
+	}
+
+	/** @deprecated cached.get() を使用してください。 */
+	getItem(slug: string): Promise<CachedItem<T> | null> {
+		return this.cachedGet(slug);
+	}
+
+	/** @deprecated cache.prefetchAll() を使用してください。 */
+	async prefetchAllLegacy(opts?: {
+		concurrency?: number;
+		onProgress?: (done: number, total: number) => void;
+	}): Promise<{ ok: number; failed: number }> {
+		return this.prefetchAll(opts);
+	}
+
+	// ── 後方互換クエリ API ──────────────────────────────────────────────────
+
+	/** @deprecated query().status(s).execute() を使用してください。 */
+	async listByStatus(status: string | readonly string[]): Promise<T[]> {
+		const statuses = Array.isArray(status) ? status : [status];
+		return this.query()
+			.status(statuses)
+			.execute()
+			.then((r) => r.items);
+	}
+
+	/** @deprecated query().where(pred).execute() を使用してください。 */
+	async where(predicate: (item: T) => boolean): Promise<T[]> {
+		return this.query()
+			.where(predicate)
+			.execute()
+			.then((r) => r.items);
+	}
+
+	/** @deprecated query().paginate(opts).execute() を使用してください。 */
+	async paginate(opts: { page: number; perPage: number }): Promise<{
+		items: T[];
+		total: number;
+		page: number;
+		perPage: number;
+		hasNext: boolean;
+	}> {
+		const result = await this.query().paginate(opts).execute();
+		return {
+			items: result.items,
+			total: result.total,
+			page: result.page,
+			perPage: result.perPage,
+			hasNext: result.hasNext,
+		};
+	}
+
+	/** @deprecated query().adjacent(slug) を使用してください。 */
+	getAdjacent(slug: string): Promise<{ prev: T | null; next: T | null }> {
+		return this.query().adjacent(slug);
 	}
 
 	// ── 画像配信 ───────────────────────────────────────────────────────────
@@ -334,6 +418,12 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 	// ── プライベートヘルパー ────────────────────────────────────────────────
 
 	private async buildCachedItem(item: T): Promise<CachedItem<T>> {
+		const start = Date.now();
+		this.logger?.info?.("コンテンツのレンダリング開始", {
+			slug: item.slug,
+			pageId: item.id,
+		});
+
 		let markdown: string;
 		try {
 			markdown = await this.source.loadMarkdown(item);
@@ -378,13 +468,34 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 			});
 		}
 
-		return {
+		// afterRender フック
+		if (this.hooks.afterRender) {
+			html = await this.hooks.afterRender(html, item);
+		}
+
+		let result: CachedItem<T> = {
 			html,
 			item,
 			notionUpdatedAt: item.updatedAt,
 			cachedAt: Date.now(),
 		};
+
+		// beforeCache フック
+		if (this.hooks.beforeCache) {
+			result = await this.hooks.beforeCache(result);
+		}
+
+		this.logger?.info?.("コンテンツのレンダリング完了", {
+			slug: item.slug,
+			durationMs: Date.now() - start,
+		});
+
+		return result;
 	}
+}
+
+function buildListVersion<T extends BaseContentItem>(items: T[]): string {
+	return items.map((item) => `${item.id}:${item.updatedAt}`).join("|");
 }
 
 /** 設定済みの CMS インスタンスを生成するファクトリ関数。 */

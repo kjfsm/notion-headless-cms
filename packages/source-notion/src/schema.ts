@@ -2,198 +2,163 @@ import type {
 	PageObjectResponse,
 	RichTextItemResponse,
 } from "@notionhq/client/build/src/api-endpoints";
+import type { z } from "zod";
 
-// ── デフォルト値の共通オプション型 ──────────────────────────────────────────
+// ── フィールドマッピング型定義 ──────────────────────────────────────────────
 
-type WithDefault<T> = { default?: T | ((page: PageObjectResponse) => T) };
+export type NotionFieldType =
+	| {
+			type: "title" | "richText" | "url" | "checkbox" | "date" | "number";
+			notion: string;
+	  }
+	| { type: "multiSelect"; notion: string }
+	| {
+			type: "select";
+			notion: string;
+			published?: string[];
+			accessible?: string[];
+	  };
 
-// ── カラム定義型 ─────────────────────────────────────────────────────────────
+// id・updatedAt は Notion ページメタデータから自動設定されるシステムフィールド
+type SystemField = "id" | "updatedAt";
 
-export type TitleColumnDef = { type: "title"; notion: string } & WithDefault<string>;
-export type RichTextColumnDef = { type: "richText"; notion: string } & WithDefault<string>;
-export type DateColumnDef = { type: "date"; notion: string } & WithDefault<string>;
-export type NumberColumnDef = { type: "number"; notion: string } & WithDefault<number>;
-export type CheckboxColumnDef = { type: "checkbox"; notion: string } & WithDefault<boolean>;
-export type UrlColumnDef = { type: "url"; notion: string } & WithDefault<string>;
-export type MultiSelectColumnDef = { type: "multiSelect"; notion: string } & WithDefault<string[]>;
-export type SelectColumnDef<V extends Record<string, string> = Record<string, string>> = {
-	type: "select";
-	notion: string;
-	values?: V;
-	published?: string[];
-	accessible?: string[];
-} & WithDefault<string>;
+// ── defineMapping ────────────────────────────────────────────────────────────
 
-export type ColumnDef =
-	| TitleColumnDef
-	| RichTextColumnDef
-	| DateColumnDef
-	| NumberColumnDef
-	| CheckboxColumnDef
-	| UrlColumnDef
-	| MultiSelectColumnDef
-	| SelectColumnDef;
-
-export type SchemaMap = Record<string, ColumnDef>;
-
-// ── 型推論ユーティリティ ──────────────────────────────────────────────────────
-
-type HasDefault<C> = C extends { default: NonNullable<unknown> } ? true : false;
-
-type ColBase<C extends ColumnDef> =
-	C extends { type: "number" } ? number :
-	C extends { type: "checkbox" } ? boolean :
-	C extends { type: "multiSelect" } ? string[] :
-	C extends SelectColumnDef<infer V> ?
-		string extends V[keyof V] ? string :
-		V[keyof V]
-	: string;
-
-export type InferColValue<C extends ColumnDef> =
-	C extends { type: "multiSelect" | "checkbox" }
-		? ColBase<C>
-		: HasDefault<C> extends true
-			? ColBase<C>
-			: ColBase<C> | null;
-
-export type InferSchemaType<S extends SchemaMap> =
-	{ id: string; updatedAt: string } &
-	{ [K in keyof S]: InferColValue<S[K]> };
+/**
+ * Notion プロパティマッピングを定義する。
+ * `id` / `updatedAt` はシステムフィールドのため指定不要。
+ * 型レベルでキーがスキーマと一致することを保証する。ランタイムは恒等関数。
+ */
+export function defineMapping<T extends Record<string, unknown>>(
+	mapping: { [K in keyof Omit<T, SystemField>]: NotionFieldType },
+): { [K in keyof Omit<T, SystemField>]: NotionFieldType } {
+	return mapping;
+}
 
 // ── NotionSchema オブジェクト型 ──────────────────────────────────────────────
 
 export interface NotionSchema<T> {
-	_columns: SchemaMap;
+	zodSchema: z.ZodObject<z.ZodRawShape>;
+	mapping: { [K in keyof T]: NotionFieldType };
 	mapItem: (page: PageObjectResponse) => T;
 	publishedStatuses: readonly string[];
 	accessibleStatuses: readonly string[];
 }
 
-// ── col ヘルパー ─────────────────────────────────────────────────────────────
+// ── defineSchema ─────────────────────────────────────────────────────────────
 
-export const col = {
-	title: (notion: string, opts?: WithDefault<string>): TitleColumnDef =>
-		({ type: "title", notion, ...opts }),
-	richText: (notion: string, opts?: WithDefault<string>): RichTextColumnDef =>
-		({ type: "richText", notion, ...opts }),
-	date: (notion: string, opts?: WithDefault<string>): DateColumnDef =>
-		({ type: "date", notion, ...opts }),
-	number: (notion: string, opts?: WithDefault<number>): NumberColumnDef =>
-		({ type: "number", notion, ...opts }),
-	checkbox: (notion: string, opts?: WithDefault<boolean>): CheckboxColumnDef =>
-		({ type: "checkbox", notion, ...opts }),
-	url: (notion: string, opts?: WithDefault<string>): UrlColumnDef =>
-		({ type: "url", notion, ...opts }),
-	multiSelect: (notion: string, opts?: WithDefault<string[]>): MultiSelectColumnDef =>
-		({ type: "multiSelect", notion, ...opts }),
-	select: <V extends Record<string, string>>(
-		notion: string,
-		opts?: {
-			values?: V;
-			published?: Array<V[keyof V]>;
-			accessible?: Array<V[keyof V]>;
-			default?: string | ((page: PageObjectResponse) => string);
-		},
-	): SelectColumnDef<V> => ({ type: "select", notion, ...(opts as object) } as SelectColumnDef<V>),
-};
-
-// ── defineSchema 関数 ────────────────────────────────────────────────────────
-
-export function defineSchema<
-	S extends SchemaMap & {
-		slug: ColumnDef;
-		status: ColumnDef;
-		publishedAt: ColumnDef;
+/**
+ * Zod スキーマとマッピングを結合して NotionSchema を生成する。
+ *
+ * @example
+ * const PostSchema = z.object({ slug: z.string(), status: z.string() })
+ * const mapping = defineMapping<z.infer<typeof PostSchema>>({
+ *   slug: { notion: "Slug", type: "richText" },
+ *   status: { notion: "Status", type: "select", published: ["Published"] },
+ * })
+ * const schema = defineSchema(PostSchema, mapping)
+ */
+export function defineSchema<S extends z.ZodRawShape>(
+	zodSchema: z.ZodObject<S>,
+	mapping: {
+		[K in keyof Omit<z.infer<z.ZodObject<S>>, SystemField>]: NotionFieldType;
 	},
->(columns: S): NotionSchema<InferSchemaType<S>> {
+): NotionSchema<z.infer<z.ZodObject<S>>> {
+	type T = z.infer<z.ZodObject<S>>;
+
 	const published: string[] = [];
 	const accessible: string[] = [];
-	for (const colDef of Object.values(columns)) {
-		if (colDef.type === "select" && "published" in colDef) {
-			published.push(...(colDef.published ?? []));
-			accessible.push(...(colDef.accessible ?? colDef.published ?? []));
+
+	for (const fieldDef of Object.values(mapping) as NotionFieldType[]) {
+		if (fieldDef.type === "select") {
+			published.push(...(fieldDef.published ?? []));
+			accessible.push(...(fieldDef.accessible ?? fieldDef.published ?? []));
 		}
 	}
 
 	return {
-		_columns: columns,
-		mapItem: (page) => parseSchema(page, columns) as InferSchemaType<S>,
+		zodSchema: zodSchema as z.ZodObject<z.ZodRawShape>,
+		mapping: mapping as { [K in keyof T]: NotionFieldType },
+		mapItem: (page) => {
+			const raw = parseMapping(
+				page,
+				mapping as { [K in keyof T]: NotionFieldType },
+			);
+			return zodSchema.parse(raw) as T;
+		},
 		publishedStatuses: published,
 		accessibleStatuses: accessible,
 	};
 }
 
-// ── Notionプロパティパーサー ──────────────────────────────────────────────────
+// ── パーサー ─────────────────────────────────────────────────────────────────
 
 type PropertyValue = PageObjectResponse["properties"][string];
 
-function getPlainText(items: RichTextItemResponse[] | undefined): string {
+export function getPlainText(
+	items: RichTextItemResponse[] | undefined,
+): string {
 	return items?.map((item) => item.plain_text).join("") ?? "";
 }
 
-function parseSchema(page: PageObjectResponse, columns: SchemaMap): Record<string, unknown> {
+// id と updatedAt は Notion ページのメタデータから自動設定されるシステムフィールド
+const SYSTEM_FIELDS = new Set(["id", "updatedAt"]);
+
+function parseMapping<T>(
+	page: PageObjectResponse,
+	mapping: { [K in keyof T]: NotionFieldType },
+): Record<string, unknown> {
 	const result: Record<string, unknown> = {
 		id: page.id,
 		updatedAt: page.last_edited_time,
 	};
-	for (const [key, colDef] of Object.entries(columns)) {
-		result[key] = parseProperty(page, page.properties[colDef.notion], colDef);
+	for (const [key, fieldDef] of Object.entries(mapping) as [
+		string,
+		NotionFieldType,
+	][]) {
+		if (SYSTEM_FIELDS.has(key)) continue;
+		result[key] = parseField(page.properties[fieldDef.notion], fieldDef);
 	}
 	return result;
 }
 
-function parseProperty(
-	page: PageObjectResponse,
+function parseField(
 	prop: PropertyValue | undefined,
-	colDef: ColumnDef,
+	fieldDef: NotionFieldType,
 ): unknown {
-	const resolveDefault = (implicitFallback: unknown) => {
-		if ("default" in colDef && colDef.default !== undefined) {
-			return typeof colDef.default === "function" ? colDef.default(page) : colDef.default;
-		}
-		return implicitFallback;
-	};
-
 	if (!prop) {
-		if (colDef.type === "checkbox") return resolveDefault(false);
-		if (colDef.type === "multiSelect") return resolveDefault([]);
-		return resolveDefault(null);
+		if (fieldDef.type === "checkbox") return false;
+		if (fieldDef.type === "multiSelect") return [];
+		return null;
 	}
 
-	switch (colDef.type) {
-		case "title": {
-			const v = getPlainText(prop.type === "title" ? prop.title : []);
-			return v || resolveDefault(null);
-		}
-		case "richText": {
-			const v = getPlainText(prop.type === "rich_text" ? prop.rich_text : []);
-			return v || resolveDefault(null);
-		}
-		case "date": {
-			const v = prop.type === "date" ? prop.date?.start ?? null : null;
-			return v ?? resolveDefault(null);
-		}
-		case "number": {
-			const v = prop.type === "number" ? prop.number : null;
-			return v ?? resolveDefault(null);
-		}
+	switch (fieldDef.type) {
+		case "title":
+			return getPlainText(prop.type === "title" ? prop.title : []) || null;
+		case "richText":
+			return (
+				getPlainText(prop.type === "rich_text" ? prop.rich_text : []) || null
+			);
+		case "date":
+			return prop.type === "date" ? (prop.date?.start ?? null) : null;
+		case "number":
+			return prop.type === "number" ? prop.number : null;
 		case "checkbox":
 			return prop.type === "checkbox" ? prop.checkbox : false;
-		case "url": {
-			const v = prop.type === "url" ? prop.url : null;
-			return v ?? resolveDefault(null);
-		}
+		case "url":
+			return prop.type === "url" ? prop.url : null;
 		case "multiSelect":
-			return prop.type === "multi_select" ? prop.multi_select.map((s) => s.name) : [];
+			return prop.type === "multi_select"
+				? prop.multi_select.map((s) => s.name)
+				: [];
 		case "select": {
 			const raw =
 				prop.type === "select"
-					? prop.select?.name ?? ""
+					? (prop.select?.name ?? "")
 					: prop.type === "status"
-						? (prop as { status?: { name: string } }).status?.name ?? ""
+						? ((prop as { status?: { name: string } }).status?.name ?? "")
 						: "";
-			if (!raw) return resolveDefault("");
-			return colDef.values && raw in colDef.values ? colDef.values[raw] : raw;
+			return raw || null;
 		}
 	}
 }

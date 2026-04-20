@@ -51,6 +51,6 @@
 	},
 	"dependencies": {
 		"@notionhq/client": "^5.18.0",
-		"notion-to-md": "4.0.0-alpha.7"
+		"notion-to-md": "^3.1.0"
 	}
 }

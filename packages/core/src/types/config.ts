@@ -4,6 +4,9 @@ import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoint
 import type { PluggableList } from "unified";
 import type { CacheConfig } from "./cache";
 import type { BaseContentItem, CMSSchemaProperties } from "./content";
+import type { CMSHooks } from "./hooks";
+import type { Logger } from "./logger";
+import type { CMSPlugin } from "./plugin";
 import type { DataSourceAdapter } from "./source";
 
 /** スキーマ設定。公開ステータスのフィルタやプロパティ名マッピングを制御する。 */
@@ -35,6 +38,18 @@ export interface ContentConfig {
 	blocks?: Record<string, BlockHandler>;
 }
 
+/** レートリミット・リトライ設定。 */
+export interface RateLimiterConfig {
+	/** 同時実行数の上限。デフォルト: 3 */
+	maxConcurrent?: number;
+	/** リトライ対象の HTTP ステータスコード。デフォルト: [429, 502, 503] */
+	retryOn?: number[];
+	/** 最大リトライ回数。デフォルト: 4 */
+	maxRetries?: number;
+	/** リトライ時の基準待機時間（ミリ秒）。デフォルト: 1000 */
+	baseDelayMs?: number;
+}
+
 /**
  * createCMS() に渡すオプション。
  * ジェネリクス型 T にカスタムコンテンツ型を指定できる（デフォルト: BaseContentItem）。
@@ -50,4 +65,12 @@ export interface CreateCMSOptions<T extends BaseContentItem = BaseContentItem> {
 	content?: ContentConfig;
 	/** Cloudflare Workers の waitUntil に相当する非同期処理の登録関数。 */
 	waitUntil?: (p: Promise<unknown>) => void;
+	/** ライフサイクルフック。 */
+	hooks?: CMSHooks<T>;
+	/** プラグイン配列。フックとロガーを組み合わせて提供できる。 */
+	plugins?: CMSPlugin<T>[];
+	/** ロガー。 */
+	logger?: Logger;
+	/** レートリミット・リトライ設定。 */
+	rateLimiter?: RateLimiterConfig;
 }

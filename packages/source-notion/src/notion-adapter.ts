@@ -59,9 +59,11 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 			this.itemMapper = opts.schema.mapItem;
 			this.publishedStatuses = opts.schema.publishedStatuses;
 			this.accessibleStatuses = opts.schema.accessibleStatuses;
-			// schema 経由でも slug プロパティ名を取得（_columns.slug.notion）
-			const slugCol = opts.schema._columns.slug;
-			this.slugPropName = slugCol.notion;
+			// schema 経由でも slug プロパティ名を取得（mapping.slug.notion）
+			const slugField = (
+				opts.schema.mapping as Record<string, { notion: string }>
+			).slug;
+			this.slugPropName = slugField?.notion ?? DEFAULT_PROPERTIES.slug;
 		} else {
 			const props: Required<CMSSchemaProperties> = {
 				...DEFAULT_PROPERTIES,

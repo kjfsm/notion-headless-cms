@@ -9,13 +9,14 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@notion-headless-cms/adapter-next": "^0.2.0",
-		"@notion-headless-cms/cache-next": "^0.2.0",
-		"@notion-headless-cms/core": "^0.0.6",
-		"@notion-headless-cms/source-notion": "^0.2.0",
+		"@notion-headless-cms/adapter-next": "workspace:*",
+		"@notion-headless-cms/cache-next": "workspace:*",
+		"@notion-headless-cms/core": "workspace:*",
+		"@notion-headless-cms/source-notion": "workspace:*",
 		"next": "^15.0.0",
 		"react": "^19.0.0",
-		"react-dom": "^19.0.0"
+		"react-dom": "^19.0.0",
+		"zod": "^4.1.12"
 	},
 	"devDependencies": {
 		"@types/node": "^22.0.0",

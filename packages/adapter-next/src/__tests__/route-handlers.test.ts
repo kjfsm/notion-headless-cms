@@ -6,7 +6,9 @@ import {
 
 const makeMockCMS = () => ({
 	createCachedImageResponse: vi.fn(),
-	syncFromWebhook: vi.fn().mockResolvedValue({ updated: ["post-a"] }),
+	cache: {
+		sync: vi.fn().mockResolvedValue({ updated: ["post-a"] }),
+	},
 });
 
 describe("createImageRouteHandler", () => {
@@ -57,7 +59,7 @@ describe("createRevalidateRouteHandler", () => {
 
 		const res = await handler(request);
 		expect(res.status).toBe(200);
-		expect(cms.syncFromWebhook).toHaveBeenCalledWith({ slug: "post-a" });
+		expect(cms.cache.sync).toHaveBeenCalledWith({ slug: "post-a" });
 		const body = await res.json();
 		expect(body.updated).toEqual(["post-a"]);
 	});
@@ -75,6 +77,6 @@ describe("createRevalidateRouteHandler", () => {
 
 		const res = await handler(request);
 		expect(res.status).toBe(401);
-		expect(cms.syncFromWebhook).not.toHaveBeenCalled();
+		expect(cms.cache.sync).not.toHaveBeenCalled();
 	});
 });

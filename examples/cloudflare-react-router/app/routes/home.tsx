@@ -4,7 +4,7 @@ import { createCMS } from "../lib/cms";
 
 export async function loader({ context }: Route.LoaderArgs) {
 	const cms = createCMS(context.cloudflare.env);
-	const { items } = await cms.getList();
+	const { items } = await cms.cached.list();
 	return { items };
 }
 
