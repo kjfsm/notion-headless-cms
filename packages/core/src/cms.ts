@@ -11,14 +11,12 @@ import type {
 	BaseContentItem,
 	CacheConfig,
 	CachedItem,
-	CachedItemList,
 	CMSHooks,
 	CreateCMSOptions,
 	DataSourceAdapter,
 	DocumentCacheAdapter,
 	ImageCacheAdapter,
 	Logger,
-	RateLimiterConfig,
 	StorageBinary,
 } from "./types/index";
 

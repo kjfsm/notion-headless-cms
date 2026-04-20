@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { memoryCache, memoryImageCache } from "../cache/memory";
+import { memoryCache } from "../cache/memory";
 import { type CMS, createCMS } from "../cms";
 import type {
 	BaseContentItem,
