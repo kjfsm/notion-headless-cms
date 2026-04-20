@@ -10,9 +10,10 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@notion-headless-cms/adapter-node": "file:../../packages/adapter-node",
-		"@notion-headless-cms/source-notion": "^0.2.0",
-		"express": "^4.21.0"
+		"@notion-headless-cms/adapter-node": "workspace:*",
+		"@notion-headless-cms/source-notion": "workspace:*",
+		"express": "^4.21.0",
+		"zod": "^4.1.12"
 	},
 	"devDependencies": {
 		"@types/express": "^4.17.0",

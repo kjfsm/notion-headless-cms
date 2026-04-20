@@ -10,16 +10,18 @@
 		"typecheck": "svelte-kit sync && tsc --noEmit"
 	},
 	"dependencies": {
-		"@notion-headless-cms/adapter-cloudflare": "^0.0.6",
-		"@notion-headless-cms/source-notion": "^0.2.0"
+		"@notion-headless-cms/adapter-cloudflare": "workspace:*",
+		"@notion-headless-cms/source-notion": "workspace:*",
+		"zod": "^4.1.12"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20250620.0",
-		"@sveltejs/adapter-cloudflare": "^4.0.0",
+		"@sveltejs/adapter-cloudflare": "^7.0.0",
 		"@sveltejs/kit": "^2.0.0",
+		"@sveltejs/vite-plugin-svelte": "^5.0.0",
 		"svelte": "^5.0.0",
 		"typescript": "^5.9.0",
 		"vite": "^6.0.0",
-		"wrangler": "^3.80.0"
+		"wrangler": "^4.83.0"
 	}
 }

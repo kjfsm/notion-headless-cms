@@ -2,7 +2,7 @@ name = "example-cloudflare-sveltekit"
 main = ".svelte-kit/cloudflare/_worker.js"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
-assets = { directory = ".svelte-kit/cloudflare" }
+assets = { directory = ".svelte-kit/cloudflare", binding = "ASSETS" }
 
 [[r2_buckets]]
 binding = "CACHE_BUCKET"

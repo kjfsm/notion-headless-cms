@@ -4,8 +4,12 @@ import { cms } from "../../lib/cms";
 export const revalidate = 300;
 
 export async function generateStaticParams() {
-	const slugs = await cms.getStaticSlugs();
-	return slugs.map((slug) => ({ slug }));
+	try {
+		const slugs = await cms.getStaticSlugs();
+		return slugs.map((slug) => ({ slug }));
+	} catch {
+		return [];
+	}
 }
 
 export default async function PostPage({
@@ -14,7 +18,7 @@ export default async function PostPage({
 	params: Promise<{ slug: string }>;
 }) {
 	const { slug } = await params;
-	const entry = await cms.getItemBySlug(slug);
+	const entry = await cms.cached.get(slug);
 	if (!entry) notFound();
 
 	const { html, item } = entry;
