@@ -1,6 +1,6 @@
 {
 	"name": "@notion-headless-cms/core",
-	"version": "0.0.6",
+	"version": "0.0.7",
 	"description": "Core CMS engine for notion-headless-cms — fetch, transform, cache with stale-while-revalidate strategy",
 	"keywords": [
 		"notion",
