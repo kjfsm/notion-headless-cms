@@ -1,6 +1,6 @@
 {
 	"name": "@notion-headless-cms/source-notion",
-	"version": "0.2.0",
+	"version": "0.2.1",
 	"description": "Notion DataSourceAdapter for notion-headless-cms — fetches pages from Notion databases",
 	"keywords": [
 		"notion",

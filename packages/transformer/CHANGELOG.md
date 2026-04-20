@@ -1,5 +1,11 @@
 # @notion-headless-cms/transformer
 
+## 0.1.1
+
+### Patch Changes
+
+- 8f69e55: update
+
 ## 0.1.0
 
 ### Minor Changes
