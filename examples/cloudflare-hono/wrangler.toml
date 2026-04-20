@@ -1,0 +1,13 @@
+name = "example-cloudflare-hono"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[r2_buckets]]
+binding = "CACHE_BUCKET"
+bucket_name = "my-cms-cache"
+preview_bucket_name = "my-cms-cache-preview"
+
+# シークレットは wrangler secret put で設定する
+# wrangler secret put NOTION_TOKEN
+# wrangler secret put NOTION_DATA_SOURCE_ID

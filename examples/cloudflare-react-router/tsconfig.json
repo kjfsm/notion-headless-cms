@@ -1,0 +1,16 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ESNext",
+		"moduleResolution": "bundler",
+		"strict": true,
+		"verbatimModuleSyntax": true,
+		"skipLibCheck": true,
+		"jsx": "react-jsx",
+		"paths": {
+			"~/*": ["./app/*"]
+		}
+	},
+	"include": ["**/*.ts", "**/*.tsx", ".react-router/types/**/*.d.ts"],
+	"exclude": ["node_modules"]
+}

@@ -1,0 +1,25 @@
+{
+	"name": "example-cloudflare-sveltekit",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "vite dev",
+		"build": "vite build",
+		"deploy": "vite build && wrangler deploy",
+		"typecheck": "svelte-kit sync && tsc --noEmit"
+	},
+	"dependencies": {
+		"@notion-headless-cms/adapter-cloudflare": "0.0.6",
+		"@notion-headless-cms/source-notion": "0.1.0"
+	},
+	"devDependencies": {
+		"@cloudflare/workers-types": "^4.20250620.0",
+		"@sveltejs/adapter-cloudflare": "^4.0.0",
+		"@sveltejs/kit": "^2.0.0",
+		"svelte": "^5.0.0",
+		"typescript": "^5.9.0",
+		"vite": "^6.0.0",
+		"wrangler": "^3.80.0"
+	}
+}

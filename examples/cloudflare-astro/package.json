@@ -1,0 +1,22 @@
+{
+	"name": "example-cloudflare-astro",
+	"private": true,
+	"version": "0.0.1",
+	"type": "module",
+	"scripts": {
+		"dev": "astro dev",
+		"build": "astro build",
+		"deploy": "astro build && wrangler deploy",
+		"typecheck": "astro check"
+	},
+	"dependencies": {
+		"@notion-headless-cms/adapter-cloudflare": "0.0.6",
+		"@notion-headless-cms/source-notion": "0.1.0",
+		"astro": "^5.0.0"
+	},
+	"devDependencies": {
+		"@astrojs/cloudflare": "^12.0.0",
+		"@cloudflare/workers-types": "^4.20250620.0",
+		"wrangler": "^3.80.0"
+	}
+}
