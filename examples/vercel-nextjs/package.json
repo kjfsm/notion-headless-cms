@@ -9,10 +9,10 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@notion-headless-cms/adapter-next": "0.1.0",
-		"@notion-headless-cms/cache-next": "0.1.0",
-		"@notion-headless-cms/core": "0.0.6",
-		"@notion-headless-cms/source-notion": "0.1.0",
+		"@notion-headless-cms/adapter-next": "^0.2.0",
+		"@notion-headless-cms/cache-next": "^0.2.0",
+		"@notion-headless-cms/core": "^0.0.6",
+		"@notion-headless-cms/source-notion": "^0.2.0",
 		"next": "^15.0.0",
 		"react": "^19.0.0",
 		"react-dom": "^19.0.0"

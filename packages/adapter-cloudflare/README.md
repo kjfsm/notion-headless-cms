@@ -1,6 +1,6 @@
 # @notion-headless-cms/adapter-cloudflare
 
-Cloudflare Workers 向け CMS ファクトリー。  
+Cloudflare Workers 向け CMS ファクトリー。
 `env.CACHE_BUCKET`（R2Bucket）を受け取り、`CMS` インスタンスを生成して返す。
 
 ## インストール
@@ -16,7 +16,7 @@ npm install @notion-headless-cms/adapter-cloudflare
 ```toml
 [[r2_buckets]]
 binding = "CACHE_BUCKET"
-bucket_name = "my-cms-cache"
+bucket_name = "nhc-example-cache"
 ```
 
 ### Workers エントリーポイント

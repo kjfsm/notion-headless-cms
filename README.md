@@ -1,6 +1,6 @@
 # notion-headless-cms
 
-Notion をヘッドレス CMS として利用するための TypeScript ライブラリ群。  
+Notion をヘッドレス CMS として利用するための TypeScript ライブラリ群。
 Cloudflare Workers + R2 での利用を前提に設計されており、pnpm モノリポで管理されている。
 
 ## データフロー
@@ -27,7 +27,7 @@ flowchart LR
   pipeline --> output
 ```
 
-> **SWR（Stale-While-Revalidate）**: キャッシュを即返し、TTL 切れなら裏で非同期更新。  
+> **SWR（Stale-While-Revalidate）**: キャッシュを即返し、TTL 切れなら裏で非同期更新。
 > Notion の `last_edited_time` を比較し、変更があれば HTML を再生成する。
 
 ## パッケージ一覧
@@ -124,7 +124,7 @@ console.log(rendered?.html);
 NOTION_TOKEN=xxx NOTION_DATA_SOURCE_ID=yyy npx tsx fetch-posts.ts
 ```
 
-> R2 キャッシュ不要のローカル開発・バッチ処理向け。  
+> R2 キャッシュ不要のローカル開発・バッチ処理向け。
 > Cloudflare Workers + R2 を使った本番構成は次節を参照。
 
 ## クイックスタート（Cloudflare Workers）
@@ -134,7 +134,7 @@ NOTION_TOKEN=xxx NOTION_DATA_SOURCE_ID=yyy npx tsx fetch-posts.ts
 ```toml
 [[r2_buckets]]
 binding = "CACHE_BUCKET"
-bucket_name = "my-cms-cache"
+bucket_name = "nhc-example-cache"
 ```
 
 ### Workers エントリーポイント

@@ -6,8 +6,8 @@ assets = { directory = ".svelte-kit/cloudflare" }
 
 [[r2_buckets]]
 binding = "CACHE_BUCKET"
-bucket_name = "my-cms-cache"
-preview_bucket_name = "my-cms-cache-preview"
+bucket_name = "nhc-example-cache"
+preview_bucket_name = "nhc-example-cache-preview"
 
 # wrangler secret put NOTION_TOKEN
 # wrangler secret put NOTION_DATA_SOURCE_ID

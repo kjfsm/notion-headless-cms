@@ -1,4 +1,4 @@
-name = "example-cloudflare-astro"
+name = "nhc-example-cloudflare-astro"
 main = "./dist/_worker.js"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
@@ -6,8 +6,7 @@ assets = { directory = "./dist" }
 
 [[r2_buckets]]
 binding = "CACHE_BUCKET"
-bucket_name = "my-cms-cache"
-preview_bucket_name = "my-cms-cache-preview"
+bucket_name = "nhc-example-cache"
 
 # wrangler secret put NOTION_TOKEN
 # wrangler secret put NOTION_DATA_SOURCE_ID

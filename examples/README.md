@@ -48,12 +48,12 @@ pnpm dev
 
 ```bash
 # R2 バケットを作成
-wrangler r2 bucket create my-cms-cache
+wrangler r2 bucket create nhc-example-cache
 
 # wrangler.toml の bucket_name を更新
 # [[r2_buckets]]
 # binding = "CACHE_BUCKET"
-# bucket_name = "my-cms-cache"
+# bucket_name = "nhc-example-cache"
 
 # シークレットを設定
 wrangler secret put NOTION_TOKEN
