@@ -11,7 +11,7 @@
 	},
 	"dependencies": {
 		"@notion-headless-cms/adapter-node": "file:../../packages/adapter-node",
-		"@notion-headless-cms/source-notion": "0.1.0",
+		"@notion-headless-cms/source-notion": "^0.2.0",
 		"express": "^4.21.0"
 	},
 	"devDependencies": {

@@ -5,8 +5,8 @@ compatibility_flags = ["nodejs_compat"]
 
 [[r2_buckets]]
 binding = "CACHE_BUCKET"
-bucket_name = "my-cms-cache"
-preview_bucket_name = "my-cms-cache-preview"
+bucket_name = "nhc-example-cache"
+preview_bucket_name = "nhc-example-cache-preview"
 
 # シークレットは wrangler secret put で設定する
 # wrangler secret put NOTION_TOKEN

@@ -11,7 +11,7 @@ pnpm add @notion-headless-cms/adapter-cloudflare
 ```toml
 [[r2_buckets]]
 binding = "CACHE_BUCKET"
-bucket_name = "my-cms-cache"
+bucket_name = "nhc-example-cache"
 ```
 
 ## シークレットの設定
