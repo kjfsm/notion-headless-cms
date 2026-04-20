@@ -19,15 +19,19 @@ export type NotionFieldType =
 			accessible?: string[];
 	  };
 
+// id・updatedAt は Notion ページメタデータから自動設定されるシステムフィールド
+type SystemField = "id" | "updatedAt";
+
 // ── defineMapping ────────────────────────────────────────────────────────────
 
 /**
  * Notion プロパティマッピングを定義する。
+ * `id` / `updatedAt` はシステムフィールドのため指定不要。
  * 型レベルでキーがスキーマと一致することを保証する。ランタイムは恒等関数。
  */
 export function defineMapping<T extends Record<string, unknown>>(
-	mapping: { [K in keyof T]: NotionFieldType },
-): { [K in keyof T]: NotionFieldType } {
+	mapping: { [K in keyof Omit<T, SystemField>]: NotionFieldType },
+): { [K in keyof Omit<T, SystemField>]: NotionFieldType } {
 	return mapping;
 }
 
@@ -56,7 +60,9 @@ export interface NotionSchema<T> {
  */
 export function defineSchema<S extends z.ZodRawShape>(
 	zodSchema: z.ZodObject<S>,
-	mapping: { [K in keyof z.infer<z.ZodObject<S>>]: NotionFieldType },
+	mapping: {
+		[K in keyof Omit<z.infer<z.ZodObject<S>>, SystemField>]: NotionFieldType;
+	},
 ): NotionSchema<z.infer<z.ZodObject<S>>> {
 	type T = z.infer<z.ZodObject<S>>;
 

@@ -15,8 +15,6 @@ const PostSchema = z.object({
 type Post = z.infer<typeof PostSchema>;
 
 const mapping = defineMapping<Post>({
-	id: { type: "richText", notion: "Id" }, // システムフィールド（無視される）
-	updatedAt: { type: "richText", notion: "UpdatedAt" }, // システムフィールド（無視される）
 	slug: { type: "richText", notion: "Slug" },
 	status: {
 		type: "select",
@@ -141,8 +139,6 @@ describe("defineSchema", () => {
 				views: z.number(),
 			});
 			const strictMapping = defineMapping<z.infer<typeof StrictSchema>>({
-				id: { type: "richText", notion: "Id" },
-				updatedAt: { type: "richText", notion: "UpdatedAt" },
 				slug: { type: "richText", notion: "Slug" },
 				status: { type: "select", notion: "Status" },
 				title: { type: "title", notion: "Title" },
