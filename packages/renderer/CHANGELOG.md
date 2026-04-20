@@ -1,5 +1,11 @@
 # @notion-headless-cms/renderer
 
+## 0.1.0
+
+### Minor Changes
+
+- 25c018d: update version
+
 ## 0.0.4
 
 ### Patch Changes

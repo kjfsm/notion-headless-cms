@@ -1,5 +1,18 @@
 # @notion-headless-cms/core
 
+## 0.1.0
+
+### Minor Changes
+
+- 25c018d: update version
+
+### Patch Changes
+
+- Updated dependencies [25c018d]
+  - @notion-headless-cms/fetcher@0.1.0
+  - @notion-headless-cms/renderer@0.1.0
+  - @notion-headless-cms/transformer@0.1.0
+
 ## 0.0.7
 
 ### Patch Changes

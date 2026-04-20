@@ -1,6 +1,6 @@
 {
 	"name": "@notion-headless-cms/transformer",
-	"version": "0.0.4",
+	"version": "0.1.0",
 	"description": "Notion Block to Markdown transformer for notion-headless-cms",
 	"keywords": [
 		"notion",
