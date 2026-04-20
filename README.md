@@ -1,7 +1,7 @@
 # notion-headless-cms
 
 Notion をヘッドレス CMS として利用するための TypeScript ライブラリ群。
-Cloudflare Workers + R2 での利用を前提に設計されており、pnpm モノリポで管理されている。
+Cloudflare Workers + R2 での利用を前提に設計されており、pnpm モノレポで管理されている。
 
 ## データフロー
 
