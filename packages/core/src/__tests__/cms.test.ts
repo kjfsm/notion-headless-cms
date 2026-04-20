@@ -110,15 +110,17 @@ describe("CMS", () => {
 		});
 	});
 
-	describe("renderBySlug()", () => {
+	describe("find() + render()", () => {
 		it("スラッグからレンダリング済み CachedItem を返す", async () => {
-			const result = await cms.renderBySlug("post-a");
-			expect(result?.html).toBe("<p>rendered</p>");
+			const item = await cms.find("post-a");
+			expect(item).not.toBeNull();
+			const result = await cms.render(item!);
+			expect(result.html).toBe("<p>rendered</p>");
 		});
 
 		it("存在しないスラッグでは null を返す", async () => {
-			const result = await cms.renderBySlug("nonexistent");
-			expect(result).toBeNull();
+			const item = await cms.find("nonexistent");
+			expect(item).toBeNull();
 		});
 	});
 

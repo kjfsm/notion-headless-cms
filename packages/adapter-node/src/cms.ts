@@ -10,8 +10,8 @@ import {
 	memoryDocumentCache,
 	memoryImageCache,
 } from "@notion-headless-cms/core";
-import { notionAdapter } from "@notion-headless-cms/source-notion";
 import type { NotionSchema } from "@notion-headless-cms/source-notion";
+import { notionAdapter } from "@notion-headless-cms/source-notion";
 
 export interface NodeCMSOptions<T extends BaseContentItem = BaseContentItem> {
 	/** defineSchema() の戻り値または SchemaConfig を受け取る。 */
@@ -28,7 +28,7 @@ export interface NodeCMSOptions<T extends BaseContentItem = BaseContentItem> {
 function isNotionSchema<T extends BaseContentItem>(
 	s: SchemaConfig<T> | NotionSchema<T>,
 ): s is NotionSchema<T> {
-	return "_columns" in s;
+	return "zodSchema" in s && "mapping" in s;
 }
 
 /**
@@ -46,10 +46,8 @@ export function createNodeCMS<T extends BaseContentItem = BaseContentItem>(
 		throw new Error("NOTION_DATA_SOURCE_ID environment variable is not set");
 
 	const schema = opts?.schema;
-	const notionSchema =
-		schema && isNotionSchema(schema) ? schema : undefined;
-	const cmsSchema =
-		schema && !isNotionSchema(schema) ? schema : undefined;
+	const notionSchema = schema && isNotionSchema(schema) ? schema : undefined;
+	const cmsSchema = schema && !isNotionSchema(schema) ? schema : undefined;
 
 	const source = notionAdapter<T>({
 		token,
@@ -59,8 +57,7 @@ export function createNodeCMS<T extends BaseContentItem = BaseContentItem>(
 
 	const docCache =
 		opts?.cache?.document === "memory" ? memoryDocumentCache<T>() : false;
-	const imgCache =
-		opts?.cache?.image === "memory" ? memoryImageCache() : false;
+	const imgCache = opts?.cache?.image === "memory" ? memoryImageCache() : false;
 
 	const cacheConfig: CacheConfig<T> = {
 		document: docCache,

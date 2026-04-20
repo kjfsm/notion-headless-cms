@@ -54,6 +54,7 @@
 		"@notion-headless-cms/core": "workspace:*",
 		"@notion-headless-cms/fetcher": "workspace:*",
 		"@notion-headless-cms/transformer": "workspace:*",
-		"@notionhq/client": "^5.18.0"
+		"@notionhq/client": "^5.18.0",
+		"zod": "^4.1.12"
 	}
 }

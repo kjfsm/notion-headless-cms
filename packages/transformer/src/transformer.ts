@@ -1,67 +1,52 @@
 import type { Client } from "@notionhq/client";
-import { NotionConverter } from "notion-to-md";
-import type { BaseRendererPlugin } from "notion-to-md/core";
-import { MDXRenderer } from "notion-to-md/plugins/renderer";
+import type { BlockConverter } from "./converter";
+import { NtmConverter } from "./ntm-converter";
 import type { BlockHandler, TransformerConfig } from "./types";
 
 /**
  * Notion Block → Markdown 変換クラス。
- * notion-to-md v4 をラップし、registerBlock でカスタムブロックハンドラーを登録できる。
- *
- * カスタムハンドラーを登録する場合は MDXRenderer を利用し、
- * テンプレートをコンテンツのみに設定して標準 Markdown に近い出力を得る。
+ * notion-to-md v3 をラップし、registerBlock でカスタムブロックハンドラーを登録できる。
+ * converter オプションで代替実装に差し替え可能。
  */
 export class Transformer {
 	private readonly customHandlers: Map<string, BlockHandler> = new Map();
+	private readonly converterFactory:
+		| ((client: Client) => BlockConverter)
+		| undefined;
 
-	constructor(config?: TransformerConfig) {
+	constructor(
+		config?: TransformerConfig & {
+			converter?: (client: Client) => BlockConverter;
+		},
+	) {
 		if (config?.blocks) {
 			for (const [type, handler] of Object.entries(config.blocks)) {
 				this.customHandlers.set(type, handler);
 			}
 		}
+		this.converterFactory = config?.converter;
 	}
 
-	/**
-	 * ブロックタイプにカスタムハンドラーを登録する。
-	 * 同じタイプを再登録した場合は上書きされる。
-	 */
+	/** ブロックタイプにカスタムハンドラーを登録する。同じタイプを再登録した場合は上書きされる。 */
 	registerBlock(type: string, handler: BlockHandler): void {
 		this.customHandlers.set(type, handler);
 	}
 
-	/**
-	 * NotionページをMarkdownに変換する。
-	 * notion-to-md が内部でサブブロックを取得するため client が必要。
-	 * カスタムハンドラーが登録されている場合は MDXRenderer に登録して適用する。
-	 */
+	/** NotionページをMarkdownに変換する。 */
 	async transform(client: Client, pageId: string): Promise<string> {
-		const n2m = new NotionConverter(client);
+		const converter = this.converterFactory
+			? this.converterFactory(client)
+			: new NtmConverter(client, this.customHandlers);
 
-		if (this.customHandlers.size > 0) {
-			// コンテンツのみを出力するテンプレートで MDXRenderer を設定する。
-			const renderer: BaseRendererPlugin = new MDXRenderer().setTemplate(
-				"{{{content}}}",
-			);
+		if (!this.converterFactory) {
+			// NtmConverter はコンストラクタでハンドラーをコピー済み
+		} else {
 			for (const [type, handler] of this.customHandlers) {
-				renderer.createBlockTransformer(
-					// notion-to-md の NotionBlockType は string のサブタイプ。
-					// eslint-disable-next-line @typescript-eslint/no-explicit-any
-					type as any,
-					{
-						transform: async (ctx: { block: unknown }) =>
-							handler(ctx.block as Parameters<BlockHandler>[0], {
-								client,
-								pageId,
-							}),
-					},
-				);
+				converter.registerBlock(type, handler);
 			}
-			n2m.withRenderer(renderer);
 		}
 
-		const result = await n2m.convert(pageId);
-		return result.content;
+		return converter.convert(pageId);
 	}
 }
 

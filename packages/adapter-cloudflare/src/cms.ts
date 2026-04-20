@@ -7,8 +7,8 @@ import type {
 	SchemaConfig,
 } from "@notion-headless-cms/core";
 import { CMS } from "@notion-headless-cms/core";
-import { notionAdapter } from "@notion-headless-cms/source-notion";
 import type { NotionSchema } from "@notion-headless-cms/source-notion";
+import { notionAdapter } from "@notion-headless-cms/source-notion";
 
 export interface CloudfareCMSEnv {
 	NOTION_TOKEN: string;
@@ -29,7 +29,7 @@ export interface CreateCloudflareCMSOptions<
 function isNotionSchema<T extends BaseContentItem>(
 	s: SchemaConfig<T> | NotionSchema<T>,
 ): s is NotionSchema<T> {
-	return "_columns" in s;
+	return "zodSchema" in s && "mapping" in s;
 }
 
 /**
@@ -43,10 +43,8 @@ export function createCloudflareCMS<
 >(opts: CreateCloudflareCMSOptions<T>): CMS<T> {
 	const { env, schema, content, cache } = opts;
 
-	const notionSchema =
-		schema && isNotionSchema(schema) ? schema : undefined;
-	const cmsSchema =
-		schema && !isNotionSchema(schema) ? schema : undefined;
+	const notionSchema = schema && isNotionSchema(schema) ? schema : undefined;
+	const cmsSchema = schema && !isNotionSchema(schema) ? schema : undefined;
 
 	const source = notionAdapter<T>({
 		token: env.NOTION_TOKEN,
