@@ -43,7 +43,7 @@ describe("mergeHooks", () => {
 		});
 
 		const result = await merged.beforeCache?.(makeCachedItem("test"));
-		expect(result.html).toBe("<p>test</p>-p1-direct");
+		expect(result?.html).toBe("<p>test</p>-p1-direct");
 		expect(order).toEqual([1, 2]);
 	});
 
