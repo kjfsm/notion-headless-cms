@@ -37,13 +37,12 @@
 		"node": ">=18"
 	},
 	"scripts": {
-		"build": "tsup src/index.ts --format esm --dts --out-dir dist",
+		"build": "tsup src/index.ts --format esm --dts --sourcemap --out-dir dist",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
 		"prepublishOnly": "pnpm run build"
 	},
 	"publishConfig": {
-		"registry": "https://registry.npmjs.org",
 		"access": "public",
 		"exports": {
 			".": {

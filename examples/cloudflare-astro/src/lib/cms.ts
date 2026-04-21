@@ -1,4 +1,4 @@
-import type { CloudfareCMSEnv } from "@notion-headless-cms/adapter-cloudflare";
+import type { CloudflareCMSEnv } from "@notion-headless-cms/adapter-cloudflare";
 import { createCloudflareCMS } from "@notion-headless-cms/adapter-cloudflare";
 import { defineMapping, defineSchema } from "@notion-headless-cms/source-notion";
 import { z } from "zod";
@@ -32,7 +32,7 @@ const mapping = defineMapping<BlogPost>({
 
 const blogSchema = defineSchema(BlogSchema, mapping);
 
-export function createCMS(env: CloudfareCMSEnv) {
+export function createCMS(env: CloudflareCMSEnv) {
 	return createCloudflareCMS<BlogPost>({
 		env,
 		schema: blogSchema,

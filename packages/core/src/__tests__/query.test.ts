@@ -28,8 +28,10 @@ const makeMockSource = (data: Item[] = items): DataSourceAdapter<Item> => ({
 	name: "mock",
 	list: vi.fn().mockImplementation(async (opts) => {
 		if (opts?.publishedStatuses && opts.publishedStatuses.length > 0) {
-			return data.filter((i) =>
-				(opts.publishedStatuses as string[]).includes(i.status),
+			return data.filter(
+				(i) =>
+					i.status !== undefined &&
+					(opts.publishedStatuses as string[]).includes(i.status),
 			);
 		}
 		return data;

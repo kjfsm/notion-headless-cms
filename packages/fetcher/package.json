@@ -1,6 +1,7 @@
 {
 	"name": "@notion-headless-cms/fetcher",
 	"version": "0.1.0",
+	"private": true,
 	"description": "Notion API client wrapper — fetches pages and blocks from Notion databases",
 	"keywords": [
 		"notion",
@@ -39,7 +40,6 @@
 		"prepublishOnly": "pnpm run build"
 	},
 	"publishConfig": {
-		"registry": "https://registry.npmjs.org",
 		"access": "public",
 		"exports": {
 			".": {

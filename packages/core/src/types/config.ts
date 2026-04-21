@@ -1,7 +1,3 @@
-import type { RendererFn } from "@notion-headless-cms/renderer";
-import type { BlockHandler } from "@notion-headless-cms/transformer";
-import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
-import type { PluggableList } from "unified";
 import type { CacheConfig } from "./cache";
 import type { BaseContentItem, CMSSchemaProperties } from "./content";
 import type { CMSHooks } from "./hooks";
@@ -9,19 +5,31 @@ import type { Logger } from "./logger";
 import type { CMSPlugin } from "./plugin";
 import type { DataSourceAdapter } from "./source";
 
+/**
+ * render() オプション。core は renderer の実装を知らず、この型だけを扱う。
+ * @notion-headless-cms/renderer の renderMarkdown() はこのシグネチャと互換。
+ */
+export interface RenderOptions {
+	imageProxyBase?: string;
+	cacheImage?: (url: string) => Promise<string | null>;
+	remarkPlugins?: unknown[];
+	rehypePlugins?: unknown[];
+}
+
+/** カスタムレンダラー関数の型。デフォルトは @notion-headless-cms/renderer の renderMarkdown。 */
+export type RendererFn = (
+	markdown: string,
+	opts: RenderOptions,
+) => Promise<string>;
+
 /** スキーマ設定。公開ステータスのフィルタやプロパティ名マッピングを制御する。 */
 export interface SchemaConfig<T extends BaseContentItem = BaseContentItem> {
-	/**
-	 * Notionページをコンテンツ型 T にマッピングするカスタム関数。
-	 * 指定した場合 properties の設定は無視される（slug プロパティ名のみ例外）。
-	 */
-	mapItem?: (page: PageObjectResponse) => T;
-	/** mapItem 未使用時のプロパティ名マッピング。 */
-	properties?: CMSSchemaProperties;
 	/** list() で返す「公開済み」ステータス値の配列。デフォルト: [] （全件返す） */
 	publishedStatuses?: string[];
 	/** findBySlug() でアクセス可能なステータス値の配列。デフォルト: [] （全件許可） */
 	accessibleStatuses?: string[];
+	/** mapItem 未使用時のプロパティ名マッピング。source-notion 経由で渡す場合は不要。 */
+	properties?: CMSSchemaProperties;
 }
 
 /** レンダリング・コンテンツ処理設定。 */
@@ -29,13 +37,11 @@ export interface ContentConfig {
 	/** 画像プロキシのベースURL。デフォルト: '/api/images' */
 	imageProxyBase?: string;
 	/** 追加する remark プラグイン。 */
-	remarkPlugins?: PluggableList;
+	remarkPlugins?: unknown[];
 	/** 追加する rehype プラグイン。 */
-	rehypePlugins?: PluggableList;
+	rehypePlugins?: unknown[];
 	/** デフォルトのパイプラインを置き換えるカスタムレンダラー。 */
 	render?: RendererFn;
-	/** カスタムブロックハンドラーのマップ。Notionブロックタイプをキーとする。 */
-	blocks?: Record<string, BlockHandler>;
 }
 
 /** レートリミット・リトライ設定。 */
@@ -57,6 +63,8 @@ export interface RateLimiterConfig {
 export interface CreateCMSOptions<T extends BaseContentItem = BaseContentItem> {
 	/** データソースアダプタ（Notion など）。 */
 	source: DataSourceAdapter<T>;
+	/** レンダラー関数。未指定時は @notion-headless-cms/renderer の renderMarkdown を使用。 */
+	renderer?: RendererFn;
 	/** キャッシュ設定。未設定時はキャッシュなし。 */
 	cache?: CacheConfig<T>;
 	/** スキーマ・ステータス設定。 */

@@ -1,12 +1,18 @@
-export type CMSErrorCode =
-	| "CONFIG_INVALID"
-	| "NOTION_ITEM_SCHEMA_INVALID"
-	| "NOTION_FETCH_ITEMS_FAILED"
-	| "NOTION_FETCH_ITEM_BY_SLUG_FAILED"
-	| "NOTION_GET_BLOCKS_FAILED"
-	| "NOTION_MARKDOWN_FETCH_FAILED"
-	| "IMAGE_CACHE_FAILED"
-	| "RENDERER_FAILED";
+type BuiltInCMSErrorCode =
+	| "core/config_invalid"
+	| "core/schema_invalid"
+	| "source/fetch_items_failed"
+	| "source/fetch_item_failed"
+	| "source/load_markdown_failed"
+	| "cache/io_failed"
+	| "renderer/failed";
+
+/**
+ * CMS エラーコード。
+ * `BuiltInCMSErrorCode` のリテラル補完を維持しつつ、
+ * サードパーティアダプタが独自コードを定義できるよう `string & {}` で拡張可能にする。
+ */
+export type CMSErrorCode = BuiltInCMSErrorCode | (string & {});
 
 export interface CMSErrorContext {
 	operation: string;
@@ -37,4 +43,12 @@ export class CMSError extends Error {
 
 export function isCMSError(error: unknown): error is CMSError {
 	return error instanceof CMSError;
+}
+
+/** エラーコードが特定の名前空間に属するかを判定する（例: "source/"）。 */
+export function isCMSErrorInNamespace(
+	error: unknown,
+	namespace: string,
+): error is CMSError {
+	return isCMSError(error) && error.code.startsWith(namespace);
 }

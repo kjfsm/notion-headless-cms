@@ -3,13 +3,15 @@ import type {
 	CacheConfig,
 	ContentConfig,
 	CreateCMSOptions,
+	RendererFn,
 	SchemaConfig,
 } from "@notion-headless-cms/core";
 import {
-	CMS,
+	createCMS,
 	memoryDocumentCache,
 	memoryImageCache,
 } from "@notion-headless-cms/core";
+import { renderMarkdown } from "@notion-headless-cms/renderer";
 import type { NotionSchema } from "@notion-headless-cms/source-notion";
 import { notionAdapter } from "@notion-headless-cms/source-notion";
 
@@ -38,7 +40,7 @@ function isNotionSchema<T extends BaseContentItem>(
  */
 export function createNodeCMS<T extends BaseContentItem = BaseContentItem>(
 	opts?: NodeCMSOptions<T>,
-): CMS<T> {
+): ReturnType<typeof createCMS<T>> {
 	const token = process.env.NOTION_TOKEN;
 	const dataSourceId = process.env.NOTION_DATA_SOURCE_ID;
 	if (!token) throw new Error("NOTION_TOKEN environment variable is not set");
@@ -67,10 +69,11 @@ export function createNodeCMS<T extends BaseContentItem = BaseContentItem>(
 
 	const cmsOpts: CreateCMSOptions<T> = {
 		source,
+		renderer: renderMarkdown as unknown as RendererFn,
 		schema: cmsSchema,
 		content: opts?.content,
 		cache: cacheConfig,
 	};
 
-	return new CMS<T>(cmsOpts);
+	return createCMS<T>(cmsOpts);
 }

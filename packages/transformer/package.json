@@ -1,6 +1,7 @@
 {
 	"name": "@notion-headless-cms/transformer",
 	"version": "0.1.1",
+	"private": true,
 	"description": "Notion Block to Markdown transformer for notion-headless-cms",
 	"keywords": [
 		"notion",
@@ -40,7 +41,6 @@
 		"prepublishOnly": "pnpm run build"
 	},
 	"publishConfig": {
-		"registry": "https://registry.npmjs.org",
 		"access": "public",
 		"exports": {
 			".": {

@@ -1,8 +1,6 @@
-import type {
-	PageObjectResponse,
-	RichTextItemResponse,
-} from "@notionhq/client/build/src/api-endpoints";
+import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import type { z } from "zod";
+import { getPlainText } from "./mapper";
 
 // ── フィールドマッピング型定義 ──────────────────────────────────────────────
 
@@ -94,12 +92,6 @@ export function defineSchema<S extends z.ZodRawShape>(
 // ── パーサー ─────────────────────────────────────────────────────────────────
 
 type PropertyValue = PageObjectResponse["properties"][string];
-
-export function getPlainText(
-	items: RichTextItemResponse[] | undefined,
-): string {
-	return items?.map((item) => item.plain_text).join("") ?? "";
-}
 
 // id と updatedAt は Notion ページのメタデータから自動設定されるシステムフィールド
 const SYSTEM_FIELDS = new Set(["id", "updatedAt"]);

@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { CMSError, isCMSError } from "../errors";
+import { CMSError, isCMSError, isCMSErrorInNamespace } from "../errors";
 
 describe("CMSError", () => {
 	const baseParams = {
-		code: "CONFIG_INVALID" as const,
+		code: "core/config_invalid" as const,
 		message: "設定が無効です",
 		context: { operation: "init" },
 	};
@@ -20,7 +20,7 @@ describe("CMSError", () => {
 
 	it("code が設定される", () => {
 		const err = new CMSError(baseParams);
-		expect(err.code).toBe("CONFIG_INVALID");
+		expect(err.code).toBe("core/config_invalid");
 	});
 
 	it("context が設定される", () => {
@@ -44,16 +44,15 @@ describe("CMSError", () => {
 		expect(err).toBeInstanceOf(Error);
 	});
 
-	it("各エラーコードで生成できる", () => {
+	it("組み込みエラーコードで生成できる", () => {
 		const codes = [
-			"CONFIG_INVALID",
-			"NOTION_ITEM_SCHEMA_INVALID",
-			"NOTION_FETCH_ITEMS_FAILED",
-			"NOTION_FETCH_ITEM_BY_SLUG_FAILED",
-			"NOTION_GET_BLOCKS_FAILED",
-			"NOTION_MARKDOWN_FETCH_FAILED",
-			"IMAGE_CACHE_FAILED",
-			"RENDERER_FAILED",
+			"core/config_invalid",
+			"core/schema_invalid",
+			"source/fetch_items_failed",
+			"source/fetch_item_failed",
+			"source/load_markdown_failed",
+			"cache/io_failed",
+			"renderer/failed",
 		] as const;
 		for (const code of codes) {
 			const err = new CMSError({
@@ -64,12 +63,21 @@ describe("CMSError", () => {
 			expect(err.code).toBe(code);
 		}
 	});
+
+	it("サードパーティのカスタムコードでも生成できる", () => {
+		const err = new CMSError({
+			code: "my-adapter/custom_error",
+			message: "カスタムエラー",
+			context: { operation: "test" },
+		});
+		expect(err.code).toBe("my-adapter/custom_error");
+	});
 });
 
 describe("isCMSError", () => {
 	it("CMSError なら true を返す", () => {
 		const err = new CMSError({
-			code: "CONFIG_INVALID",
+			code: "core/config_invalid",
 			message: "test",
 			context: { operation: "test" },
 		});
@@ -90,5 +98,29 @@ describe("isCMSError", () => {
 
 	it("undefined なら false を返す", () => {
 		expect(isCMSError(undefined)).toBe(false);
+	});
+});
+
+describe("isCMSErrorInNamespace", () => {
+	it("名前空間が一致するなら true を返す", () => {
+		const err = new CMSError({
+			code: "source/fetch_items_failed",
+			message: "test",
+			context: { operation: "test" },
+		});
+		expect(isCMSErrorInNamespace(err, "source/")).toBe(true);
+	});
+
+	it("名前空間が一致しないなら false を返す", () => {
+		const err = new CMSError({
+			code: "source/fetch_items_failed",
+			message: "test",
+			context: { operation: "test" },
+		});
+		expect(isCMSErrorInNamespace(err, "cache/")).toBe(false);
+	});
+
+	it("CMSError でない場合は false を返す", () => {
+		expect(isCMSErrorInNamespace(new Error("test"), "source/")).toBe(false);
 	});
 });

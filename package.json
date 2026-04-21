@@ -11,6 +11,7 @@
 		"typecheck": "pnpm -r run typecheck",
 		"test": "vitest run",
 		"format": "biome check --write",
+		"lint": "biome ci",
 		"changeset": "changeset",
 		"version": "changeset version",
 		"release": "changeset publish"

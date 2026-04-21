@@ -245,6 +245,9 @@ importers:
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core
+      '@notion-headless-cms/renderer':
+        specifier: workspace:*
+        version: link:../renderer
       '@notion-headless-cms/source-notion':
         specifier: workspace:*
         version: link:../source-notion
@@ -267,6 +270,9 @@ importers:
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core
+      '@notion-headless-cms/renderer':
+        specifier: workspace:*
+        version: link:../renderer
       '@notion-headless-cms/source-notion':
         specifier: workspace:*
         version: link:../source-notion
@@ -295,25 +301,10 @@ importers:
         version: 4.20260420.1
 
   packages/core:
-    dependencies:
-      '@notion-headless-cms/fetcher':
-        specifier: workspace:*
-        version: link:../fetcher
+    devDependencies:
       '@notion-headless-cms/renderer':
         specifier: workspace:*
         version: link:../renderer
-      '@notion-headless-cms/transformer':
-        specifier: workspace:*
-        version: link:../transformer
-      '@notionhq/client':
-        specifier: ^5.18.0
-        version: 5.19.0
-      unified:
-        specifier: ^11.0.5
-        version: 11.0.5
-      zod:
-        specifier: ^4.1.12
-        version: 4.3.6
 
   packages/fetcher:
     dependencies:
@@ -350,15 +341,12 @@ importers:
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core
-      '@notion-headless-cms/fetcher':
-        specifier: workspace:*
-        version: link:../fetcher
-      '@notion-headless-cms/transformer':
-        specifier: workspace:*
-        version: link:../transformer
       '@notionhq/client':
         specifier: ^5.18.0
         version: 5.19.0
+      notion-to-md:
+        specifier: ^3.1.0
+        version: 3.1.9
       zod:
         specifier: ^4.1.12
         version: 4.3.6

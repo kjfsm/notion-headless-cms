@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { notionAdapter } from "../notion-adapter";
 
-vi.mock("@notion-headless-cms/fetcher", () => ({
+vi.mock("../internal/fetcher/index", () => ({
 	createClient: vi.fn().mockReturnValue({}),
 	queryAllPages: vi.fn(),
 	queryPageBySlug: vi.fn(),
 }));
 
-vi.mock("@notion-headless-cms/transformer", () => {
+vi.mock("../internal/transformer/transformer", () => {
 	const transform = vi.fn().mockResolvedValue("# Hello");
 	class MockTransformer {
 		transform = transform;
@@ -15,7 +15,7 @@ vi.mock("@notion-headless-cms/transformer", () => {
 	return { Transformer: MockTransformer };
 });
 
-import { queryAllPages, queryPageBySlug } from "@notion-headless-cms/fetcher";
+import { queryAllPages, queryPageBySlug } from "../internal/fetcher/index";
 
 const makePage = (slug: string, status: string) => ({
 	id: `id-${slug}`,
