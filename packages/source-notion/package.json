@@ -33,7 +33,7 @@
 		"dist"
 	],
 	"engines": {
-		"node": ">=18"
+		"node": ">=24"
 	},
 	"scripts": {
 		"build": "tsup src/index.ts --format esm --dts --sourcemap --out-dir dist",
@@ -51,8 +51,14 @@
 	},
 	"dependencies": {
 		"@notion-headless-cms/core": "workspace:*",
+		"notion-to-md": "^3.1.0"
+	},
+	"peerDependencies": {
 		"@notionhq/client": "^5.18.0",
-		"notion-to-md": "^3.1.0",
+		"zod": "^4.0.0"
+	},
+	"devDependencies": {
+		"@notionhq/client": "^5.18.0",
 		"zod": "^4.1.12"
 	}
 }

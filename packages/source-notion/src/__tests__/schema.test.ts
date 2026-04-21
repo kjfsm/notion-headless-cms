@@ -63,10 +63,6 @@ describe("defineSchema", () => {
 		expect(s2.accessibleStatuses).toEqual(["Published", "Draft"]);
 	});
 
-	it("zodSchema フィールドが保持される", () => {
-		expect(schema.zodSchema).toBe(PostSchema);
-	});
-
 	it("mapping フィールドが保持される", () => {
 		expect(schema.mapping).toBe(mapping);
 	});

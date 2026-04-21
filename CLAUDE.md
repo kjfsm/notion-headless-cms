@@ -23,22 +23,24 @@ Notion DB
             └─ @notion-headless-cms/adapter-next（Next.js ルートハンドラ）
 ```
 
-`@notion-headless-cms/fetcher` と `@notion-headless-cms/transformer` は `source-notion` 内部に統合され、`private: true` で npm 公開対象外。
+Notion API クライアントと Notion ブロック→Markdown 変換器は `source-notion` の `src/internal/` 配下に実装されており、独立パッケージとしては公開しない。
 
 ## 技術スタック
 
 | 層 | 技術 |
 |---|---|
+| ランタイム | Node.js 24+（全パッケージ `engines.node: ">=24"`） |
 | ビルド | tsup（ESM + TypeScript declarations） |
 | 型チェック | TypeScript 5.9（strict） |
-| Notion API | @notionhq/client |
+| Notion API | @notionhq/client（`source-notion` の `peerDependencies`） |
 | Markdown変換 | notion-to-md |
-| HTMLレンダリング | remark / rehype（unified） |
-| キャッシュストレージ | Cloudflare R2 / Next.js `unstable_cache` / メモリ |
-| バリデーション | Zod |
+| HTMLレンダリング | remark / rehype（unified）（`renderer` の `peerDependencies`） |
+| キャッシュストレージ | Cloudflare R2 / Next.js `unstable_cache` / メモリ（LRU 対応） |
+| バリデーション | Zod（`source-notion` の `peerDependencies`） |
 | リンター/フォーマッター | Biome |
 | パッケージ管理 | pnpm ワークスペース |
 | リリース | changesets |
+| CI | GitHub Actions（Node 24.x / 25.x マトリクス） |
 
 ## ディレクトリ構成
 
@@ -70,8 +72,6 @@ packages/
   adapter-cloudflare/     # createCloudflareCMS() ファクトリ
   adapter-node/           # createNodeCMS() ファクトリ
   adapter-next/           # Next.js 用ルートハンドラ
-  fetcher/                # 旧独立公開パッケージ（現在は private: true）
-  transformer/            # 旧独立公開パッケージ（現在は private: true）
 
 examples/                 # フレームワーク別の動作例
 
@@ -120,11 +120,11 @@ Biome の設定に従う（biome.json 参照）。
 - まずキャッシュを返し、TTL 切れなら裏で非同期更新
 - `CreateCMSOptions.cache.ttlMs` が有効期間
 - `cache.document` / `cache.image` 未設定時は `noopDocumentCache` / `noopImageCache` が使われる（キャッシュなし）
-- `cms.cached.list()` / `cms.cached.get(slug)` が SWR アクセサ
+- `cms.cache.read.list()` / `cms.cache.read.get(slug)` が SWR アクセサ
 
 ### Notion 更新検知
 - `last_edited_time` でキャッシュと比較し、差分があれば HTML 再生成
-- `cms.cache.checkItem(slug, lastEdited)` / `cms.cache.checkList(version)` が差分 API
+- `cms.cache.manage.checkItem(slug, lastEdited)` / `cms.cache.manage.checkList(version)` が差分 API
 
 ### 画像処理
 - Notion 画像 URL は期限付きのため、fetch → SHA256 ハッシュキーでストレージに永続保存
@@ -165,7 +165,6 @@ pnpm changeset
 - `release.yml` は build → typecheck → test の後に `changesets/action` を実行
 - `NPM_TOKEN` と `GITHUB_TOKEN` シークレットが必要（リポジトリ Settings > Secrets）
 - アクセス設定は `.changeset/config.json` の `"access": "public"` で制御
-- `fetcher` / `transformer` は `private: true` のため changeset 対象から自動除外される
 
 ## ワークフロー
 

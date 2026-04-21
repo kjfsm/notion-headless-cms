@@ -33,7 +33,7 @@
 		"dist"
 	],
 	"engines": {
-		"node": ">=18"
+		"node": ">=24"
 	},
 	"scripts": {
 		"build": "tsup src/index.ts --format esm --dts --sourcemap --out-dir dist",
@@ -52,7 +52,14 @@
 		"@notion-headless-cms/cache-r2": "workspace:*",
 		"@notion-headless-cms/core": "workspace:*",
 		"@notion-headless-cms/renderer": "workspace:*",
-		"@notion-headless-cms/source-notion": "workspace:*"
+		"@notion-headless-cms/source-notion": "workspace:*",
+		"@notionhq/client": "^5.18.0",
+		"rehype-stringify": "^10.0.1",
+		"remark-gfm": "^4.0.1",
+		"remark-parse": "^11.0.0",
+		"remark-rehype": "^11.1.2",
+		"unified": "^11.0.5",
+		"zod": "^4.0.0"
 	},
 	"peerDependencies": {
 		"@cloudflare/workers-types": ">=4.0.0"

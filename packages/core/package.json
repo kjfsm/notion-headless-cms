@@ -26,16 +26,28 @@
 		".": {
 			"import": "./dist/index.js",
 			"types": "./dist/index.d.ts"
+		},
+		"./errors": {
+			"import": "./dist/errors.js",
+			"types": "./dist/errors.d.ts"
+		},
+		"./hooks": {
+			"import": "./dist/hooks.js",
+			"types": "./dist/hooks.d.ts"
+		},
+		"./cache/memory": {
+			"import": "./dist/cache/memory.js",
+			"types": "./dist/cache/memory.d.ts"
 		}
 	},
 	"files": [
 		"dist"
 	],
 	"engines": {
-		"node": ">=18"
+		"node": ">=24"
 	},
 	"scripts": {
-		"build": "tsup src/index.ts --format esm --dts --sourcemap --out-dir dist",
+		"build": "tsup src/index.ts src/errors.ts src/hooks.ts src/cache/memory.ts --format esm --dts --sourcemap --out-dir dist",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run"
 	},
@@ -45,6 +57,18 @@
 			".": {
 				"import": "./dist/index.js",
 				"types": "./dist/index.d.ts"
+			},
+			"./errors": {
+				"import": "./dist/errors.js",
+				"types": "./dist/errors.d.ts"
+			},
+			"./hooks": {
+				"import": "./dist/hooks.js",
+				"types": "./dist/hooks.d.ts"
+			},
+			"./cache/memory": {
+				"import": "./dist/cache/memory.js",
+				"types": "./dist/cache/memory.d.ts"
 			}
 		}
 	},

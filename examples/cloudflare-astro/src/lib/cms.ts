@@ -48,6 +48,6 @@ export function createCMS(env: CloudflareCMSEnv) {
 	return createCloudflareCMS<BlogPost>({
 		env,
 		schema: blogSchema,
-		cache: { ttlMs: 5 * 60_000 },
+		ttlMs: 5 * 60_000,
 	});
 }

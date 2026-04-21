@@ -32,12 +32,11 @@ import {
 } from "@notion-headless-cms/adapter-cloudflare";
 
 export default {
-  async fetch(request: Request, env: CloudflareCMSEnv, ctx: ExecutionContext) {
+  async fetch(request: Request, env: CloudflareCMSEnv, _ctx: ExecutionContext) {
     const cms = createCloudflareCMS({
       env,
       schema: { publishedStatuses: ["公開"] },
-      cache: { ttlMs: 5 * 60_000 }, // 5分 TTL
-      waitUntil: ctx.waitUntil.bind(ctx), // SWR の裏更新を非同期化
+      ttlMs: 5 * 60_000, // 5分 TTL
     });
 
     const url = new URL(request.url);
@@ -51,13 +50,13 @@ export default {
 
     // 一覧（SWR）
     if (url.pathname === "/posts") {
-      const { items } = await cms.cached.list();
+      const { items } = await cms.cache.read.list();
       return Response.json(items);
     }
 
     // 単一アイテム（SWR）
     const slug = url.pathname.replace("/posts/", "");
-    const cached = await cms.cached.get(slug);
+    const cached = await cms.cache.read.get(slug);
     if (!cached) return new Response("Not Found", { status: 404 });
 
     return new Response(cached.html, {
@@ -72,15 +71,61 @@ export default {
 `CACHE_BUCKET` を設定しないと、自動的にキャッシュなし（noop）で動作する。
 `wrangler dev` での開発時に便利。
 
+## SWR 裏更新の非同期化（waitUntil）
+
+`adapter-cloudflare` の `createCloudflareCMS` は `waitUntil` オプションを直接受け取らない（シグネチャを単純化するため）。SWR キャッシュのバックグラウンド書き戻しを `ctx.waitUntil` に委ねたい場合は、`core` の `createCMS` を直接組み立てる。
+
+```ts
+import {
+  createCMS,
+  type CreateCMSOptions,
+} from "@notion-headless-cms/core";
+import { r2Cache } from "@notion-headless-cms/cache-r2";
+import { notionAdapter } from "@notion-headless-cms/source-notion";
+import { renderMarkdown } from "@notion-headless-cms/renderer";
+
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    const cache = r2Cache({ bucket: env.CACHE_BUCKET });
+    const cms = createCMS({
+      source: notionAdapter({
+        token: env.NOTION_TOKEN,
+        dataSourceId: env.NOTION_DATA_SOURCE_ID,
+      }),
+      renderer: renderMarkdown,
+      cache: cache
+        ? { document: cache, image: cache, ttlMs: 5 * 60_000 }
+        : "disabled",
+      waitUntil: ctx.waitUntil.bind(ctx),
+    });
+    // ...
+  },
+};
+```
+
+## 画像配信ルート
+
+Notion 画像 URL は期限付きのため、`core` 側で SHA256 ハッシュキーに変換して R2 に永続保存する。レンダリング後の HTML 内の `<img>` は `/api/images/<hash>` に書き換わるので、同じハッシュを提供するルートを用意する。
+
+```ts
+if (url.pathname.startsWith("/api/images/")) {
+  const hash = url.pathname.split("/").pop()!;
+  const response = await cms.createCachedImageResponse(hash);
+  return response ?? new Response("Not Found", { status: 404 });
+}
+```
+
+`createCachedImageResponse` は `cache-control: public, max-age=31536000, immutable` ヘッダを自動付与する。
+
 ## R2BucketLike と型依存
 
-`createCloudflareCMS` の `env.CACHE_BUCKET` は構造型 `R2BucketLike` を受け取るため、`@cloudflare/workers-types` は `peerDependencies` として扱われる。テストではモックに差し替え可能。
+`createCloudflareCMS` の `env.CACHE_BUCKET` は構造型 `R2BucketLike` を受け取るため、`@cloudflare/workers-types` への実依存はない。テストではモックに差し替え可能。
 
 ```ts
 import type { R2BucketLike } from "@notion-headless-cms/cache-r2";
 
 const mockBucket: R2BucketLike = {
   async get() { return null; },
-  async put() { return null; },
+  async put() { return undefined; },
 };
 ```

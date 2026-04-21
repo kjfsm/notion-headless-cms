@@ -24,10 +24,15 @@ export interface ImageCacheAdapter {
 	set(hash: string, data: ArrayBuffer, contentType: string): Promise<void>;
 }
 
-/** キャッシュ設定オブジェクト。document / image それぞれ独立したアダプタを差し込める。 */
-export interface CacheConfig<T extends BaseContentItem = BaseContentItem> {
-	document?: DocumentCacheAdapter<T> | false;
-	image?: ImageCacheAdapter | false;
-	/** キャッシュの有効期間（ミリ秒）。未設定の場合はTTLなし。 */
-	ttlMs?: number;
-}
+/**
+ * キャッシュ設定。`"disabled"` を渡すと完全にキャッシュを無効化する。
+ * オブジェクトの場合、document / image それぞれ独立したアダプタを差し込める。
+ */
+export type CacheConfig<T extends BaseContentItem = BaseContentItem> =
+	| "disabled"
+	| {
+			document?: DocumentCacheAdapter<T>;
+			image?: ImageCacheAdapter;
+			/** キャッシュの有効期間（ミリ秒）。未設定の場合はTTLなし。 */
+			ttlMs?: number;
+	  };

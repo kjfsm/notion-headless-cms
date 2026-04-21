@@ -10,4 +10,6 @@ export interface CMSHooks<T extends BaseContentItem = BaseContentItem> {
 	onListCacheHit?: (items: T[], cachedAt: number) => void;
 	onListCacheMiss?: () => void;
 	onError?: (error: Error) => void;
+	onRenderStart?: (slug: string) => void;
+	onRenderEnd?: (slug: string, durationMs: number) => void;
 }

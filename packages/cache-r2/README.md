@@ -36,24 +36,27 @@ export default {
       },
     });
 
-    const { items } = await cms.cached.list();
+    const { items } = await cms.cache.read.list();
     return Response.json(items);
   },
 };
 ```
 
-`bucket` が `undefined` の場合（例: `wrangler.toml` で R2 バインディングを設定していない）、`r2Cache` は `undefined` を返す。`createCMS` の `cache.document` / `cache.image` は undefined 許容のため、そのまま渡せばキャッシュなし動作にフォールバックする。
+`bucket` が `undefined` の場合（例: `wrangler.toml` で R2 バインディングを設定していない）、`r2Cache` は `undefined` を返す。`CacheConfig` は `"disabled"` への切り替えか、`document` / `image` の個別指定（未指定は noop）を受け付けるので、以下のように組み立てられる。
 
 ```typescript
+import type { CacheConfig } from "@notion-headless-cms/core";
+
 const cache = r2Cache({ bucket: env.CACHE_BUCKET }); // 未バインド時は undefined
+
+const cacheConfig: CacheConfig = cache
+  ? { document: cache, image: cache, ttlMs: 5 * 60_000 }
+  : "disabled";
 
 createCMS({
   source,
   renderer: renderMarkdown,
-  cache: {
-    document: cache,
-    image: cache ?? memoryImageCache(),
-  },
+  cache: cacheConfig,
 });
 ```
 

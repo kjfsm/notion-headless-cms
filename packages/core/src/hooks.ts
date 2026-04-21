@@ -6,11 +6,12 @@ import type { CMSPlugin } from "./types/plugin";
 /**
  * プラグイン配列とダイレクトフックを合成して単一の CMSHooks を返す。
  * beforeCache / afterRender はパイプライン（前の出力が次の入力）。
- * onCacheHit などオブザーバー系は全員に同じ値を渡す。
+ * onCacheHit などオブザーバー系は全員に同じ値を渡し、例外は logger に流して握りつぶす。
  */
 export function mergeHooks<T extends BaseContentItem>(
 	plugins: CMSPlugin<T>[],
 	directHooks?: CMSHooks<T>,
+	logger?: Logger,
 ): CMSHooks<T> {
 	const allHooks: CMSHooks<T>[] = [
 		...plugins.map((p) => p.hooks ?? {}),
@@ -22,11 +23,13 @@ export function mergeHooks<T extends BaseContentItem>(
 	return {
 		beforeCache: buildPipeline(allHooks, "beforeCache"),
 		afterRender: buildRenderPipeline(allHooks),
-		onCacheHit: buildObserver(allHooks, "onCacheHit"),
-		onCacheMiss: buildObserver(allHooks, "onCacheMiss"),
-		onListCacheHit: buildObserver(allHooks, "onListCacheHit"),
-		onListCacheMiss: buildObserver(allHooks, "onListCacheMiss"),
-		onError: buildObserver(allHooks, "onError"),
+		onCacheHit: buildObserver(allHooks, "onCacheHit", logger),
+		onCacheMiss: buildObserver(allHooks, "onCacheMiss", logger),
+		onListCacheHit: buildObserver(allHooks, "onListCacheHit", logger),
+		onListCacheMiss: buildObserver(allHooks, "onListCacheMiss", logger),
+		onError: buildObserver(allHooks, "onError", logger),
+		onRenderStart: buildObserver(allHooks, "onRenderStart", logger),
+		onRenderEnd: buildObserver(allHooks, "onRenderEnd", logger),
 	};
 }
 
@@ -66,13 +69,20 @@ function buildRenderPipeline<T extends BaseContentItem>(
 function buildObserver<T extends BaseContentItem, K extends keyof CMSHooks<T>>(
 	hooks: CMSHooks<T>[],
 	key: K,
+	logger?: Logger,
 ): CMSHooks<T>[K] {
 	const fns = hooks.map((h) => h[key]).filter(Boolean);
 	if (fns.length === 0) return undefined;
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
 	return ((...args: unknown[]) => {
 		for (const fn of fns) {
-			(fn as (...a: unknown[]) => void)(...args);
+			try {
+				(fn as (...a: unknown[]) => void)(...args);
+			} catch (err) {
+				logger?.error?.("観測フックで例外が発生", {
+					hook: String(key),
+					error: err instanceof Error ? err.message : String(err),
+				});
+			}
 		}
 	}) as CMSHooks<T>[K];
 }

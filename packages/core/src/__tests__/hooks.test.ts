@@ -83,6 +83,46 @@ describe("mergeHooks", () => {
 		merged.onCacheMiss?.("slug");
 		expect(fn).toHaveBeenCalledWith("slug");
 	});
+
+	it("観測フックで例外が投げられても後続フックは実行される", () => {
+		const logger = { error: vi.fn() };
+		const calls: string[] = [];
+		const merged = mergeHooks(
+			[
+				{
+					name: "p1",
+					hooks: {
+						onCacheHit: () => {
+							throw new Error("boom");
+						},
+					},
+				},
+				{
+					name: "p2",
+					hooks: { onCacheHit: (slug) => calls.push(slug) },
+				},
+			],
+			undefined,
+			logger,
+		);
+		expect(() =>
+			merged.onCacheHit?.("my-slug", makeCachedItem("my-slug")),
+		).not.toThrow();
+		expect(calls).toEqual(["my-slug"]);
+		expect(logger.error).toHaveBeenCalled();
+	});
+
+	it("onRenderStart / onRenderEnd が観測フックとして機能する", () => {
+		const start = vi.fn();
+		const end = vi.fn();
+		const merged = mergeHooks([
+			{ name: "p", hooks: { onRenderStart: start, onRenderEnd: end } },
+		]);
+		merged.onRenderStart?.("slug-a");
+		merged.onRenderEnd?.("slug-a", 42);
+		expect(start).toHaveBeenCalledWith("slug-a");
+		expect(end).toHaveBeenCalledWith("slug-a", 42);
+	});
 });
 
 describe("mergeLoggers", () => {

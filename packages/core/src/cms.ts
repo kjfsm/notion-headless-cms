@@ -25,27 +25,37 @@ const DEFAULT_IMAGE_PROXY_BASE = "/api/images";
 function resolveDocumentCache<T extends BaseContentItem>(
 	cache: CacheConfig<T> | undefined,
 ): DocumentCacheAdapter<T> {
-	if (!cache || cache.document === false || cache.document === undefined) {
+	if (!cache || cache === "disabled" || !cache.document) {
 		return noopDocumentCache<T>();
 	}
 	return cache.document;
 }
 
 function resolveImageCache(cache: CacheConfig | undefined): ImageCacheAdapter {
-	if (!cache || cache.image === false || cache.image === undefined) {
+	if (!cache || cache === "disabled" || !cache.image) {
 		return noopImageCache();
 	}
 	return cache.image;
 }
 
-/** キャッシュ優先アクセサ。 */
-interface CachedAccessor<T extends BaseContentItem> {
+function resolveTtl(cache: CacheConfig | undefined): number | undefined {
+	if (!cache || cache === "disabled") return undefined;
+	return cache.ttlMs;
+}
+
+function hasImageCacheConfigured(cache: CacheConfig | undefined): boolean {
+	if (!cache || cache === "disabled") return false;
+	return !!cache.image;
+}
+
+/** キャッシュ読み取りアクセサ（SWR）。 */
+interface CacheReadAccessor<T extends BaseContentItem> {
 	list(): Promise<{ items: T[]; isStale: boolean; cachedAt: number }>;
 	get(slug: string): Promise<CachedItem<T> | null>;
 }
 
 /** キャッシュ管理オペレーション。 */
-interface CacheManager<T extends BaseContentItem> {
+interface CacheManageAccessor<T extends BaseContentItem> {
 	prefetchAll(opts?: {
 		concurrency?: number;
 		onProgress?: (done: number, total: number) => void;
@@ -62,6 +72,12 @@ interface CacheManager<T extends BaseContentItem> {
 		| { changed: false }
 		| { changed: true; html: string; item: T; notionUpdatedAt: string }
 	>;
+}
+
+/** キャッシュ系の公開名前空間。`read` と `manage` を分離する。 */
+interface CacheAccessor<T extends BaseContentItem> {
+	read: CacheReadAccessor<T>;
+	manage: CacheManageAccessor<T>;
 }
 
 /**
@@ -89,15 +105,14 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 	private readonly logger: Logger | undefined;
 	private readonly retryConfig: RetryConfig;
 
-	readonly cached: CachedAccessor<T>;
-	readonly cache: CacheManager<T>;
+	readonly cache: CacheAccessor<T>;
 
 	constructor(opts: CreateCMSOptions<T>) {
 		this.source = opts.source;
 		this.docCache = resolveDocumentCache(opts.cache);
 		this.imgCache = resolveImageCache(opts.cache);
-		this.hasImageCache = !!opts.cache?.image;
-		this.ttlMs = opts.cache?.ttlMs;
+		this.hasImageCache = hasImageCacheConfigured(opts.cache);
+		this.ttlMs = resolveTtl(opts.cache);
 		this.publishedStatuses =
 			opts.schema?.publishedStatuses ??
 			(opts.source.publishedStatuses ? [...opts.source.publishedStatuses] : []);
@@ -111,23 +126,25 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		this.contentConfig = opts.content;
 		this.rendererFn = opts.renderer ?? opts.content?.render;
 		this.waitUntil = opts.waitUntil;
-		this.hooks = mergeHooks(opts.plugins ?? [], opts.hooks);
 		this.logger = mergeLoggers(opts.plugins ?? [], opts.logger);
+		this.hooks = mergeHooks(opts.plugins ?? [], opts.hooks, this.logger);
 		this.retryConfig = {
 			...DEFAULT_RETRY_CONFIG,
 			...(opts.rateLimiter ?? {}),
 		};
 
-		this.cached = {
-			list: this.cachedList.bind(this),
-			get: this.cachedGet.bind(this),
-		};
 		this.cache = {
-			prefetchAll: this.prefetchAll.bind(this),
-			revalidate: this.revalidate.bind(this),
-			sync: this.syncFromWebhook.bind(this),
-			checkList: this.checkListUpdate.bind(this),
-			checkItem: this.checkItemUpdate.bind(this),
+			read: {
+				list: this.cachedList.bind(this),
+				get: this.cachedGet.bind(this),
+			},
+			manage: {
+				prefetchAll: this.prefetchAll.bind(this),
+				revalidate: this.revalidate.bind(this),
+				sync: this.syncFromWebhook.bind(this),
+				checkList: this.checkListUpdate.bind(this),
+				checkItem: this.checkItemUpdate.bind(this),
+			},
 		};
 	}
 
@@ -365,6 +382,7 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 			slug: item.slug,
 			pageId: item.id,
 		});
+		this.hooks.onRenderStart?.(item.slug);
 
 		let markdown: string;
 		try {
@@ -427,10 +445,12 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 			result = await this.hooks.beforeCache(result);
 		}
 
+		const durationMs = Date.now() - start;
 		this.logger?.info?.("コンテンツのレンダリング完了", {
 			slug: item.slug,
-			durationMs: Date.now() - start,
+			durationMs,
 		});
+		this.hooks.onRenderEnd?.(item.slug, durationMs);
 
 		return result;
 	}

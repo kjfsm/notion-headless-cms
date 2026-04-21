@@ -31,11 +31,11 @@ export const cms = createCMS({
 });
 ```
 
-`cms.cached.list()` / `cms.cached.get(slug)` は Next.js の fetch キャッシュ層と協調して再生成される。
+`cms.cache.read.list()` / `cms.cache.read.get(slug)` は Next.js の fetch キャッシュ層と協調して再生成される。`nextCache` の `getItem` / `getList` は常に `null` を返す設計のため、実際の保存層は Next.js の `fetch` キャッシュ / `unstable_cache` が担うことに留意。
 
 ### キャッシュ無効化（Revalidate Webhook）
 
-Notion 側の変更通知を受けて `cms.cache.sync(payload)` を呼ぶと、`nextCache` の `invalidate` が走り `revalidateTag` が実行される。
+Notion 側の変更通知を受けて `cms.cache.manage.sync(payload)` を呼ぶと、`nextCache` の `invalidate` が走り `revalidateTag` が実行される。
 
 - `"all"`: `tags` で指定した全タグに対して `revalidateTag` を呼ぶ
 - `{ tag }`: 指定タグのみ再検証

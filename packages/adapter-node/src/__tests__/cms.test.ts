@@ -60,14 +60,14 @@ describe("createNodeCMS", () => {
 		expect(items[0].slug).toBe("post-a");
 	});
 
-	it("cache: 'memory' でインメモリキャッシュ付き CMS を作成できる", () => {
+	it("cache: { document: 'memory' } でインメモリキャッシュ付き CMS を作成できる", () => {
 		const cms = createNodeCMS({ cache: { document: "memory", ttlMs: 60_000 } });
 		expect(cms).toBeDefined();
-		expect(typeof cms.cached.list).toBe("function");
+		expect(typeof cms.cache.read.list).toBe("function");
 	});
 
-	it("cache なしでもキャッシュ無効で動作する", () => {
-		const cms = createNodeCMS({ cache: { document: false } });
+	it("cache: 'disabled' でキャッシュ無効で動作する", () => {
+		const cms = createNodeCMS({ cache: "disabled" });
 		expect(cms).toBeDefined();
 	});
 });

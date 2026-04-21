@@ -34,7 +34,7 @@
 		"dist"
 	],
 	"engines": {
-		"node": ">=18"
+		"node": ">=24"
 	},
 	"scripts": {
 		"build": "tsup src/index.ts --format esm --dts --sourcemap --out-dir dist",

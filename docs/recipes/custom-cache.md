@@ -1,5 +1,7 @@
 # カスタムキャッシュアダプタの実装
 
+`@notion-headless-cms/core` は `DocumentCacheAdapter<T>` / `ImageCacheAdapter` という 2 つのインターフェースを公開している。これを実装することで R2 / Next.js ISR 以外のストレージ（Redis / Memcached / S3 など）にキャッシュを差し替えられる。
+
 ## DocumentCacheAdapter
 
 ```ts
@@ -32,7 +34,7 @@ class RedisDocumentCache<T extends BaseContentItem> implements DocumentCacheAdap
     await this.redis.set(`cms:item:${slug}`, JSON.stringify(data));
   }
 
-  // invalidate はオプション。未実装でも cms.cache.revalidate() が no-op になるだけ。
+  // invalidate はオプション。未実装でも cms.cache.manage.revalidate() が no-op になるだけ。
   async invalidate(scope: "all" | { slug: string } | { tag: string }): Promise<void> {
     if (scope === "all") {
       await this.redis.del("cms:list");

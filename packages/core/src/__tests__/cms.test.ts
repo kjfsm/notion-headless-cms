@@ -189,7 +189,7 @@ describe("CMS", () => {
 		});
 	});
 
-	describe("cached.list() - SWR", () => {
+	describe("cache.read.list() - SWR", () => {
 		it("キャッシュが新鮮なら source.list() を呼ばない", async () => {
 			const docCache = memoryCache();
 			const swrCms = createCMS({
@@ -206,7 +206,7 @@ describe("CMS", () => {
 			});
 			vi.clearAllMocks();
 
-			const result = await swrCms.cached.list();
+			const result = await swrCms.cache.read.list();
 			expect(result.items[0].slug).toBe("cached");
 			expect(source.list).not.toHaveBeenCalled();
 		});
@@ -222,13 +222,13 @@ describe("CMS", () => {
 			});
 
 			await docCache.setList({ items: [makeItem("stale")], cachedAt: 0 });
-			const result = await swrCms.cached.list();
+			const result = await swrCms.cache.read.list();
 			expect(source.list).toHaveBeenCalled();
 			expect(result.items).not.toEqual([{ slug: "stale" }]);
 		});
 	});
 
-	describe("cached.get() - SWR", () => {
+	describe("cache.read.get() - SWR", () => {
 		it("キャッシュが新鮮なら source.findBySlug() を呼ばない", async () => {
 			const docCache = memoryCache();
 			const swrCms = createCMS({
@@ -247,7 +247,7 @@ describe("CMS", () => {
 			await docCache.setItem("post-a", cachedEntry);
 			vi.clearAllMocks();
 
-			const result = await swrCms.cached.get("post-a");
+			const result = await swrCms.cache.read.get("post-a");
 			expect(result?.html).toBe("<p>cached</p>");
 			expect(source.findBySlug).not.toHaveBeenCalled();
 		});
@@ -264,7 +264,7 @@ describe("CMS", () => {
 			});
 
 			await docCache.setList({ items: [], cachedAt: 0 });
-			await swrCms.cached.list();
+			await swrCms.cache.read.list();
 
 			expect(waitUntil).toHaveBeenCalledWith(expect.any(Promise));
 		});
