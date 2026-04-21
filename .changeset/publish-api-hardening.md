@@ -1,12 +1,12 @@
 ---
-"@notion-headless-cms/core": minor
-"@notion-headless-cms/renderer": minor
-"@notion-headless-cms/source-notion": minor
+"@notion-headless-cms/core": patch
+"@notion-headless-cms/renderer": patch
+"@notion-headless-cms/source-notion": patch
 "@notion-headless-cms/cache-r2": patch
 "@notion-headless-cms/cache-next": patch
-"@notion-headless-cms/adapter-cloudflare": minor
-"@notion-headless-cms/adapter-next": minor
-"@notion-headless-cms/adapter-node": minor
+"@notion-headless-cms/adapter-cloudflare": patch
+"@notion-headless-cms/adapter-next": patch
+"@notion-headless-cms/adapter-node": patch
 ---
 
 公開前 API 整理。後方互換を壊しうる構造的変更を一括で実施する。
