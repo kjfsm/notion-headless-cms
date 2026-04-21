@@ -1,14 +1,26 @@
 import type { CloudflareCMSEnv } from "@notion-headless-cms/adapter-cloudflare";
 import { createCloudflareCMS } from "@notion-headless-cms/adapter-cloudflare";
-import { defineMapping, defineSchema } from "@notion-headless-cms/source-notion";
+import {
+	defineMapping,
+	defineSchema,
+} from "@notion-headless-cms/source-notion";
 import { z } from "zod";
 
 const BlogSchema = z.object({
 	id: z.string(),
 	updatedAt: z.string(),
-	slug: z.string().nullable().transform((s) => s ?? ""),
-	status: z.string().nullable().transform((s) => s ?? ""),
-	publishedAt: z.string().nullable().transform((s) => s ?? ""),
+	slug: z
+		.string()
+		.nullable()
+		.transform((s) => s ?? ""),
+	status: z
+		.string()
+		.nullable()
+		.transform((s) => s ?? ""),
+	publishedAt: z
+		.string()
+		.nullable()
+		.transform((s) => s ?? ""),
 	title: z.string().nullable(),
 	tags: z.array(z.string()),
 	description: z.string().nullable(),
