@@ -6,7 +6,6 @@
 		"strict": true,
 		"verbatimModuleSyntax": true,
 		"skipLibCheck": true,
-		"types": ["@cloudflare/workers-types"]
 	},
 	"include": ["src"]
 }
