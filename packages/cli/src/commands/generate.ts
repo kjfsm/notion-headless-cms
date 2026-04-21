@@ -1,0 +1,80 @@
+import fs from "node:fs/promises";
+import path from "node:path";
+import type { ResolvedSource } from "../codegen.js";
+import { generateSchemaFile } from "../codegen.js";
+import { loadConfig } from "../config-loader.js";
+import { createNotionCLIClient } from "../notion-client.js";
+
+export interface GenerateOptions {
+	config?: string;
+	token?: string;
+}
+
+export async function runGenerate(opts: GenerateOptions): Promise<void> {
+	const configPath = path.resolve(
+		process.cwd(),
+		opts.config ?? "nhc.config.ts",
+	);
+
+	console.log(`設定ファイルを読み込み中: ${configPath}`);
+	const config = await loadConfig(configPath);
+
+	const token = opts.token ?? process.env.NOTION_TOKEN;
+	if (!token) {
+		throw new Error(
+			"NOTION_TOKEN が設定されていません。--token フラグまたは環境変数 NOTION_TOKEN を指定してください。",
+		);
+	}
+
+	const notionClient = createNotionCLIClient(token);
+
+	console.log(`${config.dataSources.length} 件のデータソースを解決中...`);
+	const resolvedSources: ResolvedSource[] = [];
+
+	for (const ds of config.dataSources) {
+		let resolvedId: string;
+
+		if (ds.id) {
+			resolvedId = ds.id;
+		} else {
+			// ds.id が falsy のとき、DataSourceWithDbName として dbName は必ず string
+			const dbName = ds.dbName as string;
+			const found = await notionClient.resolveId(dbName);
+			if (!found) {
+				throw new Error(
+					`データベース "${dbName}" が見つかりませんでした。\n` +
+						"・Notion トークンにそのデータベースへのアクセス権限があるか確認してください。\n" +
+						"・DB 名が正確に一致しているか確認してください。",
+				);
+			}
+			resolvedId = found;
+		}
+
+		const ds_ = await notionClient.retrieveDataSource(resolvedId);
+		const dbName =
+			ds.dbName ?? (ds_.title.map((t) => t.plain_text).join("") || resolvedId);
+
+		console.log(`  ✓ ${ds.name}: ${resolvedId} (${dbName})`);
+
+		resolvedSources.push({
+			config: ds,
+			id: resolvedId,
+			dbName,
+			properties: ds_.properties,
+		});
+	}
+
+	const code = generateSchemaFile(resolvedSources);
+
+	const outputPath = path.resolve(
+		process.cwd(),
+		config.output ?? "./nhc-schema.ts",
+	);
+	await fs.mkdir(path.dirname(outputPath), { recursive: true });
+	await fs.writeFile(outputPath, code, "utf-8");
+
+	console.log(`\n生成完了: ${outputPath}`);
+	console.log(
+		"注意: status フィールドの published/accessible は手動で設定してください（TODO コメントを確認）。",
+	);
+}

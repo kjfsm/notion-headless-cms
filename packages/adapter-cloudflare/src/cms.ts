@@ -71,3 +71,70 @@ export function createCloudflareCMS<
 
 	return createCMS<T>(cmsOpts);
 }
+
+// ── Multi-Source ──────────────────────────────────────────────────────────────
+
+/** nhcSchema の各エントリの型。generateSchema() が生成するオブジェクトと対応する。 */
+export interface MultiSourceEntry<T extends BaseContentItem = BaseContentItem> {
+	id: string;
+	dbName: string;
+	schema?: NotionSchema<T>;
+}
+
+export type MultiSourceSchema = Record<
+	string,
+	MultiSourceEntry<BaseContentItem>
+>;
+
+type InferSourceItem<E> =
+	E extends MultiSourceEntry<infer T> ? T : BaseContentItem;
+
+export type MultiCMSResult<S extends MultiSourceSchema> = {
+	[K in keyof S]: ReturnType<typeof createCMS<InferSourceItem<S[K]>>>;
+};
+
+/** マルチソース向け Cloudflare CMS ファクトリの env 型。 */
+export interface CloudflareMultiCMSEnv {
+	NOTION_TOKEN: string;
+	/** R2 バケット（未設定時はキャッシュなし） */
+	CACHE_BUCKET?: R2BucketLike;
+}
+
+/**
+ * マルチソース向け Cloudflare Workers CMS ファクトリ。
+ * nhc generate で生成した nhcSchema を渡すと、各ソースに対応する CMS インスタンスを返す。
+ *
+ * @example
+ * const client = createCloudflareCMSMulti({ schema: nhcSchema, env })
+ * const posts = await client.posts.list()
+ */
+export function createCloudflareCMSMulti<S extends MultiSourceSchema>(opts: {
+	schema: S;
+	env: CloudflareMultiCMSEnv;
+	content?: ContentConfig;
+	ttlMs?: number;
+}): MultiCMSResult<S> {
+	const { schema, env, content, ttlMs } = opts;
+	const r2 = r2Cache({ bucket: env.CACHE_BUCKET });
+	const result = {} as MultiCMSResult<S>;
+
+	for (const key of Object.keys(schema) as (keyof S & string)[]) {
+		const entry = schema[key] as MultiSourceEntry<BaseContentItem>;
+		const source = notionAdapter({
+			token: env.NOTION_TOKEN,
+			dataSourceId: entry.id,
+			schema: entry.schema,
+		});
+		const cacheConfig: CacheConfig<BaseContentItem> = r2
+			? { document: r2, image: r2, ttlMs }
+			: "disabled";
+		(result as Record<string, unknown>)[key] = createCMS({
+			source,
+			renderer: renderMarkdown,
+			cache: cacheConfig,
+			content,
+		});
+	}
+
+	return result;
+}

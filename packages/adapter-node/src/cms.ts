@@ -38,6 +38,18 @@ function isNotionSchema<T extends BaseContentItem>(
 	return "mapping" in s && "mapItem" in s;
 }
 
+function resolveCacheConfig<T extends BaseContentItem>(
+	cache: NodeCMSOptions["cache"],
+): CacheConfig<T> {
+	if (cache === "disabled" || cache === undefined) return "disabled";
+	return {
+		document:
+			cache.document === "memory" ? memoryDocumentCache<T>() : undefined,
+		image: cache.image === "memory" ? memoryImageCache() : undefined,
+		ttlMs: cache.ttlMs,
+	};
+}
+
 /**
  * Node.js 環境向け CMS ファクトリ。
  * process.env.NOTION_TOKEN / NOTION_DATA_SOURCE_ID を自動で読み取る。
@@ -76,25 +88,84 @@ export function createNodeCMS<T extends BaseContentItem = BaseContentItem>(
 		schema: notionSchema,
 	});
 
-	const cacheConfig: CacheConfig<T> =
-		opts?.cache === "disabled" || opts?.cache === undefined
-			? "disabled"
-			: {
-					document:
-						opts.cache.document === "memory"
-							? memoryDocumentCache<T>()
-							: undefined,
-					image: opts.cache.image === "memory" ? memoryImageCache() : undefined,
-					ttlMs: opts.cache.ttlMs,
-				};
-
 	const cmsOpts: CreateCMSOptions<T> = {
 		source,
 		renderer: renderMarkdown,
 		schema: cmsSchema,
 		content: opts?.content,
-		cache: cacheConfig,
+		cache: resolveCacheConfig<T>(opts?.cache),
 	};
 
 	return createCMS<T>(cmsOpts);
+}
+
+// ── Multi-Source ──────────────────────────────────────────────────────────────
+
+/** nhcSchema の各エントリの型。generateSchema() が生成するオブジェクトと対応する。 */
+export interface MultiSourceEntry<T extends BaseContentItem = BaseContentItem> {
+	id: string;
+	dbName: string;
+	schema?: NotionSchema<T>;
+}
+
+export type MultiSourceSchema = Record<
+	string,
+	MultiSourceEntry<BaseContentItem>
+>;
+
+type InferSourceItem<E> =
+	E extends MultiSourceEntry<infer T> ? T : BaseContentItem;
+
+export type MultiCMSResult<S extends MultiSourceSchema> = {
+	[K in keyof S]: ReturnType<typeof createCMS<InferSourceItem<S[K]>>>;
+};
+
+export interface CreateNodeMultiCMSOptions<S extends MultiSourceSchema> {
+	/** nhcSchema（nhc generate で生成されたオブジェクト） */
+	schema: S;
+	/** Notion API トークン（省略時は process.env.NOTION_TOKEN を使用） */
+	token?: string;
+	cache?: NodeCMSOptions["cache"];
+	content?: ContentConfig;
+}
+
+/**
+ * マルチソース向け Node.js CMS ファクトリ。
+ * nhc generate で生成した nhcSchema を渡すと、各ソースに対応する CMS インスタンスを返す。
+ *
+ * @example
+ * const client = createNodeMultiCMS({ schema: nhcSchema })
+ * const posts = await client.posts.list()
+ */
+export function createNodeMultiCMS<S extends MultiSourceSchema>(
+	opts: CreateNodeMultiCMSOptions<S>,
+): MultiCMSResult<S> {
+	const token = opts.token ?? process.env.NOTION_TOKEN;
+	if (!token) {
+		throw new CMSError({
+			code: "core/config_invalid",
+			message: "NOTION_TOKEN environment variable is not set",
+			context: { operation: "createNodeMultiCMS", envVar: "NOTION_TOKEN" },
+		});
+	}
+
+	const cacheConfig = resolveCacheConfig(opts.cache);
+	const result = {} as MultiCMSResult<S>;
+
+	for (const key of Object.keys(opts.schema) as (keyof S & string)[]) {
+		const entry = opts.schema[key] as MultiSourceEntry<BaseContentItem>;
+		const source = notionAdapter({
+			token,
+			dataSourceId: entry.id,
+			schema: entry.schema,
+		});
+		(result as Record<string, unknown>)[key] = createCMS({
+			source,
+			renderer: renderMarkdown,
+			cache: cacheConfig,
+			content: opts.content,
+		});
+	}
+
+	return result;
 }
