@@ -19,18 +19,23 @@ export interface NodeCMSOptions<T extends BaseContentItem = BaseContentItem> {
 	/** defineSchema() の戻り値または SchemaConfig を受け取る。 */
 	schema?: SchemaConfig<T> | NotionSchema<T>;
 	content?: ContentConfig;
-	cache?: {
-		/** "memory" = インメモリキャッシュ、false = キャッシュなし（デフォルト）。 */
-		document?: "memory" | false;
-		image?: "memory" | false;
-		ttlMs?: number;
-	};
+	/**
+	 * キャッシュ設定。`"disabled"` で完全に無効化。
+	 * document/image には `"memory"` でインメモリキャッシュを指定できる。
+	 */
+	cache?:
+		| "disabled"
+		| {
+				document?: "memory";
+				image?: "memory";
+				ttlMs?: number;
+		  };
 }
 
 function isNotionSchema<T extends BaseContentItem>(
 	s: SchemaConfig<T> | NotionSchema<T>,
 ): s is NotionSchema<T> {
-	return "zodSchema" in s && "mapping" in s;
+	return "mapping" in s && "mapItem" in s;
 }
 
 /**
@@ -71,15 +76,17 @@ export function createNodeCMS<T extends BaseContentItem = BaseContentItem>(
 		schema: notionSchema,
 	});
 
-	const docCache =
-		opts?.cache?.document === "memory" ? memoryDocumentCache<T>() : false;
-	const imgCache = opts?.cache?.image === "memory" ? memoryImageCache() : false;
-
-	const cacheConfig: CacheConfig<T> = {
-		document: docCache,
-		image: imgCache,
-		ttlMs: opts?.cache?.ttlMs,
-	};
+	const cacheConfig: CacheConfig<T> =
+		opts?.cache === "disabled" || opts?.cache === undefined
+			? "disabled"
+			: {
+					document:
+						opts.cache.document === "memory"
+							? memoryDocumentCache<T>()
+							: undefined,
+					image: opts.cache.image === "memory" ? memoryImageCache() : undefined,
+					ttlMs: opts.cache.ttlMs,
+				};
 
 	const cmsOpts: CreateCMSOptions<T> = {
 		source,

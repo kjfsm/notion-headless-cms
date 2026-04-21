@@ -176,7 +176,7 @@ type CMSErrorCode = BuiltInCMSErrorCode | (string & {});
 ## 新規追加 API
 
 - `cms.query()` — QueryBuilder（status / tag / where / sortBy / paginate / execute / executeOne / adjacent）
-- `cms.cache` — キャッシュ管理グループ（prefetchAll / revalidate / sync / checkList / checkItem）
-- `cms.cached` — SWR アクセサ（list / get）
+- `cms.cache.read` — SWR アクセサ（list / get）
+- `cms.cache.manage` — キャッシュ管理グループ（prefetchAll / revalidate / sync / checkList / checkItem）
 - `definePlugin()` — フック・ロガー・リトライ設定をまとめて注入するプラグイン
 - `isCMSErrorInNamespace(err, "source/")` — 名前空間判定ヘルパー

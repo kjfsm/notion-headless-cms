@@ -1,3 +1,4 @@
+import type { PluggableList } from "@notion-headless-cms/renderer";
 import type { CacheConfig } from "./cache";
 import type { BaseContentItem, CMSSchemaProperties } from "./content";
 import type { CMSHooks } from "./hooks";
@@ -12,8 +13,8 @@ import type { DataSourceAdapter } from "./source";
 export interface RenderOptions {
 	imageProxyBase?: string;
 	cacheImage?: (url: string) => Promise<string>;
-	remarkPlugins?: readonly unknown[];
-	rehypePlugins?: readonly unknown[];
+	remarkPlugins?: PluggableList;
+	rehypePlugins?: PluggableList;
 }
 
 /** カスタムレンダラー関数の型。デフォルトは @notion-headless-cms/renderer の renderMarkdown。 */
@@ -37,9 +38,9 @@ export interface ContentConfig {
 	/** 画像プロキシのベースURL。デフォルト: '/api/images' */
 	imageProxyBase?: string;
 	/** 追加する remark プラグイン。 */
-	remarkPlugins?: readonly unknown[];
+	remarkPlugins?: PluggableList;
 	/** 追加する rehype プラグイン。 */
-	rehypePlugins?: readonly unknown[];
+	rehypePlugins?: PluggableList;
 	/** デフォルトのパイプラインを置き換えるカスタムレンダラー。 */
 	render?: RendererFn;
 }

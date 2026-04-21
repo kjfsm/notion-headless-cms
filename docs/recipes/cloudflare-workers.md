@@ -36,7 +36,7 @@ export default {
     const cms = createCloudflareCMS({
       env,
       schema: { publishedStatuses: ["公開"] },
-      cache: { ttlMs: 5 * 60_000 }, // 5分 TTL
+      ttlMs: 5 * 60_000, // 5分 TTL
       waitUntil: ctx.waitUntil.bind(ctx), // SWR の裏更新を非同期化
     });
 
@@ -51,13 +51,13 @@ export default {
 
     // 一覧（SWR）
     if (url.pathname === "/posts") {
-      const { items } = await cms.cached.list();
+      const { items } = await cms.cache.read.list();
       return Response.json(items);
     }
 
     // 単一アイテム（SWR）
     const slug = url.pathname.replace("/posts/", "");
-    const cached = await cms.cached.get(slug);
+    const cached = await cms.cache.read.get(slug);
     if (!cached) return new Response("Not Found", { status: 404 });
 
     return new Response(cached.html, {

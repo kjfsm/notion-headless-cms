@@ -44,8 +44,8 @@ const item = await cms.find("my-post");
 const rendered = item ? await cms.render(item) : null;
 
 // SWR
-const { items: cachedItems } = await cms.cached.list();
-const cached = await cms.cached.get("my-post");
+const { items: cachedItems } = await cms.cache.read.list();
+const cached = await cms.cache.read.get("my-post");
 console.log(cached?.html);
 ```
 
@@ -91,13 +91,13 @@ const cms = createCMS<MyPost>({
 | `find(slug)` | ソースから単一アイテム取得 |
 | `render(item)` | Markdown → HTML にレンダリング |
 | `isPublished(item)` | `publishedStatuses` 判定 |
-| `cached.list()` | SWR で一覧取得 |
-| `cached.get(slug)` | SWR で単一アイテム取得 |
-| `cache.prefetchAll(opts?)` | 全アイテムを事前レンダリング |
-| `cache.revalidate(scope?)` | キャッシュ無効化 |
-| `cache.sync(payload?)` | Webhook 由来のキャッシュ同期 |
-| `cache.checkList(version)` | 一覧差分検知 |
-| `cache.checkItem(slug, lastEdited)` | 個別差分検知 |
+| `cache.read.list()` | SWR で一覧取得 |
+| `cache.read.get(slug)` | SWR で単一アイテム取得 |
+| `cache.manage.prefetchAll(opts?)` | 全アイテムを事前レンダリング |
+| `cache.manage.revalidate(scope?)` | キャッシュ無効化 |
+| `cache.manage.sync(payload?)` | Webhook 由来のキャッシュ同期 |
+| `cache.manage.checkList(version)` | 一覧差分検知 |
+| `cache.manage.checkItem(slug, lastEdited)` | 個別差分検知 |
 | `query()` | QueryBuilder を返す |
 | `getStaticSlugs()` | 静的生成用スラッグ一覧 |
 | `getCachedImage(hash)` | キャッシュ画像を取得 |

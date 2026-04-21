@@ -3,7 +3,7 @@ import { createCMS } from "../../lib/cms";
 
 const cms = createCMS(Astro.locals.runtime.env);
 const { slug } = Astro.params;
-const entry = await cms.cached.get(slug!);
+const entry = await cms.cache.read.get(slug!);
 
 if (!entry) return Astro.redirect("/404");
 

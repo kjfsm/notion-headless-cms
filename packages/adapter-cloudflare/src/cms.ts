@@ -25,13 +25,14 @@ export interface CreateCloudflareCMSOptions<
 	/** defineSchema() の戻り値または SchemaConfig を受け取る。 */
 	schema?: SchemaConfig<T> | NotionSchema<T>;
 	content?: ContentConfig;
-	cache?: Omit<CacheConfig<T>, "document" | "image">;
+	/** キャッシュ TTL（ミリ秒）。未指定時は TTL なし。 */
+	ttlMs?: number;
 }
 
 function isNotionSchema<T extends BaseContentItem>(
 	s: SchemaConfig<T> | NotionSchema<T>,
 ): s is NotionSchema<T> {
-	return "zodSchema" in s && "mapping" in s;
+	return "mapping" in s && "mapItem" in s;
 }
 
 /**
@@ -43,7 +44,7 @@ function isNotionSchema<T extends BaseContentItem>(
 export function createCloudflareCMS<
 	T extends BaseContentItem = BaseContentItem,
 >(opts: CreateCloudflareCMSOptions<T>): ReturnType<typeof createCMS<T>> {
-	const { env, schema, content, cache } = opts;
+	const { env, schema, content, ttlMs } = opts;
 
 	const notionSchema = schema && isNotionSchema(schema) ? schema : undefined;
 	const cmsSchema = schema && !isNotionSchema(schema) ? schema : undefined;
@@ -56,11 +57,9 @@ export function createCloudflareCMS<
 
 	const r2 = r2Cache<T>({ bucket: env.CACHE_BUCKET });
 
-	const cacheConfig: CacheConfig<T> = {
-		...cache,
-		document: r2 ?? false,
-		image: r2 ?? false,
-	};
+	const cacheConfig: CacheConfig<T> = r2
+		? { document: r2, image: r2, ttlMs }
+		: "disabled";
 
 	const cmsOpts: CreateCMSOptions<T> = {
 		source,

@@ -4,7 +4,6 @@ import type {
 	DataSourceAdapter,
 } from "@notion-headless-cms/core";
 import { CMSError, isCMSError } from "@notion-headless-cms/core";
-import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import {
 	createClient,
 	queryAllPages,
@@ -14,6 +13,7 @@ import { Transformer } from "./internal/transformer/transformer";
 import type { BlockHandler } from "./internal/transformer/types";
 import { mapItem } from "./mapper";
 import type { NotionSchema } from "./schema";
+import type { NotionPage } from "./types";
 
 const DEFAULT_PROPERTIES: Required<CMSSchemaProperties> = {
 	slug: "Slug",
@@ -36,7 +36,7 @@ export interface NotionAdapterOptions<
 	 * 代わりに `schema` を指定すること。指定しない場合、デフォルトマッパーは
 	 * BaseContentItem のフィールドのみ返し、T 固有フィールドは undefined となる。
 	 */
-	mapItem?: (page: PageObjectResponse) => T;
+	mapItem?: (page: NotionPage) => T;
 	/** カスタムブロックハンドラーのマップ。 */
 	blocks?: Record<string, BlockHandler>;
 	/** 宣言的スキーマ定義。指定時は properties / mapItem より優先される。 */
@@ -52,7 +52,7 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 	readonly accessibleStatuses?: readonly string[];
 	private readonly client: ReturnType<typeof createClient>;
 	private readonly dataSourceId: string;
-	private readonly itemMapper: (page: PageObjectResponse) => T;
+	private readonly itemMapper: (page: NotionPage) => T;
 	private readonly slugPropName: string;
 	private readonly blocksConfig: Record<string, BlockHandler> | undefined;
 

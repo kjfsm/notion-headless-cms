@@ -2,6 +2,10 @@
 
 // ── キャッシュユーティリティ ───────────────────────────────────────────────
 export { isStale, sha256Hex } from "./cache";
+export type {
+	MemoryDocumentCacheOptions,
+	MemoryImageCacheOptions,
+} from "./cache/memory";
 export {
 	memoryCache,
 	memoryDocumentCache,

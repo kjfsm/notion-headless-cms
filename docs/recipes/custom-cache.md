@@ -32,7 +32,7 @@ class RedisDocumentCache<T extends BaseContentItem> implements DocumentCacheAdap
     await this.redis.set(`cms:item:${slug}`, JSON.stringify(data));
   }
 
-  // invalidate はオプション。未実装でも cms.cache.revalidate() が no-op になるだけ。
+  // invalidate はオプション。未実装でも cms.cache.manage.revalidate() が no-op になるだけ。
   async invalidate(scope: "all" | { slug: string } | { tag: string }): Promise<void> {
     if (scope === "all") {
       await this.redis.del("cms:list");

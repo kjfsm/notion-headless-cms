@@ -1,5 +1,4 @@
-import type { Client } from "@notionhq/client";
-import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import type { Client, PageObjectResponse } from "@notionhq/client";
 
 /** Notionデータソースをカーソルページネーションで最後まで取得する。 */
 export async function queryAllPages(

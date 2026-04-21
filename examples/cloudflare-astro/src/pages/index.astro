@@ -2,7 +2,7 @@
 import { createCMS } from "../lib/cms";
 
 const cms = createCMS(Astro.locals.runtime.env);
-const { items } = await cms.cached.list();
+const { items } = await cms.cache.read.list();
 ---
 
 <html lang="ja">

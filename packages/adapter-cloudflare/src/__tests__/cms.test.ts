@@ -65,8 +65,8 @@ describe("createCloudflareCMS", () => {
 		const env = { ...baseEnv, CACHE_BUCKET: makeMockBucket() };
 		const cms = createCloudflareCMS({ env });
 		expect(cms).toBeDefined();
-		expect(typeof cms.cached.list).toBe("function");
-		expect(typeof cms.cached.get).toBe("function");
+		expect(typeof cms.cache.read.list).toBe("function");
+		expect(typeof cms.cache.read.get).toBe("function");
 	});
 
 	it("list() がソースのアイテムを返す", async () => {
@@ -78,7 +78,7 @@ describe("createCloudflareCMS", () => {
 
 	it("ttlMs オプションが cache に反映される", () => {
 		const env = { ...baseEnv, CACHE_BUCKET: makeMockBucket() };
-		const cms = createCloudflareCMS({ env, cache: { ttlMs: 30_000 } });
+		const cms = createCloudflareCMS({ env, ttlMs: 30_000 });
 		expect(cms).toBeDefined();
 	});
 });

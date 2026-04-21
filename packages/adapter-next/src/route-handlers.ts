@@ -57,7 +57,7 @@ export function createRevalidateRouteHandler(
 			// JSON でなくても動作する
 		}
 
-		const result = await cms.cache.sync(payload);
+		const result = await cms.cache.manage.sync(payload);
 		return Response.json({ updated: result.updated });
 	};
 }

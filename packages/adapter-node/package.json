@@ -50,7 +50,14 @@
 	"dependencies": {
 		"@notion-headless-cms/core": "workspace:*",
 		"@notion-headless-cms/renderer": "workspace:*",
-		"@notion-headless-cms/source-notion": "workspace:*"
+		"@notion-headless-cms/source-notion": "workspace:*",
+		"@notionhq/client": "^5.18.0",
+		"rehype-stringify": "^10.0.1",
+		"remark-gfm": "^4.0.1",
+		"remark-parse": "^11.0.0",
+		"remark-rehype": "^11.1.2",
+		"unified": "^11.0.5",
+		"zod": "^4.0.0"
 	},
 	"devDependencies": {
 		"@types/node": "^22.0.0"

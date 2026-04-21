@@ -22,7 +22,7 @@ const cms = createNodeCMS({
   cache: { document: "memory", image: "memory", ttlMs: 5 * 60_000 },
 });
 
-const { items } = await cms.cached.list();
+const { items } = await cms.cache.read.list();
 console.log(items.map((i) => i.slug));
 ```
 
@@ -45,7 +45,7 @@ const cms = createNodeCMS({
   cache: { document: "memory", image: "memory" },
 });
 
-const { ok, failed } = await cms.cache.prefetchAll({
+const { ok, failed } = await cms.cache.manage.prefetchAll({
   concurrency: 5,
   onProgress: (done, total) => console.log(`${done}/${total}`),
 });

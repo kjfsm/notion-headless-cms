@@ -11,24 +11,24 @@
 | `render(item)` | アイテムを Markdown → HTML にレンダリングして `CachedItem` を返す |
 | `isPublished(item)` | `publishedStatuses` に含まれるかどうかを返す |
 
-## SWR（Stale-While-Revalidate）: `cms.cached`
+## SWR（Stale-While-Revalidate）: `cms.cache.read`
 
 | メソッド | 説明 |
 |---|---|
-| `cached.list()` | キャッシュ優先で一覧を返す。`{ items, isStale, cachedAt }` |
-| `cached.get(slug)` | キャッシュ優先で単一アイテムを返す。`CachedItem \| null` |
+| `cache.read.list()` | キャッシュ優先で一覧を返す。`{ items, isStale, cachedAt }` |
+| `cache.read.get(slug)` | キャッシュ優先で単一アイテムを返す。`CachedItem \| null` |
 
 キャッシュが `TTL` 切れ or 未ヒットの場合はソースから取得し、`waitUntil` 指定時は非同期で書き戻す。
 
-## キャッシュ管理: `cms.cache`
+## キャッシュ管理: `cms.cache.manage`
 
 | メソッド | 説明 |
 |---|---|
-| `cache.prefetchAll({ concurrency?, onProgress? })` | 全コンテンツを事前レンダリングしてキャッシュに保存 |
-| `cache.revalidate(scope?)` | 指定スコープ（`"all"` または `{ slug }`）のキャッシュを無効化 |
-| `cache.sync({ slug? })` | Webhook ペイロードを元にキャッシュを同期 |
-| `cache.checkList(version)` | 一覧の更新有無を返す（`{ changed: true, items } \| { changed: false }`） |
-| `cache.checkItem(slug, lastEdited)` | 単一アイテムの更新有無を返す |
+| `cache.manage.prefetchAll({ concurrency?, onProgress? })` | 全コンテンツを事前レンダリングしてキャッシュに保存 |
+| `cache.manage.revalidate(scope?)` | 指定スコープ（`"all"` または `{ slug }`）のキャッシュを無効化 |
+| `cache.manage.sync({ slug? })` | Webhook ペイロードを元にキャッシュを同期 |
+| `cache.manage.checkList(version)` | 一覧の更新有無を返す（`{ changed: true, items } \| { changed: false }`） |
+| `cache.manage.checkItem(slug, lastEdited)` | 単一アイテムの更新有無を返す |
 
 ## クエリビルダー
 

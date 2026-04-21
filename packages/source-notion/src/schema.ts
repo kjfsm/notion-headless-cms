@@ -1,6 +1,6 @@
-import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import type { z } from "zod";
 import { getPlainText } from "./mapper";
+import type { NotionPage } from "./types";
 
 // ── フィールドマッピング型定義 ──────────────────────────────────────────────
 
@@ -36,9 +36,8 @@ export function defineMapping<T extends Record<string, unknown>>(
 // ── NotionSchema オブジェクト型 ──────────────────────────────────────────────
 
 export interface NotionSchema<T> {
-	zodSchema: z.ZodObject<z.ZodRawShape>;
 	mapping: { [K in keyof T]: NotionFieldType };
-	mapItem: (page: PageObjectResponse) => T;
+	mapItem: (page: NotionPage) => T;
 	publishedStatuses: readonly string[];
 	accessibleStatuses: readonly string[];
 }
@@ -75,7 +74,6 @@ export function defineSchema<S extends z.ZodRawShape>(
 	}
 
 	return {
-		zodSchema: zodSchema as z.ZodObject<z.ZodRawShape>,
 		mapping: mapping as { [K in keyof T]: NotionFieldType },
 		mapItem: (page) => {
 			const raw = parseMapping(
@@ -91,13 +89,13 @@ export function defineSchema<S extends z.ZodRawShape>(
 
 // ── パーサー ─────────────────────────────────────────────────────────────────
 
-type PropertyValue = PageObjectResponse["properties"][string];
+type PropertyValue = NotionPage["properties"][string];
 
 // id と updatedAt は Notion ページのメタデータから自動設定されるシステムフィールド
 const SYSTEM_FIELDS = new Set(["id", "updatedAt"]);
 
 function parseMapping<T>(
-	page: PageObjectResponse,
+	page: NotionPage,
 	mapping: { [K in keyof T]: NotionFieldType },
 ): Record<string, unknown> {
 	const result: Record<string, unknown> = {

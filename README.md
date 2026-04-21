@@ -40,8 +40,8 @@ flowchart LR
 CMS エンジン本体。データソース・キャッシュ・レンダラーを統合し、Stale-While-Revalidate / 更新検知 / クエリビルダー / フック / リトライを提供する。**外部ランタイム依存ゼロ**。
 - `createCMS(options)` / `CMS` — CMS インスタンス生成
 - `cms.list()` / `cms.find(slug)` / `cms.render(item)` — ソースから直接取得
-- `cms.cached.list()` / `cms.cached.get(slug)` — SWR 取得
-- `cms.cache.prefetchAll()` / `cms.cache.revalidate()` / `cms.cache.sync()` — キャッシュ管理
+- `cms.cache.read.list()` / `cms.cache.read.get(slug)` — SWR 取得
+- `cms.cache.manage.prefetchAll()` / `cms.cache.manage.revalidate()` / `cms.cache.manage.sync()` — キャッシュ管理
 - `cms.query()` — ステータス・タグ・述語・ソート・ページネーション
 - `memoryDocumentCache()` / `memoryImageCache()` — インメモリキャッシュ
 - `CMSError` / `isCMSError` / `isCMSErrorInNamespace` — 名前空間付きエラー
@@ -148,18 +148,18 @@ export default {
         publishedStatuses: ["公開"],
         accessibleStatuses: ["公開", "下書き"],
       },
-      cache: { ttlMs: 5 * 60 * 1000 },
+      ttlMs: 5 * 60 * 1000,
     });
 
     const url = new URL(request.url);
 
     if (url.pathname === "/posts") {
-      const { items } = await cms.cached.list();
+      const { items } = await cms.cache.read.list();
       return Response.json(items);
     }
 
     const slug = url.pathname.replace("/posts/", "");
-    const cached = await cms.cached.get(slug);
+    const cached = await cms.cache.read.get(slug);
     if (!cached) return new Response("Not Found", { status: 404 });
 
     return new Response(cached.html, {
@@ -213,8 +213,6 @@ pnpm changeset
 
 # 3. その PR をマージすると npm に自動公開される
 ```
-
-`@notion-headless-cms/fetcher` と `@notion-headless-cms/transformer` は `source-notion` に内包されたため `private: true` で公開対象外。
 
 ## ライセンス
 

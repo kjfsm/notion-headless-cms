@@ -3,11 +3,8 @@ import type {
 	CMSSchemaProperties,
 } from "@notion-headless-cms/core";
 import { CMSError } from "@notion-headless-cms/core";
-import type {
-	PageObjectResponse,
-	RichTextItemResponse,
-} from "@notionhq/client/build/src/api-endpoints";
 import { z } from "zod";
+import type { NotionPage, NotionRichTextItem } from "./types";
 
 const baseContentItemSchema = z.object({
 	id: z.string().min(1),
@@ -18,19 +15,17 @@ const baseContentItemSchema = z.object({
 });
 
 /** Notionリッチテキスト配列をプレーンテキストに結合する。 */
-export function getPlainText(
-	items: RichTextItemResponse[] | undefined,
-): string {
+export function getPlainText(items: NotionRichTextItem[] | undefined): string {
 	return items?.map((item) => item.plain_text).join("") ?? "";
 }
 
 /**
- * NotionのPageObjectResponseをデフォルトの BaseContentItem に変換する。
+ * Notion ページをデフォルトの BaseContentItem に変換する。
  * 独自の拡張型（title などを含む）が必要な場合は、本関数の戻り値に
  * 追加フィールドを足してカスタム mapItem を実装する。
  */
 export function mapItem(
-	page: PageObjectResponse,
+	page: NotionPage,
 	props: Required<CMSSchemaProperties>,
 ): BaseContentItem {
 	const statusProperty = page.properties[props.status] as
@@ -45,7 +40,7 @@ export function mapItem(
 		slug: getPlainText(
 			(
 				page.properties[props.slug] as
-					| { rich_text?: RichTextItemResponse[] }
+					| { rich_text?: NotionRichTextItem[] }
 					| undefined
 			)?.rich_text,
 		),

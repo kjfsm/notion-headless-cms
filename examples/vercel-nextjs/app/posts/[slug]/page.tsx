@@ -18,7 +18,7 @@ export default async function PostPage({
 	params: Promise<{ slug: string }>;
 }) {
 	const { slug } = await params;
-	const entry = await cms.cached.get(slug);
+	const entry = await cms.cache.read.get(slug);
 	if (!entry) notFound();
 
 	const { html, item } = entry;

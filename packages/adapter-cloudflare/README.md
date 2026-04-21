@@ -34,18 +34,18 @@ export default {
         publishedStatuses: ["公開"],
         accessibleStatuses: ["公開", "下書き"],
       },
-      cache: { ttlMs: 5 * 60 * 1000 },
+      ttlMs: 5 * 60 * 1000,
     });
 
     const url = new URL(request.url);
 
     if (url.pathname === "/posts") {
-      const { items } = await cms.cached.list();
+      const { items } = await cms.cache.read.list();
       return Response.json(items);
     }
 
     const slug = url.pathname.replace("/posts/", "");
-    const cached = await cms.cached.get(slug);
+    const cached = await cms.cache.read.get(slug);
     if (!cached) return new Response("Not Found", { status: 404 });
 
     return new Response(cached.html, {
@@ -103,7 +103,7 @@ wrangler secret put NOTION_DATA_SOURCE_ID
 | `env` | `CloudflareCMSEnv` | Workers バインディング（後述） |
 | `schema` | `SchemaConfig<T> \| NotionSchema<T>` | `publishedStatuses` 等の設定、または `defineSchema()` の戻り値 |
 | `content` | `ContentConfig` | `imageProxyBase` などのレンダリング設定 |
-| `cache` | `Omit<CacheConfig<T>, "document" \| "image">` | `ttlMs` など。`document` / `image` は `CACHE_BUCKET` から自動注入 |
+| `ttlMs` | `number` | SWR の TTL（ミリ秒）。`document` / `image` は `CACHE_BUCKET` から自動注入 |
 
 戻り値は `createCMS<T>()` と同じ `CMS<T>`。
 

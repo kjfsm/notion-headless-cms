@@ -65,6 +65,27 @@ describe("MemoryDocumentCache", () => {
 		expect(await cache.getItem("a")).toBeNull();
 		expect(await cache.getItem("b")).not.toBeNull();
 	});
+
+	it("maxItems 指定時に LRU で古いエントリが退避される", async () => {
+		const cache = memoryDocumentCache({ maxItems: 2 });
+		await cache.setItem("a", makeCachedItem("a"));
+		await cache.setItem("b", makeCachedItem("b"));
+		await cache.setItem("c", makeCachedItem("c"));
+		expect(await cache.getItem("a")).toBeNull();
+		expect(await cache.getItem("b")).not.toBeNull();
+		expect(await cache.getItem("c")).not.toBeNull();
+	});
+
+	it("getItem でアクセスされたエントリは LRU の末尾に移動する", async () => {
+		const cache = memoryDocumentCache({ maxItems: 2 });
+		await cache.setItem("a", makeCachedItem("a"));
+		await cache.setItem("b", makeCachedItem("b"));
+		await cache.getItem("a");
+		await cache.setItem("c", makeCachedItem("c"));
+		expect(await cache.getItem("a")).not.toBeNull();
+		expect(await cache.getItem("b")).toBeNull();
+		expect(await cache.getItem("c")).not.toBeNull();
+	});
 });
 
 describe("MemoryImageCache", () => {
@@ -80,5 +101,25 @@ describe("MemoryImageCache", () => {
 		const result = await cache.get("hash123");
 		expect(result?.contentType).toBe("image/png");
 		expect(result?.data).toBe(data);
+	});
+
+	it("maxItems 指定時に LRU で古いエントリが退避される", async () => {
+		const cache = memoryImageCache({ maxItems: 2 });
+		await cache.set("a", new ArrayBuffer(8), "image/png");
+		await cache.set("b", new ArrayBuffer(8), "image/png");
+		await cache.set("c", new ArrayBuffer(8), "image/png");
+		expect(await cache.get("a")).toBeNull();
+		expect(await cache.get("b")).not.toBeNull();
+		expect(await cache.get("c")).not.toBeNull();
+	});
+
+	it("maxSizeBytes 指定時に合計サイズを超えるエントリを退避する", async () => {
+		const cache = memoryImageCache({ maxSizeBytes: 20 });
+		await cache.set("a", new ArrayBuffer(10), "image/png");
+		await cache.set("b", new ArrayBuffer(10), "image/png");
+		await cache.set("c", new ArrayBuffer(10), "image/png");
+		expect(await cache.get("a")).toBeNull();
+		expect(await cache.get("b")).not.toBeNull();
+		expect(await cache.get("c")).not.toBeNull();
 	});
 });

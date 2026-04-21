@@ -36,7 +36,7 @@ export default {
       },
     });
 
-    const { items } = await cms.cached.list();
+    const { items } = await cms.cache.read.list();
     return Response.json(items);
   },
 };

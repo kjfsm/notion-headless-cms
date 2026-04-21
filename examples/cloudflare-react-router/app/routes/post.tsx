@@ -4,7 +4,7 @@ import type { Route } from "./+types/post";
 
 export async function loader({ params, context }: Route.LoaderArgs) {
 	const cms = createCMS(context.cloudflare.env);
-	const entry = await cms.cached.get(params.slug ?? "");
+	const entry = await cms.cache.read.get(params.slug ?? "");
 	if (!entry) throw data("Not Found", { status: 404 });
 	return entry;
 }
