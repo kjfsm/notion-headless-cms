@@ -50,13 +50,13 @@ export default {
 
     // 一覧（SWR）
     if (url.pathname === "/posts") {
-      const { items } = await cms.cache.read.list();
+      const { items } = await cms.cache.getList();
       return Response.json(items);
     }
 
     // 単一アイテム（SWR）
     const slug = url.pathname.replace("/posts/", "");
-    const cached = await cms.cache.read.get(slug);
+    const cached = await cms.cache.get(slug);
     if (!cached) return new Response("Not Found", { status: 404 });
 
     return new Response(cached.html, {

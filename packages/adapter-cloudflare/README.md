@@ -42,12 +42,12 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/posts") {
-      const { items } = await cms.cache.read.list();
+      const { items } = await cms.cache.getList();
       return Response.json(items);
     }
 
     const slug = url.pathname.replace("/posts/", "");
-    const cached = await cms.cache.read.get(slug);
+    const cached = await cms.cache.get(slug);
     if (!cached) return new Response("Not Found", { status: 404 });
 
     return new Response(cached.html, {

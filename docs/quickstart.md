@@ -63,10 +63,10 @@ const cms = createNodeCMS({
 });
 
 // SWR でキャッシュ優先取得
-const { items, isStale, cachedAt } = await cms.cache.read.list();
+const { items, isStale, cachedAt } = await cms.cache.getList();
 
 // SWR で単一アイテム取得（HTML 付き）
-const cached = await cms.cache.read.get("my-first-post");
+const cached = await cms.cache.get("my-first-post");
 console.log(cached?.html);
 ```
 

@@ -32,6 +32,7 @@ import { memoryDocumentCache } from "@notion-headless-cms/core/cache/memory";
 | `@notion-headless-cms/core/errors` | `CMSError` / `isCMSError` / `isCMSErrorInNamespace` |
 | `@notion-headless-cms/core/hooks` | `mergeHooks` / `mergeLoggers` |
 | `@notion-headless-cms/core/cache/memory` | `memoryDocumentCache` / `memoryImageCache` / `*Options` |
+| `@notion-headless-cms/core/cache/noop` | `noopDocumentCache` / `noopImageCache` |
 
 ## 使い方（core を直接使う場合）
 
@@ -63,8 +64,8 @@ const item = await cms.find("my-post");
 const rendered = item ? await cms.render(item) : null;
 
 // SWR
-const { items: cachedItems } = await cms.cache.read.list();
-const cached = await cms.cache.read.get("my-post");
+const { items: cachedItems } = await cms.cache.getList();
+const cached = await cms.cache.get("my-post");
 console.log(cached?.html);
 ```
 
@@ -120,15 +121,16 @@ const cms = createCMS<MyPost>({
 |---|---|
 | `list()` | ソースから一覧取得 |
 | `find(slug)` | ソースから単一アイテム取得 |
+| `findMany(slugs[])` | 複数スラッグを並列取得（`Map<string, T>` を返す） |
 | `render(item)` | Markdown → HTML にレンダリング |
 | `isPublished(item)` | `publishedStatuses` 判定 |
-| `cache.read.list()` | SWR で一覧取得 |
-| `cache.read.get(slug)` | SWR で単一アイテム取得 |
-| `cache.manage.prefetchAll(opts?)` | 全アイテムを事前レンダリング |
-| `cache.manage.revalidate(scope?)` | キャッシュ無効化 |
-| `cache.manage.sync(payload?)` | Webhook 由来のキャッシュ同期 |
-| `cache.manage.checkList(version)` | 一覧差分検知 |
-| `cache.manage.checkItem(slug, lastEdited)` | 個別差分検知 |
+| `cache.getList()` | SWR で一覧取得 |
+| `cache.get(slug)` | SWR で単一アイテム取得 |
+| `cache.prefetchAll(opts?)` | 全アイテムを事前レンダリング |
+| `cache.revalidate(scope?)` | キャッシュ無効化 |
+| `cache.sync(payload?)` | Webhook 由来のキャッシュ同期 |
+| `cache.checkList(version)` | 一覧差分検知 |
+| `cache.checkItem(slug, lastEdited)` | 個別差分検知 |
 | `query()` | QueryBuilder を返す |
 | `getStaticSlugs()` | 静的生成用スラッグ一覧 |
 | `getCachedImage(hash)` | キャッシュ画像を取得 |
@@ -169,6 +171,7 @@ const cms = createCMS<MyPost>({
 - `CreateCMSOptions<T>` — `createCMS()` の引数
 - `BaseContentItem` — デフォルト・カスタム型の基底（`status` / `publishedAt` はオプション）
 - `CachedItem<T>` / `CachedItemList<T>` — キャッシュ済みコンテンツ
+- `CacheAccessor<T>` — `cms.cache` の型（外部で型引数として使いたい場合に）
 - `DataSourceAdapter<T>` — データソース抽象
 - `DocumentCacheAdapter<T>` / `ImageCacheAdapter` — キャッシュ抽象
 - `RendererFn` / `RenderOptions` — レンダラー関数の型
@@ -190,7 +193,7 @@ try {
 }
 ```
 
-組み込みコード: `core/config_invalid` / `core/schema_invalid` / `source/fetch_items_failed` / `source/fetch_item_failed` / `source/load_markdown_failed` / `cache/io_failed` / `renderer/failed`
+組み込みコード: `core/config_invalid` / `core/schema_invalid` / `source/fetch_items_failed` / `source/fetch_item_failed` / `source/load_markdown_failed` / `cache/io_failed` / `cache/image_fetch_failed` / `renderer/failed`
 
 ## 関連パッケージ
 
