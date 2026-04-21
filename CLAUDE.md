@@ -29,16 +29,18 @@ Notion API クライアントと Notion ブロック→Markdown 変換器は `so
 
 | 層 | 技術 |
 |---|---|
+| ランタイム | Node.js 24+（全パッケージ `engines.node: ">=24"`） |
 | ビルド | tsup（ESM + TypeScript declarations） |
 | 型チェック | TypeScript 5.9（strict） |
-| Notion API | @notionhq/client |
+| Notion API | @notionhq/client（`source-notion` の `peerDependencies`） |
 | Markdown変換 | notion-to-md |
-| HTMLレンダリング | remark / rehype（unified） |
-| キャッシュストレージ | Cloudflare R2 / Next.js `unstable_cache` / メモリ |
-| バリデーション | Zod |
+| HTMLレンダリング | remark / rehype（unified）（`renderer` の `peerDependencies`） |
+| キャッシュストレージ | Cloudflare R2 / Next.js `unstable_cache` / メモリ（LRU 対応） |
+| バリデーション | Zod（`source-notion` の `peerDependencies`） |
 | リンター/フォーマッター | Biome |
 | パッケージ管理 | pnpm ワークスペース |
 | リリース | changesets |
+| CI | GitHub Actions（Node 24.x / 25.x マトリクス） |
 
 ## ディレクトリ構成
 

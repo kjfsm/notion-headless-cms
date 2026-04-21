@@ -15,16 +15,16 @@
 
 ## 共通の Notion DB 設定
 
-すべての example は以下のプロパティを持つ Notion データベースを想定しています。
+すべての example は以下のプロパティを持つ Notion データベースを想定しています。プロパティ名は `defineMapping` / `properties` で自由に変更可能ですが、デフォルトのマッパー（`Slug` / `Status` / `CreatedAt`）をそのまま使う場合は以下の名前で作成してください。
 
 | プロパティ名 | タイプ | 説明 |
 |---|---|---|
-| Slug | タイトル | URL スラッグ（例: `my-first-post`） |
-| Title | テキスト | 記事タイトル |
+| Slug | リッチテキスト | URL スラッグ（例: `my-first-post`） |
+| Title | タイトル | 記事タイトル |
 | Status | セレクト | `公開` / `下書き` |
 | PublishedAt | 日付 | 公開日 |
 | Tags | マルチセレクト | タグ |
-| Description | テキスト | 概要文 |
+| Description | リッチテキスト | 概要文 |
 
 ## セットアップ手順（共通）
 
@@ -67,3 +67,7 @@ wrangler secret put NOTION_DATA_SOURCE_ID
 | `NOTION_TOKEN` | Notion API インテグレーションのシークレット | ✓ |
 | `NOTION_DATA_SOURCE_ID` | Notion データベースの ID | ✓ |
 | `REVALIDATE_SECRET` | Webhook 再検証用シークレット（vercel-nextjs のみ） | - |
+
+## Node.js バージョン
+
+examples は Node.js 24 以上を前提としています（`astro` は Node 22.12+、本体パッケージは `engines.node: ">=24"`）。

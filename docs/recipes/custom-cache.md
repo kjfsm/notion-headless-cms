@@ -1,5 +1,7 @@
 # カスタムキャッシュアダプタの実装
 
+`@notion-headless-cms/core` は `DocumentCacheAdapter<T>` / `ImageCacheAdapter` という 2 つのインターフェースを公開している。これを実装することで R2 / Next.js ISR 以外のストレージ（Redis / Memcached / S3 など）にキャッシュを差し替えられる。
+
 ## DocumentCacheAdapter
 
 ```ts

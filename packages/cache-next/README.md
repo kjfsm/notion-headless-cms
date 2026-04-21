@@ -31,7 +31,7 @@ export const cms = createCMS({
 });
 ```
 
-`cms.cache.read.list()` / `cms.cache.read.get(slug)` は Next.js の fetch キャッシュ層と協調して再生成される。
+`cms.cache.read.list()` / `cms.cache.read.get(slug)` は Next.js の fetch キャッシュ層と協調して再生成される。`nextCache` の `getItem` / `getList` は常に `null` を返す設計のため、実際の保存層は Next.js の `fetch` キャッシュ / `unstable_cache` が担うことに留意。
 
 ### キャッシュ無効化（Revalidate Webhook）
 

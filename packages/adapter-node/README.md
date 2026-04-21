@@ -5,10 +5,12 @@ Node.js 環境向け CMS ファクトリ。`process.env.NOTION_TOKEN` / `NOTION_
 ## インストール
 
 ```bash
-npm install @notion-headless-cms/adapter-node
+npm install @notion-headless-cms/adapter-node \
+  @notionhq/client zod \
+  unified remark-parse remark-gfm remark-rehype rehype-stringify
 ```
 
-`core` / `source-notion` / `renderer` を推移依存として含むため、追加インストールは不要。
+`core` / `source-notion` / `renderer` を推移依存として含むが、`source-notion` の `@notionhq/client` / `zod`、`renderer` の `unified` / `remark-*` / `rehype-*` は `peerDependencies` のため、利用側で明示的にインストールする必要がある。
 
 ## 使い方
 
@@ -104,9 +106,16 @@ const cms = createNodeCMS({ schema: defineSchema(PostSchema, mapping) });
 |---|---|---|
 | `schema` | `SchemaConfig<T> \| NotionSchema<T>` | `publishedStatuses` などの設定、または `defineSchema()` の戻り値 |
 | `content` | `ContentConfig` | `imageProxyBase` などのレンダリング設定 |
-| `cache.document` | `"memory" \| false` | インメモリ or キャッシュなし（デフォルト: `false`） |
-| `cache.image` | `"memory" \| false` | 同上 |
-| `cache.ttlMs` | `number` | SWR の有効期間 |
+| `cache` | `"disabled" \| { document?: "memory"; image?: "memory"; ttlMs?: number }` | キャッシュ設定。省略時は `"disabled"`（完全無効化） |
+
+`cache` の内部構造:
+
+- `"disabled"`: document / image 共にキャッシュなし
+- `{ document: "memory" }`: ドキュメントのみ `memoryDocumentCache()` を注入（画像は noop）
+- `{ image: "memory" }`: 画像のみ `memoryImageCache()` を注入
+- `{ document: "memory", image: "memory", ttlMs: 300_000 }`: 両方を有効化
+
+> LRU の上限（`maxItems` / `maxSizeBytes`）を細かく制御したい場合は、`adapter-node` を経由せず `core` の `createCMS` を直接組み立てる。
 
 戻り値は `createCMS<T>()` と同じ `CMS<T>`。ソース／レンダラーは `notionAdapter` + `renderMarkdown` が自動注入される。
 

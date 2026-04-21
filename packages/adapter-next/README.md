@@ -67,7 +67,13 @@ Notion 側の変更通知などから `POST /api/revalidate` を呼ぶ際に、`
 { "slug": "my-post" }
 ```
 
-`slug` を省略すると全体の再生成が走る。レスポンスは `{ "updated": true | false }`。
+`slug` を省略すると全コンテンツの再生成が走る。レスポンスは `{ "updated": string[] }` 形式で、再生成されたスラッグ配列が返る。
+
+```json
+{ "updated": ["my-post"] }
+```
+
+認可失敗時は `401 Unauthorized` を返す。リクエストボディが JSON として解釈できない場合はエラーにせず、`slug` 省略と同じ「全件再生成」扱いになる。
 
 ## API
 

@@ -5,10 +5,12 @@ Cloudflare Workers 向け CMS ファクトリ。Workers のバインディング
 ## インストール
 
 ```bash
-npm install @notion-headless-cms/adapter-cloudflare
+npm install @notion-headless-cms/adapter-cloudflare \
+  @notionhq/client zod \
+  unified remark-parse remark-gfm remark-rehype rehype-stringify
 ```
 
-本パッケージは `core` / `source-notion` / `renderer` / `cache-r2` を推移依存として含むため、追加のインストールは不要。
+本パッケージは `core` / `source-notion` / `renderer` / `cache-r2` を推移依存として含むが、`source-notion` の `@notionhq/client` / `zod`、`renderer` の `unified` / `remark-*` / `rehype-*` は `peerDependencies` のため、利用側で明示的にインストールする必要がある。
 
 ## 使い方
 
@@ -102,10 +104,12 @@ wrangler secret put NOTION_DATA_SOURCE_ID
 |---|---|---|
 | `env` | `CloudflareCMSEnv` | Workers バインディング（後述） |
 | `schema` | `SchemaConfig<T> \| NotionSchema<T>` | `publishedStatuses` 等の設定、または `defineSchema()` の戻り値 |
-| `content` | `ContentConfig` | `imageProxyBase` などのレンダリング設定 |
+| `content` | `ContentConfig` | `imageProxyBase` / `remarkPlugins` / `rehypePlugins` などのレンダリング設定 |
 | `ttlMs` | `number` | SWR の TTL（ミリ秒）。`document` / `image` は `CACHE_BUCKET` から自動注入 |
 
 戻り値は `createCMS<T>()` と同じ `CMS<T>`。
+
+> `waitUntil` は本ファクトリのオプションでは受け付けない。`ctx.waitUntil` に SWR の裏更新を委ねたい場合は、`core` の `createCMS()` を直接組み立てる（詳細は [Cloudflare Workers レシピ](../../docs/recipes/cloudflare-workers.md#swr-裏更新の非同期化waituntil)）。
 
 ### `CloudflareCMSEnv`
 

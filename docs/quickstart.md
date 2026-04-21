@@ -4,15 +4,27 @@
 
 - Notion API トークン（[Notion Developers](https://www.notion.so/my-integrations) で取得）
 - Notion データベース ID（共有リンクの URL から取得）
-- Node.js 22 以降
+- Node.js 24 以降
 
 ## インストール
 
 ```bash
-pnpm add @notion-headless-cms/adapter-node
+pnpm add @notion-headless-cms/adapter-node @notionhq/client zod
 ```
 
-`adapter-node` は `core` / `source-notion` / `renderer` を推移依存として含むため、個別インストールは不要。
+`adapter-node` は `core` / `source-notion` / `renderer` を推移依存として含む。
+ただし `source-notion` の `@notionhq/client` / `zod`、`renderer` の `unified` / `remark-*` / `rehype-*` は `peerDependencies` のため、利用側で明示的にインストールする必要がある。
+
+<details>
+<summary>必要な peer 依存をまとめて入れるコマンド</summary>
+
+```bash
+pnpm add @notion-headless-cms/adapter-node \
+  @notionhq/client zod \
+  unified remark-parse remark-gfm remark-rehype rehype-stringify
+```
+
+</details>
 
 ## 最小構成（キャッシュなし・ローカル開発向け）
 
@@ -58,6 +70,8 @@ const cached = await cms.cache.read.get("my-first-post");
 console.log(cached?.html);
 ```
 
+`cache` は `"disabled"`（完全無効化）か、`{ document?: "memory"; image?: "memory"; ttlMs?: number }` を受け取る。`document` / `image` を省略するとキャッシュなし（noop）で動作する。
+
 ## core を直接使う（アダプタを使わない構成）
 
 アダプタを経由せず、`createCMS` に自分で `source` / `renderer` / `cache` を組み立てることもできる。
@@ -75,12 +89,14 @@ const cms = createCMS({
   renderer: renderMarkdown,
   schema: { publishedStatuses: ["公開"] },
   cache: {
-    document: memoryDocumentCache(),
-    image: memoryImageCache(),
+    document: memoryDocumentCache({ maxItems: 500 }),
+    image: memoryImageCache({ maxItems: 200, maxSizeBytes: 64 * 1024 * 1024 }),
     ttlMs: 5 * 60_000,
   },
 });
 ```
+
+`memoryDocumentCache` / `memoryImageCache` は LRU 上限をオプションで指定できる。長時間稼働するプロセスではメモリ膨張を防ぐために必ず指定することを推奨する。
 
 ## 次のステップ
 
