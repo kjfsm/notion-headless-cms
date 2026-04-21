@@ -6,8 +6,11 @@
 	"scripts": {
 		"dev": "vite dev",
 		"build": "vite build",
-		"deploy": "vite build && wrangler deploy",
-		"typecheck": "svelte-kit sync && tsc --noEmit"
+		"preview": "pnpm run build && wrangler dev",
+		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+		"deploy": "pnpm run build && wrangler deploy",
+		"cf-typegen": "wrangler types"
 	},
 	"dependencies": {
 		"@notion-headless-cms/adapter-cloudflare": "workspace:*",

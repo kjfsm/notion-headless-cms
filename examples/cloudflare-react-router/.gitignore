@@ -1,1 +1,5 @@
+node_modules
+.wrangler
+
 .react-router
+build

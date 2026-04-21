@@ -4,10 +4,13 @@
 	"version": "0.0.2",
 	"type": "module",
 	"scripts": {
-		"dev": "react-router dev",
 		"build": "react-router build",
-		"deploy": "react-router build && wrangler deploy",
-		"typecheck": "react-router typegen && tsc --noEmit"
+		"cf-typegen": "wrangler types && react-router typegen",
+		"check": "tsc && react-router build && wrangler deploy --dry-run",
+		"deploy": "wrangler deploy",
+		"dev": "react-router dev",
+		"preview": "pnpm run build && vite preview",
+		"typecheck": "pnpm run cf-typegen && tsc -b"
 	},
 	"dependencies": {
 		"@notion-headless-cms/adapter-cloudflare": "workspace:*",

@@ -14,6 +14,7 @@
 		"lint": "biome ci",
 		"changeset": "changeset",
 		"version": "changeset version",
+		"cf-typegen": "pnpm --filter example-cloudflare-* cf-typegen",
 		"release": "changeset publish"
 	},
 	"devDependencies": {

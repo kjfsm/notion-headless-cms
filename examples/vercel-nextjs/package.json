@@ -3,10 +3,14 @@
 	"private": true,
 	"version": "0.0.2",
 	"scripts": {
-		"dev": "next dev",
 		"build": "next build",
-		"start": "next start",
-		"typecheck": "tsc --noEmit"
+		"cf-typegen": "wrangler types",
+		"check": "npm run build && tsc",
+		"deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+		"dev": "next dev",
+		"lint": "next lint",
+		"preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+		"start": "next start"
 	},
 	"dependencies": {
 		"@notion-headless-cms/adapter-next": "workspace:*",
