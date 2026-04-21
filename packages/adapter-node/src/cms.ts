@@ -3,10 +3,10 @@ import type {
 	CacheConfig,
 	ContentConfig,
 	CreateCMSOptions,
-	RendererFn,
 	SchemaConfig,
 } from "@notion-headless-cms/core";
 import {
+	CMSError,
 	createCMS,
 	memoryDocumentCache,
 	memoryImageCache,
@@ -43,9 +43,23 @@ export function createNodeCMS<T extends BaseContentItem = BaseContentItem>(
 ): ReturnType<typeof createCMS<T>> {
 	const token = process.env.NOTION_TOKEN;
 	const dataSourceId = process.env.NOTION_DATA_SOURCE_ID;
-	if (!token) throw new Error("NOTION_TOKEN environment variable is not set");
-	if (!dataSourceId)
-		throw new Error("NOTION_DATA_SOURCE_ID environment variable is not set");
+	if (!token) {
+		throw new CMSError({
+			code: "core/config_invalid",
+			message: "NOTION_TOKEN environment variable is not set",
+			context: { operation: "createNodeCMS", envVar: "NOTION_TOKEN" },
+		});
+	}
+	if (!dataSourceId) {
+		throw new CMSError({
+			code: "core/config_invalid",
+			message: "NOTION_DATA_SOURCE_ID environment variable is not set",
+			context: {
+				operation: "createNodeCMS",
+				envVar: "NOTION_DATA_SOURCE_ID",
+			},
+		});
+	}
 
 	const schema = opts?.schema;
 	const notionSchema = schema && isNotionSchema(schema) ? schema : undefined;
@@ -69,7 +83,7 @@ export function createNodeCMS<T extends BaseContentItem = BaseContentItem>(
 
 	const cmsOpts: CreateCMSOptions<T> = {
 		source,
-		renderer: renderMarkdown as unknown as RendererFn,
+		renderer: renderMarkdown,
 		schema: cmsSchema,
 		content: opts?.content,
 		cache: cacheConfig,

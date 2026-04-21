@@ -115,7 +115,7 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		this.logger = mergeLoggers(opts.plugins ?? [], opts.logger);
 		this.retryConfig = {
 			...DEFAULT_RETRY_CONFIG,
-			...(opts.rateLimiter as Partial<RetryConfig> | undefined),
+			...(opts.rateLimiter ?? {}),
 		};
 
 		this.cached = {
@@ -204,8 +204,16 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 						const rendered = await this.buildCachedItem(item);
 						await this.docCache.setItem(item.slug, rendered);
 						ok++;
-					} catch {
+					} catch (err) {
 						failed++;
+						this.logger?.warn?.(
+							"prefetchAll: アイテムの事前レンダリングに失敗",
+							{
+								slug: item.slug,
+								pageId: item.id,
+								error: err instanceof Error ? err.message : String(err),
+							},
+						);
 					}
 				}),
 			);
@@ -436,13 +444,14 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 async function loadDefaultRenderer(): Promise<RendererFn> {
 	try {
 		const mod = await import("@notion-headless-cms/renderer");
-		return mod.renderMarkdown as unknown as RendererFn;
-	} catch {
+		return mod.renderMarkdown;
+	} catch (err) {
 		throw new CMSError({
-			code: "RENDERER_FAILED",
+			code: "renderer/failed",
 			message:
 				"renderer オプションが未指定で @notion-headless-cms/renderer が見つかりません。" +
 				" createCMS({ renderer }) でレンダラーを注入するか、@notion-headless-cms/renderer をインストールしてください。",
+			cause: err,
 			context: { operation: "loadDefaultRenderer" },
 		});
 	}

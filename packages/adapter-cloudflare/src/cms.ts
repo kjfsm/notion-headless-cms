@@ -5,7 +5,6 @@ import type {
 	CacheConfig,
 	ContentConfig,
 	CreateCMSOptions,
-	RendererFn,
 	SchemaConfig,
 } from "@notion-headless-cms/core";
 import { createCMS } from "@notion-headless-cms/core";
@@ -65,7 +64,7 @@ export function createCloudflareCMS<
 
 	const cmsOpts: CreateCMSOptions<T> = {
 		source,
-		renderer: renderMarkdown as unknown as RendererFn,
+		renderer: renderMarkdown,
 		schema: cmsSchema,
 		content,
 		cache: cacheConfig,

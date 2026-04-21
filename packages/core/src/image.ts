@@ -1,5 +1,5 @@
 import { sha256Hex } from "./cache";
-import { CMSError } from "./errors";
+import { CMSError, isCMSError } from "./errors";
 import type { ImageCacheAdapter, StorageBinary } from "./types/index";
 
 /** レスポンスヘッダまたはURLの拡張子からContent-Typeを推測する。 */
@@ -35,7 +35,17 @@ async function fetchAndCacheImage(
 		const response = await fetch(notionUrl, {
 			signal: AbortSignal.timeout(10_000),
 		});
-		if (!response.ok) return proxyUrl;
+		if (!response.ok) {
+			throw new CMSError({
+				code: "cache/io_failed",
+				message: `Failed to fetch Notion image: HTTP ${response.status}`,
+				context: {
+					operation: "fetchAndCacheImage",
+					notionUrl,
+					httpStatus: response.status,
+				},
+			});
+		}
 
 		const data = await response.arrayBuffer();
 		const contentType = inferContentType(
@@ -44,8 +54,9 @@ async function fetchAndCacheImage(
 		);
 		await cache.set(hash, data, contentType);
 	} catch (err) {
+		if (isCMSError(err)) throw err;
 		throw new CMSError({
-			code: "IMAGE_CACHE_FAILED",
+			code: "cache/io_failed",
 			message: "Failed to fetch or cache Notion image.",
 			cause: err,
 			context: { operation: "fetchAndCacheImage", notionUrl },

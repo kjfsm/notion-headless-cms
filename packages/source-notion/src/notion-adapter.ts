@@ -30,7 +30,12 @@ export interface NotionAdapterOptions<
 	dataSourceId: string;
 	/** Notionプロパティ名マッピング。 */
 	properties?: CMSSchemaProperties;
-	/** Notionページをコンテンツ型 T にマッピングするカスタム関数。 */
+	/**
+	 * Notionページをコンテンツ型 T にマッピングするカスタム関数。
+	 * T が BaseContentItem を拡張したカスタム型の場合は必ず指定するか、
+	 * 代わりに `schema` を指定すること。指定しない場合、デフォルトマッパーは
+	 * BaseContentItem のフィールドのみ返し、T 固有フィールドは undefined となる。
+	 */
 	mapItem?: (page: PageObjectResponse) => T;
 	/** カスタムブロックハンドラーのマップ。 */
 	blocks?: Record<string, BlockHandler>;

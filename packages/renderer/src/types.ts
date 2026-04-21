@@ -1,14 +1,15 @@
-import type { PluggableList } from "unified";
-
 /**
  * カスタムレンダラー関数の型。
  * Markdownを受け取り、HTMLを返す。
+ * core の RendererFn と構造的に互換。
  */
 export type RendererFn = (
 	markdown: string,
-	options: {
-		imageProxyBase: string;
-		cacheImage: (notionUrl: string) => Promise<string>;
+	options?: {
+		imageProxyBase?: string;
+		cacheImage?: (notionUrl: string) => Promise<string>;
+		remarkPlugins?: readonly unknown[];
+		rehypePlugins?: readonly unknown[];
 	},
 ) => Promise<string>;
 
@@ -22,9 +23,9 @@ export interface RendererOptions {
 	 */
 	cacheImage?: (notionUrl: string) => Promise<string>;
 	/** 追加する remark プラグイン。 */
-	remarkPlugins?: PluggableList;
+	remarkPlugins?: readonly unknown[];
 	/** 追加する rehype プラグイン。 */
-	rehypePlugins?: PluggableList;
+	rehypePlugins?: readonly unknown[];
 	/** デフォルトのパイプラインを置き換えるカスタムレンダラー。 */
 	render?: RendererFn;
 }

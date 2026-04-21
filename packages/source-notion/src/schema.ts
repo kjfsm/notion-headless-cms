@@ -144,13 +144,13 @@ function parseField(
 				? prop.multi_select.map((s) => s.name)
 				: [];
 		case "select": {
-			const raw =
-				prop.type === "select"
-					? (prop.select?.name ?? "")
-					: prop.type === "status"
-						? ((prop as { status?: { name: string } }).status?.name ?? "")
-						: "";
-			return raw || null;
+			if (prop.type === "select") return prop.select?.name ?? null;
+			if (prop.type === "status") {
+				return (
+					(prop as { status?: { name: string } | null }).status?.name ?? null
+				);
+			}
+			return null;
 		}
 	}
 }

@@ -11,7 +11,7 @@ import { z } from "zod";
 
 const baseContentItemSchema = z.object({
 	id: z.string().min(1),
-	slug: z.string(),
+	slug: z.string().min(1),
 	updatedAt: z.string().min(1),
 	status: z.string().optional(),
 	publishedAt: z.string().optional(),

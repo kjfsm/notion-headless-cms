@@ -7,19 +7,19 @@ import type { DataSourceAdapter } from "./source";
 
 /**
  * render() オプション。core は renderer の実装を知らず、この型だけを扱う。
- * @notion-headless-cms/renderer の renderMarkdown() はこのシグネチャと互換。
+ * @notion-headless-cms/renderer の renderMarkdown() はこのシグネチャと構造的に互換。
  */
 export interface RenderOptions {
 	imageProxyBase?: string;
-	cacheImage?: (url: string) => Promise<string | null>;
-	remarkPlugins?: unknown[];
-	rehypePlugins?: unknown[];
+	cacheImage?: (url: string) => Promise<string>;
+	remarkPlugins?: readonly unknown[];
+	rehypePlugins?: readonly unknown[];
 }
 
 /** カスタムレンダラー関数の型。デフォルトは @notion-headless-cms/renderer の renderMarkdown。 */
 export type RendererFn = (
 	markdown: string,
-	opts: RenderOptions,
+	opts?: RenderOptions,
 ) => Promise<string>;
 
 /** スキーマ設定。公開ステータスのフィルタやプロパティ名マッピングを制御する。 */
@@ -37,9 +37,9 @@ export interface ContentConfig {
 	/** 画像プロキシのベースURL。デフォルト: '/api/images' */
 	imageProxyBase?: string;
 	/** 追加する remark プラグイン。 */
-	remarkPlugins?: unknown[];
+	remarkPlugins?: readonly unknown[];
 	/** 追加する rehype プラグイン。 */
-	rehypePlugins?: unknown[];
+	rehypePlugins?: readonly unknown[];
 	/** デフォルトのパイプラインを置き換えるカスタムレンダラー。 */
 	render?: RendererFn;
 }
