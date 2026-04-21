@@ -41,8 +41,6 @@ export interface ContentConfig {
 	remarkPlugins?: PluggableList;
 	/** 追加する rehype プラグイン。 */
 	rehypePlugins?: PluggableList;
-	/** デフォルトのパイプラインを置き換えるカスタムレンダラー。 */
-	render?: RendererFn;
 }
 
 /** レートリミット・リトライ設定。 */

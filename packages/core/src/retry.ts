@@ -1,19 +1,20 @@
 export interface RetryConfig {
-	maxConcurrent: number;
 	retryOn: number[];
 	maxRetries: number;
 	baseDelayMs: number;
+	/** true のとき指数バックオフにランダムジッターを加える（Thundering Herd 対策）。デフォルト: true */
+	jitter?: boolean;
 	onRetry?: (attempt: number, status: number) => void;
 }
 
 export const DEFAULT_RETRY_CONFIG: RetryConfig = {
-	maxConcurrent: 3,
 	retryOn: [429, 502, 503],
 	maxRetries: 4,
 	baseDelayMs: 1000,
+	jitter: true,
 };
 
-/** 指数バックオフでリトライする。retryOn に含まれる HTTP エラーのみ対象。 */
+/** 指数バックオフ（オプションでジッター付き）でリトライする。retryOn に含まれる HTTP エラーのみ対象。 */
 export async function withRetry<T>(
 	fn: () => Promise<T>,
 	config: RetryConfig,
@@ -30,9 +31,10 @@ export async function withRetry<T>(
 			lastError = err;
 			if (attempt < config.maxRetries) {
 				config.onRetry?.(attempt + 1, status);
-				await new Promise((resolve) =>
-					setTimeout(resolve, config.baseDelayMs * 2 ** attempt),
-				);
+				const jitterFactor =
+					config.jitter !== false ? 0.5 + Math.random() * 0.5 : 1;
+				const delay = config.baseDelayMs * 2 ** attempt * jitterFactor;
+				await new Promise((resolve) => setTimeout(resolve, delay));
 			}
 		}
 	}

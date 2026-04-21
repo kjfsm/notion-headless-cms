@@ -12,6 +12,7 @@ export {
 	memoryImageCache,
 } from "./cache/memory";
 export { noopDocumentCache, noopImageCache } from "./cache/noop";
+export type { CacheAccessor } from "./cms";
 export { CMS, createCMS } from "./cms";
 
 // ── エラー ────────────────────────────────────────────────────────────────

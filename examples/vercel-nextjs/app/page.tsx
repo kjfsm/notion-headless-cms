@@ -4,8 +4,7 @@ import { cms } from "./lib/cms";
 export const revalidate = 300;
 
 export default async function HomePage() {
-	const { items } = await cms.cache.read
-		.list()
+	const { items } = await cms.cache.getList()
 		.catch(() => ({ items: [], isStale: false, cachedAt: 0 }));
 	return (
 		<main>

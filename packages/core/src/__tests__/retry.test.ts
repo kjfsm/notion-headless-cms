@@ -3,10 +3,10 @@ import type { RetryConfig } from "../retry";
 import { withRetry } from "../retry";
 
 const config: RetryConfig = {
-	maxConcurrent: 1,
 	retryOn: [429, 503],
 	maxRetries: 3,
 	baseDelayMs: 1,
+	jitter: false,
 };
 
 describe("withRetry", () => {

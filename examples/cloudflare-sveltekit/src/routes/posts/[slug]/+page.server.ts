@@ -4,7 +4,7 @@ import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ params, platform }) => {
 	const cms = createCMS(platform!.env);
-	const entry = await cms.cache.read.get(params.slug);
+	const entry = await cms.cache.get(params.slug);
 	if (!entry) error(404, "Not Found");
 	return entry;
 };

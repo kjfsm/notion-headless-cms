@@ -38,6 +38,10 @@
 		"./cache/memory": {
 			"import": "./dist/cache/memory.js",
 			"types": "./dist/cache/memory.d.ts"
+		},
+		"./cache/noop": {
+			"import": "./dist/cache/noop.js",
+			"types": "./dist/cache/noop.d.ts"
 		}
 	},
 	"files": [
@@ -47,7 +51,7 @@
 		"node": ">=24"
 	},
 	"scripts": {
-		"build": "tsup src/index.ts src/errors.ts src/hooks.ts src/cache/memory.ts --format esm --dts --sourcemap --out-dir dist",
+		"build": "tsup src/index.ts src/errors.ts src/hooks.ts src/cache/memory.ts src/cache/noop.ts --format esm --dts --sourcemap --out-dir dist",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run"
 	},
@@ -69,6 +73,10 @@
 			"./cache/memory": {
 				"import": "./dist/cache/memory.js",
 				"types": "./dist/cache/memory.d.ts"
+			},
+			"./cache/noop": {
+				"import": "./dist/cache/noop.js",
+				"types": "./dist/cache/noop.d.ts"
 			}
 		}
 	},
