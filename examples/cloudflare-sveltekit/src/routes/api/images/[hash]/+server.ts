@@ -1,5 +1,5 @@
-import type { RequestHandler } from "./$types";
 import { createCMS } from "$lib/cms";
+import type { RequestHandler } from "./$types";
 
 export const GET: RequestHandler = async ({ params, platform }) => {
 	const cms = createCMS(platform!.env);

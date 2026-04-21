@@ -3,15 +3,16 @@ import type {
 	CMSSchemaProperties,
 	DataSourceAdapter,
 } from "@notion-headless-cms/core";
-import { CMSError, isCMSError, mapItem } from "@notion-headless-cms/core";
+import { CMSError, isCMSError } from "@notion-headless-cms/core";
+import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import {
 	createClient,
 	queryAllPages,
 	queryPageBySlug,
-} from "@notion-headless-cms/fetcher";
-import type { BlockHandler } from "@notion-headless-cms/transformer";
-import { Transformer } from "@notion-headless-cms/transformer";
-import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+} from "./internal/fetcher/index";
+import { Transformer } from "./internal/transformer/transformer";
+import type { BlockHandler } from "./internal/transformer/types";
+import { mapItem } from "./mapper";
 import type { NotionSchema } from "./schema";
 
 const DEFAULT_PROPERTIES: Required<CMSSchemaProperties> = {
@@ -29,7 +30,12 @@ export interface NotionAdapterOptions<
 	dataSourceId: string;
 	/** Notionプロパティ名マッピング。 */
 	properties?: CMSSchemaProperties;
-	/** Notionページをコンテンツ型 T にマッピングするカスタム関数。 */
+	/**
+	 * Notionページをコンテンツ型 T にマッピングするカスタム関数。
+	 * T が BaseContentItem を拡張したカスタム型の場合は必ず指定するか、
+	 * 代わりに `schema` を指定すること。指定しない場合、デフォルトマッパーは
+	 * BaseContentItem のフィールドのみ返し、T 固有フィールドは undefined となる。
+	 */
 	mapItem?: (page: PageObjectResponse) => T;
 	/** カスタムブロックハンドラーのマップ。 */
 	blocks?: Record<string, BlockHandler>;
@@ -84,18 +90,21 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 			const items = pages.map(this.itemMapper);
 			const filtered =
 				opts?.publishedStatuses && opts.publishedStatuses.length > 0
-					? items.filter((item) =>
-							(opts.publishedStatuses as string[]).includes(item.status),
+					? items.filter(
+							(item) =>
+								item.status !== undefined &&
+								(opts.publishedStatuses as string[]).includes(item.status),
 						)
 					: items;
-			return filtered.sort(
-				(a, b) =>
-					new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
-			);
+			return filtered.sort((a, b) => {
+				const aTime = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+				const bTime = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+				return bTime - aTime;
+			});
 		} catch (err) {
 			if (isCMSError(err)) throw err;
 			throw new CMSError({
-				code: "NOTION_FETCH_ITEMS_FAILED",
+				code: "source/fetch_items_failed",
 				message: "Failed to fetch items from Notion data source.",
 				cause: err,
 				context: {
@@ -119,7 +128,7 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 		} catch (err) {
 			if (isCMSError(err)) throw err;
 			throw new CMSError({
-				code: "NOTION_FETCH_ITEM_BY_SLUG_FAILED",
+				code: "source/fetch_item_failed",
 				message: "Failed to fetch item by slug from Notion data source.",
 				cause: err,
 				context: {
@@ -140,7 +149,7 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 		} catch (err) {
 			if (isCMSError(err)) throw err;
 			throw new CMSError({
-				code: "NOTION_MARKDOWN_FETCH_FAILED",
+				code: "source/load_markdown_failed",
 				message: "Failed to load markdown from Notion.",
 				cause: err,
 				context: {

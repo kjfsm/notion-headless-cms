@@ -1,13 +1,14 @@
 # @notion-headless-cms/adapter-cloudflare
 
-Cloudflare Workers 向け CMS ファクトリー。
-`env.CACHE_BUCKET`（R2Bucket）を受け取り、`CMS` インスタンスを生成して返す。
+Cloudflare Workers 向け CMS ファクトリ。Workers のバインディング（`R2Bucket` / シークレット）から `@notion-headless-cms/core` の CMS インスタンスを組み立てる。
 
 ## インストール
 
 ```bash
 npm install @notion-headless-cms/adapter-cloudflare
 ```
+
+本パッケージは `core` / `source-notion` / `renderer` / `cache-r2` を推移依存として含むため、追加のインストールは不要。
 
 ## 使い方
 
@@ -22,17 +23,13 @@ bucket_name = "nhc-example-cache"
 ### Workers エントリーポイント
 
 ```typescript
+import type { CloudflareCMSEnv } from "@notion-headless-cms/adapter-cloudflare";
 import { createCloudflareCMS } from "@notion-headless-cms/adapter-cloudflare";
 
-interface Env {
-  NOTION_TOKEN: string;
-  NOTION_DATA_SOURCE_ID: string;
-  CACHE_BUCKET?: R2Bucket;
-}
-
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const cms = createCloudflareCMS(env, {
+  async fetch(request: Request, env: CloudflareCMSEnv): Promise<Response> {
+    const cms = createCloudflareCMS({
+      env,
       schema: {
         publishedStatuses: ["公開"],
         accessibleStatuses: ["公開", "下書き"],
@@ -42,15 +39,13 @@ export default {
 
     const url = new URL(request.url);
 
-    // コンテンツ一覧
     if (url.pathname === "/posts") {
-      const { items } = await cms.getItems();
+      const { items } = await cms.cached.list();
       return Response.json(items);
     }
 
-    // 個別コンテンツ
     const slug = url.pathname.replace("/posts/", "");
-    const cached = await cms.getItemBySlug(slug);
+    const cached = await cms.cached.get(slug);
     if (!cached) return new Response("Not Found", { status: 404 });
 
     return new Response(cached.html, {
@@ -60,6 +55,36 @@ export default {
 };
 ```
 
+### 型安全なカスタムスキーマ
+
+`defineSchema` の戻り値をそのまま `schema` に渡せる。
+
+```typescript
+import { createCloudflareCMS } from "@notion-headless-cms/adapter-cloudflare";
+import { defineMapping, defineSchema } from "@notion-headless-cms/source-notion";
+import { z } from "zod";
+
+const PostSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  updatedAt: z.string(),
+  status: z.enum(["公開", "下書き"]),
+  publishedAt: z.string(),
+  title: z.string(),
+});
+const mapping = defineMapping<z.infer<typeof PostSchema>>({
+  slug:        { type: "richText", notion: "Slug" },
+  status:      { type: "select",   notion: "Status", published: ["公開"] },
+  publishedAt: { type: "date",     notion: "PublishedAt" },
+  title:       { type: "title",    notion: "Title" },
+});
+
+const cms = createCloudflareCMS({
+  env,
+  schema: defineSchema(PostSchema, mapping),
+});
+```
+
 ### 環境変数の設定
 
 ```bash
@@ -67,20 +92,36 @@ wrangler secret put NOTION_TOKEN
 wrangler secret put NOTION_DATA_SOURCE_ID
 ```
 
-`CACHE_BUCKET` が未設定の場合はキャッシュなしで動作する（ローカル開発向け）。
+`CACHE_BUCKET` 未バインド時はキャッシュなしで動作する（ローカル開発向け）。
 
 ## API
 
-### `createCloudflareCMS(env, config?)`
+### `createCloudflareCMS<T>(opts): CMS<T>`
 
-| 引数 | 型 | 説明 |
+| オプション | 型 | 説明 |
 |---|---|---|
-| `env` | `CloudflareCMSEnv` | Workers バインディング（`NOTION_TOKEN`, `NOTION_DATA_SOURCE_ID`, オプションで `CACHE_BUCKET`） |
-| `config` | `Omit<CMSConfig, "storage" \| "env">` | CMS の設定（`schema`, `cache`, `transformer`, `renderer`） |
+| `env` | `CloudflareCMSEnv` | Workers バインディング（後述） |
+| `schema` | `SchemaConfig<T> \| NotionSchema<T>` | `publishedStatuses` 等の設定、または `defineSchema()` の戻り値 |
+| `content` | `ContentConfig` | `imageProxyBase` などのレンダリング設定 |
+| `cache` | `Omit<CacheConfig<T>, "document" \| "image">` | `ttlMs` など。`document` / `image` は `CACHE_BUCKET` から自動注入 |
 
-戻り値: `CMS`（`@notion-headless-cms/core`）
+戻り値は `createCMS<T>()` と同じ `CMS<T>`。
+
+### `CloudflareCMSEnv`
+
+```typescript
+interface CloudflareCMSEnv {
+  NOTION_TOKEN: string;
+  NOTION_DATA_SOURCE_ID: string;
+  CACHE_BUCKET?: R2BucketLike;
+}
+```
+
+`R2BucketLike` は `@notion-headless-cms/cache-r2` で定義される構造型。Workers の `R2Bucket` とそのまま互換。
 
 ## 関連パッケージ
 
 - [`@notion-headless-cms/core`](../core) — CMS エンジン本体
-- [`@notion-headless-cms/cache-r2`](../cache-r2) — R2 ストレージアダプター（内部で使用）
+- [`@notion-headless-cms/cache-r2`](../cache-r2) — R2 キャッシュ（内部で使用）
+- [`@notion-headless-cms/source-notion`](../source-notion) — Notion データソース（内部で使用）
+- [`@notion-headless-cms/renderer`](../renderer) — Markdown レンダラー（内部で使用）

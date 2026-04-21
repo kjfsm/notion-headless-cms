@@ -1,3 +1,4 @@
+import type { R2BucketLike } from "@notion-headless-cms/cache-r2";
 import { r2Cache } from "@notion-headless-cms/cache-r2";
 import type {
 	BaseContentItem,
@@ -6,20 +7,21 @@ import type {
 	CreateCMSOptions,
 	SchemaConfig,
 } from "@notion-headless-cms/core";
-import { CMS } from "@notion-headless-cms/core";
+import { createCMS } from "@notion-headless-cms/core";
+import { renderMarkdown } from "@notion-headless-cms/renderer";
 import type { NotionSchema } from "@notion-headless-cms/source-notion";
 import { notionAdapter } from "@notion-headless-cms/source-notion";
 
-export interface CloudfareCMSEnv {
+export interface CloudflareCMSEnv {
 	NOTION_TOKEN: string;
 	NOTION_DATA_SOURCE_ID: string;
-	CACHE_BUCKET?: R2Bucket;
+	CACHE_BUCKET?: R2BucketLike;
 }
 
 export interface CreateCloudflareCMSOptions<
 	T extends BaseContentItem = BaseContentItem,
 > {
-	env: CloudfareCMSEnv;
+	env: CloudflareCMSEnv;
 	/** defineSchema() の戻り値または SchemaConfig を受け取る。 */
 	schema?: SchemaConfig<T> | NotionSchema<T>;
 	content?: ContentConfig;
@@ -34,13 +36,13 @@ function isNotionSchema<T extends BaseContentItem>(
 
 /**
  * Cloudflare Workers 向け CMS ファクトリ。
- * env.CACHE_BUCKET (R2Bucket) を DocumentCacheAdapter / ImageCacheAdapter に変換して CMS に注入する。
+ * env.CACHE_BUCKET (R2BucketLike) を DocumentCacheAdapter / ImageCacheAdapter に変換して CMS に注入する。
  * CACHE_BUCKET が未設定の場合はキャッシュなしで動作する（ローカル開発向け）。
  * schema に defineSchema() の戻り値を渡すとカスタムフィールドマッピングが有効になる。
  */
 export function createCloudflareCMS<
 	T extends BaseContentItem = BaseContentItem,
->(opts: CreateCloudflareCMSOptions<T>): CMS<T> {
+>(opts: CreateCloudflareCMSOptions<T>): ReturnType<typeof createCMS<T>> {
 	const { env, schema, content, cache } = opts;
 
 	const notionSchema = schema && isNotionSchema(schema) ? schema : undefined;
@@ -62,10 +64,11 @@ export function createCloudflareCMS<
 
 	const cmsOpts: CreateCMSOptions<T> = {
 		source,
+		renderer: renderMarkdown,
 		schema: cmsSchema,
 		content,
 		cache: cacheConfig,
 	};
 
-	return new CMS<T>(cmsOpts);
+	return createCMS<T>(cmsOpts);
 }

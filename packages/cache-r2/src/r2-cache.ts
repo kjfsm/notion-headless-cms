@@ -6,9 +6,12 @@ import type {
 	ImageCacheAdapter,
 	StorageBinary,
 } from "@notion-headless-cms/core";
+import type { R2BucketLike, R2ObjectLike } from "./types";
+
+export type { R2BucketLike } from "./types";
 
 export interface R2CacheOptions {
-	bucket: R2Bucket;
+	bucket: R2BucketLike;
 	/** キャッシュキーのプレフィックス。デフォルト: '' */
 	prefix?: string;
 }
@@ -18,7 +21,7 @@ class R2Cache<T extends BaseContentItem = BaseContentItem>
 	implements DocumentCacheAdapter<T>, ImageCacheAdapter
 {
 	readonly name = "r2";
-	private readonly bucket: R2Bucket;
+	private readonly bucket: R2BucketLike;
 	private readonly listKey: string;
 	private readonly itemPrefix: string;
 	private readonly imagePrefix: string;
@@ -36,7 +39,7 @@ class R2Cache<T extends BaseContentItem = BaseContentItem>
 	async getList(): Promise<CachedItemList<T> | null> {
 		const obj = await this.bucket.get(this.listKey);
 		if (!obj) return null;
-		return obj.json<CachedItemList<T>>();
+		return (obj as R2ObjectLike).json<CachedItemList<T>>();
 	}
 
 	async setList(data: CachedItemList<T>): Promise<void> {
@@ -48,7 +51,7 @@ class R2Cache<T extends BaseContentItem = BaseContentItem>
 	async getItem(slug: string): Promise<CachedItem<T> | null> {
 		const obj = await this.bucket.get(`${this.itemPrefix}${slug}.json`);
 		if (!obj) return null;
-		return obj.json<CachedItem<T>>();
+		return (obj as R2ObjectLike).json<CachedItem<T>>();
 	}
 
 	async setItem(slug: string, data: CachedItem<T>): Promise<void> {
@@ -65,8 +68,8 @@ class R2Cache<T extends BaseContentItem = BaseContentItem>
 		const obj = await this.bucket.get(`${this.imagePrefix}${hash}`);
 		if (!obj) return null;
 		return {
-			data: await obj.arrayBuffer(),
-			contentType: obj.httpMetadata?.contentType,
+			data: await (obj as R2ObjectLike).arrayBuffer(),
+			contentType: (obj as R2ObjectLike).httpMetadata?.contentType,
 		};
 	}
 
@@ -89,10 +92,10 @@ export function r2Cache<T extends BaseContentItem = BaseContentItem>(
 	opts: R2CacheOptions,
 ): R2Cache<T>;
 export function r2Cache<T extends BaseContentItem = BaseContentItem>(
-	opts: Omit<R2CacheOptions, "bucket"> & { bucket: R2Bucket | undefined },
+	opts: Omit<R2CacheOptions, "bucket"> & { bucket: R2BucketLike | undefined },
 ): R2Cache<T> | undefined;
 export function r2Cache<T extends BaseContentItem = BaseContentItem>(
-	opts: Omit<R2CacheOptions, "bucket"> & { bucket: R2Bucket | undefined },
+	opts: Omit<R2CacheOptions, "bucket"> & { bucket: R2BucketLike | undefined },
 ): R2Cache<T> | undefined {
 	if (!opts.bucket) return undefined;
 	return new R2Cache<T>({ ...opts, bucket: opts.bucket });

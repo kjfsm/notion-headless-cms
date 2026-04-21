@@ -36,11 +36,10 @@
 		"node": ">=18"
 	},
 	"scripts": {
-		"build": "tsup src/index.ts --format esm --dts --out-dir dist",
+		"build": "tsup src/index.ts --format esm --dts --sourcemap --out-dir dist",
 		"typecheck": "tsc --noEmit"
 	},
 	"publishConfig": {
-		"registry": "https://registry.npmjs.org",
 		"access": "public",
 		"exports": {
 			".": {
@@ -50,9 +49,18 @@
 		}
 	},
 	"dependencies": {
-		"@notion-headless-cms/core": "workspace:*",
 		"@notion-headless-cms/cache-r2": "workspace:*",
+		"@notion-headless-cms/core": "workspace:*",
+		"@notion-headless-cms/renderer": "workspace:*",
 		"@notion-headless-cms/source-notion": "workspace:*"
+	},
+	"peerDependencies": {
+		"@cloudflare/workers-types": ">=4.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@cloudflare/workers-types": {
+			"optional": true
+		}
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20250620.0"

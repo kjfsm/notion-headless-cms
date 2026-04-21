@@ -1,8 +1,6 @@
-import type {
-	PageObjectResponse,
-	RichTextItemResponse,
-} from "@notionhq/client/build/src/api-endpoints";
+import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import type { z } from "zod";
+import { getPlainText } from "./mapper";
 
 // ── フィールドマッピング型定義 ──────────────────────────────────────────────
 
@@ -95,12 +93,6 @@ export function defineSchema<S extends z.ZodRawShape>(
 
 type PropertyValue = PageObjectResponse["properties"][string];
 
-export function getPlainText(
-	items: RichTextItemResponse[] | undefined,
-): string {
-	return items?.map((item) => item.plain_text).join("") ?? "";
-}
-
 // id と updatedAt は Notion ページのメタデータから自動設定されるシステムフィールド
 const SYSTEM_FIELDS = new Set(["id", "updatedAt"]);
 
@@ -152,13 +144,13 @@ function parseField(
 				? prop.multi_select.map((s) => s.name)
 				: [];
 		case "select": {
-			const raw =
-				prop.type === "select"
-					? (prop.select?.name ?? "")
-					: prop.type === "status"
-						? ((prop as { status?: { name: string } }).status?.name ?? "")
-						: "";
-			return raw || null;
+			if (prop.type === "select") return prop.select?.name ?? null;
+			if (prop.type === "status") {
+				return (
+					(prop as { status?: { name: string } | null }).status?.name ?? null
+				);
+			}
+			return null;
 		}
 	}
 }

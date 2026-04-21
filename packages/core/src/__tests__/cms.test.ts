@@ -27,8 +27,9 @@ const makeMockSource = (items: BaseContentItem[] = []): DataSourceAdapter => ({
 	name: "mock",
 	list: vi.fn().mockImplementation(async (opts) => {
 		if (opts?.publishedStatuses && opts.publishedStatuses.length > 0) {
-			return items.filter((i) =>
-				(opts.publishedStatuses as string[]).includes(i.status),
+			return items.filter(
+				(i) =>
+					i.status && (opts.publishedStatuses as string[]).includes(i.status),
 			);
 		}
 		return items;
@@ -67,14 +68,14 @@ describe("CMS", () => {
 		});
 	});
 
-	describe("findBySlug()", () => {
+	describe("find()", () => {
 		it("存在するスラッグのアイテムを返す", async () => {
-			const item = await cms.findBySlug("post-a");
+			const item = await cms.find("post-a");
 			expect(item?.slug).toBe("post-a");
 		});
 
 		it("存在しないスラッグでは null を返す", async () => {
-			const item = await cms.findBySlug("nonexistent");
+			const item = await cms.find("nonexistent");
 			expect(item).toBeNull();
 		});
 
@@ -86,7 +87,7 @@ describe("CMS", () => {
 					accessibleStatuses: ["公開"],
 				},
 			});
-			const item = await restrictedCms.findBySlug("draft-c");
+			const item = await restrictedCms.find("draft-c");
 			expect(item).toBeNull();
 		});
 	});
@@ -124,49 +125,58 @@ describe("CMS", () => {
 		});
 	});
 
-	describe("listByStatus()", () => {
+	describe("query().status()", () => {
 		it("指定ステータスのアイテムだけ返す", async () => {
-			const result = await cms.listByStatus("下書き");
-			expect(result).toHaveLength(1);
-			expect(result[0].slug).toBe("draft-c");
+			const result = await cms.query().status("下書き").execute();
+			expect(result.items).toHaveLength(1);
+			expect(result.items[0].slug).toBe("draft-c");
 		});
 
 		it("複数ステータスを配列で指定できる", async () => {
-			const result = await cms.listByStatus(["公開", "下書き"]);
-			expect(result).toHaveLength(3);
+			const result = await cms.query().status(["公開", "下書き"]).execute();
+			expect(result.items).toHaveLength(3);
 		});
 	});
 
-	describe("where()", () => {
+	describe("query().where()", () => {
 		it("任意の述語でフィルタリングする", async () => {
-			const result = await cms.where((i) => i.slug.startsWith("post"));
-			expect(result).toHaveLength(2);
+			const result = await cms
+				.query()
+				.where((i) => i.slug.startsWith("post"))
+				.execute();
+			expect(result.items).toHaveLength(2);
 		});
 	});
 
-	describe("paginate()", () => {
+	describe("query().paginate()", () => {
 		it("ページネーションで正しく分割する", async () => {
-			const result = await cms.paginate({ page: 1, perPage: 1 });
+			const result = await cms
+				.query()
+				.paginate({ page: 1, perPage: 1 })
+				.execute();
 			expect(result.items).toHaveLength(1);
 			expect(result.total).toBe(2);
 			expect(result.hasNext).toBe(true);
 		});
 
 		it("最終ページは hasNext が false", async () => {
-			const result = await cms.paginate({ page: 2, perPage: 1 });
+			const result = await cms
+				.query()
+				.paginate({ page: 2, perPage: 1 })
+				.execute();
 			expect(result.hasNext).toBe(false);
 		});
 	});
 
-	describe("getAdjacent()", () => {
+	describe("query().adjacent()", () => {
 		it("前後のアイテムを返す", async () => {
-			const adj = await cms.getAdjacent("post-a");
+			const adj = await cms.query().adjacent("post-a");
 			expect(adj.prev).toBeNull();
 			expect(adj.next?.slug).toBe("post-b");
 		});
 
 		it("最後のアイテムは next が null", async () => {
-			const adj = await cms.getAdjacent("post-b");
+			const adj = await cms.query().adjacent("post-b");
 			expect(adj.next).toBeNull();
 		});
 	});
@@ -179,7 +189,7 @@ describe("CMS", () => {
 		});
 	});
 
-	describe("getList() - SWR", () => {
+	describe("cached.list() - SWR", () => {
 		it("キャッシュが新鮮なら source.list() を呼ばない", async () => {
 			const docCache = memoryCache();
 			const swrCms = createCMS({
@@ -196,7 +206,7 @@ describe("CMS", () => {
 			});
 			vi.clearAllMocks();
 
-			const result = await swrCms.getList();
+			const result = await swrCms.cached.list();
 			expect(result.items[0].slug).toBe("cached");
 			expect(source.list).not.toHaveBeenCalled();
 		});
@@ -212,13 +222,13 @@ describe("CMS", () => {
 			});
 
 			await docCache.setList({ items: [makeItem("stale")], cachedAt: 0 });
-			const result = await swrCms.getList();
+			const result = await swrCms.cached.list();
 			expect(source.list).toHaveBeenCalled();
 			expect(result.items).not.toEqual([{ slug: "stale" }]);
 		});
 	});
 
-	describe("getItem() - SWR", () => {
+	describe("cached.get() - SWR", () => {
 		it("キャッシュが新鮮なら source.findBySlug() を呼ばない", async () => {
 			const docCache = memoryCache();
 			const swrCms = createCMS({
@@ -237,7 +247,7 @@ describe("CMS", () => {
 			await docCache.setItem("post-a", cachedEntry);
 			vi.clearAllMocks();
 
-			const result = await swrCms.getItem("post-a");
+			const result = await swrCms.cached.get("post-a");
 			expect(result?.html).toBe("<p>cached</p>");
 			expect(source.findBySlug).not.toHaveBeenCalled();
 		});
@@ -254,7 +264,7 @@ describe("CMS", () => {
 			});
 
 			await docCache.setList({ items: [], cachedAt: 0 });
-			await swrCms.getList();
+			await swrCms.cached.list();
 
 			expect(waitUntil).toHaveBeenCalledWith(expect.any(Promise));
 		});

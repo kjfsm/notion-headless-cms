@@ -6,18 +6,24 @@
 
 ## プロジェクト概要
 
-Notion をヘッドレス CMS として利用するための TypeScript ライブラリ群。  
+Notion をヘッドレス CMS として利用するための TypeScript ライブラリ群。
 pnpm モノリポで管理され、npm（`@notion-headless-cms` スコープ）としてパブリック公開される。
+
+依存方向（下が上を使う、core は外部ランタイム依存ゼロ）:
 
 ```
 Notion DB
-  └─ @notion-headless-cms/fetcher（API取得）
-       └─ @notion-headless-cms/transformer（ブロック→Markdown）
-            └─ @notion-headless-cms/renderer（Markdown→HTML）
-                 └─ @notion-headless-cms/core（CMS統合・キャッシュ）
-                      └─ @notion-headless-cms/cache-r2（R2ストレージ）
-                           └─ @notion-headless-cms/adapter-cloudflare（Workers注入）
+  └─ @notion-headless-cms/source-notion（API 取得 + Notion→Markdown）
+       ├─ @notion-headless-cms/renderer（Markdown→HTML）
+       └─ @notion-headless-cms/core（CMS 統合・キャッシュ・クエリ・フック）
+            ├─ @notion-headless-cms/cache-r2（R2 キャッシュ）
+            ├─ @notion-headless-cms/cache-next（Next.js ISR キャッシュ）
+            ├─ @notion-headless-cms/adapter-cloudflare（Workers 向けファクトリ）
+            ├─ @notion-headless-cms/adapter-node（Node.js 向けファクトリ）
+            └─ @notion-headless-cms/adapter-next（Next.js ルートハンドラ）
 ```
+
+`@notion-headless-cms/fetcher` と `@notion-headless-cms/transformer` は `source-notion` 内部に統合され、`private: true` で npm 公開対象外。
 
 ## 技術スタック
 
@@ -28,34 +34,51 @@ Notion DB
 | Notion API | @notionhq/client |
 | Markdown変換 | notion-to-md |
 | HTMLレンダリング | remark / rehype（unified） |
-| キャッシュストレージ | Cloudflare R2 |
+| キャッシュストレージ | Cloudflare R2 / Next.js `unstable_cache` / メモリ |
 | バリデーション | Zod |
 | リンター/フォーマッター | Biome |
 | パッケージ管理 | pnpm ワークスペース |
+| リリース | changesets |
 
 ## ディレクトリ構成
 
 ```
 packages/
-  core/               # CMSエンジン本体（取得・変換・キャッシュ統合）
+  core/                   # CMS エンジン本体（外部ランタイム依存なし）
     src/
-      cms.ts          # CMS クラス・createCMS()
-      cache.ts        # CacheStore・isStale・sha256Hex
-      types.ts        # 公開型定義（CMSConfig, BaseContentItem など）
-      errors.ts       # CMSError
-      mapper.ts       # Notionプロパティマッピング
-      image.ts        # 画像フェッチ・キャッシュ
-      index.ts        # 公開 API
-  fetcher/            # Notion API クライアントラッパー
-  transformer/        # Notion ブロック → Markdown 変換
-  renderer/           # Markdown → HTML レンダリング
-  cache-r2/           # Cloudflare R2 StorageAdapter 実装
-  adapter-cloudflare/ # createCloudflareCMS() ファクトリー
+      cms.ts              # CMS クラス・createCMS()
+      cache.ts            # isStale / sha256Hex
+      cache/memory.ts     # memoryDocumentCache / memoryImageCache
+      cache/noop.ts       # noop 実装
+      query.ts            # QueryBuilder
+      retry.ts            # withRetry / DEFAULT_RETRY_CONFIG
+      hooks.ts            # mergeHooks / mergeLoggers
+      errors.ts           # CMSError / 名前空間付きエラーコード
+      image.ts            # 画像フェッチ・キャッシュ
+      types/              # 型定義（config / content / cache / hooks / logger / plugin / source）
+      index.ts            # 公開 API
+  source-notion/          # Notion データソースアダプタ
+    src/
+      notion-adapter.ts   # notionAdapter() ファクトリ
+      mapper.ts           # デフォルトマッパー・getPlainText
+      schema.ts           # defineSchema / defineMapping
+      internal/fetcher/   # Notion API クライアント（内部実装）
+      internal/transformer/ # Notion ブロック→Markdown 変換（内部実装）
+  renderer/               # Markdown → HTML レンダリング（unified）
+  cache-r2/               # Cloudflare R2 キャッシュアダプタ（R2BucketLike）
+  cache-next/             # Next.js ISR キャッシュアダプタ
+  adapter-cloudflare/     # createCloudflareCMS() ファクトリ
+  adapter-node/           # createNodeCMS() ファクトリ
+  adapter-next/           # Next.js 用ルートハンドラ
+  fetcher/                # 旧独立公開パッケージ（現在は private: true）
+  transformer/            # 旧独立公開パッケージ（現在は private: true）
+
+examples/                 # フレームワーク別の動作例
 
 .github/
   workflows/
-    ci.yml            # PR・main push 時に build / typecheck / test を実行
-    release.yml       # main push 時に changesets/action で PR 作成または npm 公開
+    ci.yml                # PR・main push 時に build / typecheck / test を実行
+    release.yml           # main push 時に changesets/action で PR 作成または npm 公開
 ```
 
 ## コマンド
@@ -64,8 +87,9 @@ packages/
 # ルート（全パッケージ一括）
 pnpm build            # 全パッケージをビルド
 pnpm typecheck        # 全パッケージの型チェック
-pnpm test             # core・renderer のユニットテスト（vitest）
-pnpm format           # Biome でフォーマット・Lint自動修正
+pnpm test             # vitest ユニットテスト
+pnpm format           # Biome でフォーマット・Lint 自動修正
+pnpm lint             # Biome ci（CI で失敗させる）
 
 # 個別パッケージ（例: core）
 cd packages/core
@@ -73,7 +97,7 @@ pnpm build
 pnpm typecheck
 ```
 
-コード変更後は必ず `pnpm typecheck` を実行する。
+コード変更後は必ず `pnpm typecheck && pnpm test` を実行する。
 
 ## コードスタイル
 
@@ -86,28 +110,43 @@ Biome の設定に従う（biome.json 参照）。
 
 ## アーキテクチャ上の重要な注意点
 
+### core は外部ランタイム依存ゼロ
+- `@notionhq/client` / `unified` / `zod` / `renderer` のいずれにも依存しない
+- レンダラーは `CreateCMSOptions.renderer`（`RendererFn`）として注入する
+- アダプタ（`adapter-cloudflare` / `adapter-node`）が `renderMarkdown` を自動注入する
+- 何も指定しなかった場合、`core` は動的 `import("@notion-headless-cms/renderer")` でフォールバック
+
 ### キャッシュ戦略（Stale-While-Revalidate）
 - まずキャッシュを返し、TTL 切れなら裏で非同期更新
-- `CMSConfig.cache.ttlMs` が有効期間
-- `storage` 未設定時はキャッシュなしで動作（ローカル開発向け）
+- `CreateCMSOptions.cache.ttlMs` が有効期間
+- `cache.document` / `cache.image` 未設定時は `noopDocumentCache` / `noopImageCache` が使われる（キャッシュなし）
+- `cms.cached.list()` / `cms.cached.get(slug)` が SWR アクセサ
 
 ### Notion 更新検知
 - `last_edited_time` でキャッシュと比較し、差分があれば HTML 再生成
-- 変更なければ `cachedAt` のみ更新（TTL 延長）
+- `cms.cache.checkItem(slug, lastEdited)` / `cms.cache.checkList(version)` が差分 API
 
 ### 画像処理
-- Notion 画像 URL は期限付きのため、Workers で fetch → SHA256 ハッシュキーで R2 に永続保存
-- `core/src/image.ts` の `fetchAndCacheImage` が担当
+- Notion 画像 URL は期限付きのため、fetch → SHA256 ハッシュキーでストレージに永続保存
+- `core/src/image.ts` の `fetchAndCacheImage` が担当（HTTP 失敗時は `CMSError` を投げる）
 - フロントエンドには `{imageProxyBase}/{hash}` で配信（デフォルト: `/api/images`）
 
-### ストレージ抽象
-- `StorageAdapter` インターフェース（`core/src/types.ts`）を実装すれば R2 以外に差し替え可能
-- `cache-r2` が Cloudflare R2 実装、`adapter-cloudflare` が Workers 向け注入を担当
+### エラー体系
+- すべての内部エラーは `CMSError` に統一（コード: `namespace/kind` 形式）
+- 組み込みコード: `core/config_invalid` / `core/schema_invalid` / `source/fetch_items_failed` / `source/fetch_item_failed` / `source/load_markdown_failed` / `cache/io_failed` / `renderer/failed`
+- サードパーティアダプタは任意の文字列コードを使える（`CMSErrorCode = BuiltInCMSErrorCode | (string & {})`）
+- 名前空間判定は `isCMSErrorInNamespace(err, "source/")` を使う
+
+### キャッシュ抽象
+- `DocumentCacheAdapter<T>` / `ImageCacheAdapter` インターフェース（`core/src/types/cache.ts`）を実装すれば R2 以外に差し替え可能
+- `cache-r2` は Cloudflare R2、`cache-next` は Next.js ISR、`core` は in-memory / noop を提供
+- `cache-r2` は構造型 `R2BucketLike` を受け取るため `@cloudflare/workers-types` への実依存なし
 
 ### 環境変数（シークレット）
 - `NOTION_TOKEN`: Notion API キー
 - `NOTION_DATA_SOURCE_ID`: Notion データベース ID
-- これらは `wrangler secret put` で設定する。コードにハードコードしない
+- Workers は `wrangler secret put` で設定する。コードにハードコードしない
+- `adapter-node` は `process.env` から自動読み込み（未設定時は `CMSError` `core/config_invalid`）
 
 ## npm 公開フロー
 
@@ -126,6 +165,7 @@ pnpm changeset
 - `release.yml` は build → typecheck → test の後に `changesets/action` を実行
 - `NPM_TOKEN` と `GITHUB_TOKEN` シークレットが必要（リポジトリ Settings > Secrets）
 - アクセス設定は `.changeset/config.json` の `"access": "public"` で制御
+- `fetcher` / `transformer` は `private: true` のため changeset 対象から自動除外される
 
 ## ワークフロー
 

@@ -1,6 +1,6 @@
 # @notion-headless-cms/core
 
-CMS エンジン本体。Notion からのコンテンツ取得・変換・キャッシュを統合管理する。
+CMS エンジン本体。データソース・キャッシュ・レンダラーを統合し、Stale-While-Revalidate / 更新検知 / クエリビルダー / フック / リトライを提供する。**外部ランタイム依存ゼロ**。
 
 ## インストール
 
@@ -8,30 +8,44 @@ CMS エンジン本体。Notion からのコンテンツ取得・変換・キャ
 npm install @notion-headless-cms/core
 ```
 
-Cloudflare Workers で使う場合は [`@notion-headless-cms/adapter-cloudflare`](../adapter-cloudflare) の利用を推奨する。
+Cloudflare Workers / Node.js / Next.js などで使う場合は、それぞれのアダプタを使うのが最短ルート:
 
-## 使い方
+- [`@notion-headless-cms/adapter-cloudflare`](../adapter-cloudflare)
+- [`@notion-headless-cms/adapter-node`](../adapter-node)
+- [`@notion-headless-cms/adapter-next`](../adapter-next)
+
+## 使い方（core を直接使う場合）
 
 ```typescript
-import { CMS } from "@notion-headless-cms/core";
+import { createCMS, memoryDocumentCache, memoryImageCache } from "@notion-headless-cms/core";
+import { notionAdapter } from "@notion-headless-cms/source-notion";
+import { renderMarkdown } from "@notion-headless-cms/renderer";
 
-const cms = new CMS({
-  env: {
-    NOTION_TOKEN: process.env.NOTION_TOKEN!,
-    NOTION_DATA_SOURCE_ID: process.env.NOTION_DATA_SOURCE_ID!,
-  },
+const cms = createCMS({
+  source: notionAdapter({
+    token: process.env.NOTION_TOKEN!,
+    dataSourceId: process.env.NOTION_DATA_SOURCE_ID!,
+  }),
+  renderer: renderMarkdown,
   schema: {
     publishedStatuses: ["公開"],
     properties: { slug: "Slug" },
   },
-  cache: { ttlMs: 5 * 60 * 1000 },
+  cache: {
+    document: memoryDocumentCache(),
+    image: memoryImageCache(),
+    ttlMs: 5 * 60 * 1000,
+  },
 });
 
-// コンテンツ一覧を取得
-const { items } = await cms.getItems();
+// ソース直接
+const items = await cms.list();
+const item = await cms.find("my-post");
+const rendered = item ? await cms.render(item) : null;
 
-// スラッグで個別コンテンツを取得（HTML 付き）
-const cached = await cms.getItemBySlug("my-post");
+// SWR
+const { items: cachedItems } = await cms.cached.list();
+const cached = await cms.cached.get("my-post");
 console.log(cached?.html);
 ```
 
@@ -40,66 +54,102 @@ console.log(cached?.html);
 `BaseContentItem` を拡張することで任意のプロパティを追加できる。
 
 ```typescript
-import type { BaseContentItem, CMSConfig } from "@notion-headless-cms/core";
-import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import type { BaseContentItem } from "@notion-headless-cms/core";
+import { createCMS } from "@notion-headless-cms/core";
+import { notionAdapter } from "@notion-headless-cms/source-notion";
 
 interface MyPost extends BaseContentItem {
   title: string;
   category: string;
 }
 
-const config: CMSConfig<MyPost> = {
-  env: {
-    NOTION_TOKEN: process.env.NOTION_TOKEN!,
-    NOTION_DATA_SOURCE_ID: process.env.NOTION_DATA_SOURCE_ID!,
-  },
-  schema: {
-    mapItem: (page: PageObjectResponse): MyPost => ({
+const cms = createCMS<MyPost>({
+  source: notionAdapter<MyPost>({
+    token: process.env.NOTION_TOKEN!,
+    dataSourceId: process.env.NOTION_DATA_SOURCE_ID!,
+    mapItem: (page) => ({
       id: page.id,
       slug: /* ... */ "",
-      status: /* ... */ "",
-      publishedAt: page.created_time,
       updatedAt: page.last_edited_time,
+      publishedAt: page.created_time,
       title: /* ... */ "",
       category: /* ... */ "",
     }),
-  },
-};
+  }),
+});
 ```
+
+> 型安全なマッピングは [`defineSchema`](../source-notion) を推奨。
 
 ## 主要 API
 
-### `CMS` クラス
+### `CMS<T>` / `createCMS<T>(options)`
 
 | メソッド | 説明 |
 |---|---|
-| `getItems()` | コンテンツ一覧を返す |
-| `getItemBySlug(slug)` | スラッグで個別コンテンツを返す |
-| `renderItem(item)` | アイテムをレンダリングして `CachedItem` を返す |
-| `renderItemBySlug(slug)` | スラッグで取得してレンダリングする |
-| `getItemsCachedFirst(options?)` | キャッシュ優先でコンテンツ一覧を返す（SWR） |
-| `getItemCachedFirst(slug, options?)` | キャッシュ優先で個別コンテンツを返す（SWR） |
-| `checkItemsUpdate(clientVersion)` | 一覧の更新有無を確認する |
-| `checkItemUpdate(slug, lastEdited)` | 個別コンテンツの更新有無を確認する |
+| `list()` | ソースから一覧取得 |
+| `find(slug)` | ソースから単一アイテム取得 |
+| `render(item)` | Markdown → HTML にレンダリング |
+| `isPublished(item)` | `publishedStatuses` 判定 |
+| `cached.list()` | SWR で一覧取得 |
+| `cached.get(slug)` | SWR で単一アイテム取得 |
+| `cache.prefetchAll(opts?)` | 全アイテムを事前レンダリング |
+| `cache.revalidate(scope?)` | キャッシュ無効化 |
+| `cache.sync(payload?)` | Webhook 由来のキャッシュ同期 |
+| `cache.checkList(version)` | 一覧差分検知 |
+| `cache.checkItem(slug, lastEdited)` | 個別差分検知 |
+| `query()` | QueryBuilder を返す |
+| `getStaticSlugs()` | 静的生成用スラッグ一覧 |
+| `getCachedImage(hash)` | キャッシュ画像を取得 |
+| `createCachedImageResponse(hash)` | キャッシュ画像の Response を生成 |
+
+詳細は [CMS メソッド一覧](../../docs/api/cms-methods.md) を参照。
 
 ### ユーティリティ
 
 | エクスポート | 説明 |
 |---|---|
-| `CacheStore` | JSON/バイナリストレージの抽象ラッパー |
+| `memoryDocumentCache<T>()` | インメモリ DocumentCacheAdapter |
+| `memoryImageCache()` | インメモリ ImageCacheAdapter |
+| `noopDocumentCache<T>()` / `noopImageCache()` | 何もしないアダプタ |
 | `isStale(cachedAt, ttlMs)` | TTL 切れ判定 |
-| `sha256Hex(data)` | SHA256 ハッシュ生成（画像キー生成に使用） |
-| `CMSError` | カスタムエラークラス |
+| `sha256Hex(data)` | SHA256 ハッシュ生成 |
+| `CMSError` / `isCMSError` / `isCMSErrorInNamespace` | エラークラスと判定ヘルパー |
+| `QueryBuilder` | クエリ組み立て（`cms.query()` が返す） |
+| `withRetry` / `DEFAULT_RETRY_CONFIG` | リトライ付き実行 |
+| `definePlugin` | プラグイン（hooks / logger）の型付き定義 |
 
 ## 主要な型
 
-- `CMSConfig<T>` — CMS 設定オブジェクト（`env` フィールドで認証情報を渡す）
-- `BaseContentItem` — デフォルト・カスタム型の基底インターフェース
-- `CachedItem<T>` — キャッシュ済みコンテンツ（HTML + メタデータ）
-- `StorageAdapter` — ストレージ抽象インターフェース
-- `CMSEnv` — 必須環境変数の型
+- `CreateCMSOptions<T>` — `createCMS()` の引数
+- `BaseContentItem` — デフォルト・カスタム型の基底（`status` / `publishedAt` はオプション）
+- `CachedItem<T>` / `CachedItemList<T>` — キャッシュ済みコンテンツ
+- `DataSourceAdapter<T>` — データソース抽象
+- `DocumentCacheAdapter<T>` / `ImageCacheAdapter` — キャッシュ抽象
+- `RendererFn` / `RenderOptions` — レンダラー関数の型
+- `CMSErrorCode` / `CMSErrorContext` — エラー型（名前空間付き）
+
+## エラー体系
+
+すべての内部エラーは `CMSError` に統一される。コードは `namespace/kind` 形式。
+
+```ts
+import { isCMSErrorInNamespace } from "@notion-headless-cms/core";
+
+try {
+  await cms.list();
+} catch (err) {
+  if (isCMSErrorInNamespace(err, "source/")) {
+    // Notion 取得系エラー
+  }
+}
+```
+
+組み込みコード: `core/config_invalid` / `core/schema_invalid` / `source/fetch_items_failed` / `source/fetch_item_failed` / `source/load_markdown_failed` / `cache/io_failed` / `renderer/failed`
 
 ## 関連パッケージ
 
-- [`@notion-headless-cms/adapter-cloudflare`](../adapter-cloudflare) — Cloudflare Workers 向けファクトリー
-- [`@notion-headless-cms/cache-r2`](../cache-r2) — R2 ストレージ実装
+- [`@notion-headless-cms/source-notion`](../source-notion) — Notion データソース
+- [`@notion-headless-cms/renderer`](../renderer) — Markdown → HTML レンダラー
+- [`@notion-headless-cms/cache-r2`](../cache-r2) — R2 キャッシュ
+- [`@notion-headless-cms/cache-next`](../cache-next) — Next.js ISR キャッシュ

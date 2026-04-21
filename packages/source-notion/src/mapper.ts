@@ -1,17 +1,20 @@
 import type {
+	BaseContentItem,
+	CMSSchemaProperties,
+} from "@notion-headless-cms/core";
+import { CMSError } from "@notion-headless-cms/core";
+import type {
 	PageObjectResponse,
 	RichTextItemResponse,
 } from "@notionhq/client/build/src/api-endpoints";
 import { z } from "zod";
-import { CMSError } from "./errors";
-import type { BaseContentItem, CMSSchemaProperties } from "./types/index";
 
 const baseContentItemSchema = z.object({
 	id: z.string().min(1),
-	slug: z.string(),
-	status: z.string(),
-	publishedAt: z.string().min(1),
+	slug: z.string().min(1),
 	updatedAt: z.string().min(1),
+	status: z.string().optional(),
+	publishedAt: z.string().optional(),
 });
 
 /** Notionリッチテキスト配列をプレーンテキストに結合する。 */
@@ -46,14 +49,14 @@ export function mapItem(
 					| undefined
 			)?.rich_text,
 		),
-		status: statusProperty?.status?.name ?? statusProperty?.select?.name ?? "",
+		status: statusProperty?.status?.name ?? statusProperty?.select?.name,
 		publishedAt: dateProperty?.date?.start ?? page.created_time,
 		updatedAt: page.last_edited_time,
 	});
 
 	if (!parsed.success) {
 		throw new CMSError({
-			code: "NOTION_ITEM_SCHEMA_INVALID",
+			code: "core/schema_invalid",
 			message: "Failed to parse Notion page into BaseContentItem.",
 			context: {
 				operation: "mapItem",

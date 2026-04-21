@@ -1,55 +1,38 @@
 # @notion-headless-cms/transformer
 
-Notion ブロック → Markdown 変換器。`notion-to-md` を内部で使用し、カスタムブロックハンドラーを追加できる。
+> **⚠️ 内部パッケージ化済み**
+> このパッケージは `"private": true` に変更され、npm に公開されなくなった。現在は [`@notion-headless-cms/source-notion`](../source-notion) 内部の `internal/transformer/` に取り込まれている。
+>
+> 直接利用していた場合は [`@notion-headless-cms/source-notion`](../source-notion) の `notionAdapter` に移行してほしい。
 
-## インストール
+## 移行先
 
-```bash
-npm install @notion-headless-cms/transformer
-```
-
-通常は [`@notion-headless-cms/core`](../core) 経由で利用される。
-
-## 使い方
+`notionAdapter` の `blocks` オプションでカスタムブロックハンドラを登録できる。
 
 ```typescript
-import {
-  createTransformer,
-  transformBlocks,
-} from "@notion-headless-cms/transformer";
-import { createNotionClient } from "@notion-headless-cms/fetcher";
-
-const client = createNotionClient("notion_api_token");
-const transformer = createTransformer(client);
-
-const markdown = await transformBlocks(transformer, "page_id");
-```
-
-### カスタムブロックハンドラー
-
-```typescript
-import type { BlockHandler } from "@notion-headless-cms/transformer";
+import type { BlockHandler } from "@notion-headless-cms/source-notion";
+import { notionAdapter } from "@notion-headless-cms/source-notion";
+import { createCMS } from "@notion-headless-cms/core";
+import { renderMarkdown } from "@notion-headless-cms/renderer";
 
 const calloutHandler: BlockHandler = async (block) => {
-  // カスタム変換ロジック
-  return { parent: `> ${block.callout?.rich_text[0]?.plain_text ?? ""}` };
+  return `> ${block.callout?.rich_text[0]?.plain_text ?? ""}`;
 };
 
-const transformer = createTransformer(client, {
-  callout: calloutHandler,
+const cms = createCMS({
+  source: notionAdapter({
+    token: process.env.NOTION_TOKEN!,
+    dataSourceId: process.env.NOTION_DATA_SOURCE_ID!,
+    blocks: { callout: calloutHandler },
+  }),
+  renderer: renderMarkdown,
 });
 ```
 
-## API
-
-| エクスポート | 説明 |
-|---|---|
-| `createTransformer(client, handlers?)` | トランスフォーマーを生成する |
-| `transformBlocks(transformer, pageId)` | ページブロックを Markdown 文字列に変換する |
-| `BlockHandler` | カスタムブロックハンドラーの型 |
+`cms.render(item)` を呼ぶと、登録したハンドラが適用された Markdown から HTML が生成される。
 
 ## 関連パッケージ
 
-- [`@notion-headless-cms/fetcher`](../fetcher) — ブロック取得
+- [`@notion-headless-cms/source-notion`](../source-notion) — Notion データソース（旧 `fetcher` / `transformer` を取り込み済み）
 - [`@notion-headless-cms/renderer`](../renderer) — Markdown → HTML 変換
-- [`@notion-headless-cms/core`](../core) — CMS エンジン（このパッケージを内部で使用）
+- [`@notion-headless-cms/core`](../core) — CMS エンジン本体

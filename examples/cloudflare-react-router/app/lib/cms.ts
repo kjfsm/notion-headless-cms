@@ -1,14 +1,26 @@
-import type { CloudfareCMSEnv } from "@notion-headless-cms/adapter-cloudflare";
+import type { CloudflareCMSEnv } from "@notion-headless-cms/adapter-cloudflare";
 import { createCloudflareCMS } from "@notion-headless-cms/adapter-cloudflare";
-import { defineMapping, defineSchema } from "@notion-headless-cms/source-notion";
+import {
+	defineMapping,
+	defineSchema,
+} from "@notion-headless-cms/source-notion";
 import { z } from "zod";
 
 const BlogSchema = z.object({
 	id: z.string(),
 	updatedAt: z.string(),
-	slug: z.string().nullable().transform((s) => s ?? ""),
-	status: z.string().nullable().transform((s) => s ?? ""),
-	publishedAt: z.string().nullable().transform((s) => s ?? ""),
+	slug: z
+		.string()
+		.nullable()
+		.transform((s) => s ?? ""),
+	status: z
+		.string()
+		.nullable()
+		.transform((s) => s ?? ""),
+	publishedAt: z
+		.string()
+		.nullable()
+		.transform((s) => s ?? ""),
 	title: z.string().nullable(),
 	tags: z.array(z.string()),
 	description: z.string().nullable(),
@@ -16,7 +28,7 @@ const BlogSchema = z.object({
 
 export type BlogPost = z.infer<typeof BlogSchema>;
 
-export type Env = CloudfareCMSEnv;
+export type Env = CloudflareCMSEnv;
 
 const mapping = defineMapping<BlogPost>({
 	slug: { type: "title", notion: "Slug" },

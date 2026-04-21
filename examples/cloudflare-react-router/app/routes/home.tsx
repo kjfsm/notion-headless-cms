@@ -1,6 +1,6 @@
 import { Link } from "react-router";
-import type { Route } from "./+types/home";
 import { createCMS } from "../lib/cms";
+import type { Route } from "./+types/home";
 
 export async function loader({ context }: Route.LoaderArgs) {
 	const cms = createCMS(context.cloudflare.env);

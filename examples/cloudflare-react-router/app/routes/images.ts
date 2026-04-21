@@ -1,5 +1,5 @@
-import type { Route } from "./+types/images";
 import { createCMS } from "../lib/cms";
+import type { Route } from "./+types/images";
 
 export async function loader({ params, context }: Route.LoaderArgs) {
 	const cms = createCMS(context.cloudflare.env);

@@ -10,11 +10,16 @@
  * createCMS<Post>({ source: notionAdapter({ ... }) })
  */
 export interface BaseContentItem {
+	/** Notion ページ ID（変更検知に必須）。 */
 	id: string;
+	/** URL キー（必須）。 */
 	slug: string;
-	status: string;
-	publishedAt: string;
+	/** 最終更新タイムスタンプ（変更検知に必須）。 */
 	updatedAt: string;
+	/** コンテンツのステータス。ステータスのない DB では省略可能。 */
+	status?: string;
+	/** 公開日時。日付プロパティのない DB では省略可能。 */
+	publishedAt?: string;
 }
 
 /** ストレージにキャッシュされたレンダリング済みコンテンツ。 */

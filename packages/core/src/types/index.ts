@@ -7,6 +7,8 @@ export type {
 	ContentConfig,
 	CreateCMSOptions,
 	RateLimiterConfig,
+	RendererFn,
+	RenderOptions,
 	SchemaConfig,
 } from "./config";
 export type {

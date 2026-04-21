@@ -12,12 +12,10 @@ export { CMS, createCMS } from "./cms";
 
 // ── エラー ────────────────────────────────────────────────────────────────
 export type { CMSErrorCode, CMSErrorContext } from "./errors";
-export { CMSError, isCMSError } from "./errors";
+export { CMSError, isCMSError, isCMSErrorInNamespace } from "./errors";
 
 // ── フック・ロガー・プラグイン ──────────────────────────────────────────────
 export { mergeHooks, mergeLoggers } from "./hooks";
-// ── 低レベルAPI ───────────────────────────────────────────────────────────
-export { getPlainText, mapItem } from "./mapper";
 export type { QueryResult } from "./query";
 // ── クエリ ────────────────────────────────────────────────────────────────
 export { QueryBuilder } from "./query";
@@ -34,6 +32,8 @@ export type {
 	ContentConfig,
 	CreateCMSOptions,
 	RateLimiterConfig,
+	RendererFn,
+	RenderOptions,
 	SchemaConfig,
 } from "./types/config";
 export type {

@@ -1,6 +1,6 @@
 import { error } from "@sveltejs/kit";
-import type { PageServerLoad } from "./$types";
 import { createCMS } from "$lib/cms";
+import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ params, platform }) => {
 	const cms = createCMS(platform!.env);

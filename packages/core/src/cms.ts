@@ -1,4 +1,3 @@
-import { renderMarkdown } from "@notion-headless-cms/renderer";
 import { isStale } from "./cache";
 import { noopDocumentCache, noopImageCache } from "./cache/noop";
 import { CMSError, isCMSError } from "./errors";
@@ -17,6 +16,7 @@ import type {
 	DocumentCacheAdapter,
 	ImageCacheAdapter,
 	Logger,
+	RendererFn,
 	StorageBinary,
 } from "./types/index";
 
@@ -83,6 +83,7 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 	private readonly accessibleStatuses: string[];
 	private readonly imageProxyBase: string;
 	private readonly contentConfig: CreateCMSOptions<T>["content"];
+	private readonly rendererFn: RendererFn | undefined;
 	private readonly waitUntil: ((p: Promise<unknown>) => void) | undefined;
 	private readonly hooks: CMSHooks<T>;
 	private readonly logger: Logger | undefined;
@@ -108,12 +109,13 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		this.imageProxyBase =
 			opts.content?.imageProxyBase ?? DEFAULT_IMAGE_PROXY_BASE;
 		this.contentConfig = opts.content;
+		this.rendererFn = opts.renderer ?? opts.content?.render;
 		this.waitUntil = opts.waitUntil;
 		this.hooks = mergeHooks(opts.plugins ?? [], opts.hooks);
 		this.logger = mergeLoggers(opts.plugins ?? [], opts.logger);
 		this.retryConfig = {
 			...DEFAULT_RETRY_CONFIG,
-			...(opts.rateLimiter as Partial<RetryConfig> | undefined),
+			...(opts.rateLimiter ?? {}),
 		};
 
 		this.cached = {
@@ -161,22 +163,17 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		if (!item) return null;
 		if (
 			this.accessibleStatuses.length > 0 &&
-			!this.accessibleStatuses.includes(item.status)
+			(!item.status || !this.accessibleStatuses.includes(item.status))
 		) {
 			return null;
 		}
 		return item;
 	}
 
-	/** @deprecated find() を使用してください。 */
-	findBySlug(slug: string): Promise<T | null> {
-		return this.find(slug);
-	}
-
 	/** アイテムが publishedStatuses に含まれるステータスかどうかを返す。 */
 	isPublished(item: T): boolean {
 		if (this.publishedStatuses.length === 0) return true;
-		return this.publishedStatuses.includes(item.status);
+		return !!item.status && this.publishedStatuses.includes(item.status);
 	}
 
 	/** コンテンツを Markdown → HTML にレンダリングし、CachedItem として返す。 */
@@ -207,8 +204,16 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 						const rendered = await this.buildCachedItem(item);
 						await this.docCache.setItem(item.slug, rendered);
 						ok++;
-					} catch {
+					} catch (err) {
 						failed++;
+						this.logger?.warn?.(
+							"prefetchAll: アイテムの事前レンダリングに失敗",
+							{
+								slug: item.slug,
+								pageId: item.id,
+								error: err instanceof Error ? err.message : String(err),
+							},
+						);
 					}
 				}),
 			);
@@ -335,69 +340,6 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		};
 	}
 
-	// ── 後方互換 SWR ────────────────────────────────────────────────────────
-
-	/** @deprecated cached.list() を使用してください。 */
-	async getList(): Promise<{ items: T[]; listVersion: string }> {
-		const result = await this.cachedList();
-		return { items: result.items, listVersion: buildListVersion(result.items) };
-	}
-
-	/** @deprecated cached.get() を使用してください。 */
-	getItem(slug: string): Promise<CachedItem<T> | null> {
-		return this.cachedGet(slug);
-	}
-
-	/** @deprecated cache.prefetchAll() を使用してください。 */
-	async prefetchAllLegacy(opts?: {
-		concurrency?: number;
-		onProgress?: (done: number, total: number) => void;
-	}): Promise<{ ok: number; failed: number }> {
-		return this.prefetchAll(opts);
-	}
-
-	// ── 後方互換クエリ API ──────────────────────────────────────────────────
-
-	/** @deprecated query().status(s).execute() を使用してください。 */
-	async listByStatus(status: string | readonly string[]): Promise<T[]> {
-		const statuses = Array.isArray(status) ? status : [status];
-		return this.query()
-			.status(statuses)
-			.execute()
-			.then((r) => r.items);
-	}
-
-	/** @deprecated query().where(pred).execute() を使用してください。 */
-	async where(predicate: (item: T) => boolean): Promise<T[]> {
-		return this.query()
-			.where(predicate)
-			.execute()
-			.then((r) => r.items);
-	}
-
-	/** @deprecated query().paginate(opts).execute() を使用してください。 */
-	async paginate(opts: { page: number; perPage: number }): Promise<{
-		items: T[];
-		total: number;
-		page: number;
-		perPage: number;
-		hasNext: boolean;
-	}> {
-		const result = await this.query().paginate(opts).execute();
-		return {
-			items: result.items,
-			total: result.total,
-			page: result.page,
-			perPage: result.perPage,
-			hasNext: result.hasNext,
-		};
-	}
-
-	/** @deprecated query().adjacent(slug) を使用してください。 */
-	getAdjacent(slug: string): Promise<{ prev: T | null; next: T | null }> {
-		return this.query().adjacent(slug);
-	}
-
 	// ── 画像配信 ───────────────────────────────────────────────────────────
 
 	/** ハッシュキーでキャッシュ画像を取得する。 */
@@ -430,7 +372,7 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		} catch (err) {
 			if (isCMSError(err)) throw err;
 			throw new CMSError({
-				code: "NOTION_MARKDOWN_FETCH_FAILED",
+				code: "source/load_markdown_failed",
 				message: "Failed to load markdown from source.",
 				cause: err,
 				context: {
@@ -446,18 +388,18 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 			: undefined;
 
 		let html: string;
+		const rendererFn = this.rendererFn ?? (await loadDefaultRenderer());
 		try {
-			html = await renderMarkdown(markdown, {
+			html = await rendererFn(markdown, {
 				imageProxyBase: this.imageProxyBase,
 				cacheImage,
 				remarkPlugins: this.contentConfig?.remarkPlugins,
 				rehypePlugins: this.contentConfig?.rehypePlugins,
-				render: this.contentConfig?.render,
 			});
 		} catch (err) {
 			if (isCMSError(err)) throw err;
 			throw new CMSError({
-				code: "RENDERER_FAILED",
+				code: "renderer/failed",
 				message: "Failed to render markdown.",
 				cause: err,
 				context: {
@@ -491,6 +433,27 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		});
 
 		return result;
+	}
+}
+
+/**
+ * renderer オプション未指定時のフォールバック。
+ * @notion-headless-cms/renderer を動的 import する。
+ * adapter-cloudflare / adapter-node は renderer を明示注入するためこのパスは通らない。
+ */
+async function loadDefaultRenderer(): Promise<RendererFn> {
+	try {
+		const mod = await import("@notion-headless-cms/renderer");
+		return mod.renderMarkdown;
+	} catch (err) {
+		throw new CMSError({
+			code: "renderer/failed",
+			message:
+				"renderer オプションが未指定で @notion-headless-cms/renderer が見つかりません。" +
+				" createCMS({ renderer }) でレンダラーを注入するか、@notion-headless-cms/renderer をインストールしてください。",
+			cause: err,
+			context: { operation: "loadDefaultRenderer" },
+		});
 	}
 }
 
