@@ -2,29 +2,68 @@ import type { z } from "zod";
 import { getPlainText } from "./mapper";
 import type { NotionPage } from "./types";
 
+// ── ページプロパティ値の型エイリアス ────────────────────────────────────────
+// NotionPage["properties"][string] から各プロパティの要素型を導出する。
+// これにより @notionhq/client の型定義と常に同期される。
+
+type PropertyValue = NotionPage["properties"][string];
+
+type PeopleItem = Extract<PropertyValue, { type: "people" }>["people"][number];
+type FileItem = Extract<PropertyValue, { type: "files" }>["files"][number];
+type RelationItem = Extract<
+	PropertyValue,
+	{ type: "relation" }
+>["relation"][number];
+type SelectItem = Extract<
+	PropertyValue,
+	{ type: "multi_select" }
+>["multi_select"][number];
+type FormulaResult = Extract<PropertyValue, { type: "formula" }>["formula"];
+type RollupResult = Extract<PropertyValue, { type: "rollup" }>["rollup"];
+type UniqueIdResult = Extract<
+	PropertyValue,
+	{ type: "unique_id" }
+>["unique_id"];
+type CreatedByUser = Extract<
+	PropertyValue,
+	{ type: "created_by" }
+>["created_by"];
+type LastEditedByUser = Extract<
+	PropertyValue,
+	{ type: "last_edited_by" }
+>["last_edited_by"];
+
 // ── 複合型の値インターフェース ────────────────────────────────────────────────
 
+/** `created_by` / `last_edited_by` プロパティのユーザー情報。 */
 export interface NotionPersonValue {
 	id: string;
 	name?: string;
 }
 
+/** `files` プロパティの各ファイル情報。URL は外部 / Notion ホスト型の両方から抽出済み。 */
 export interface NotionFileValue {
 	name: string;
 	url: string;
 	type: "external" | "file";
 }
 
+/** `relation` プロパティの各ページ参照。 */
 export interface NotionRelationValue {
 	id: string;
 }
 
+/** `formula` プロパティの計算結果。date 型フォーミュラは null を返す。 */
 export type NotionFormulaValue = string | number | boolean | null;
 
+/** `unique_id` プロパティの値。 */
 export interface NotionUniqueIdValue {
 	number: number;
 	prefix: string | null;
 }
+
+/** `rollup` プロパティの集計値。集計関数に応じて型が変わるため Notion の型をそのまま使用。 */
+export type NotionRollupValue = RollupResult;
 
 // ── フィールドマッピング型定義 ──────────────────────────────────────────────
 
@@ -127,8 +166,6 @@ export function defineSchema<S extends z.ZodRawShape>(
 
 // ── パーサー ─────────────────────────────────────────────────────────────────
 
-type PropertyValue = NotionPage["properties"][string];
-
 const ARRAY_FIELD_TYPES = new Set([
 	"multiSelect",
 	"relation",
@@ -192,7 +229,7 @@ function parseField(
 			return prop.type === "last_edited_time" ? prop.last_edited_time : null;
 		case "multiSelect":
 			return prop.type === "multi_select"
-				? prop.multi_select.map((s) => s.name)
+				? prop.multi_select.map((s: SelectItem): string => s.name)
 				: [];
 		case "select":
 			return prop.type === "select" ? (prop.select?.name ?? null) : null;
@@ -201,52 +238,62 @@ function parseField(
 		case "people":
 			return prop.type === "people"
 				? prop.people.map(
-						(u) => ("name" in u ? (u.name ?? null) : null) ?? u.id,
+						(u: PeopleItem): string =>
+							("name" in u ? (u.name ?? null) : null) ?? u.id,
 					)
 				: [];
 		case "files":
 			return prop.type === "files"
-				? prop.files.map((f) => ({
-						name: f.name,
-						url: f.type === "external" ? f.external.url : f.file.url,
-						type: f.type,
-					}))
+				? prop.files.map(
+						(f: FileItem): NotionFileValue => ({
+							name: f.name,
+							url: f.type === "external" ? f.external.url : f.file.url,
+							type: f.type,
+						}),
+					)
 				: [];
 		case "relation":
 			return prop.type === "relation"
-				? prop.relation.map((r) => ({ id: r.id }))
+				? prop.relation.map(
+						(r: RelationItem): NotionRelationValue => ({ id: r.id }),
+					)
 				: [];
 		case "formula": {
 			if (prop.type !== "formula") return null;
-			const f = prop.formula;
+			const f: FormulaResult = prop.formula;
 			if (f.type === "number") return f.number;
 			if (f.type === "string") return f.string;
 			if (f.type === "boolean") return f.boolean;
 			return null;
 		}
 		case "rollup":
-			return prop.type === "rollup" ? (prop.rollup as unknown) : null;
+			return prop.type === "rollup"
+				? (prop.rollup satisfies RollupResult)
+				: null;
 		case "unique_id": {
 			if (prop.type !== "unique_id") return null;
-			const uid = prop.unique_id;
+			const uid: UniqueIdResult = prop.unique_id;
 			if (uid.number === null) return null;
-			return { number: uid.number, prefix: uid.prefix ?? null };
+			return {
+				number: uid.number,
+				prefix: uid.prefix ?? null,
+			} satisfies NotionUniqueIdValue;
 		}
 		case "created_by": {
 			if (prop.type !== "created_by") return null;
-			const u = prop.created_by;
+			const u: CreatedByUser = prop.created_by;
 			return {
 				id: u.id,
 				name: "name" in u ? (u.name ?? undefined) : undefined,
-			};
+			} satisfies NotionPersonValue;
 		}
 		case "last_edited_by": {
 			if (prop.type !== "last_edited_by") return null;
-			const u = prop.last_edited_by;
+			const u: LastEditedByUser = prop.last_edited_by;
 			return {
 				id: u.id,
 				name: "name" in u ? (u.name ?? undefined) : undefined,
-			};
+			} satisfies NotionPersonValue;
 		}
 	}
 }

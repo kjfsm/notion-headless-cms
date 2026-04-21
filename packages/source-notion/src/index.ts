@@ -12,8 +12,13 @@ export type {
 	NotionFormulaValue,
 	NotionPersonValue,
 	NotionRelationValue,
+	NotionRollupValue,
 	NotionSchema,
 	NotionUniqueIdValue,
 } from "./schema";
 export { defineMapping, defineSchema } from "./schema";
-export type { NotionPage, NotionRichTextItem } from "./types";
+export type {
+	NotionPage,
+	NotionPropertyValue,
+	NotionRichTextItem,
+} from "./types";
