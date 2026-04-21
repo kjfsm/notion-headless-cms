@@ -1,6 +1,6 @@
 {
 	"name": "@notion-headless-cms/cache-r2",
-	"version": "0.1.1",
+	"version": "0.1.2",
 	"description": "Cloudflare R2 StorageAdapter implementation for notion-headless-cms cache layer",
 	"keywords": [
 		"notion",
