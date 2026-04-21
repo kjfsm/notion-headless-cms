@@ -5,6 +5,7 @@ type BuiltInCMSErrorCode =
 	| "source/fetch_item_failed"
 	| "source/load_markdown_failed"
 	| "cache/io_failed"
+	| "cache/image_fetch_failed"
 	| "renderer/failed";
 
 /**

@@ -120,11 +120,11 @@ Biome の設定に従う（biome.json 参照）。
 - まずキャッシュを返し、TTL 切れなら裏で非同期更新
 - `CreateCMSOptions.cache.ttlMs` が有効期間
 - `cache.document` / `cache.image` 未設定時は `noopDocumentCache` / `noopImageCache` が使われる（キャッシュなし）
-- `cms.cache.read.list()` / `cms.cache.read.get(slug)` が SWR アクセサ
+- `cms.cache.getList()` / `cms.cache.get(slug)` が SWR アクセサ
 
 ### Notion 更新検知
 - `last_edited_time` でキャッシュと比較し、差分があれば HTML 再生成
-- `cms.cache.manage.checkItem(slug, lastEdited)` / `cms.cache.manage.checkList(version)` が差分 API
+- `cms.cache.checkItem(slug, lastEdited)` / `cms.cache.checkList(version)` が差分 API
 
 ### 画像処理
 - Notion 画像 URL は期限付きのため、fetch → SHA256 ハッシュキーでストレージに永続保存
@@ -133,7 +133,7 @@ Biome の設定に従う（biome.json 参照）。
 
 ### エラー体系
 - すべての内部エラーは `CMSError` に統一（コード: `namespace/kind` 形式）
-- 組み込みコード: `core/config_invalid` / `core/schema_invalid` / `source/fetch_items_failed` / `source/fetch_item_failed` / `source/load_markdown_failed` / `cache/io_failed` / `renderer/failed`
+- 組み込みコード: `core/config_invalid` / `core/schema_invalid` / `source/fetch_items_failed` / `source/fetch_item_failed` / `source/load_markdown_failed` / `cache/io_failed` / `cache/image_fetch_failed` / `renderer/failed`
 - サードパーティアダプタは任意の文字列コードを使える（`CMSErrorCode = BuiltInCMSErrorCode | (string & {})`）
 - 名前空間判定は `isCMSErrorInNamespace(err, "source/")` を使う
 

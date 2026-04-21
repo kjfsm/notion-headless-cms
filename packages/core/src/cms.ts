@@ -48,23 +48,26 @@ function hasImageCacheConfigured(cache: CacheConfig | undefined): boolean {
 	return !!cache.image;
 }
 
-/** キャッシュ読み取りアクセサ（SWR）。 */
-interface CacheReadAccessor<T extends BaseContentItem> {
-	list(): Promise<{ items: T[]; isStale: boolean; cachedAt: number }>;
+/** キャッシュ系の公開名前空間。SWR 読み取りとキャッシュ管理を統合する。 */
+export interface CacheAccessor<T extends BaseContentItem> {
+	/** キャッシュ優先でコンテンツ一覧を返す（SWR）。 */
+	getList(): Promise<{ items: T[]; isStale: boolean; cachedAt: number }>;
+	/** キャッシュ優先で単一コンテンツを返す（SWR）。HTML 付きの CachedItem を返す。 */
 	get(slug: string): Promise<CachedItem<T> | null>;
-}
-
-/** キャッシュ管理オペレーション。 */
-interface CacheManageAccessor<T extends BaseContentItem> {
+	/** 全コンテンツを事前レンダリングしてキャッシュに保存する。 */
 	prefetchAll(opts?: {
 		concurrency?: number;
 		onProgress?: (done: number, total: number) => void;
 	}): Promise<{ ok: number; failed: number }>;
+	/** 指定スコープのキャッシュを無効化する。 */
 	revalidate(scope?: "all" | { slug: string }): Promise<void>;
+	/** Webhook ペイロードを元にキャッシュを同期する。 */
 	sync(payload?: { slug?: string }): Promise<{ updated: string[] }>;
+	/** リスト全体の変更を検知する。version はリスト取得時の buildListVersion の値。 */
 	checkList(
 		version: string,
 	): Promise<{ changed: false } | { changed: true; items: T[] }>;
+	/** 単一アイテムの変更を検知し、変更があれば再レンダリングしてキャッシュを更新する。 */
 	checkItem(
 		slug: string,
 		lastEdited: string,
@@ -72,12 +75,6 @@ interface CacheManageAccessor<T extends BaseContentItem> {
 		| { changed: false }
 		| { changed: true; html: string; item: T; notionUpdatedAt: string }
 	>;
-}
-
-/** キャッシュ系の公開名前空間。`read` と `manage` を分離する。 */
-interface CacheAccessor<T extends BaseContentItem> {
-	read: CacheReadAccessor<T>;
-	manage: CacheManageAccessor<T>;
 }
 
 /**
@@ -88,6 +85,7 @@ interface CacheAccessor<T extends BaseContentItem> {
  *   source: notionAdapter({ token: '...', dataSourceId: '...' }),
  * });
  * const items = await cms.list();
+ * const entry = await cms.cache.get('my-post');
  */
 export class CMS<T extends BaseContentItem = BaseContentItem> {
 	private readonly source: DataSourceAdapter<T>;
@@ -104,6 +102,7 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 	private readonly hooks: CMSHooks<T>;
 	private readonly logger: Logger | undefined;
 	private readonly retryConfig: RetryConfig;
+	private readonly maxConcurrent: number;
 
 	readonly cache: CacheAccessor<T>;
 
@@ -124,27 +123,24 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		this.imageProxyBase =
 			opts.content?.imageProxyBase ?? DEFAULT_IMAGE_PROXY_BASE;
 		this.contentConfig = opts.content;
-		this.rendererFn = opts.renderer ?? opts.content?.render;
+		this.rendererFn = opts.renderer;
 		this.waitUntil = opts.waitUntil;
 		this.logger = mergeLoggers(opts.plugins ?? [], opts.logger);
 		this.hooks = mergeHooks(opts.plugins ?? [], opts.hooks, this.logger);
+		this.maxConcurrent = opts.rateLimiter?.maxConcurrent ?? 3;
 		this.retryConfig = {
 			...DEFAULT_RETRY_CONFIG,
 			...(opts.rateLimiter ?? {}),
 		};
 
 		this.cache = {
-			read: {
-				list: this.cachedList.bind(this),
-				get: this.cachedGet.bind(this),
-			},
-			manage: {
-				prefetchAll: this.prefetchAll.bind(this),
-				revalidate: this.revalidate.bind(this),
-				sync: this.syncFromWebhook.bind(this),
-				checkList: this.checkListUpdate.bind(this),
-				checkItem: this.checkItemUpdate.bind(this),
-			},
+			getList: this.cachedList.bind(this),
+			get: this.cachedGet.bind(this),
+			prefetchAll: this.prefetchAll.bind(this),
+			revalidate: this.revalidate.bind(this),
+			sync: this.syncFromWebhook.bind(this),
+			checkList: this.checkListUpdate.bind(this),
+			checkItem: this.checkItemUpdate.bind(this),
 		};
 	}
 
@@ -187,13 +183,25 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		return item;
 	}
 
+	/** 複数スラッグをまとめてソースから直接取得する。accessibleStatuses フィルタを適用する。 */
+	async findMany(slugs: string[]): Promise<Map<string, T>> {
+		const results = new Map<string, T>();
+		await Promise.all(
+			slugs.map(async (slug) => {
+				const item = await this.find(slug);
+				if (item) results.set(slug, item);
+			}),
+		);
+		return results;
+	}
+
 	/** アイテムが publishedStatuses に含まれるステータスかどうかを返す。 */
 	isPublished(item: T): boolean {
 		if (this.publishedStatuses.length === 0) return true;
 		return !!item.status && this.publishedStatuses.includes(item.status);
 	}
 
-	/** コンテンツを Markdown → HTML にレンダリングし、CachedItem として返す。 */
+	/** コンテンツを Markdown → HTML にレンダリングし、CachedItem として返す。キャッシュには保存しない。 */
 	async render(item: T): Promise<CachedItem<T>> {
 		return this.buildCachedItem(item);
 	}
@@ -203,13 +211,82 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		return new QueryBuilder(this.source, this.publishedStatuses);
 	}
 
-	/** 全コンテンツを事前レンダリングしてキャッシュに保存する。 */
-	async prefetchAll(opts?: {
+	/** 静的生成用のスラッグ一覧を返す。 */
+	async getStaticSlugs(): Promise<string[]> {
+		const items = await this.list();
+		return items.map((item) => item.slug);
+	}
+
+	// ── 画像配信 ──────────────────────────────────────────────────────────
+
+	/** ハッシュキーでキャッシュ画像を取得する。 */
+	getCachedImage(hash: string): Promise<StorageBinary | null> {
+		return this.imgCache.get(hash);
+	}
+
+	/** ハッシュキーでキャッシュ画像を Response として返す。 */
+	async createCachedImageResponse(hash: string): Promise<Response | null> {
+		const object = await this.imgCache.get(hash);
+		if (!object) return null;
+		const headers = new Headers();
+		if (object.contentType) headers.set("content-type", object.contentType);
+		headers.set("cache-control", "public, max-age=31536000, immutable");
+		return new Response(object.data, { headers });
+	}
+
+	// ── キャッシュ優先取得（Stale-While-Revalidate） ─────────────────────
+
+	private async cachedList(): Promise<{
+		items: T[];
+		isStale: boolean;
+		cachedAt: number;
+	}> {
+		const cached = await this.docCache.getList();
+		if (cached && !isStale(cached.cachedAt, this.ttlMs)) {
+			this.hooks.onListCacheHit?.(cached.items, cached.cachedAt);
+			return { items: cached.items, isStale: false, cachedAt: cached.cachedAt };
+		}
+
+		this.hooks.onListCacheMiss?.();
+		const items = await this.list();
+		const cachedAt = Date.now();
+		const save = this.docCache.setList({ items, cachedAt });
+		if (this.waitUntil) {
+			this.waitUntil(save);
+		} else {
+			await save;
+		}
+		return { items, isStale: !!cached, cachedAt };
+	}
+
+	private async cachedGet(slug: string): Promise<CachedItem<T> | null> {
+		const cached = await this.docCache.getItem(slug);
+		if (cached && !isStale(cached.cachedAt, this.ttlMs)) {
+			this.hooks.onCacheHit?.(slug, cached);
+			return cached;
+		}
+
+		this.hooks.onCacheMiss?.(slug);
+		const item = await this.find(slug);
+		if (!item) return null;
+		const entry = await this.buildCachedItem(item);
+		const save = this.docCache.setItem(slug, entry);
+		if (this.waitUntil) {
+			this.waitUntil(save);
+		} else {
+			await save;
+		}
+		return entry;
+	}
+
+	// ── キャッシュ管理 ────────────────────────────────────────────────────
+
+	private async prefetchAll(opts?: {
 		concurrency?: number;
 		onProgress?: (done: number, total: number) => void;
 	}): Promise<{ ok: number; failed: number }> {
 		const items = await this.list();
-		const concurrency = opts?.concurrency ?? 3;
+		const concurrency = opts?.concurrency ?? this.maxConcurrent;
 		let ok = 0;
 		let failed = 0;
 
@@ -241,20 +318,12 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		return { ok, failed };
 	}
 
-	/** 静的生成用のスラッグ一覧を返す。 */
-	async getStaticSlugs(): Promise<string[]> {
-		const items = await this.list();
-		return items.map((item) => item.slug);
-	}
-
-	/** 指定スコープのキャッシュを無効化する。 */
-	async revalidate(scope?: "all" | { slug: string }): Promise<void> {
+	private async revalidate(scope?: "all" | { slug: string }): Promise<void> {
 		if (!this.docCache.invalidate) return;
 		await this.docCache.invalidate(scope ?? "all");
 	}
 
-	/** Webhook ペイロードを元にキャッシュを同期する。 */
-	async syncFromWebhook(payload?: {
+	private async syncFromWebhook(payload?: {
 		slug?: string;
 	}): Promise<{ updated: string[] }> {
 		const updated: string[] = [];
@@ -277,54 +346,7 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		return { updated };
 	}
 
-	// ── キャッシュ優先取得（Stale-While-Revalidate） ──────────────────────
-
-	/** キャッシュ優先でコンテンツ一覧を返す（SWR）。 */
-	private async cachedList(): Promise<{
-		items: T[];
-		isStale: boolean;
-		cachedAt: number;
-	}> {
-		const cached = await this.docCache.getList();
-		if (cached && !isStale(cached.cachedAt, this.ttlMs)) {
-			this.hooks.onListCacheHit?.(cached.items, cached.cachedAt);
-			return { items: cached.items, isStale: false, cachedAt: cached.cachedAt };
-		}
-
-		this.hooks.onListCacheMiss?.();
-		const items = await this.list();
-		const cachedAt = Date.now();
-		const save = this.docCache.setList({ items, cachedAt });
-		if (this.waitUntil) {
-			this.waitUntil(save);
-		} else {
-			await save;
-		}
-		return { items, isStale: !!cached, cachedAt };
-	}
-
-	/** キャッシュ優先で単一コンテンツを返す（SWR）。 */
-	private async cachedGet(slug: string): Promise<CachedItem<T> | null> {
-		const cached = await this.docCache.getItem(slug);
-		if (cached && !isStale(cached.cachedAt, this.ttlMs)) {
-			this.hooks.onCacheHit?.(slug, cached);
-			return cached;
-		}
-
-		this.hooks.onCacheMiss?.(slug);
-		const item = await this.find(slug);
-		if (!item) return null;
-		const entry = await this.buildCachedItem(item);
-		const save = this.docCache.setItem(slug, entry);
-		if (this.waitUntil) {
-			this.waitUntil(save);
-		} else {
-			await save;
-		}
-		return entry;
-	}
-
-	async checkListUpdate(
+	private async checkListUpdate(
 		version: string,
 	): Promise<{ changed: false } | { changed: true; items: T[] }> {
 		const items = await this.list();
@@ -334,7 +356,7 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		return { changed: true, items };
 	}
 
-	async checkItemUpdate(
+	private async checkItemUpdate(
 		slug: string,
 		lastEdited: string,
 	): Promise<
@@ -355,23 +377,6 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 			item: entry.item,
 			notionUpdatedAt: entry.notionUpdatedAt,
 		};
-	}
-
-	// ── 画像配信 ───────────────────────────────────────────────────────────
-
-	/** ハッシュキーでキャッシュ画像を取得する。 */
-	getCachedImage(hash: string): Promise<StorageBinary | null> {
-		return this.imgCache.get(hash);
-	}
-
-	/** ハッシュキーでキャッシュ画像を Response として返す。 */
-	async createCachedImageResponse(hash: string): Promise<Response | null> {
-		const object = await this.imgCache.get(hash);
-		if (!object) return null;
-		const headers = new Headers();
-		if (object.contentType) headers.set("content-type", object.contentType);
-		headers.set("cache-control", "public, max-age=31536000, immutable");
-		return new Response(object.data, { headers });
 	}
 
 	// ── プライベートヘルパー ────────────────────────────────────────────────

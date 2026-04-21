@@ -132,6 +132,7 @@ export class QueryBuilder<T extends BaseContentItem> {
 		return result.items[0] ?? null;
 	}
 
+	/** 前後アイテムを返す。sortBy() で指定したソート順を適用する。 */
 	async adjacent(slug: string): Promise<{ prev: T | null; next: T | null }> {
 		const statuses =
 			this._statuses.length > 0
@@ -139,12 +140,29 @@ export class QueryBuilder<T extends BaseContentItem> {
 				: this.defaultStatuses.length > 0
 					? this.defaultStatuses
 					: undefined;
-		const items = await this.source.list({ publishedStatuses: statuses });
+		let items = await this.source.list({ publishedStatuses: statuses });
+
+		if (this._sortField) {
+			const field = this._sortField;
+			const dir = this._sortDir;
+			items = [...items].sort((a, b) => {
+				const av = a[field] as string | number;
+				const bv = b[field] as string | number;
+				const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+				return dir === "asc" ? cmp : -cmp;
+			});
+		}
+
 		const idx = items.findIndex((item) => item.slug === slug);
 		if (idx === -1) return { prev: null, next: null };
 		return {
 			prev: idx > 0 ? items[idx - 1] : null,
 			next: idx < items.length - 1 ? items[idx + 1] : null,
 		};
+	}
+
+	/** 最初の 1 件を返す。`.paginate({ page: 1, perPage: 1 }).executeOne()` の短縮形。 */
+	first(): Promise<T | null> {
+		return this.paginate({ page: 1, perPage: 1 }).executeOne();
 	}
 }

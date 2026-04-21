@@ -63,7 +63,8 @@ describe("createNodeCMS", () => {
 	it("cache: { document: 'memory' } でインメモリキャッシュ付き CMS を作成できる", () => {
 		const cms = createNodeCMS({ cache: { document: "memory", ttlMs: 60_000 } });
 		expect(cms).toBeDefined();
-		expect(typeof cms.cache.read.list).toBe("function");
+		expect(typeof cms.cache.getList).toBe("function");
+		expect(typeof cms.cache.get).toBe("function");
 	});
 
 	it("cache: 'disabled' でキャッシュ無効で動作する", () => {

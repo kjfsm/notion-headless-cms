@@ -25,7 +25,7 @@ const cms = createNodeCMS({
 });
 
 // 全記事を事前レンダリング
-const { ok, failed } = await cms.cache.manage.prefetchAll({
+const { ok, failed } = await cms.cache.prefetchAll({
   concurrency: 5,
   onProgress: (done, total) => {
     console.log(`${done}/${total}`);

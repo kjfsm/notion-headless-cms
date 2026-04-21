@@ -65,8 +65,8 @@ describe("createCloudflareCMS", () => {
 		const env = { ...baseEnv, CACHE_BUCKET: makeMockBucket() };
 		const cms = createCloudflareCMS({ env });
 		expect(cms).toBeDefined();
-		expect(typeof cms.cache.read.list).toBe("function");
-		expect(typeof cms.cache.read.get).toBe("function");
+		expect(typeof cms.cache.getList).toBe("function");
+		expect(typeof cms.cache.get).toBe("function");
 	});
 
 	it("list() がソースのアイテムを返す", async () => {

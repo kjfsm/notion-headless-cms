@@ -5,8 +5,7 @@
 ## 目次
 
 - [コンテンツ取得（ソース直接）](#コンテンツ取得ソース直接)
-- [SWR 読み取り（`cms.cache.read`）](#swr-読み取りcmscacheread)
-- [キャッシュ管理（`cms.cache.manage`）](#キャッシュ管理cmscachemanage)
+- [キャッシュ API（`cms.cache`）](#キャッシュ-apicmscache)
 - [クエリビルダー](#クエリビルダー)
 - [画像配信](#画像配信)
 - [`createCMS()` オプション](#createcms-オプション)
@@ -20,17 +19,23 @@
 |---|---|---|
 | `list()` | `Promise<T[]>` | 公開済みコンテンツ一覧をソースから直接取得（`publishedStatuses` でフィルタ） |
 | `find(slug)` | `Promise<T \| null>` | スラッグでコンテンツを取得（`accessibleStatuses` でフィルタ） |
+| `findMany(slugs[])` | `Promise<Map<string, T>>` | 複数スラッグを並列取得。見つからないスラッグは Map に含まれない |
 | `render(item)` | `Promise<CachedItem<T>>` | アイテムを Markdown → HTML にレンダリング |
 | `isPublished(item)` | `boolean` | `publishedStatuses` に含まれるかどうかを返す |
 
-## SWR 読み取り（`cms.cache.read`）
+## キャッシュ API（`cms.cache`）
 
 Stale-While-Revalidate: キャッシュがあれば即返し、TTL 切れや未ヒットの場合はソースから取得して書き戻す。`createCMS({ waitUntil })` 指定時は書き戻しを非同期化する。
 
 | メソッド | 戻り値 | 説明 |
 |---|---|---|
-| `cache.read.list()` | `Promise<{ items: T[]; isStale: boolean; cachedAt: number }>` | キャッシュ優先で一覧を返す |
-| `cache.read.get(slug)` | `Promise<CachedItem<T> \| null>` | キャッシュ優先で単一アイテムを返す |
+| `cache.getList()` | `Promise<{ items: T[]; isStale: boolean; cachedAt: number }>` | キャッシュ優先で一覧を返す |
+| `cache.get(slug)` | `Promise<CachedItem<T> \| null>` | キャッシュ優先で単一アイテムを返す |
+| `cache.prefetchAll({ concurrency?, onProgress? })` | `Promise<{ ok: number; failed: number }>` | 全コンテンツを事前レンダリングしてキャッシュに保存 |
+| `cache.revalidate(scope?)` | `Promise<void>` | 指定スコープ（`"all"` または `{ slug }`）のキャッシュを無効化 |
+| `cache.sync({ slug? })` | `Promise<{ updated: string[] }>` | Webhook ペイロードを元にキャッシュを同期。`slug` 省略時は全件 |
+| `cache.checkList(version)` | `Promise<{ changed: false } \| { changed: true; items: T[] }>` | 一覧の更新有無を返す |
+| `cache.checkItem(slug, lastEdited)` | `Promise<{ changed: false } \| { changed: true; html: string; item: T; notionUpdatedAt: string }>` | 単一アイテムの更新有無を返す |
 
 `CachedItem<T>`:
 
@@ -43,17 +48,7 @@ interface CachedItem<T> {
 }
 ```
 
-## キャッシュ管理（`cms.cache.manage`）
-
-| メソッド | 戻り値 | 説明 |
-|---|---|---|
-| `cache.manage.prefetchAll({ concurrency?, onProgress? })` | `Promise<{ ok: number; failed: number }>` | 全コンテンツを事前レンダリングしてキャッシュに保存 |
-| `cache.manage.revalidate(scope?)` | `Promise<void>` | 指定スコープ（`"all"` または `{ slug }`）のキャッシュを無効化 |
-| `cache.manage.sync({ slug? })` | `Promise<{ updated: string[] }>` | Webhook ペイロードを元にキャッシュを同期。`slug` 省略時は全件 |
-| `cache.manage.checkList(version)` | `Promise<{ changed: false } \| { changed: true; items: T[] }>` | 一覧の更新有無を返す |
-| `cache.manage.checkItem(slug, lastEdited)` | `Promise<{ changed: false } \| { changed: true; html: string; item: T; notionUpdatedAt: string }>` | 単一アイテムの更新有無を返す |
-
-> `prefetchAll` の `concurrency` はデフォルト `3`。Notion API のレート制限を踏まえて設定する。
+> `prefetchAll` の `concurrency` デフォルトは `rateLimiter.maxConcurrent`（未指定時は `3`）。Notion API のレート制限を踏まえて設定する。
 
 ## クエリビルダー
 
@@ -68,7 +63,8 @@ interface CachedItem<T> {
 | `query().paginate({ page, perPage })` | ページネーション |
 | `query().execute()` | `{ items, total, page, perPage, hasNext, hasPrev }` を返す |
 | `query().executeOne()` | 最初の 1 件を返す |
-| `query().adjacent(slug)` | 前後のコンテンツを返す（`{ prev, next }`） |
+| `query().first()` | `.paginate({ page: 1, perPage: 1 }).executeOne()` の短縮形 |
+| `query().adjacent(slug)` | 前後のコンテンツを返す（`{ prev, next }`）。`sortBy()` のソート順を適用 |
 
 `DataSourceAdapter.query` を実装しているソースでは、`where()` 未使用時に限り Notion API へクエリを委譲する（push-down）。
 
@@ -88,7 +84,7 @@ createCMS<T>({
   renderer?,      // RendererFn — 未指定時は @notion-headless-cms/renderer を動的 import
   cache?,         // CacheConfig<T>
   schema?,        // SchemaConfig<T> — publishedStatuses / accessibleStatuses など
-  content?,       // ContentConfig — imageProxyBase / remarkPlugins / rehypePlugins / render
+  content?,       // ContentConfig — imageProxyBase / remarkPlugins / rehypePlugins
   waitUntil?,     // (p: Promise<unknown>) => void — Cloudflare Workers 用
   hooks?,         // CMSHooks<T>
   plugins?,       // CMSPlugin<T>[]
@@ -120,6 +116,8 @@ type CacheConfig<T> =
 | `retryOn` | `number[]` | `[429, 502, 503]` |
 | `maxRetries` | `number` | `4` |
 | `baseDelayMs` | `number` | `1000` |
+
+`maxConcurrent` は `cache.prefetchAll()` の `concurrency` デフォルト値にも反映される。
 
 ## ライフサイクルフック
 
@@ -178,7 +176,8 @@ try {
 | `source/fetch_items_failed` | `list()` の Notion 取得失敗 |
 | `source/fetch_item_failed` | `find()` の Notion 取得失敗 |
 | `source/load_markdown_failed` | ブロック → Markdown 変換失敗 |
-| `cache/io_failed` | キャッシュ R/W 失敗・画像 fetch 失敗 |
+| `cache/io_failed` | キャッシュ R/W 失敗・ネットワークレベルの画像 fetch 失敗 |
+| `cache/image_fetch_failed` | 画像 fetch の HTTP エラー（4xx / 5xx） |
 | `renderer/failed` | Markdown → HTML レンダリング失敗 |
 
 サードパーティアダプタは任意の `namespace/kind` 文字列をコードに使える（`CMSErrorCode = BuiltInCMSErrorCode | (string & {})`）。
@@ -189,12 +188,14 @@ try {
 
 | サブパス | 内容 |
 |---|---|
-| `@notion-headless-cms/core` | 全エクスポート（`createCMS` / `CMS` / フック関連など） |
+| `@notion-headless-cms/core` | 全エクスポート（`createCMS` / `CMS` / `CacheAccessor` / フック関連など） |
 | `@notion-headless-cms/core/errors` | `CMSError` / `isCMSError` / `isCMSErrorInNamespace` / `CMSErrorCode` |
 | `@notion-headless-cms/core/hooks` | `mergeHooks` / `mergeLoggers` |
 | `@notion-headless-cms/core/cache/memory` | `memoryDocumentCache` / `memoryImageCache` / 各 `*Options` |
+| `@notion-headless-cms/core/cache/noop` | `noopDocumentCache` / `noopImageCache` |
 
 ```ts
 import { CMSError } from "@notion-headless-cms/core/errors";
 import { memoryDocumentCache } from "@notion-headless-cms/core/cache/memory";
+import { noopDocumentCache } from "@notion-headless-cms/core/cache/noop";
 ```

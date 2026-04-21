@@ -189,7 +189,22 @@ describe("CMS", () => {
 		});
 	});
 
-	describe("cache.read.list() - SWR", () => {
+	describe("findMany()", () => {
+		it("複数スラッグをまとめて取得する", async () => {
+			const map = await cms.findMany(["post-a", "post-b"]);
+			expect(map.size).toBe(2);
+			expect(map.get("post-a")?.slug).toBe("post-a");
+			expect(map.get("post-b")?.slug).toBe("post-b");
+		});
+
+		it("存在しないスラッグは結果に含まれない", async () => {
+			const map = await cms.findMany(["post-a", "nonexistent"]);
+			expect(map.size).toBe(1);
+			expect(map.has("nonexistent")).toBe(false);
+		});
+	});
+
+	describe("cache.getList() - SWR", () => {
 		it("キャッシュが新鮮なら source.list() を呼ばない", async () => {
 			const docCache = memoryCache();
 			const swrCms = createCMS({
@@ -206,7 +221,7 @@ describe("CMS", () => {
 			});
 			vi.clearAllMocks();
 
-			const result = await swrCms.cache.read.list();
+			const result = await swrCms.cache.getList();
 			expect(result.items[0].slug).toBe("cached");
 			expect(source.list).not.toHaveBeenCalled();
 		});
@@ -222,13 +237,13 @@ describe("CMS", () => {
 			});
 
 			await docCache.setList({ items: [makeItem("stale")], cachedAt: 0 });
-			const result = await swrCms.cache.read.list();
+			const result = await swrCms.cache.getList();
 			expect(source.list).toHaveBeenCalled();
 			expect(result.items).not.toEqual([{ slug: "stale" }]);
 		});
 	});
 
-	describe("cache.read.get() - SWR", () => {
+	describe("cache.get() - SWR", () => {
 		it("キャッシュが新鮮なら source.findBySlug() を呼ばない", async () => {
 			const docCache = memoryCache();
 			const swrCms = createCMS({
@@ -247,7 +262,7 @@ describe("CMS", () => {
 			await docCache.setItem("post-a", cachedEntry);
 			vi.clearAllMocks();
 
-			const result = await swrCms.cache.read.get("post-a");
+			const result = await swrCms.cache.get("post-a");
 			expect(result?.html).toBe("<p>cached</p>");
 			expect(source.findBySlug).not.toHaveBeenCalled();
 		});
@@ -264,13 +279,13 @@ describe("CMS", () => {
 			});
 
 			await docCache.setList({ items: [], cachedAt: 0 });
-			await swrCms.cache.read.list();
+			await swrCms.cache.getList();
 
 			expect(waitUntil).toHaveBeenCalledWith(expect.any(Promise));
 		});
 	});
 
-	describe("revalidate()", () => {
+	describe("cache.revalidate()", () => {
 		it("invalidate を持つキャッシュを呼び出す", async () => {
 			const docCache = memoryCache();
 			const invalidateSpy = vi.spyOn(docCache, "invalidate");
@@ -279,7 +294,7 @@ describe("CMS", () => {
 				cache: { document: docCache },
 			});
 
-			await swrCms.revalidate("all");
+			await swrCms.cache.revalidate("all");
 			expect(invalidateSpy).toHaveBeenCalledWith("all");
 		});
 	});

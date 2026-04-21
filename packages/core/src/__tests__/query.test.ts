@@ -141,5 +141,31 @@ describe("QueryBuilder", () => {
 			expect(adj.prev).toBeNull();
 			expect(adj.next).toBeNull();
 		});
+
+		it("sortBy() のソート順を adjacent() に適用する", async () => {
+			const source = makeMockSource();
+			// publishedAt 昇順: c(2024-01-01) → b(2024-02-01) → a(2024-03-01)
+			const adj = await new QueryBuilder(source, [])
+				.sortBy("publishedAt", "asc")
+				.adjacent("b");
+			expect(adj.prev?.slug).toBe("c");
+			expect(adj.next?.slug).toBe("a");
+		});
+	});
+
+	describe("first()", () => {
+		it("paginate(page:1, perPage:1) と同じ結果を返す", async () => {
+			const source = makeMockSource();
+			const item = await new QueryBuilder(source, ["公開"])
+				.sortBy("publishedAt", "desc")
+				.first();
+			expect(item?.slug).toBe("a");
+		});
+
+		it("0件の場合は null を返す", async () => {
+			const source = makeMockSource([]);
+			const item = await new QueryBuilder(source, []).first();
+			expect(item).toBeNull();
+		});
 	});
 });

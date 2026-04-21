@@ -37,7 +37,7 @@ async function fetchAndCacheImage(
 		});
 		if (!response.ok) {
 			throw new CMSError({
-				code: "cache/io_failed",
+				code: "cache/image_fetch_failed",
 				message: `Failed to fetch Notion image: HTTP ${response.status}`,
 				context: {
 					operation: "fetchAndCacheImage",

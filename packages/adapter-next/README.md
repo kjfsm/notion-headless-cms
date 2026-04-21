@@ -59,7 +59,7 @@ export const POST = createRevalidateRouteHandler(cms, {
 });
 ```
 
-Notion 側の変更通知などから `POST /api/revalidate` を呼ぶ際に、`Authorization: Bearer <REVALIDATE_SECRET>` ヘッダが必要。認可に成功すると `cms.cache.manage.sync(payload)` が呼ばれてキャッシュが再生成される。
+Notion 側の変更通知などから `POST /api/revalidate` を呼ぶ際に、`Authorization: Bearer <REVALIDATE_SECRET>` ヘッダが必要。認可に成功すると `cms.cache.sync(payload)` が呼ばれてキャッシュが再生成される。
 
 リクエストボディの例:
 

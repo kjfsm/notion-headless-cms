@@ -38,7 +38,7 @@ export const cms = createCMS({
 import { cms } from "@/lib/cms";
 
 export default async function PostsPage() {
-  const { items } = await cms.cache.read.list();
+  const { items } = await cms.cache.getList();
   return (
     <ul>
       {items.map((post) => (
@@ -61,7 +61,7 @@ export async function generateStaticParams() {
 }
 
 export default async function PostPage({ params }: { params: { slug: string } }) {
-  const cached = await cms.cache.read.get(params.slug);
+  const cached = await cms.cache.get(params.slug);
   if (!cached) return <div>Not Found</div>;
   return <div dangerouslySetInnerHTML={{ __html: cached.html }} />;
 }
@@ -90,4 +90,4 @@ export const POST = createRevalidateRouteHandler(cms, {
 ```
 
 Notion に変更があった際に `POST /api/revalidate` を `Authorization: Bearer <secret>` で叩くと、
-`cms.cache.manage.sync()` が呼ばれてキャッシュが再生成される。
+`cms.cache.sync()` が呼ばれてキャッシュが再生成される。
