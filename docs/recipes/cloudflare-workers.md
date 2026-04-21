@@ -6,6 +6,8 @@
 pnpm add @notion-headless-cms/adapter-cloudflare
 ```
 
+`adapter-cloudflare` は `core` / `source-notion` / `renderer` / `cache-r2` を推移依存として含む。
+
 ## wrangler.toml の設定
 
 ```toml
@@ -24,20 +26,18 @@ wrangler secret put NOTION_DATA_SOURCE_ID
 ## Workers のコード
 
 ```ts
-import { createCloudflareCMS } from "@notion-headless-cms/adapter-cloudflare";
-
-export interface Env {
-  NOTION_TOKEN: string;
-  NOTION_DATA_SOURCE_ID: string;
-  CACHE_BUCKET?: R2Bucket;
-}
+import {
+  createCloudflareCMS,
+  type CloudflareCMSEnv,
+} from "@notion-headless-cms/adapter-cloudflare";
 
 export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+  async fetch(request: Request, env: CloudflareCMSEnv, ctx: ExecutionContext) {
     const cms = createCloudflareCMS({
       env,
       schema: { publishedStatuses: ["公開"] },
-      cache: { ttlMs: 5 * 60_000 }, // 5分TTL
+      cache: { ttlMs: 5 * 60_000 }, // 5分 TTL
+      waitUntil: ctx.waitUntil.bind(ctx), // SWR の裏更新を非同期化
     });
 
     const url = new URL(request.url);
@@ -49,14 +49,38 @@ export default {
       return response ?? new Response("Not Found", { status: 404 });
     }
 
-    // SWR でコンテンツ一覧
-    const { items } = await cms.getList();
-    return Response.json(items);
+    // 一覧（SWR）
+    if (url.pathname === "/posts") {
+      const { items } = await cms.cached.list();
+      return Response.json(items);
+    }
+
+    // 単一アイテム（SWR）
+    const slug = url.pathname.replace("/posts/", "");
+    const cached = await cms.cached.get(slug);
+    if (!cached) return new Response("Not Found", { status: 404 });
+
+    return new Response(cached.html, {
+      headers: { "Content-Type": "text/html; charset=utf-8" },
+    });
   },
 };
 ```
 
 ## キャッシュなしで動かす（ローカル開発）
 
-`CACHE_BUCKET` を設定しないと、キャッシュなしで動作します。
-`wrangler dev` での開発時に便利です。
+`CACHE_BUCKET` を設定しないと、自動的にキャッシュなし（noop）で動作する。
+`wrangler dev` での開発時に便利。
+
+## R2BucketLike と型依存
+
+`createCloudflareCMS` の `env.CACHE_BUCKET` は構造型 `R2BucketLike` を受け取るため、`@cloudflare/workers-types` は `peerDependencies` として扱われる。テストではモックに差し替え可能。
+
+```ts
+import type { R2BucketLike } from "@notion-headless-cms/cache-r2";
+
+const mockBucket: R2BucketLike = {
+  async get() { return null; },
+  async put() { return null; },
+};
+```

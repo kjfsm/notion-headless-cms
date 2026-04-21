@@ -1,7 +1,7 @@
 # @notion-headless-cms/source-notion
 
-Notion を `@notion-headless-cms/core` のデータソースとして利用するためのアダプタ。  
-Notion データベースからページを取得し、`DataSourceAdapter` インターフェースを実装する。
+Notion を `@notion-headless-cms/core` のデータソースとして利用するためのアダプタ。
+`DataSourceAdapter` インターフェースを実装し、Notion DB からページ取得・Markdown 変換を行う。
 
 ## インストール
 
@@ -11,106 +11,102 @@ npm install @notion-headless-cms/source-notion @notion-headless-cms/core
 
 ## 使い方
 
-### 基本（`notionAdapter`）
+### 最小構成（`notionAdapter`）
+
+`Slug` / `Status` / `CreatedAt` というデフォルトのプロパティ名に従う場合は、`notionAdapter` をトークンと data source ID だけで呼び出せる。
 
 ```typescript
+import { createCMS } from "@notion-headless-cms/core";
 import { notionAdapter } from "@notion-headless-cms/source-notion";
-import { createCMS } from "@notion-headless-cms/core";
 
 const cms = createCMS({
   source: notionAdapter({
     token: process.env.NOTION_TOKEN!,
     dataSourceId: process.env.NOTION_DATA_SOURCE_ID!,
   }),
-  schema: {
-    publishedStatuses: ["公開"],
+  schema: { publishedStatuses: ["公開"] },
+});
+
+const items = await cms.list();
+```
+
+プロパティ名を変更したい場合は `properties` を渡す。
+
+```typescript
+notionAdapter({
+  token: process.env.NOTION_TOKEN!,
+  dataSourceId: process.env.NOTION_DATA_SOURCE_ID!,
+  properties: { slug: "Slug", status: "Status", date: "PublishedAt" },
+});
+```
+
+---
+
+### 型安全なスキーマ定義（`defineSchema` + Zod）
+
+Zod スキーマと Notion プロパティのマッピングを同時に宣言することで、`cms.list()` / `cms.find()` の返す型を推論させられる。
+
+```typescript
+import { createCMS } from "@notion-headless-cms/core";
+import {
+  defineMapping,
+  defineSchema,
+  notionAdapter,
+} from "@notion-headless-cms/source-notion";
+import { z } from "zod";
+
+const PostSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  updatedAt: z.string(),
+  status: z.enum(["公開", "下書き"]),
+  publishedAt: z.string(),
+  title: z.string(),
+  tags: z.array(z.string()),
+  featured: z.boolean(),
+});
+type Post = z.infer<typeof PostSchema>;
+
+const mapping = defineMapping<Post>({
+  slug:        { type: "richText", notion: "Slug" },
+  status:      {
+    type: "select",
+    notion: "Status",
+    published: ["公開"],
+    accessible: ["公開", "下書き"],
   },
+  publishedAt: { type: "date",        notion: "PublishedAt" },
+  title:       { type: "title",       notion: "Title" },
+  tags:        { type: "multiSelect", notion: "Tags" },
+  featured:    { type: "checkbox",    notion: "Featured" },
 });
 
-const items = await cms.list();
-```
+const schema = defineSchema(PostSchema, mapping);
 
----
-
-### 型安全なスキーマ定義（`defineSchema` + `col`）
-
-`col` ヘルパーと `defineSchema` 関数を使うと、Notion DB のカラム定義から TypeScript 型を自動推論できる。
-
-```typescript
-import { col, defineSchema, notionAdapter } from "@notion-headless-cms/source-notion";
-import { createCMS } from "@notion-headless-cms/core";
-
-const blogSchema = defineSchema({
-  // システムフィールド（slug / status / publishedAt は必須）
-  slug:        col.richText("Slug"),
-  publishedAt: col.date("公開日", { default: (page) => page.created_time }),
-  status: col.select("ステータス", {
-    values:     { "公開済み": "published", "下書き": "draft" },
-    published:  ["published"],          // list() でフィルタされる値
-    accessible: ["published", "draft"], // findBySlug() でアクセス可能な値
-  }),
-
-  // カスタムフィールド
-  title:     col.title("タイトル", { default: "無題" }),
-  author:    col.richText("著者"),
-  category:  col.select("カテゴリ", {
-    values: { "技術": "tech", "デザイン": "design" },
-  }),
-  tags:      col.multiSelect("タグ"),
-  featured:  col.checkbox("特集"),
-  viewCount: col.number("閲覧数", { default: 0 }),
-});
-
-const cms = createCMS({
-  source: notionAdapter({
+const cms = createCMS<Post>({
+  source: notionAdapter<Post>({
     token: process.env.NOTION_TOKEN!,
     dataSourceId: process.env.NOTION_DATA_SOURCE_ID!,
-    schema: blogSchema,
+    schema,
   }),
 });
 
 const items = await cms.list();
-items[0].title     // string     （default 指定 → null なし）
-items[0].author    // string | null （default 未指定 → null あり）
-items[0].category  // "tech" | "design" | null
-items[0].status    // "published" | "draft"
-items[0].featured  // boolean
-items[0].tags      // string[]
+items[0].title;    // string
+items[0].tags;     // string[]
+items[0].featured; // boolean
+items[0].status;   // "公開" | "下書き"
 ```
 
-#### 推論される型
-
-| カラム定義 | TypeScript 型 |
-|-----------|--------------|
-| `col.title(...)` | `string \| null` |
-| `col.title(..., { default: "無題" })` | `string` |
-| `col.richText(...)` | `string \| null` |
-| `col.date(...)` | `string \| null` |
-| `col.number(...)` | `number \| null` |
-| `col.number(..., { default: 0 })` | `number` |
-| `col.checkbox(...)` | `boolean`（常に非 null） |
-| `col.url(...)` | `string \| null` |
-| `col.multiSelect(...)` | `string[]`（常に非 null） |
-| `col.select("...", { values: { A: "a", B: "b" } })` | `"a" \| "b" \| null` |
-| `col.select(..., { values: ..., default: "a" })` | `"a" \| "b"` |
-
-> `checkbox` と `multiSelect` は値が存在しない場合でも `false` / `[]` を返すため、常に非 null。
-
-#### `default` オプション
-
-固定値または `(page: PageObjectResponse) => T` の動的関数を指定できる。  
-Notion プロパティが未設定・空の場合のフォールバックとして使われる。
-
-```typescript
-col.date("公開日", { default: (page) => page.created_time })  // 動的デフォルト
-col.number("閲覧数", { default: 0 })                          // 固定値
-```
+- `defineMapping<T>(mapping)` は型レベルで `mapping` のキーを `T` のキーと一致させる恒等関数。`id` / `updatedAt` は Notion のメタデータから自動設定されるため指定不要。
+- `defineSchema(zodSchema, mapping)` は Notion ページ → プレーンオブジェクト → `zodSchema.parse` の順で変換する `NotionSchema<T>` を返す。バリデーションに失敗した場合は `CMSError` (`core/schema_invalid`) が投げられる。
+- `select` プロパティの `published` / `accessible` は `cms.list()` / `cms.find()` で使用する状態フィルタに流し込まれる。
 
 ---
 
-### カスタム `mapItem`（既存パターン）
+### カスタム `mapItem`
 
-引き続き `mapItem` 関数を手書きして独自の変換ロジックを実装できる。
+Zod を使わずに独自の変換ロジックを書く場合は `mapItem` を渡す。`schema` 指定時は `mapItem` / `properties` は無視される。
 
 ```typescript
 import type { BaseContentItem } from "@notion-headless-cms/core";
@@ -125,11 +121,12 @@ const source = notionAdapter<MyPost>({
   dataSourceId: process.env.NOTION_DATA_SOURCE_ID!,
   mapItem: (page) => ({
     id: page.id,
-    slug: (page.properties["Slug"] as any).rich_text[0]?.plain_text ?? "",
-    status: (page.properties["Status"] as any).status?.name ?? "",
-    publishedAt: (page.properties["PublishedAt"] as any).date?.start ?? page.created_time,
+    slug: (page.properties.Slug as any).rich_text[0]?.plain_text ?? "",
+    status: (page.properties.Status as any).status?.name,
+    publishedAt:
+      (page.properties.PublishedAt as any).date?.start ?? page.created_time,
     updatedAt: page.last_edited_time,
-    title: (page.properties["Title"] as any).title[0]?.plain_text ?? "",
+    title: (page.properties.Title as any).title[0]?.plain_text ?? "",
   }),
 });
 ```
@@ -138,42 +135,78 @@ const source = notionAdapter<MyPost>({
 
 ## API
 
-### `notionAdapter(opts)`
-
-`DataSourceAdapter` を返すファクトリ関数。
+### `notionAdapter<T>(opts): DataSourceAdapter<T>`
 
 | オプション | 型 | 説明 |
-|-----------|-----|------|
-| `token` | `string` | Notion API 認証トークン |
-| `dataSourceId` | `string` | Notion データベース ID |
-| `schema` | `NotionSchema<T>` | `defineSchema()` で生成したスキーマ（型安全） |
-| `properties` | `CMSSchemaProperties` | プロパティ名マッピング（`schema` 未使用時） |
-| `mapItem` | `(page) => T` | カスタムマッパー（`schema` 未使用時） |
-| `blocks` | `Record<string, BlockHandler>` | カスタムブロックハンドラー |
+|---|---|---|
+| `token` | `string` | Notion API 認証トークン（必須） |
+| `dataSourceId` | `string` | Notion データベース ID（必須） |
+| `schema` | `NotionSchema<T>` | `defineSchema()` で生成したスキーマ。指定時は他より優先 |
+| `mapItem` | `(page) => T` | Notion ページを `T` に変換する関数 |
+| `properties` | `CMSSchemaProperties` | プロパティ名マッピング（`schema` / `mapItem` 未使用時のみ有効） |
+| `blocks` | `Record<string, BlockHandler>` | カスタムブロックハンドラ |
 
-`schema` / `mapItem` / `properties` は優先順位: `schema` > `mapItem` > `properties`（デフォルト）。
+優先順位: `schema` > `mapItem` > `properties`（デフォルト）。
 
-### `defineSchema(columns)`
+### `defineMapping<T>(mapping)`
 
-カラム定義マップからスキーマオブジェクトを生成する。  
-`slug` / `status` / `publishedAt` の 3 フィールドは必須。
+`T` のキー（`id` / `updatedAt` を除く）を漏れなくカバーする `NotionFieldType` マップを型チェック付きで宣言するヘルパー。ランタイムは恒等関数。
 
-### `col`
+### `defineSchema(zodSchema, mapping): NotionSchema<T>`
 
-各 Notion プロパティ型に対応するカラム定義ヘルパー。
+Zod オブジェクトスキーマと `defineMapping` の結果を結合し、Notion ページ → `T` への変換関数を含む `NotionSchema` を返す。`select` フィールドに設定した `published` / `accessible` はフィルタ用途に集約される。
 
-```typescript
-col.title(notion: string, opts?: { default?: string | (page) => string })
-col.richText(notion: string, opts?: { default?: string | (page) => string })
-col.date(notion: string, opts?: { default?: string | (page) => string })
-col.number(notion: string, opts?: { default?: number | (page) => number })
-col.checkbox(notion: string, opts?: { default?: boolean })
-col.url(notion: string, opts?: { default?: string | (page) => string })
-col.multiSelect(notion: string, opts?: { default?: string[] })
-col.select(notion: string, opts?: {
-  values?: Record<string, string>  // Notion表示名 → コード値マッピング
-  published?: string[]             // list() でフィルタするコード値
-  accessible?: string[]            // findBySlug() でアクセス可能なコード値
-  default?: string | (page) => string
-})
+### `NotionFieldType`
+
+`notion` はフィールドが紐付く Notion プロパティ名。
+
+| `type` | 追加プロパティ | 意味 |
+|---|---|---|
+| `"title"` | — | タイトル → プレーンテキスト |
+| `"richText"` | — | リッチテキスト → プレーンテキスト |
+| `"url"` | — | URL（null あり） |
+| `"checkbox"` | — | チェックボックス（boolean、未設定は `false`） |
+| `"date"` | — | 日付の `start` 文字列 |
+| `"number"` | — | 数値 |
+| `"multiSelect"` | — | 名前の配列（未設定は `[]`） |
+| `"select"` | `published?` / `accessible?` | セレクトまたはステータス。`published` は `cms.list()` がデフォルトで返す値、`accessible` は `cms.find()` で取得できる値 |
+
+Notion プロパティが存在しない場合、`checkbox` は `false`、`multiSelect` は `[]`、それ以外は `null` が返る。
+
+### ユーティリティ
+
+| エクスポート | 説明 |
+|---|---|
+| `mapItem(page, props)` | デフォルトマッパー（`schema` / `mapItem` 未指定時の実装） |
+| `getPlainText(items)` | Notion のリッチテキスト配列をプレーンテキストに結合 |
+
+## エラー体系
+
+Notion 取得・Markdown 変換の失敗は `CMSError` で統一される。
+
+| code | 契機 |
+|---|---|
+| `source/fetch_items_failed` | `cms.list()` 中の API 失敗 |
+| `source/fetch_item_failed` | `cms.find()` 中の API 失敗 |
+| `source/load_markdown_failed` | `cms.render()` のブロック変換失敗 |
+| `core/schema_invalid` | `defineSchema` / デフォルトマッパーの Zod バリデーション失敗 |
+
+```ts
+import { isCMSErrorInNamespace } from "@notion-headless-cms/core";
+
+try {
+  await cms.list();
+} catch (err) {
+  if (isCMSErrorInNamespace(err, "source/")) {
+    // Notion 取得系エラー
+  }
+}
 ```
+
+## 関連パッケージ
+
+- [`@notion-headless-cms/core`](../core) — CMS 本体
+- [`@notion-headless-cms/renderer`](../renderer) — Markdown → HTML
+- [`@notion-headless-cms/adapter-node`](../adapter-node) — Node.js 向けファクトリ
+- [`@notion-headless-cms/adapter-cloudflare`](../adapter-cloudflare) — Cloudflare Workers 向けファクトリ
+- [`@notion-headless-cms/adapter-next`](../adapter-next) — Next.js ルートハンドラ

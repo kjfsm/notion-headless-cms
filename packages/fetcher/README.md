@@ -1,43 +1,29 @@
 # @notion-headless-cms/fetcher
 
-Notion API クライアントラッパー。データベースのクエリとページブロックの取得を担当する。
+> **⚠️ 内部パッケージ化済み**
+> このパッケージは `"private": true` に変更され、npm に公開されなくなった。現在は [`@notion-headless-cms/source-notion`](../source-notion) 内部の `internal/fetcher/` に取り込まれている。
+>
+> 直接利用していた場合は [`@notion-headless-cms/source-notion`](../source-notion) の `notionAdapter` に移行してほしい。
 
-## インストール
-
-```bash
-npm install @notion-headless-cms/fetcher
-```
-
-通常は [`@notion-headless-cms/core`](../core) 経由で利用される。  
-低レベル API を直接使いたい場合にのみインストールする。
-
-## 使い方
+## 移行先
 
 ```typescript
-import {
-  createNotionClient,
-  fetchDatabase,
-  fetchBlocks,
-} from "@notion-headless-cms/fetcher";
+import { notionAdapter } from "@notion-headless-cms/source-notion";
+import { createCMS } from "@notion-headless-cms/core";
 
-const client = createNotionClient("notion_api_token");
+const cms = createCMS({
+  source: notionAdapter({
+    token: process.env.NOTION_TOKEN!,
+    dataSourceId: process.env.NOTION_DATA_SOURCE_ID!,
+  }),
+});
 
-// データベース一覧取得
-const pages = await fetchDatabase(client, "database_id");
-
-// ページのブロック取得
-const blocks = await fetchBlocks(client, pages[0].id);
+const items = await cms.list();
 ```
 
-## API
-
-| エクスポート | 説明 |
-|---|---|
-| `createNotionClient(token)` | Notion クライアントを生成する |
-| `fetchDatabase(client, databaseId)` | データベースの全ページを取得する |
-| `fetchBlocks(client, pageId)` | ページの全ブロックを再帰取得する |
+Notion API の生レスポンスが必要な場合は `source-notion` 経由で `DataSourceAdapter` をラップするか、`@notionhq/client` を直接利用することを推奨する。
 
 ## 関連パッケージ
 
-- [`@notion-headless-cms/core`](../core) — CMS エンジン（このパッケージを内部で使用）
-- [`@notion-headless-cms/transformer`](../transformer) — 取得したブロックを Markdown に変換
+- [`@notion-headless-cms/source-notion`](../source-notion) — Notion データソース（旧 `fetcher` / `transformer` を取り込み済み）
+- [`@notion-headless-cms/core`](../core) — CMS エンジン本体

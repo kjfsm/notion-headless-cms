@@ -32,6 +32,7 @@ class RedisDocumentCache<T extends BaseContentItem> implements DocumentCacheAdap
     await this.redis.set(`cms:item:${slug}`, JSON.stringify(data));
   }
 
+  // invalidate はオプション。未実装でも cms.cache.revalidate() が no-op になるだけ。
   async invalidate(scope: "all" | { slug: string } | { tag: string }): Promise<void> {
     if (scope === "all") {
       await this.redis.del("cms:list");
@@ -39,6 +40,7 @@ class RedisDocumentCache<T extends BaseContentItem> implements DocumentCacheAdap
     } else if ("slug" in scope) {
       await this.redis.del(`cms:item:${scope.slug}`);
     }
+    // tag スコープは実装任意
   }
 }
 ```
@@ -52,10 +54,12 @@ class S3ImageCache implements ImageCacheAdapter {
   readonly name = "s3";
 
   async get(hash: string): Promise<StorageBinary | null> {
-    // S3 から取得
     const obj = await s3.getObject({ Key: `images/${hash}` }).catch(() => null);
     if (!obj) return null;
-    return { data: await obj.Body!.transformToByteArray(), contentType: obj.ContentType };
+    return {
+      data: await obj.Body!.transformToByteArray(),
+      contentType: obj.ContentType,
+    };
   }
 
   async set(hash: string, data: ArrayBuffer, contentType: string): Promise<void> {
@@ -81,4 +85,25 @@ const cms = createCMS({
     ttlMs: 5 * 60_000,
   },
 });
+```
+
+## エラー処理
+
+キャッシュ R/W 失敗は `CMSError` の `cache/io_failed` コードで投げると、ライブラリ他部分と挙動が揃う。
+
+```ts
+import { CMSError } from "@notion-headless-cms/core";
+
+async setItem(slug: string, data: CachedItem<T>): Promise<void> {
+  try {
+    await this.redis.set(`cms:item:${slug}`, JSON.stringify(data));
+  } catch (err) {
+    throw new CMSError({
+      code: "cache/io_failed",
+      message: "Failed to write to Redis cache.",
+      cause: err,
+      context: { operation: "RedisDocumentCache.setItem", slug },
+    });
+  }
+}
 ```
