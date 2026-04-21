@@ -10,11 +10,9 @@ const makeImageCache = (): ImageCacheAdapter & {
 		name: "test",
 		store,
 		get: vi.fn(async (hash: string) => store.get(hash) ?? null),
-		set: vi.fn(
-			async (hash: string, data: ArrayBuffer, contentType: string) => {
-				store.set(hash, { data, contentType });
-			},
-		),
+		set: vi.fn(async (hash: string, data: ArrayBuffer, contentType: string) => {
+			store.set(hash, { data, contentType });
+		}),
 	};
 };
 
@@ -112,7 +110,9 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 	it("fetch がネットワークエラーをスローしたとき cache/io_failed CMSError をスローする", async () => {
 		const cache = makeImageCache();
 		const cacheImage = buildCacheImageFn(cache, "/api/images");
-		vi.mocked(globalThis.fetch).mockRejectedValueOnce(new Error("network error"));
+		vi.mocked(globalThis.fetch).mockRejectedValueOnce(
+			new Error("network error"),
+		);
 
 		await expect(
 			cacheImage("https://example.com/net-error.jpg"),
