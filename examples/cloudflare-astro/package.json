@@ -5,15 +5,16 @@
 	"type": "module",
 	"scripts": {
 		"astro": "astro",
-		"build": "astro build",
+		"build": "nhc generate && astro build",
 		"cf-typegen": "wrangler types",
-		"check": "astro build && tsc && wrangler deploy --dry-run",
+		"check": "nhc generate && astro build && tsc && wrangler deploy --dry-run",
 		"deploy": "wrangler deploy",
-		"dev": "astro dev",
-		"preview": "astro build && wrangler dev"
+		"dev": "nhc generate && astro dev",
+		"preview": "nhc generate && astro build && wrangler dev"
 	},
 	"dependencies": {
 		"@notion-headless-cms/adapter-cloudflare": "workspace:*",
+		"@notion-headless-cms/core": "workspace:*",
 		"@notion-headless-cms/source-notion": "workspace:*",
 		"astro": "^6.1.8",
 		"zod": "^4.3.6"
@@ -21,6 +22,7 @@
 	"devDependencies": {
 		"@astrojs/check": "^0.9.8",
 		"@astrojs/cloudflare": "^13.1.10",
+		"@notion-headless-cms/cli": "workspace:*",
 		"@types/node": "^25.6.0",
 		"typescript": "^5.0.0",
 		"wrangler": "^4.84.1"

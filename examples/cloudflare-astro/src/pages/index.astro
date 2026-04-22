@@ -18,7 +18,7 @@ const { items } = await cms.cache.getList();
         {items.map((post) => (
           <li>
             <a href={`/posts/${post.slug}`}>
-              <strong>{post.title || post.slug}</strong>
+              <strong>{post.slug}</strong>
               {post.publishedAt && <time>{post.publishedAt}</time>}
             </a>
           </li>

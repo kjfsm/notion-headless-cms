@@ -1,59 +1,22 @@
 import { nextCache } from "@notion-headless-cms/cache-next";
 import { createCMS, memoryImageCache } from "@notion-headless-cms/core";
-import {
-	defineMapping,
-	defineSchema,
-	notionAdapter,
-} from "@notion-headless-cms/source-notion";
-import { z } from "zod";
+import { notionAdapter } from "@notion-headless-cms/source-notion";
+import { nhcSchema, type PostsItem } from "../generated/nhc-schema";
 
-const BlogSchema = z.object({
-	id: z.string(),
-	updatedAt: z.string(),
-	slug: z
-		.string()
-		.nullable()
-		.transform((s) => s ?? ""),
-	status: z
-		.string()
-		.nullable()
-		.transform((s) => s ?? ""),
-	publishedAt: z
-		.string()
-		.nullable()
-		.transform((s) => s ?? ""),
-	title: z.string().nullable(),
-	tags: z.array(z.string()),
-	description: z.string().nullable(),
-});
+export type BlogPost = PostsItem;
 
-export type BlogPost = z.infer<typeof BlogSchema>;
-
-const mapping = defineMapping<BlogPost>({
-	slug: { type: "title", notion: "Slug" },
-	status: {
-		type: "select",
-		notion: "Status",
-		published: ["公開"],
-		accessible: ["公開", "下書き"],
-	},
-	publishedAt: { type: "date", notion: "PublishedAt" },
-	title: { type: "richText", notion: "Title" },
-	tags: { type: "multiSelect", notion: "Tags" },
-	description: { type: "richText", notion: "Description" },
-});
-
-const blogSchema = defineSchema(BlogSchema, mapping);
+const { posts } = nhcSchema;
 
 export const cms = createCMS<BlogPost>({
 	source: notionAdapter<BlogPost>({
 		token: process.env.NOTION_TOKEN!,
-		dataSourceId: process.env.NOTION_DATA_SOURCE_ID,
-		dbName: process.env.NOTION_DATA_SOURCE_ID
-			? undefined
-			: (process.env.DB_NAME ?? process.env.NOTION_DB_NAME),
-		schema: blogSchema,
+		dataSourceId: posts.id,
+		schema: posts.schema,
 	}),
+	schema: {
+		publishedStatuses: ["公開済み"],
+		accessibleStatuses: ["公開済み", "編集中", "下書き"],
+	},
 	cache: {
 		document: nextCache({ revalidate: 300, tags: ["posts"] }),
 		image: memoryImageCache(),

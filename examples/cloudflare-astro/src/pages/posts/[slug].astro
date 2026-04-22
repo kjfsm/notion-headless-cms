@@ -14,17 +14,13 @@ const { html, item } = entry;
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <title>{item.title || item.slug}</title>
+    <title>{item.slug}</title>
   </head>
   <body>
     <article>
-      <h1>{item.title}</h1>
+      <h1>{item.slug}</h1>
       {item.publishedAt && <time>{item.publishedAt}</time>}
-      {item.tags.length > 0 && (
-        <ul>
-          {item.tags.map((tag) => <li>{tag}</li>)}
-        </ul>
-      )}
+      {item.author && <p>Author: {item.author}</p>}
       <div set:html={html} />
     </article>
   </body>

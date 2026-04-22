@@ -4,18 +4,20 @@
 	"version": "0.0.4",
 	"type": "module",
 	"scripts": {
-		"dev": "tsx watch src/index.ts",
+		"dev": "nhc generate && tsx watch src/index.ts",
 		"start": "node dist/index.js",
-		"build": "tsc",
+		"build": "nhc generate && tsc",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@notion-headless-cms/adapter-node": "workspace:*",
+		"@notion-headless-cms/core": "workspace:*",
 		"@notion-headless-cms/source-notion": "workspace:*",
 		"express": "^4.21.0",
 		"zod": "^4.1.12"
 	},
 	"devDependencies": {
+		"@notion-headless-cms/cli": "workspace:*",
 		"@types/express": "^4.17.0",
 		"@types/node": "^22.0.0",
 		"tsx": "^4.19.0",
