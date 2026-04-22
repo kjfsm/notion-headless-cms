@@ -1,12 +1,19 @@
 name = "nhc-example-cloudflare-react-router"
+main = "build/server/index.js"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 assets = { directory = "./build/client" }
+
+# モノリポのルートから依存インストール・パッケージビルド・本 example ビルドを順に実行する。
+# NOTION_TOKEN はビルド時に nhc generate が Notion API へアクセスするために必要。
+# Cloudflare Dashboard の Build 設定で環境変数 NOTION_TOKEN を追加すること。
+[build]
+command = "pnpm --dir=../.. install --frozen-lockfile && pnpm --dir=../.. --filter='@notion-headless-cms/*' build && pnpm build"
 
 [[r2_buckets]]
 binding = "CACHE_BUCKET"
 bucket_name = "nhc-example-cache"
 preview_bucket_name = "nhc-example-cache-preview"
 
+# ランタイムシークレットは初回デプロイ前に以下で設定してください:
 # wrangler secret put NOTION_TOKEN
-# wrangler secret put NOTION_DATA_SOURCE_ID
