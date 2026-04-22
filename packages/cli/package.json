@@ -21,7 +21,7 @@
 	},
 	"type": "module",
 	"bin": {
-		"nhc": "./bin/nhc.js"
+		"nhc": "./dist/cli.js"
 	},
 	"exports": {
 		".": {
@@ -36,6 +36,7 @@
 		"node": ">=24"
 	},
 	"scripts": {
+		"prepare": "pnpm build",
 		"build": "tsup src/index.ts src/cli.ts --format esm --dts --sourcemap --out-dir dist",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run"
