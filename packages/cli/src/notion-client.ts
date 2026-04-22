@@ -14,7 +14,24 @@ const RETRY_STATUSES = new Set([429, 502, 503, 504]);
 const MAX_RETRIES = 4;
 const BASE_DELAY_MS = 1000;
 
-/** Notion API の一時的な失敗（429 / 5xx）を指数バックオフでリトライする。 */
+/** ネットワーク起因のエラー（fetch failed / ECONN* など）かどうか判定する。 */
+function isRetriableNetworkError(err: unknown): boolean {
+	if (!(err instanceof Error)) return false;
+	if (err.message === "fetch failed") return true;
+	const cause = (err as { cause?: { code?: string } }).cause;
+	const code = cause?.code ?? (err as { code?: string }).code;
+	if (!code) return false;
+	return [
+		"ECONNRESET",
+		"ECONNREFUSED",
+		"ETIMEDOUT",
+		"ENOTFOUND",
+		"EAI_AGAIN",
+		"UND_ERR_SOCKET",
+	].includes(code);
+}
+
+/** Notion API の一時的な失敗（429 / 5xx / ネットワークエラー）を指数バックオフでリトライする。 */
 async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
 	let lastError: unknown;
 	for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
@@ -22,7 +39,10 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
 			return await fn();
 		} catch (err) {
 			const status = (err as { status?: number }).status;
-			if (status === undefined || !RETRY_STATUSES.has(status)) throw err;
+			const isRetriable =
+				(status !== undefined && RETRY_STATUSES.has(status)) ||
+				isRetriableNetworkError(err);
+			if (!isRetriable) throw err;
 			lastError = err;
 			if (attempt < MAX_RETRIES) {
 				const jitter = 0.5 + Math.random() * 0.5;

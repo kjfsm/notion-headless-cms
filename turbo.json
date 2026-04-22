@@ -4,7 +4,14 @@
 		"build": {
 			"dependsOn": ["^build"],
 			"outputs": ["dist/**"],
-			"passThroughEnv": ["NOTION_TOKEN", "NOTION_DATA_SOURCE_ID"]
+			"passThroughEnv": [
+				"NOTION_TOKEN",
+				"NOTION_DATA_SOURCE_ID",
+				"DB_NAME",
+				"NOTION_DB_NAME",
+				"NODE_EXTRA_CA_CERTS",
+				"SSL_CERT_FILE"
+			]
 		},
 		"typecheck": {
 			"dependsOn": ["^build"],
