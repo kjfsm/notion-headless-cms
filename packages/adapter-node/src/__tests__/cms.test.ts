@@ -29,11 +29,16 @@ describe("createNodeCMS", () => {
 	beforeEach(() => {
 		process.env.NOTION_TOKEN = "test-token";
 		process.env.NOTION_DATA_SOURCE_ID = "test-db-id";
+		delete process.env.DB_NAME;
+		delete process.env.NOTION_DB_NAME;
 	});
 
 	afterEach(() => {
 		process.env.NOTION_TOKEN = origEnv.NOTION_TOKEN;
 		process.env.NOTION_DATA_SOURCE_ID = origEnv.NOTION_DATA_SOURCE_ID;
+		if (origEnv.DB_NAME !== undefined) process.env.DB_NAME = origEnv.DB_NAME;
+		if (origEnv.NOTION_DB_NAME !== undefined)
+			process.env.NOTION_DB_NAME = origEnv.NOTION_DB_NAME;
 	});
 
 	it("環境変数が設定されていれば CMS インスタンスを作成できる", () => {
@@ -48,9 +53,18 @@ describe("createNodeCMS", () => {
 		expect(() => createNodeCMS()).toThrow("NOTION_TOKEN");
 	});
 
-	it("NOTION_DATA_SOURCE_ID が未設定の場合はエラーをスローする", () => {
+	it("NOTION_DATA_SOURCE_ID と DB_NAME が両方未設定の場合はエラーをスローする", () => {
 		delete process.env.NOTION_DATA_SOURCE_ID;
+		delete process.env.DB_NAME;
+		delete process.env.NOTION_DB_NAME;
 		expect(() => createNodeCMS()).toThrow("NOTION_DATA_SOURCE_ID");
+	});
+
+	it("DB_NAME のみ設定でも CMS インスタンスを作成できる", () => {
+		delete process.env.NOTION_DATA_SOURCE_ID;
+		process.env.DB_NAME = "ブログ記事DB";
+		const cms = createNodeCMS();
+		expect(cms).toBeDefined();
 	});
 
 	it("list() がソースのアイテムを返す", async () => {

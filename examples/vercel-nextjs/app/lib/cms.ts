@@ -48,7 +48,10 @@ const blogSchema = defineSchema(BlogSchema, mapping);
 export const cms = createCMS<BlogPost>({
 	source: notionAdapter<BlogPost>({
 		token: process.env.NOTION_TOKEN!,
-		dataSourceId: process.env.NOTION_DATA_SOURCE_ID!,
+		dataSourceId: process.env.NOTION_DATA_SOURCE_ID,
+		dbName: process.env.NOTION_DATA_SOURCE_ID
+			? undefined
+			: (process.env.DB_NAME ?? process.env.NOTION_DB_NAME),
 		schema: blogSchema,
 	}),
 	cache: {

@@ -60,6 +60,7 @@ export function createNodeCMS<T extends BaseContentItem = BaseContentItem>(
 ): ReturnType<typeof createCMS<T>> {
 	const token = process.env.NOTION_TOKEN;
 	const dataSourceId = process.env.NOTION_DATA_SOURCE_ID;
+	const dbName = process.env.DB_NAME ?? process.env.NOTION_DB_NAME;
 	if (!token) {
 		throw new CMSError({
 			code: "core/config_invalid",
@@ -67,10 +68,11 @@ export function createNodeCMS<T extends BaseContentItem = BaseContentItem>(
 			context: { operation: "createNodeCMS", envVar: "NOTION_TOKEN" },
 		});
 	}
-	if (!dataSourceId) {
+	if (!dataSourceId && !dbName) {
 		throw new CMSError({
 			code: "core/config_invalid",
-			message: "NOTION_DATA_SOURCE_ID environment variable is not set",
+			message:
+				"NOTION_DATA_SOURCE_ID (または DB_NAME) 環境変数が設定されていません",
 			context: {
 				operation: "createNodeCMS",
 				envVar: "NOTION_DATA_SOURCE_ID",
@@ -85,6 +87,7 @@ export function createNodeCMS<T extends BaseContentItem = BaseContentItem>(
 	const source = notionAdapter<T>({
 		token,
 		dataSourceId,
+		dbName: dataSourceId ? undefined : dbName,
 		schema: notionSchema,
 	});
 
