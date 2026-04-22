@@ -1,5 +1,5 @@
 name = "nhc-example-cloudflare-react-router"
-main = "build/server/index.js"
+main = "./workers/app.ts"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 assets = { directory = "./build/client" }
