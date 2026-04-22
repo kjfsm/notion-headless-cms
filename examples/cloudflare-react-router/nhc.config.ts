@@ -6,7 +6,6 @@ export default defineConfig({
 		{
 			name: "posts",
 			dbName: "ブログ記事DB",
-
 			fields: {
 				status: "ステータス", // status に使う Notion プロパティ名
 				publishedAt: "公開日", // publishedAt に使う Notion プロパティ名

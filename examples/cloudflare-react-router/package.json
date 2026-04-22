@@ -9,6 +9,7 @@
 		"check": "tsc && nhc generate && react-router build && wrangler deploy --dry-run",
 		"deploy": "wrangler deploy",
 		"dev": "react-router dev",
+		"env": "dotenv -e .dev.vars",
 		"preview": "pnpm run build && vite preview",
 		"typecheck": "pnpm run cf-typegen && tsc -b"
 	},
@@ -17,6 +18,7 @@
 		"@notion-headless-cms/core": "workspace:*",
 		"@notion-headless-cms/source-notion": "workspace:*",
 		"@react-router/cloudflare": "^7.14.2",
+		"dotenv": "^17.4.2",
 		"react": "^19.2.5",
 		"react-dom": "^19.2.5",
 		"react-router": "^7.14.2",
@@ -28,6 +30,7 @@
 		"@react-router/dev": "^7.14.2",
 		"@types/react": "^19.2.14",
 		"@types/react-dom": "^19.2.3",
+		"dotenv-cli": "^11.0.0",
 		"typescript": "^6.0.3",
 		"vite": "^8.0.9",
 		"wrangler": "^4.84.1"
