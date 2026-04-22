@@ -1,6 +1,7 @@
 export type {
 	CloudflareCMSEnv,
 	CloudflareMultiCMSEnv,
+	CreateCloudflareCMSMultiOptions,
 	CreateCloudflareCMSOptions,
 	MultiCMSResult,
 	MultiSourceEntry,

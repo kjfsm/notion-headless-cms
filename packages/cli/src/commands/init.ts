@@ -16,22 +16,23 @@ export default defineConfig({
 			dbName: "ブログ記事DB",
 			// id を直接指定することもできます（id が優先されます）
 			// id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			fields: {
-				// slug に使う Notion プロパティ名（省略時: title 型プロパティを自動検出）
-				// slug: "Slug",
-				// status に使う Notion プロパティ名（省略時: "Status" などを自動検出）
-				// status: "Status",
-				// publishedAt に使う Notion プロパティ名（省略時: "PublishedAt" などを自動検出）
-				// publishedAt: "PublishedAt",
-				// 公開ステータス値（nhc generate 後に手動設定することも可能）
-				// published: ["公開"],
-				// accessible: ["公開", "下書き"],
-			},
+			// fields: {
+			// 	// slug に使う Notion プロパティ名（省略時: title 型プロパティを自動検出）
+			// 	// slug: "Slug",
+			// 	// status に使う Notion プロパティ名（省略時: "Status" などを自動検出）
+			// 	// status: "Status",
+			// 	// publishedAt に使う Notion プロパティ名（省略時: "PublishedAt" などを自動検出）
+			// 	// publishedAt: "PublishedAt",
+			// },
 		},
 	],
 	// 生成ファイルの出力先（省略時: ./nhc-schema.ts）
 	// output: "./nhc-schema.ts",
 });
+
+// 生成後: createNodeMultiCMS / createCloudflareCMSMulti の sources オプションで
+// published / accessible を設定してください。
+// 例: sources: { posts: { published: ["公開"], accessible: ["公開", "下書き"] } }
 `;
 
 export async function runInit(opts: InitOptions): Promise<void> {

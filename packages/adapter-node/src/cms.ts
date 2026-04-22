@@ -187,8 +187,7 @@ export function createNodeMultiCMS<S extends MultiSourceSchema>(
 			...(statusConfig && {
 				schema: {
 					publishedStatuses: statusConfig.published,
-					accessibleStatuses:
-						statusConfig.accessible ?? statusConfig.published,
+					accessibleStatuses: statusConfig.accessible ?? statusConfig.published,
 				},
 			}),
 		});

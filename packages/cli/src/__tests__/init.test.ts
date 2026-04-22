@@ -20,7 +20,9 @@ describe("runInit", () => {
 		await runInit({ output: outputPath });
 
 		const content = await fs.readFile(outputPath, "utf-8");
-		expect(content).toContain('import { defineConfig } from "@notion-headless-cms/cli"');
+		expect(content).toContain(
+			'import { defineConfig } from "@notion-headless-cms/cli"',
+		);
 		expect(content).toContain("defineConfig(");
 		expect(content).toContain("dataSources:");
 	});
@@ -44,9 +46,7 @@ describe("runInit", () => {
 		const outputPath = path.join(tmpDir, "nhc.config.ts");
 		await fs.writeFile(outputPath, "existing content", "utf-8");
 
-		await expect(runInit({ output: outputPath })).rejects.toThrow(
-			"--force",
-		);
+		await expect(runInit({ output: outputPath })).rejects.toThrow("--force");
 	});
 
 	it("--force を指定すると既存ファイルを上書きする", async () => {

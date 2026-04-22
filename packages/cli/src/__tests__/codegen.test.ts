@@ -1,15 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { generateSchemaFile } from "../codegen.js";
 import type { ResolvedSource } from "../codegen.js";
+import { generateSchemaFile } from "../codegen.js";
 
 // biome-ignore lint/suspicious/noExplicitAny: テスト用モックのため型アサーションを許容
 function makeProp(type: string): any {
 	return { type, id: "_", name: "_", description: "" };
 }
 
-function makeSource(
-	overrides: Partial<ResolvedSource> = {},
-): ResolvedSource {
+function makeSource(overrides: Partial<ResolvedSource> = {}): ResolvedSource {
 	return {
 		config: { name: "posts", dbName: "ブログ記事DB" },
 		id: "abc-123",
@@ -61,14 +59,7 @@ describe("generateSchemaFile", () => {
 	});
 
 	it("status フィールドは published/accessible なしで生成される（クライアント側で差し込む）", () => {
-		const source = makeSource({
-			config: {
-				name: "posts",
-				dbName: "ブログ記事DB",
-				fields: { published: ["公開"], accessible: ["公開", "下書き"] },
-			},
-		});
-		const code = generateSchemaFile([source]);
+		const code = generateSchemaFile([makeSource()]);
 		// published/accessible は生成ファイルに含まれない
 		expect(code).not.toContain("published:");
 		expect(code).not.toContain("accessible:");
@@ -85,7 +76,9 @@ describe("generateSchemaFile", () => {
 			},
 		});
 		const code = generateSchemaFile([source]);
-		expect(code).toContain('publishedAt: { type: "date", notion: "PublishedAt" }');
+		expect(code).toContain(
+			'publishedAt: { type: "date", notion: "PublishedAt" }',
+		);
 		expect(code).toContain("publishedAt: z.string().nullable()");
 	});
 
@@ -142,7 +135,9 @@ describe("generateSchemaFile", () => {
 			},
 		});
 		const code = generateSchemaFile([source]);
-		expect(code).toContain("export interface PostsItem extends BaseContentItem");
+		expect(code).toContain(
+			"export interface PostsItem extends BaseContentItem",
+		);
 		expect(code).toContain("tags: string[];");
 	});
 

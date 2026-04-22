@@ -108,6 +108,24 @@ export interface SourceStatusConfig {
 	accessible?: string[];
 }
 
+export interface CreateCloudflareCMSMultiOptions<S extends MultiSourceSchema> {
+	schema: S;
+	env: CloudflareMultiCMSEnv;
+	/**
+	 * ソースごとの公開ステータス設定。
+	 * 生成ファイルを編集せずに published / accessible を差し込む。
+	 *
+	 * @example
+	 * sources: {
+	 *   posts: { published: ["公開"], accessible: ["公開", "下書き"] },
+	 * }
+	 */
+	sources?: { [K in keyof S]?: SourceStatusConfig };
+	content?: ContentConfig;
+	/** SWR の TTL（ミリ秒） */
+	ttlMs?: number;
+}
+
 /**
  * マルチソース向け Cloudflare Workers CMS ファクトリ。
  * nhc generate で生成した nhcSchema を渡すと、各ソースに対応する CMS インスタンスを返す。
@@ -116,14 +134,9 @@ export interface SourceStatusConfig {
  * const client = createCloudflareCMSMulti({ schema: nhcSchema, env, sources: { posts: { published: ["公開"] } } })
  * const posts = await client.posts.list()
  */
-export function createCloudflareCMSMulti<S extends MultiSourceSchema>(opts: {
-	schema: S;
-	env: CloudflareMultiCMSEnv;
-	/** ソースごとの公開ステータス設定。生成ファイルを編集せずに差し込む。 */
-	sources?: { [K in keyof S]?: SourceStatusConfig };
-	content?: ContentConfig;
-	ttlMs?: number;
-}): MultiCMSResult<S> {
+export function createCloudflareCMSMulti<S extends MultiSourceSchema>(
+	opts: CreateCloudflareCMSMultiOptions<S>,
+): MultiCMSResult<S> {
 	const { schema, env, content, ttlMs } = opts;
 	const r2 = r2Cache({ bucket: env.CACHE_BUCKET });
 	const result = {} as MultiCMSResult<S>;
@@ -147,8 +160,7 @@ export function createCloudflareCMSMulti<S extends MultiSourceSchema>(opts: {
 			...(statusConfig && {
 				schema: {
 					publishedStatuses: statusConfig.published,
-					accessibleStatuses:
-						statusConfig.accessible ?? statusConfig.published,
+					accessibleStatuses: statusConfig.accessible ?? statusConfig.published,
 				},
 			}),
 		});

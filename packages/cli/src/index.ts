@@ -5,10 +5,6 @@ export interface DataSourceFieldOptions {
 	status?: string;
 	/** publishedAt に使う Notion プロパティ名（デフォルト: "PublishedAt" などの date 型） */
 	publishedAt?: string;
-	/** 公開ステータス値（生成後に手動設定が必要） */
-	published?: string[];
-	/** アクセス可能ステータス値（未指定時は published と同じ値） */
-	accessible?: string[];
 }
 
 interface DataSourceWithId {

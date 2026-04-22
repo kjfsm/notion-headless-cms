@@ -75,6 +75,6 @@ export async function runGenerate(opts: GenerateOptions): Promise<void> {
 
 	console.log(`\n生成完了: ${outputPath}`);
 	console.log(
-		"注意: status フィールドの published/accessible は手動で設定してください（TODO コメントを確認）。",
+		"次のステップ: createNodeMultiCMS / createCloudflareCMSMulti の sources オプションで published / accessible を設定してください。",
 	);
 }

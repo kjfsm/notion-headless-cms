@@ -17,9 +17,6 @@ interface MappedField {
 	isSlug: boolean;
 	isStatus: boolean;
 	isPublishedAt: boolean;
-	/** select フィールドで published/accessible が指定されているか */
-	published: string[];
-	accessible: string[];
 	/** 非推奨プロパティ型のためスキップされた */
 	skipped?: boolean;
 	skipReason?: string;
@@ -70,13 +67,9 @@ function mapProperty(
 			(STATUS_NAMES.has(propName) || STATUS_NAMES.has(propName.toLowerCase())));
 	const isPublishedAt =
 		fields?.publishedAt === propName ||
-		(!fields?.publishedAt && PUBLISHED_AT_NAMES.has(propName)) ||
-		PUBLISHED_AT_NAMES.has(propName.toLowerCase());
-
-	const published = isStatus ? (fields?.published ?? []) : [];
-	const accessible = isStatus
-		? (fields?.accessible ?? fields?.published ?? [])
-		: [];
+		(!fields?.publishedAt &&
+			(PUBLISHED_AT_NAMES.has(propName) ||
+				PUBLISHED_AT_NAMES.has(propName.toLowerCase())));
 
 	switch (prop.type) {
 		case "title":
@@ -89,8 +82,6 @@ function mapProperty(
 				isSlug,
 				isStatus: false,
 				isPublishedAt: false,
-				published: [],
-				accessible: [],
 			};
 
 		case "rich_text":
@@ -103,8 +94,6 @@ function mapProperty(
 				isSlug,
 				isStatus: false,
 				isPublishedAt: false,
-				published: [],
-				accessible: [],
 			};
 
 		case "select":
@@ -118,8 +107,6 @@ function mapProperty(
 				isSlug: false,
 				isStatus,
 				isPublishedAt: false,
-				published,
-				accessible,
 			};
 
 		case "multi_select":
@@ -132,8 +119,6 @@ function mapProperty(
 				isSlug: false,
 				isStatus: false,
 				isPublishedAt: false,
-				published: [],
-				accessible: [],
 			};
 
 		case "date":
@@ -146,8 +131,6 @@ function mapProperty(
 				isSlug: false,
 				isStatus: false,
 				isPublishedAt,
-				published: [],
-				accessible: [],
 			};
 
 		case "number":
@@ -160,8 +143,6 @@ function mapProperty(
 				isSlug: false,
 				isStatus: false,
 				isPublishedAt: false,
-				published: [],
-				accessible: [],
 			};
 
 		case "checkbox":
@@ -174,8 +155,6 @@ function mapProperty(
 				isSlug: false,
 				isStatus: false,
 				isPublishedAt: false,
-				published: [],
-				accessible: [],
 			};
 
 		case "url":
@@ -188,8 +167,6 @@ function mapProperty(
 				isSlug: false,
 				isStatus: false,
 				isPublishedAt: false,
-				published: [],
-				accessible: [],
 			};
 
 		default:
@@ -202,8 +179,6 @@ function mapProperty(
 				isSlug: false,
 				isStatus: false,
 				isPublishedAt: false,
-				published: [],
-				accessible: [],
 				skipped: true,
 				skipReason: `未対応のプロパティ型: ${prop.type}`,
 			};
