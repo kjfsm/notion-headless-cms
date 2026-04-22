@@ -68,11 +68,12 @@ export default defineConfig({
 | `name` | `string` | コード上で使う識別子（`client.posts` など） |
 | `id` | `string`（任意） | Notion DB ID。指定時は `dbName` より優先 |
 | `dbName` | `string`（`id` 未指定時は必須） | Notion DB 名（前方一致で検索） |
-| `fields.slug` | `string`（任意） | slug に使う Notion プロパティ名 |
-| `fields.status` | `string`（任意） | status に使う Notion プロパティ名 |
-| `fields.publishedAt` | `string`（任意） | publishedAt に使う Notion プロパティ名 |
-| `fields.published` | `string[]`（任意） | 公開とみなすステータス値 |
-| `fields.accessible` | `string[]`（任意） | アクセス可能とみなすステータス値（省略時は `published` と同じ） |
+| `fields.slug` | `string`（任意） | slug に使う Notion プロパティ名（省略時: `title` 型プロパティを自動検出） |
+| `fields.status` | `string`（任意） | status に使う Notion プロパティ名（省略時: `Status` / `状態` 等を自動検出） |
+| `fields.publishedAt` | `string`（任意） | publishedAt に使う Notion プロパティ名（省略時: `PublishedAt` / `公開日` 等を自動検出） |
+| `fields.properties` | `Record<string, string>`（任意） | Notion プロパティ名 → TypeScript フィールド名の明示マッピング。日本語など ASCII 変換できない名前は必須 |
+
+> `published` / `accessible` は `nhc.config.ts` で設定しない。クライアント作成時（`createNodeMultiCMS` / `createCloudflareCMSMulti`）の `sources` オプションで差し込む。
 
 ## コマンド一覧
 
@@ -122,7 +123,7 @@ Options:
 |---|---|
 | `slug` | `title` 型プロパティ（最初に見つかったもの） |
 | `status` | プロパティ名が `Status` / `状態` / `state` の `select` または `status` 型 |
-| `publishedAt` | プロパティ名が `PublishedAt` / `PublishedAt` / `CreatedAt` / `公開日` 等の `date` 型 |
+| `publishedAt` | プロパティ名が `PublishedAt` / `CreatedAt` / `公開日` 等の `date` 型 |
 
 ## 生成ファイルの構造
 

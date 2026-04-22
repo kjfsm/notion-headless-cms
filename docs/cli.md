@@ -13,10 +13,11 @@ pnpm add -D @notion-headless-cms/cli
 
 ```
 nhc init          →  nhc.config.ts テンプレートを生成
-↓ （設定を編集）
-nhc generate      →  Notion DB を introspect して nhc-schema.ts を生成
-↓ （公開ステータスを手動設定）
+↓ （DB 名 / ID を設定）
+nhc generate      →  Notion DB を introspect して nhc-schema.ts を生成（編集不要）
+↓
 createNodeMultiCMS / createCloudflareCMSMulti で型安全に利用
+（published / accessible は sources オプションで差し込む）
 ```
 
 ## `nhc init` — 設定ファイルの生成
@@ -112,12 +113,17 @@ fields: {
   slug: "Slug",            // slug に使うプロパティ名
   status: "Status",        // status に使うプロパティ名
   publishedAt: "公開日",    // publishedAt に使うプロパティ名
-  published: ["公開"],      // 公開とみなすステータス値
-  accessible: ["公開", "下書き"],  // アクセス可能なステータス値
+  // 日本語など ASCII 変換できないプロパティ名は必須指定
+  properties: {
+    "タイトル": "title",
+    "カテゴリ": "category",
+  },
 }
 ```
 
 `fields` を省略した場合は自動検出ルールが適用される（後述）。
+
+`published` / `accessible` はここでは設定しない。クライアント作成時の `sources` オプションで差し込む（[生成ファイルは編集不要](#生成ファイルは編集不要) 参照）。
 
 ### 複数 DB の設定例
 
@@ -129,10 +135,7 @@ export default defineConfig({
     {
       name: "posts",
       dbName: "ブログ記事DB",
-      fields: {
-        published: ["公開"],
-        accessible: ["公開", "下書き"],
-      },
+      // fields の省略時は自動検出ルールを適用
     },
     {
       name: "news",
@@ -140,12 +143,15 @@ export default defineConfig({
       fields: {
         slug: "Title",
         status: "公開状態",
-        published: ["掲載中"],
       },
     },
     {
       name: "members",
       dbName: "メンバーDB",
+      fields: {
+        // 日本語プロパティ名は properties で明示マッピング
+        properties: { "氏名": "fullName", "所属": "department" },
+      },
     },
   ],
   output: "./src/generated/nhc-schema.ts",
@@ -178,10 +184,31 @@ export default defineConfig({
 
 ### 日本語プロパティ名の扱い
 
-ASCII に変換できないプロパティ名は `field_N`（N=インデックス）にフォールバックし、元の名前をコメントに残す。
+ASCII に変換できないプロパティ名（日本語など）は `fields.properties` で TypeScript フィールド名を明示する必要がある。未指定の場合はエラーになる。
 
 ```ts
-// スキップ: あいうえお (未対応のプロパティ型: person)
+// nhc.config.ts
+fields: {
+  properties: {
+    "タイトル": "title",      // Notion の "タイトル" → TS の title フィールド
+    "カテゴリ": "category",
+    "公開日時": "publishedAt", // publishedAt として扱う場合も properties に書く
+  },
+}
+```
+
+自動変換できないプロパティに `fields.properties` の指定がない場合:
+
+```
+Error: [posts] プロパティ "タイトル" は TypeScript 識別子に自動変換できません。
+  → nhc.config.ts の fields.properties に追加してください:
+     properties: { "タイトル": "フィールド名" }
+```
+
+スキップされる（サポート外の型の）プロパティはコメントとして記録される:
+
+```ts
+// スキップ: Formula (未対応のプロパティ型: formula)
 ```
 
 ## 生成ファイルの構造

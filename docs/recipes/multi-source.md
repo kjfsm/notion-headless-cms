@@ -26,12 +26,12 @@ export default defineConfig({
     {
       name: "posts",
       dbName: "ブログ記事DB",
-      fields: { published: ["公開"], accessible: ["公開", "下書き"] },
+      // published/accessible は nhc.config.ts に書かない
+      // → createNodeMultiCMS の sources オプションで差し込む
     },
     {
       name: "news",
       id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-      fields: { published: ["掲載中"] },
     },
   ],
 });
