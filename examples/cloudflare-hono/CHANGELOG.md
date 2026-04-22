@@ -1,5 +1,12 @@
 # example-cloudflare-hono
 
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies [b453f2e]
+  - @notion-headless-cms/adapter-cloudflare@0.1.3
+
 ## 0.0.3
 
 ### Patch Changes
