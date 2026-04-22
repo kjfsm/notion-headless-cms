@@ -22,6 +22,16 @@ export async function runGenerate(opts: GenerateOptions): Promise<void> {
 		}
 		dotenvConfig({ path: envFilePath });
 		console.log(`環境変数ファイルを読み込み中: ${envFilePath}`);
+	} else {
+		// --env-file 未指定時は .dev.vars を自動検出（Cloudflare Workers のローカル開発環境向け）
+		const devVarsPath = path.resolve(process.cwd(), ".dev.vars");
+		try {
+			await fs.access(devVarsPath);
+			dotenvConfig({ path: devVarsPath });
+			console.log(`環境変数ファイルを自動検出: ${devVarsPath}`);
+		} catch {
+			// .dev.vars が存在しない場合はスキップ
+		}
 	}
 
 	const configPath = path.resolve(
@@ -32,7 +42,7 @@ export async function runGenerate(opts: GenerateOptions): Promise<void> {
 	console.log(`設定ファイルを読み込み中: ${configPath}`);
 	const config = await loadConfig(configPath);
 
-	const token = opts.token ?? config.notionToken ?? process.env.NOTION_TOKEN;
+	const token = opts.token || config.notionToken || process.env.NOTION_TOKEN;
 	if (!token) {
 		throw new Error(
 			"Notion トークンが設定されていません。以下のいずれかで指定してください:\n" +

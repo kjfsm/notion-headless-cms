@@ -47,15 +47,9 @@ export function defineConfig(config: NHCConfig): NHCConfig {
 
 /**
  * 環境変数を読み込む設定ヘルパー（Prisma の env() と同様の使い方）。
- * 環境変数が未設定の場合は nhc generate 実行時にエラーを投げる。
+ * 環境変数が未設定の場合は空文字を返す。トークン未設定エラーは nhc generate 実行時に表示される。
  * @example notionToken: env("NOTION_TOKEN")
  */
 export function env(name: string): string {
-	const value = process.env[name];
-	if (!value) {
-		throw new Error(
-			`環境変数 "${name}" が設定されていません。\nnhc generate を実行する前に設定してください。`,
-		);
-	}
-	return value;
+	return process.env[name] ?? "";
 }
