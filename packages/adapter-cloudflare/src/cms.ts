@@ -14,7 +14,10 @@ import { notionAdapter } from "@notion-headless-cms/source-notion";
 
 export interface CloudflareCMSEnv {
 	NOTION_TOKEN: string;
-	NOTION_DATA_SOURCE_ID: string;
+	/** Notion データベースの ID。DB_NAME を使う場合は任意。 */
+	NOTION_DATA_SOURCE_ID?: string;
+	/** Notion データベース名。NOTION_DATA_SOURCE_ID の代わりに指定可能。 */
+	DB_NAME?: string;
 	CACHE_BUCKET?: R2BucketLike;
 }
 
@@ -52,6 +55,7 @@ export function createCloudflareCMS<
 	const source = notionAdapter<T>({
 		token: env.NOTION_TOKEN,
 		dataSourceId: env.NOTION_DATA_SOURCE_ID,
+		dbName: env.NOTION_DATA_SOURCE_ID ? undefined : env.DB_NAME,
 		schema: notionSchema,
 	});
 

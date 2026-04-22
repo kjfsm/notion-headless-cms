@@ -5,16 +5,12 @@ let { data }: { data: PageData } = $props();
 </script>
 
 <article>
-	<h1>{data.item.title}</h1>
+	<h1>{data.item.slug}</h1>
 	{#if data.item.publishedAt}
 		<time>{data.item.publishedAt}</time>
 	{/if}
-	{#if data.item.tags.length > 0}
-		<ul>
-			{#each data.item.tags as tag (tag)}
-				<li>{tag}</li>
-			{/each}
-		</ul>
+	{#if data.item.author}
+		<p>Author: {data.item.author}</p>
 	{/if}
 	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 	{@html data.html}

@@ -24,15 +24,9 @@ export default async function PostPage({
 	const { html, item } = entry;
 	return (
 		<article>
-			<h1>{item.title}</h1>
+			<h1>{item.slug}</h1>
 			{item.publishedAt && <time>{item.publishedAt}</time>}
-			{item.tags.length > 0 && (
-				<ul>
-					{item.tags.map((tag) => (
-						<li key={tag}>{tag}</li>
-					))}
-				</ul>
-			)}
+			{item.author && <p>Author: {item.author}</p>}
 			{/* biome-ignore lint/security/noDangerouslySetInnerHtml: Notion レンダリング結果を表示 */}
 			<div dangerouslySetInnerHTML={{ __html: html }} />
 		</article>

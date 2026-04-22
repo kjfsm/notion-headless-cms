@@ -5,17 +5,20 @@
 	"type": "module",
 	"scripts": {
 		"cf-typegen": "wrangler types",
+		"build": "nhc generate",
 		"deploy": "npm run build && wrangler deploy",
-		"dev": "wrangler dev",
+		"dev": "nhc generate && wrangler dev",
 		"typecheck": "npm run cf-typegen && tsc -b"
 	},
 	"dependencies": {
 		"@notion-headless-cms/adapter-cloudflare": "workspace:*",
+		"@notion-headless-cms/core": "workspace:*",
 		"@notion-headless-cms/source-notion": "workspace:*",
 		"hono": "^4.12.14",
 		"zod": "^4.3.6"
 	},
 	"devDependencies": {
+		"@notion-headless-cms/cli": "workspace:*",
 		"typescript": "^6.0.3",
 		"wrangler": "^4.84.0"
 	}

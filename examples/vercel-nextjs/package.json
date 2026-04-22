@@ -3,11 +3,11 @@
 	"private": true,
 	"version": "0.0.3",
 	"scripts": {
-		"build": "next build",
+		"build": "nhc generate && next build",
 		"cf-typegen": "wrangler types",
 		"check": "npm run build && tsc",
 		"deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-		"dev": "next dev",
+		"dev": "nhc generate && next dev",
 		"lint": "next lint",
 		"preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
 		"start": "next start"
@@ -23,6 +23,7 @@
 		"zod": "^4.1.12"
 	},
 	"devDependencies": {
+		"@notion-headless-cms/cli": "workspace:*",
 		"@types/node": "^22.0.0",
 		"@types/react": "^19.0.0",
 		"@types/react-dom": "^19.0.0",

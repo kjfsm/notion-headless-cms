@@ -1,16 +1,21 @@
-import type { CloudflareCMSEnv } from "@notion-headless-cms/adapter-cloudflare";
-import { createCloudflareCMS } from "@notion-headless-cms/adapter-cloudflare";
-import type { PostsItem } from "../generated/nhc-schema";
-import { postsSchema } from "../generated/nhc-schema";
+import type { CloudflareMultiCMSEnv } from "@notion-headless-cms/adapter-cloudflare";
+import { createCloudflareCMSMulti } from "@notion-headless-cms/adapter-cloudflare";
+import { nhcSchema, type PostsItem } from "../generated/nhc-schema";
 
 export type { PostsItem as BlogPost };
-
-export type Env = CloudflareCMSEnv;
+export type Env = CloudflareMultiCMSEnv;
 
 export function createCMS(env: Env) {
-	return createCloudflareCMS<PostsItem>({
+	const client = createCloudflareCMSMulti({
+		schema: nhcSchema,
 		env,
-		schema: postsSchema,
+		sources: {
+			posts: {
+				published: ["公開済み"],
+				accessible: ["公開済み", "編集中", "下書き"],
+			},
+		},
 		ttlMs: 5 * 60_000,
 	});
+	return client.posts;
 }

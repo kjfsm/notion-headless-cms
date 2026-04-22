@@ -1,7 +1,8 @@
 ---
+import { env } from "cloudflare:workers";
 import { createCMS } from "../lib/cms";
 
-const cms = createCMS(Astro.locals.runtime.env);
+const cms = createCMS(env as unknown as Parameters<typeof createCMS>[0]);
 const { items } = await cms.cache.getList();
 ---
 
@@ -17,7 +18,7 @@ const { items } = await cms.cache.getList();
         {items.map((post) => (
           <li>
             <a href={`/posts/${post.slug}`}>
-              <strong>{post.title || post.slug}</strong>
+              <strong>{post.slug}</strong>
               {post.publishedAt && <time>{post.publishedAt}</time>}
             </a>
           </li>

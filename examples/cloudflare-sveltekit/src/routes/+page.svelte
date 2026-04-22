@@ -10,7 +10,7 @@ let { data }: { data: PageData } = $props();
 		{#each data.items as post (post.slug)}
 			<li>
 				<a href="/posts/{post.slug}">
-					<strong>{post.title || post.slug}</strong>
+					<strong>{post.slug}</strong>
 					{#if post.publishedAt}
 						<time>{post.publishedAt}</time>
 					{/if}

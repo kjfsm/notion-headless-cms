@@ -4,6 +4,8 @@ dist
 .turbo
 
 .env
+.dev.vars
 *.tsbuildinfo
 
 **/generated
+**/.wrangler

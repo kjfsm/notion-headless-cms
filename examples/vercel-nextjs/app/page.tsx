@@ -14,7 +14,7 @@ export default async function HomePage() {
 				{items.map((post) => (
 					<li key={post.slug}>
 						<Link href={`/posts/${post.slug}`}>
-							<strong>{post.title || post.slug}</strong>
+							<strong>{post.slug}</strong>
 							{post.publishedAt && <time>{post.publishedAt}</time>}
 						</Link>
 					</li>

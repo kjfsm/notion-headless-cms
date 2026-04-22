@@ -32,6 +32,9 @@ importers:
       '@notion-headless-cms/adapter-cloudflare':
         specifier: workspace:*
         version: link:../../packages/adapter-cloudflare
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@notion-headless-cms/source-notion':
         specifier: workspace:*
         version: link:../../packages/source-notion
@@ -48,6 +51,9 @@ importers:
       '@astrojs/cloudflare':
         specifier: ^13.1.10
         version: 13.1.10(@types/node@25.6.0)(astro@6.1.8(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(rollup@4.60.2)(tsx@4.21.0)(typescript@5.9.3)(yaml@2.8.3))(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(workerd@1.20260421.1)(wrangler@4.84.1(@cloudflare/workers-types@4.20260421.1))(yaml@2.8.3)
+      '@notion-headless-cms/cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0
@@ -63,6 +69,9 @@ importers:
       '@notion-headless-cms/adapter-cloudflare':
         specifier: workspace:*
         version: link:../../packages/adapter-cloudflare
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@notion-headless-cms/source-notion':
         specifier: workspace:*
         version: link:../../packages/source-notion
@@ -73,6 +82,9 @@ importers:
         specifier: ^4.3.6
         version: 4.3.6
     devDependencies:
+      '@notion-headless-cms/cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -143,6 +155,9 @@ importers:
       '@notion-headless-cms/adapter-cloudflare':
         specifier: workspace:*
         version: link:../../packages/adapter-cloudflare
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@notion-headless-cms/source-notion':
         specifier: workspace:*
         version: link:../../packages/source-notion
@@ -150,6 +165,9 @@ importers:
         specifier: ^4.1.12
         version: 4.3.6
     devDependencies:
+      '@notion-headless-cms/cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
       '@sveltejs/adapter-cloudflare':
         specifier: ^7.0.0
         version: 7.2.8(@sveltejs/kit@2.57.1(@sveltejs/vite-plugin-svelte@5.1.1(svelte@5.55.4)(vite@6.4.2(@types/node@22.19.17)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.3)))(svelte@5.55.4)(typescript@5.9.3)(vite@6.4.2(@types/node@22.19.17)(jiti@2.6.1)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.3)))(wrangler@4.83.0(@cloudflare/workers-types@4.20260421.1))
@@ -180,6 +198,9 @@ importers:
       '@notion-headless-cms/adapter-node':
         specifier: workspace:*
         version: link:../../packages/adapter-node
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@notion-headless-cms/source-notion':
         specifier: workspace:*
         version: link:../../packages/source-notion
@@ -190,6 +211,9 @@ importers:
         specifier: ^4.1.12
         version: 4.3.6
     devDependencies:
+      '@notion-headless-cms/cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
       '@types/express':
         specifier: ^4.17.0
         version: 4.17.25
@@ -230,6 +254,9 @@ importers:
         specifier: ^4.1.12
         version: 4.3.6
     devDependencies:
+      '@notion-headless-cms/cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.17

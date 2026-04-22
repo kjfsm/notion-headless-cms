@@ -26,8 +26,16 @@ export interface NotionAdapterOptions<
 > {
 	/** Notion API 認証トークン。 */
 	token: string;
-	/** Notion データベース（データソース）ID。 */
-	dataSourceId: string;
+	/**
+	 * Notion データベース（データソース）ID。
+	 * `dbName` を指定する場合は省略可能（最初のアクセス時に解決される）。
+	 */
+	dataSourceId?: string;
+	/**
+	 * Notion データベース名。`dataSourceId` の代わりに指定すると、
+	 * 最初の API 呼び出し時に `client.search` で解決される（結果はキャッシュされる）。
+	 */
+	dbName?: string;
 	/** Notionプロパティ名マッピング。 */
 	properties?: CMSSchemaProperties;
 	/**
@@ -51,14 +59,25 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 	readonly publishedStatuses?: readonly string[];
 	readonly accessibleStatuses?: readonly string[];
 	private readonly client: ReturnType<typeof createClient>;
-	private readonly dataSourceId: string;
+	private readonly dbName: string | undefined;
+	private resolvedDataSourceId: string | undefined;
+	private resolvingDataSourceId: Promise<string> | undefined;
 	private readonly itemMapper: (page: NotionPage) => T;
 	private readonly slugPropName: string;
 	private readonly blocksConfig: Record<string, BlockHandler> | undefined;
 
 	constructor(opts: NotionAdapterOptions<T>) {
+		if (!opts.dataSourceId && !opts.dbName) {
+			throw new CMSError({
+				code: "core/config_invalid",
+				message:
+					"NotionAdapter requires either `dataSourceId` or `dbName` to be set.",
+				context: { operation: "NotionAdapter.constructor" },
+			});
+		}
 		this.client = createClient({ NOTION_TOKEN: opts.token });
-		this.dataSourceId = opts.dataSourceId;
+		this.resolvedDataSourceId = opts.dataSourceId;
+		this.dbName = opts.dbName;
 		this.blocksConfig = opts.blocks;
 
 		if (opts.schema) {
@@ -84,9 +103,58 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 		}
 	}
 
+	/** dataSourceId を返す。未設定なら dbName で検索して解決し、結果をキャッシュする。 */
+	private async getDataSourceId(): Promise<string> {
+		if (this.resolvedDataSourceId) return this.resolvedDataSourceId;
+		if (this.resolvingDataSourceId) return this.resolvingDataSourceId;
+		const dbName = this.dbName;
+		if (!dbName) {
+			throw new CMSError({
+				code: "core/config_invalid",
+				message: "dataSourceId is not set and dbName was not provided.",
+				context: { operation: "NotionAdapter.getDataSourceId" },
+			});
+		}
+		this.resolvingDataSourceId = (async () => {
+			const response = await this.client.search({
+				query: dbName,
+				filter: { property: "object", value: "data_source" },
+			});
+			// 完全一致を優先
+			for (const result of response.results) {
+				if (result.object !== "data_source") continue;
+				const ds = result as { id: string; title?: { plain_text: string }[] };
+				const title = ds.title?.map((t) => t.plain_text).join("") ?? "";
+				if (title === dbName) {
+					this.resolvedDataSourceId = ds.id;
+					return ds.id;
+				}
+			}
+			// フォールバック: 検索結果の先頭
+			const first = response.results.find((r) => r.object === "data_source") as
+				| { id: string }
+				| undefined;
+			if (!first) {
+				throw new CMSError({
+					code: "source/fetch_items_failed",
+					message: `Notion データベース "${dbName}" が見つかりませんでした。インテグレーションが DB にアクセスできるか確認してください。`,
+					context: { operation: "NotionAdapter.getDataSourceId", dbName },
+				});
+			}
+			this.resolvedDataSourceId = first.id;
+			return first.id;
+		})();
+		try {
+			return await this.resolvingDataSourceId;
+		} finally {
+			this.resolvingDataSourceId = undefined;
+		}
+	}
+
 	async list(opts?: { publishedStatuses?: readonly string[] }): Promise<T[]> {
 		try {
-			const pages = await queryAllPages(this.client, this.dataSourceId);
+			const dataSourceId = await this.getDataSourceId();
+			const pages = await queryAllPages(this.client, dataSourceId);
 			const items = pages.map(this.itemMapper);
 			const filtered =
 				opts?.publishedStatuses && opts.publishedStatuses.length > 0
@@ -109,7 +177,8 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 				cause: err,
 				context: {
 					operation: "NotionAdapter.list",
-					dataSourceId: this.dataSourceId,
+					dataSourceId: this.resolvedDataSourceId,
+					dbName: this.dbName,
 				},
 			});
 		}
@@ -117,9 +186,10 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 
 	async findBySlug(slug: string): Promise<T | null> {
 		try {
+			const dataSourceId = await this.getDataSourceId();
 			const page = await queryPageBySlug(
 				this.client,
-				this.dataSourceId,
+				dataSourceId,
 				slug,
 				this.slugPropName,
 			);
@@ -133,7 +203,8 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 				cause: err,
 				context: {
 					operation: "NotionAdapter.findBySlug",
-					dataSourceId: this.dataSourceId,
+					dataSourceId: this.resolvedDataSourceId,
+					dbName: this.dbName,
 					slug,
 				},
 			});
