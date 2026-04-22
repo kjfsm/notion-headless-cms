@@ -1,2 +1,9 @@
-export type { NodeCMSOptions } from "./cms";
-export { createNodeCMS } from "./cms";
+export type {
+	CreateNodeMultiCMSOptions,
+	MultiCMSResult,
+	MultiSourceEntry,
+	MultiSourceSchema,
+	NodeCMSOptions,
+	SourceStatusConfig,
+} from "./cms.js";
+export { createNodeCMS, createNodeMultiCMS } from "./cms.js";

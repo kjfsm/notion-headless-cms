@@ -71,3 +71,100 @@ export function createCloudflareCMS<
 
 	return createCMS<T>(cmsOpts);
 }
+
+// ── Multi-Source ──────────────────────────────────────────────────────────────
+
+/** nhcSchema の各エントリの型。generateSchema() が生成するオブジェクトと対応する。 */
+export interface MultiSourceEntry<T extends BaseContentItem = BaseContentItem> {
+	id: string;
+	dbName: string;
+	schema?: NotionSchema<T>;
+}
+
+export type MultiSourceSchema = Record<
+	string,
+	MultiSourceEntry<BaseContentItem>
+>;
+
+type InferSourceItem<E> =
+	E extends MultiSourceEntry<infer T> ? T : BaseContentItem;
+
+export type MultiCMSResult<S extends MultiSourceSchema> = {
+	[K in keyof S]: ReturnType<typeof createCMS<InferSourceItem<S[K]>>>;
+};
+
+/** マルチソース向け Cloudflare CMS ファクトリの env 型。 */
+export interface CloudflareMultiCMSEnv {
+	NOTION_TOKEN: string;
+	/** R2 バケット（未設定時はキャッシュなし） */
+	CACHE_BUCKET?: R2BucketLike;
+}
+
+/** ソースごとの公開ステータス設定。nhc generate で生成したファイルを編集せずに差し込める。 */
+export interface SourceStatusConfig {
+	/** 公開済みとみなすステータス値。未指定時は全件返す。 */
+	published?: string[];
+	/** アクセス可能とみなすステータス値。未指定時は published と同じ。 */
+	accessible?: string[];
+}
+
+export interface CreateCloudflareCMSMultiOptions<S extends MultiSourceSchema> {
+	schema: S;
+	env: CloudflareMultiCMSEnv;
+	/**
+	 * ソースごとの公開ステータス設定。
+	 * 生成ファイルを編集せずに published / accessible を差し込む。
+	 *
+	 * @example
+	 * sources: {
+	 *   posts: { published: ["公開"], accessible: ["公開", "下書き"] },
+	 * }
+	 */
+	sources?: { [K in keyof S]?: SourceStatusConfig };
+	content?: ContentConfig;
+	/** SWR の TTL（ミリ秒） */
+	ttlMs?: number;
+}
+
+/**
+ * マルチソース向け Cloudflare Workers CMS ファクトリ。
+ * nhc generate で生成した nhcSchema を渡すと、各ソースに対応する CMS インスタンスを返す。
+ *
+ * @example
+ * const client = createCloudflareCMSMulti({ schema: nhcSchema, env, sources: { posts: { published: ["公開"] } } })
+ * const posts = await client.posts.list()
+ */
+export function createCloudflareCMSMulti<S extends MultiSourceSchema>(
+	opts: CreateCloudflareCMSMultiOptions<S>,
+): MultiCMSResult<S> {
+	const { schema, env, content, ttlMs } = opts;
+	const r2 = r2Cache({ bucket: env.CACHE_BUCKET });
+	const result = {} as MultiCMSResult<S>;
+
+	for (const key of Object.keys(schema) as (keyof S & string)[]) {
+		const entry = schema[key] as MultiSourceEntry<BaseContentItem>;
+		const statusConfig = opts.sources?.[key];
+		const source = notionAdapter({
+			token: env.NOTION_TOKEN,
+			dataSourceId: entry.id,
+			schema: entry.schema,
+		});
+		const cacheConfig: CacheConfig<BaseContentItem> = r2
+			? { document: r2, image: r2, ttlMs }
+			: "disabled";
+		(result as Record<string, unknown>)[key] = createCMS({
+			source,
+			renderer: renderMarkdown,
+			cache: cacheConfig,
+			content,
+			...(statusConfig && {
+				schema: {
+					publishedStatuses: statusConfig.published,
+					accessibleStatuses: statusConfig.accessible ?? statusConfig.published,
+				},
+			}),
+		});
+	}
+
+	return result;
+}

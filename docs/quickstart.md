@@ -98,8 +98,54 @@ const cms = createCMS({
 
 `memoryDocumentCache` / `memoryImageCache` は LRU 上限をオプションで指定できる。長時間稼働するプロセスではメモリ膨張を防ぐために必ず指定することを推奨する。
 
+## CLI でスキーマを自動生成する（推奨）
+
+複数の Notion DB を扱う場合は、CLI でスキーマを自動生成するワークフローが便利。
+
+```bash
+# CLI をインストール
+pnpm add -D @notion-headless-cms/cli
+
+# 設定ファイルのテンプレートを生成
+npx nhc init
+```
+
+`nhc.config.ts` を編集して DB を設定する:
+
+```ts
+import { defineConfig } from "@notion-headless-cms/cli";
+
+export default defineConfig({
+  dataSources: [
+    { name: "posts", dbName: "ブログ記事DB", fields: { published: ["公開"] } },
+    { name: "news",  dbName: "ニュースDB",   fields: { published: ["掲載中"] } },
+  ],
+});
+```
+
+```bash
+# Notion DB を introspect してスキーマを生成
+NOTION_TOKEN=secret_xxx npx nhc generate
+```
+
+生成された `nhc-schema.ts` をそのまま使える:
+
+```ts
+import { nhcSchema } from "./nhc-schema.ts";
+import { createNodeMultiCMS } from "@notion-headless-cms/adapter-node";
+
+const client = createNodeMultiCMS({ schema: nhcSchema });
+
+const posts = await client.posts.list();  // PostsItem[]
+const news  = await client.news.list();   // NewsItem[]
+```
+
+詳細は [CLI ドキュメント](./cli.md) と [マルチソースレシピ](./recipes/multi-source.md) を参照。
+
 ## 次のステップ
 
+- [CLI ツール（nhc）](./cli.md)
+- [マルチソース](./recipes/multi-source.md)
 - [Cloudflare Workers + R2](./recipes/cloudflare-workers.md)
 - [Next.js App Router](./recipes/nextjs-app-router.md)
 - [Node スクリプト](./recipes/nodejs-script.md)

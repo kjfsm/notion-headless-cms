@@ -173,3 +173,5 @@ pnpm changeset
 3. **コミットメッセージ**: 日本語で変更の「なぜ」を記述する
 4. **changeset**: ライブラリを更新したら `pnpm changeset` を実行して changeset を作成する
 5. **リリース**: main にマージすると release.yml が "Version Packages" PR を作成し、その PR をマージすると npm に公開される
+6. **ドキュメント追従**: ライブラリの API・型・挙動を変更したら、関連する `docs/` と各パッケージの `README.md` も同じコミットで更新する
+7. **CLAUDE.md 自己更新**: 同じ指摘を複数回受けたことは、明示的な追記指示がなくても CLAUDE.md に追記する
