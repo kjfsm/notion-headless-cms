@@ -6,9 +6,11 @@ export interface InitOptions {
 	force?: boolean;
 }
 
-const CONFIG_TEMPLATE = `import { defineConfig } from "@notion-headless-cms/cli";
+const CONFIG_TEMPLATE = `import { defineConfig, env } from "@notion-headless-cms/cli";
 
 export default defineConfig({
+	// Notion インテグレーションのシークレット（環境変数 NOTION_TOKEN から読み込む）
+	notionToken: env("NOTION_TOKEN"),
 	dataSources: [
 		{
 			name: "posts",

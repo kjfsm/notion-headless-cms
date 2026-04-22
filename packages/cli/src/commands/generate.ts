@@ -19,10 +19,13 @@ export async function runGenerate(opts: GenerateOptions): Promise<void> {
 	console.log(`設定ファイルを読み込み中: ${configPath}`);
 	const config = await loadConfig(configPath);
 
-	const token = opts.token ?? process.env.NOTION_TOKEN;
+	const token = opts.token ?? config.notionToken ?? process.env.NOTION_TOKEN;
 	if (!token) {
 		throw new Error(
-			"NOTION_TOKEN が設定されていません。--token フラグまたは環境変数 NOTION_TOKEN を指定してください。",
+			"Notion トークンが設定されていません。以下のいずれかで指定してください:\n" +
+				'  - nhc.config.ts に notionToken: env("NOTION_TOKEN") を追加\n' +
+				"  - 環境変数 NOTION_TOKEN を設定\n" +
+				"  - --token フラグを使用",
 		);
 	}
 

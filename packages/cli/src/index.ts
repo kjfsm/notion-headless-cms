@@ -36,9 +36,26 @@ export interface NHCConfig {
 	dataSources: DataSourceConfig[];
 	/** 生成ファイルの出力パス */
 	output: string;
+	/** Notion API トークン。env() で環境変数から読み込むか、直接文字列を指定する */
+	notionToken?: string;
 }
 
 /** nhc.config.ts で使う設定ヘルパー。型推論のみで実体は恒等関数。 */
 export function defineConfig(config: NHCConfig): NHCConfig {
 	return config;
+}
+
+/**
+ * 環境変数を読み込む設定ヘルパー（Prisma の env() と同様の使い方）。
+ * 環境変数が未設定の場合は nhc generate 実行時にエラーを投げる。
+ * @example notionToken: env("NOTION_TOKEN")
+ */
+export function env(name: string): string {
+	const value = process.env[name];
+	if (!value) {
+		throw new Error(
+			`環境変数 "${name}" が設定されていません。\nnhc generate を実行する前に設定してください。`,
+		);
+	}
+	return value;
 }

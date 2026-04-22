@@ -1,6 +1,7 @@
-import { defineConfig } from "@notion-headless-cms/cli";
+import { defineConfig, env } from "@notion-headless-cms/cli";
 
 export default defineConfig({
+	notionToken: env("NOTION_TOKEN"),
 	dataSources: [
 		{
 			name: "posts",
