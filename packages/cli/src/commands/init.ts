@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fileExists } from "../fs-utils.js";
 
 export interface InitOptions {
 	output?: string;
@@ -43,12 +44,7 @@ export async function runInit(opts: InitOptions): Promise<void> {
 		opts.output ?? "nhc.config.ts",
 	);
 
-	const exists = await fs
-		.access(outputPath)
-		.then(() => true)
-		.catch(() => false);
-
-	if (exists && !opts.force) {
+	if (!opts.force && (await fileExists(outputPath))) {
 		throw new Error(
 			`${outputPath} はすでに存在します。上書きするには --force を指定してください。`,
 		);
