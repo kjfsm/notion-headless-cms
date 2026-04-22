@@ -20,13 +20,19 @@ npx nhc init
 NOTION_TOKEN=secret_xxx npx nhc generate
 ```
 
-生成された `nhc-schema.ts` をそのままアダプタに渡せる。
+生成された `nhc-schema.ts` はそのままアダプタに渡せる（編集不要）。
+`published` / `accessible` はクライアント作成時に `sources` で差し込む。
 
 ```ts
 import { nhcSchema } from "./nhc-schema.ts";
 import { createNodeMultiCMS } from "@notion-headless-cms/adapter-node";
 
-const client = createNodeMultiCMS({ schema: nhcSchema });
+const client = createNodeMultiCMS({
+  schema: nhcSchema,
+  sources: {
+    posts: { published: ["公開"], accessible: ["公開", "下書き"] },
+  },
+});
 const posts = await client.posts.list();
 ```
 
@@ -148,7 +154,7 @@ export const nhcSchema = {
 export type NHCSchema = typeof nhcSchema;
 ```
 
-> **注意**: `status` フィールドの `published` / `accessible` 値は Notion DB の設定に依存するため、生成後に手動で設定する必要がある。`// TODO: 公開ステータスを設定してください` というコメントが挿入されるので、そこを編集すること。
+> **`nhc-schema.ts` は編集不要**: `status` フィールドの `published` / `accessible` は生成ファイルに埋め込まれず、クライアント作成時の `sources` オプションで差し込む。`nhc generate` を再実行しても設定が失われない。
 
 ## 関連パッケージ
 

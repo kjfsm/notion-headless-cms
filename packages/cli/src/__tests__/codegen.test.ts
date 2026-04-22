@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 import { generateSchemaFile } from "../codegen.js";
 import type { ResolvedSource } from "../codegen.js";
 
-function makeProp(type: string): { type: string } {
-	return { type };
+// biome-ignore lint/suspicious/noExplicitAny: テスト用モックのため型アサーションを許容
+function makeProp(type: string): any {
+	return { type, id: "_", name: "_", description: "" };
 }
 
 function makeSource(
@@ -53,11 +54,13 @@ describe("generateSchemaFile", () => {
 
 	it("Status プロパティが status として自動検出される", () => {
 		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain('status: { type: "select", notion: "Status"');
-		expect(code).toContain("// TODO: 公開ステータスを設定してください");
+		expect(code).toContain('status: { type: "select", notion: "Status" }');
+		// published/accessible は生成しない（クライアント側で sources オプションで差し込む）
+		expect(code).not.toContain("published:");
+		expect(code).not.toContain("// TODO");
 	});
 
-	it("published/accessible が config で指定された場合は出力される", () => {
+	it("status フィールドは published/accessible なしで生成される（クライアント側で差し込む）", () => {
 		const source = makeSource({
 			config: {
 				name: "posts",
@@ -66,9 +69,12 @@ describe("generateSchemaFile", () => {
 			},
 		});
 		const code = generateSchemaFile([source]);
-		expect(code).toContain('published: ["公開"]');
-		expect(code).toContain('accessible: ["公開", "下書き"]');
-		expect(code).not.toContain("// TODO: 公開ステータスを設定してください");
+		// published/accessible は生成ファイルに含まれない
+		expect(code).not.toContain("published:");
+		expect(code).not.toContain("accessible:");
+		expect(code).not.toContain("// TODO");
+		// status フィールドは notion プロパティ名だけ保持する
+		expect(code).toContain('status: { type: "select", notion: "Status" }');
 	});
 
 	it("PublishedAt date プロパティが publishedAt として自動検出される", () => {

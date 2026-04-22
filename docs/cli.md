@@ -220,7 +220,7 @@ const _postsZodSchema = z.object({
 
 const _postsMapping = defineMapping<PostsItem>({
   slug: { type: "title", notion: "Name" },
-  status: { type: "select", notion: "Status", published: [], accessible: [] }, // TODO: 公開ステータスを設定してください
+  status: { type: "select", notion: "Status" },
   publishedAt: { type: "date", notion: "PublishedAt" },
   title: { type: "richText", notion: "Title" },
   tags: { type: "multiSelect", notion: "Tags" },
@@ -241,26 +241,25 @@ export const nhcSchema = {
 export type NHCSchema = typeof nhcSchema;
 ```
 
-### TODO コメントの処理
+### 生成ファイルは編集不要
 
-`status` フィールドの `published` / `accessible` 値はデータベース固有のため、生成後に手動で設定する必要がある。
-
-```ts
-// 生成直後（要編集）
-status: { type: "select", notion: "Status", published: [], accessible: [] }, // TODO: 公開ステータスを設定してください
-
-// 編集後
-status: { type: "select", notion: "Status", published: ["公開"], accessible: ["公開", "下書き"] },
-```
-
-または `nhc.config.ts` の `fields.published` / `fields.accessible` に設定しておくと、次回 `nhc generate` 実行時に自動で反映される。
+`nhc generate` で生成した `nhc-schema.ts` は **触らなくてよい**。
+`status` フィールドの `published` / `accessible` は生成ファイルには埋め込まれず、クライアント作成時に `sources` オプションで差し込む。
 
 ```ts
-fields: {
-  published: ["公開"],
-  accessible: ["公開", "下書き"],
-},
+import { nhcSchema } from "./nhc-schema.ts";
+import { createNodeMultiCMS } from "@notion-headless-cms/adapter-node";
+
+const client = createNodeMultiCMS({
+  schema: nhcSchema,
+  sources: {
+    posts: { published: ["公開"], accessible: ["公開", "下書き"] },
+    news:  { published: ["掲載中"] },
+  },
+});
 ```
+
+`nhc generate` を再実行しても `sources` の設定は上書きされない（アプリコード側にあるため）。
 
 ## マルチソースクライアントでの利用
 

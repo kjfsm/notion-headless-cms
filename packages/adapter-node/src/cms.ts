@@ -120,9 +120,28 @@ export type MultiCMSResult<S extends MultiSourceSchema> = {
 	[K in keyof S]: ReturnType<typeof createCMS<InferSourceItem<S[K]>>>;
 };
 
+/** ソースごとの公開ステータス設定。nhc generate で生成したファイルを編集せずに差し込める。 */
+export interface SourceStatusConfig {
+	/** 公開済みとみなすステータス値。未指定時は全件返す。 */
+	published?: string[];
+	/** アクセス可能とみなすステータス値。未指定時は published と同じ。 */
+	accessible?: string[];
+}
+
 export interface CreateNodeMultiCMSOptions<S extends MultiSourceSchema> {
 	/** nhcSchema（nhc generate で生成されたオブジェクト） */
 	schema: S;
+	/**
+	 * ソースごとの公開ステータス設定。
+	 * 生成ファイルを編集せずに published / accessible を差し込む。
+	 *
+	 * @example
+	 * sources: {
+	 *   posts: { published: ["公開"], accessible: ["公開", "下書き"] },
+	 *   news:  { published: ["掲載中"] },
+	 * }
+	 */
+	sources?: { [K in keyof S]?: SourceStatusConfig };
 	/** Notion API トークン（省略時は process.env.NOTION_TOKEN を使用） */
 	token?: string;
 	cache?: NodeCMSOptions["cache"];
@@ -154,6 +173,7 @@ export function createNodeMultiCMS<S extends MultiSourceSchema>(
 
 	for (const key of Object.keys(opts.schema) as (keyof S & string)[]) {
 		const entry = opts.schema[key] as MultiSourceEntry<BaseContentItem>;
+		const statusConfig = opts.sources?.[key];
 		const source = notionAdapter({
 			token,
 			dataSourceId: entry.id,
@@ -164,6 +184,13 @@ export function createNodeMultiCMS<S extends MultiSourceSchema>(
 			renderer: renderMarkdown,
 			cache: cacheConfig,
 			content: opts.content,
+			...(statusConfig && {
+				schema: {
+					publishedStatuses: statusConfig.published,
+					accessibleStatuses:
+						statusConfig.accessible ?? statusConfig.published,
+				},
+			}),
 		});
 	}
 

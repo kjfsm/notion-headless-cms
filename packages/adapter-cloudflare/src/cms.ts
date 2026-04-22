@@ -100,17 +100,27 @@ export interface CloudflareMultiCMSEnv {
 	CACHE_BUCKET?: R2BucketLike;
 }
 
+/** ソースごとの公開ステータス設定。nhc generate で生成したファイルを編集せずに差し込める。 */
+export interface SourceStatusConfig {
+	/** 公開済みとみなすステータス値。未指定時は全件返す。 */
+	published?: string[];
+	/** アクセス可能とみなすステータス値。未指定時は published と同じ。 */
+	accessible?: string[];
+}
+
 /**
  * マルチソース向け Cloudflare Workers CMS ファクトリ。
  * nhc generate で生成した nhcSchema を渡すと、各ソースに対応する CMS インスタンスを返す。
  *
  * @example
- * const client = createCloudflareCMSMulti({ schema: nhcSchema, env })
+ * const client = createCloudflareCMSMulti({ schema: nhcSchema, env, sources: { posts: { published: ["公開"] } } })
  * const posts = await client.posts.list()
  */
 export function createCloudflareCMSMulti<S extends MultiSourceSchema>(opts: {
 	schema: S;
 	env: CloudflareMultiCMSEnv;
+	/** ソースごとの公開ステータス設定。生成ファイルを編集せずに差し込む。 */
+	sources?: { [K in keyof S]?: SourceStatusConfig };
 	content?: ContentConfig;
 	ttlMs?: number;
 }): MultiCMSResult<S> {
@@ -120,6 +130,7 @@ export function createCloudflareCMSMulti<S extends MultiSourceSchema>(opts: {
 
 	for (const key of Object.keys(schema) as (keyof S & string)[]) {
 		const entry = schema[key] as MultiSourceEntry<BaseContentItem>;
+		const statusConfig = opts.sources?.[key];
 		const source = notionAdapter({
 			token: env.NOTION_TOKEN,
 			dataSourceId: entry.id,
@@ -133,6 +144,13 @@ export function createCloudflareCMSMulti<S extends MultiSourceSchema>(opts: {
 			renderer: renderMarkdown,
 			cache: cacheConfig,
 			content,
+			...(statusConfig && {
+				schema: {
+					publishedStatuses: statusConfig.published,
+					accessibleStatuses:
+						statusConfig.accessible ?? statusConfig.published,
+				},
+			}),
 		});
 	}
 

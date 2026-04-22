@@ -56,7 +56,14 @@ pnpm add @notion-headless-cms/adapter-node @notionhq/client zod \
 import { nhcSchema } from "./nhc-schema.ts";
 import { createNodeMultiCMS } from "@notion-headless-cms/adapter-node";
 
-const client = createNodeMultiCMS({ schema: nhcSchema });
+const client = createNodeMultiCMS({
+  schema: nhcSchema,
+  // published/accessible はここで差し込む（生成ファイルは編集不要）
+  sources: {
+    posts: { published: ["公開"], accessible: ["公開", "下書き"] },
+    news:  { published: ["掲載中"] },
+  },
+});
 
 // 各ソースは個別の CMS インスタンスとして推論される
 const posts = await client.posts.list();   // PostsItem[]
@@ -68,6 +75,9 @@ const news  = await client.news.list();    // NewsItem[]
 ```ts
 const client = createNodeMultiCMS({
   schema: nhcSchema,
+  sources: {
+    posts: { published: ["公開"], accessible: ["公開", "下書き"] },
+  },
   cache: {
     document: "memory",
     image: "memory",
@@ -87,6 +97,7 @@ const cached = await client.news.cache.get("some-slug");
 | オプション | 型 | 説明 |
 |---|---|---|
 | `schema` | `MultiSourceSchema` | `nhc generate` で生成した `nhcSchema` |
+| `sources` | `{ [K in keyof S]?: SourceStatusConfig }`（任意） | ソースごとの `published` / `accessible` 設定 |
 | `token` | `string`（任意） | Notion API トークン（省略時は `NOTION_TOKEN` 環境変数） |
 | `cache` | `NodeCMSOptions["cache"]`（任意） | キャッシュ設定（`adapter-node` の `createNodeCMS` と同じ） |
 | `content` | `ContentConfig`（任意） | `imageProxyBase` などのレンダリング設定 |
@@ -127,6 +138,11 @@ export default {
       schema: nhcSchema,
       env,
       ttlMs: 5 * 60_000, // 5分 TTL
+      // published/accessible はここで差し込む（生成ファイルは編集不要）
+      sources: {
+        posts: { published: ["公開"], accessible: ["公開", "下書き"] },
+        news:  { published: ["掲載中"] },
+      },
     });
 
     const url = new URL(request.url);
@@ -162,6 +178,7 @@ wrangler secret put NOTION_TOKEN
 |---|---|---|
 | `schema` | `MultiSourceSchema` | `nhc generate` で生成した `nhcSchema` |
 | `env` | `CloudflareMultiCMSEnv` | Workers バインディング |
+| `sources` | `{ [K in keyof S]?: SourceStatusConfig }`（任意） | ソースごとの `published` / `accessible` 設定 |
 | `ttlMs` | `number`（任意） | SWR の TTL（ミリ秒） |
 | `content` | `ContentConfig`（任意） | `imageProxyBase` などのレンダリング設定 |
 

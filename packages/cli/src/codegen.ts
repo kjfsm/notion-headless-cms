@@ -286,20 +286,8 @@ function generateSourceBlock(source: ResolvedSource): string {
 	}
 
 	if (statusField) {
-		const pubStr =
-			statusField.published.length > 0
-				? statusField.published.map((s) => `"${s}"`).join(", ")
-				: "";
-		const accStr =
-			statusField.accessible.length > 0
-				? statusField.accessible.map((s) => `"${s}"`).join(", ")
-				: "";
-		const hasTodo =
-			statusField.published.length === 0
-				? " // TODO: 公開ステータスを設定してください"
-				: "";
 		mappingLines.push(
-			`\t\tstatus: { type: "select", notion: "${statusField.notionPropName}", published: [${pubStr}], accessible: [${accStr}] },${hasTodo}`,
+			`\t\tstatus: { type: "select", notion: "${statusField.notionPropName}" },`,
 		);
 	}
 
@@ -310,21 +298,9 @@ function generateSourceBlock(source: ResolvedSource): string {
 	}
 
 	for (const f of interfaceFields) {
-		if (f.notionFieldType === "select" || f.notionFieldType === "multiSelect") {
-			if (f.notionFieldType === "select") {
-				mappingLines.push(
-					`\t\t${f.tsName}: { type: "select", notion: "${f.notionPropName}", published: [], accessible: [] },`,
-				);
-			} else {
-				mappingLines.push(
-					`\t\t${f.tsName}: { type: "${f.notionFieldType}", notion: "${f.notionPropName}" },`,
-				);
-			}
-		} else {
-			mappingLines.push(
-				`\t\t${f.tsName}: { type: "${f.notionFieldType}", notion: "${f.notionPropName}" },`,
-			);
-		}
+		mappingLines.push(
+			`\t\t${f.tsName}: { type: "${f.notionFieldType}", notion: "${f.notionPropName}" },`,
+		);
 	}
 
 	// スキップされたプロパティのコメント
