@@ -26,8 +26,8 @@ export default defineConfig({
 			// },
 		},
 	],
-	// 生成ファイルの出力先（省略時: ./nhc-schema.ts）
-	// output: "./nhc-schema.ts",
+	// 生成ファイルの出力先
+	output: "./app/generated/nhc-schema.ts",
 });
 
 // 生成後: createNodeMultiCMS / createCloudflareCMSMulti の sources オプションで

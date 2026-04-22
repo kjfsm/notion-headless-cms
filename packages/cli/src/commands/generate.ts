@@ -66,10 +66,7 @@ export async function runGenerate(opts: GenerateOptions): Promise<void> {
 
 	const code = generateSchemaFile(resolvedSources);
 
-	const outputPath = path.resolve(
-		process.cwd(),
-		config.output ?? "./nhc-schema.ts",
-	);
+	const outputPath = path.resolve(process.cwd(), config.output);
 	await fs.mkdir(path.dirname(outputPath), { recursive: true });
 	await fs.writeFile(outputPath, code, "utf-8");
 
@@ -77,4 +74,9 @@ export async function runGenerate(opts: GenerateOptions): Promise<void> {
 	console.log(
 		"次のステップ: createNodeMultiCMS / createCloudflareCMSMulti の sources オプションで published / accessible を設定してください。",
 	);
+
+	const relPath = path.relative(process.cwd(), outputPath);
+	console.log(`\n⚠  生成ファイルには Notion DB の ID が含まれています。`);
+	console.log(`   .gitignore に追加することを検討してください:`);
+	console.log(`   echo "${relPath}" >> .gitignore`);
 }

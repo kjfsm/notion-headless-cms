@@ -34,8 +34,8 @@ export type DataSourceConfig = DataSourceWithId | DataSourceWithDbName;
 
 export interface NHCConfig {
 	dataSources: DataSourceConfig[];
-	/** 生成ファイルの出力パス（デフォルト: ./nhc-schema.ts） */
-	output?: string;
+	/** 生成ファイルの出力パス */
+	output: string;
 }
 
 /** nhc.config.ts で使う設定ヘルパー。型推論のみで実体は恒等関数。 */

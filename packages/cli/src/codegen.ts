@@ -249,10 +249,11 @@ function generateSourceBlock(source: ResolvedSource): string {
 	const publishedAtField = mapped.find((f) => f.isPublishedAt);
 
 	// ── extraFields: slug/status/publishedAt/title/skipped を除いた追加フィールド ──
+	// isSlug=true のフィールドは選択されなかったスラッグ候補も含め除外する（重複 slug キー防止）
 	const extraFields = mapped.filter(
 		(f) =>
 			!f.skipped &&
-			f !== slugField &&
+			!f.isSlug &&
 			f !== statusField &&
 			f !== publishedAtField &&
 			f.notionFieldType !== "title",
@@ -272,15 +273,30 @@ function generateSourceBlock(source: ResolvedSource): string {
 	// TS interface のフィールド（BaseContentItem 由来の slug/status/publishedAt は除く）
 	const interfaceFields = extraFields.filter((f) => !f.skipped);
 
+	// status/publishedAt が検出された場合はオプションを必須に絞り込む semantic override
+	const semanticOverrides: { tsName: string; tsType: string }[] = [];
+	if (statusField)
+		semanticOverrides.push({ tsName: "status", tsType: "string" });
+	if (publishedAtField)
+		semanticOverrides.push({ tsName: "publishedAt", tsType: "string" });
+	const hasInterface =
+		semanticOverrides.length > 0 || interfaceFields.length > 0;
+
 	// Zod schema のフィールド（id + updatedAt は常に含む）
+	// nullable().transform で BaseContentItem の string 型と整合させる
 	const zodFields: string[] = [
 		"\t\tid: z.string(),",
 		"\t\tupdatedAt: z.string(),",
-		"\t\tslug: z.string().nullable(),",
+		'\t\tslug: z.string().nullable().transform((s) => s ?? ""),',
 	];
-	if (statusField) zodFields.push("\t\tstatus: z.string().nullable(),");
+	if (statusField)
+		zodFields.push(
+			'\t\tstatus: z.string().nullable().transform((s) => s ?? ""),',
+		);
 	if (publishedAtField)
-		zodFields.push("\t\tpublishedAt: z.string().nullable(),");
+		zodFields.push(
+			'\t\tpublishedAt: z.string().nullable().transform((s) => s ?? ""),',
+		);
 	for (const f of interfaceFields) {
 		zodFields.push(`\t\t${f.tsName}: ${f.zodExpr},`);
 	}
@@ -324,8 +340,11 @@ function generateSourceBlock(source: ResolvedSource): string {
 	];
 
 	// interface
-	if (interfaceFields.length > 0) {
+	if (hasInterface) {
 		lines.push(`export interface ${typeName} extends BaseContentItem {`);
+		for (const f of semanticOverrides) {
+			lines.push(`\t${f.tsName}: ${f.tsType};`);
+		}
 		for (const f of interfaceFields) {
 			lines.push(`\t${f.tsName}: ${f.tsType};`);
 		}
@@ -342,7 +361,7 @@ function generateSourceBlock(source: ResolvedSource): string {
 	lines.push("");
 
 	// defineMapping
-	if (interfaceFields.length > 0) {
+	if (hasInterface) {
 		lines.push(`const _${varPrefix}Mapping = defineMapping<${typeName}>({`);
 	} else {
 		lines.push(`const _${varPrefix}Mapping = defineMapping<BaseContentItem>({`);

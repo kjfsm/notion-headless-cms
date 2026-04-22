@@ -17,7 +17,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 				{items.map((post) => (
 					<li key={post.slug}>
 						<Link to={`/posts/${post.slug}`}>
-							<strong>{post.title || post.slug}</strong>
+							<strong>{post.slug}</strong>
 							{post.publishedAt && <time>{post.publishedAt}</time>}
 						</Link>
 					</li>

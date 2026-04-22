@@ -27,7 +27,7 @@ type SystemField = "id" | "updatedAt";
  * `id` / `updatedAt` はシステムフィールドのため指定不要。
  * 型レベルでキーがスキーマと一致することを保証する。ランタイムは恒等関数。
  */
-export function defineMapping<T extends Record<string, unknown>>(
+export function defineMapping<T extends object>(
 	mapping: { [K in keyof Omit<T, SystemField>]: NotionFieldType },
 ): { [K in keyof Omit<T, SystemField>]: NotionFieldType } {
 	return mapping;

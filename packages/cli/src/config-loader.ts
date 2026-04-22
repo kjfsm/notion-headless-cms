@@ -15,5 +15,11 @@ export async function loadConfig(configPath: string): Promise<NHCConfig> {
 		);
 	}
 
+	if (!(config as NHCConfig).output) {
+		throw new Error(
+			`設定ファイルに output の指定が必要です。\n例: output: "./app/generated/nhc-schema.ts"\nPath: ${configPath}`,
+		);
+	}
+
 	return config as NHCConfig;
 }
