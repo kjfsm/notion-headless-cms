@@ -9,7 +9,8 @@ interface ResolvedSource {
 }
 
 interface MappedField {
-	tsName: string;
+	/** null = ASCII 変換不可かつ fields.properties 未指定（semantic/skipped フィールドのみ許容） */
+	tsName: string | null;
 	tsType: string;
 	zodExpr: string;
 	notionFieldType: string;
@@ -17,7 +18,7 @@ interface MappedField {
 	isSlug: boolean;
 	isStatus: boolean;
 	isPublishedAt: boolean;
-	/** 非推奨プロパティ型のためスキップされた */
+	/** 未対応プロパティ型のためスキップされた */
 	skipped?: boolean;
 	skipReason?: string;
 }
@@ -54,10 +55,12 @@ function toTsCamelCase(name: string): string | null {
 function mapProperty(
 	propName: string,
 	prop: DataSourceObjectResponse["properties"][string],
-	fieldIndex: number,
 	fields: DataSourceFieldOptions | undefined,
-): MappedField | null {
-	const tsName = toTsCamelCase(propName) ?? `field_${fieldIndex}`;
+): MappedField {
+	// 明示マッピング優先 → 自動 camelCase → null（semantic/skipped フィールド以外はエラーになる）
+	const tsName: string | null =
+		fields?.properties?.[propName] ?? toTsCamelCase(propName) ?? null;
+
 	const isSlug =
 		fields?.slug === propName ||
 		(!fields?.slug && (SLUG_NAMES.has(propName) || prop.type === "title"));
@@ -197,39 +200,74 @@ function generateSourceBlock(source: ResolvedSource): string {
 	const varPrefix = config.name;
 	const fields = config.fields;
 
-	// 全プロパティをマッピング
-	const mapped: MappedField[] = [];
-	let fieldIndex = 0;
-	for (const [propName, prop] of Object.entries(properties)) {
-		const f = mapProperty(propName, prop, fieldIndex++, fields);
-		if (f) mapped.push(f);
-	}
-
-	// slug フィールドを特定（title 型から自動検出または指定）
-	let slugField = mapped.find((f) => f.isSlug && f.notionFieldType === "title");
-	if (!slugField) {
-		// title 型がなければ richText で slug 名のものを探す
-		slugField = mapped.find(
-			(f) => f.isSlug && f.notionFieldType === "richText",
+	// ── 事前検証: fields で指定したプロパティが DB に存在するか ──────────────────
+	const hint = `nhc.config.ts の "${config.name}" の fields を確認してください。`;
+	if (fields?.slug && !(fields.slug in properties)) {
+		throw new Error(
+			`[${config.name}] fields.slug に "${fields.slug}" が指定されていますが、DB "${dbName}" に該当するプロパティが見つかりません。${hint}`,
 		);
 	}
+	if (fields?.status && !(fields.status in properties)) {
+		throw new Error(
+			`[${config.name}] fields.status に "${fields.status}" が指定されていますが、DB "${dbName}" に該当するプロパティが見つかりません。${hint}`,
+		);
+	}
+	if (fields?.publishedAt && !(fields.publishedAt in properties)) {
+		throw new Error(
+			`[${config.name}] fields.publishedAt に "${fields.publishedAt}" が指定されていますが、DB "${dbName}" に該当するプロパティが見つかりません。${hint}`,
+		);
+	}
+	for (const notionPropName of Object.keys(fields?.properties ?? {})) {
+		if (!(notionPropName in properties)) {
+			throw new Error(
+				`[${config.name}] fields.properties に "${notionPropName}" が指定されていますが、DB "${dbName}" に該当するプロパティが見つかりません。${hint}`,
+			);
+		}
+	}
+
+	// ── 全プロパティをマッピング ────────────────────────────────────────────────
+	const mapped: MappedField[] = [];
+	for (const [propName, prop] of Object.entries(properties)) {
+		mapped.push(mapProperty(propName, prop, fields));
+	}
+
+	// ── slug / status / publishedAt を特定 ────────────────────────────────────
+	const slugField =
+		mapped.find((f) => f.isSlug && f.notionFieldType === "title") ??
+		mapped.find((f) => f.isSlug && f.notionFieldType === "richText");
+
 	if (!slugField) {
-		// フォールバック: 最初の title 型
-		slugField = mapped.find((f) => f.notionFieldType === "title");
+		const suggestion = fields?.slug
+			? ""
+			: `\n  → fields.slug に title 型プロパティ名を指定してください。`;
+		throw new Error(
+			`[${config.name}] slug フィールドが見つかりませんでした。DB "${dbName}" に title 型プロパティが存在するか確認してください。${suggestion}`,
+		);
 	}
 
 	const statusField = mapped.find((f) => f.isStatus);
 	const publishedAtField = mapped.find((f) => f.isPublishedAt);
 
-	// システムフィールド以外の追加フィールド
+	// ── extraFields: slug/status/publishedAt/title/skipped を除いた追加フィールド ──
 	const extraFields = mapped.filter(
 		(f) =>
 			!f.skipped &&
 			f !== slugField &&
 			f !== statusField &&
 			f !== publishedAtField &&
-			f.notionFieldType !== "title", // title はすでに slug として扱う
+			f.notionFieldType !== "title",
 	);
+
+	// ── tsName が null の extraField はエラー（フォールバック廃止） ────────────────
+	for (const f of extraFields) {
+		if (f.tsName === null) {
+			throw new Error(
+				`[${config.name}] プロパティ "${f.notionPropName}" は TypeScript 識別子に自動変換できません。\n` +
+					`  → nhc.config.ts の fields.properties に追加してください:\n` +
+					`     properties: { "${f.notionPropName}": "フィールド名" }`,
+			);
+		}
+	}
 
 	// TS interface のフィールド（BaseContentItem 由来の slug/status/publishedAt は除く）
 	const interfaceFields = extraFields.filter((f) => !f.skipped);
@@ -248,17 +286,9 @@ function generateSourceBlock(source: ResolvedSource): string {
 	}
 
 	// defineMapping のフィールド（id/updatedAt を除く全フィールド）
-	const mappingLines: string[] = [];
-
-	if (slugField) {
-		mappingLines.push(
-			`\t\tslug: { type: "${slugField.notionFieldType}", notion: "${slugField.notionPropName}" },`,
-		);
-	} else {
-		mappingLines.push(
-			`\t\tslug: { type: "richText", notion: "Slug" }, // TODO: slug フィールドが見つかりませんでした`,
-		);
-	}
+	const mappingLines: string[] = [
+		`\t\tslug: { type: "${slugField.notionFieldType}", notion: "${slugField.notionPropName}" },`,
+	];
 
 	if (statusField) {
 		mappingLines.push(

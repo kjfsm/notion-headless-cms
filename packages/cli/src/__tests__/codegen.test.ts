@@ -189,7 +189,7 @@ describe("generateSchemaFile", () => {
 		expect(code).toContain('dbName: "ニュースDB",');
 	});
 
-	it("日本語プロパティ名は camelCase に変換できない場合 field_N にフォールバックする", () => {
+	it("日本語プロパティ名は fields.properties がないとエラーになる", () => {
 		const source = makeSource({
 			config: { name: "posts", dbName: "DB" },
 			properties: {
@@ -197,9 +197,60 @@ describe("generateSchemaFile", () => {
 				あいうえお: makeProp("number"),
 			},
 		});
+		expect(() => generateSchemaFile([source])).toThrow(
+			"fields.properties に追加してください",
+		);
+	});
+
+	it("fields.properties で日本語プロパティ名を明示マッピングできる", () => {
+		const source = makeSource({
+			config: {
+				name: "posts",
+				dbName: "DB",
+				fields: { properties: { あいうえお: "japaneseField" } },
+			},
+			properties: {
+				Name: makeProp("title"),
+				あいうえお: makeProp("number"),
+			},
+		});
 		const code = generateSchemaFile([source]);
-		// 日本語のみの名前は空になるため field_N になる
-		expect(code).toMatch(/field_\d+/);
+		expect(code).toContain("japaneseField");
+		expect(code).toContain('notion: "あいうえお"');
+	});
+
+	it("slug が見つからない場合はエラーになる", () => {
+		const source = makeSource({
+			properties: {
+				Body: makeProp("rich_text"),
+				Status: makeProp("status"),
+			},
+		});
+		expect(() => generateSchemaFile([source])).toThrow(
+			"slug フィールドが見つかりませんでした",
+		);
+	});
+
+	it("fields.slug に存在しないプロパティを指定するとエラーになる", () => {
+		const source = makeSource({
+			config: {
+				name: "posts",
+				dbName: "DB",
+				fields: { slug: "NoSuchProp" },
+			},
+		});
+		expect(() => generateSchemaFile([source])).toThrow("NoSuchProp");
+	});
+
+	it("fields.properties に存在しないプロパティを指定するとエラーになる", () => {
+		const source = makeSource({
+			config: {
+				name: "posts",
+				dbName: "DB",
+				fields: { properties: { 存在しない: "missing" } },
+			},
+		});
+		expect(() => generateSchemaFile([source])).toThrow("存在しない");
 	});
 
 	it("スペースやハイフン入りのプロパティ名を camelCase に変換する", () => {

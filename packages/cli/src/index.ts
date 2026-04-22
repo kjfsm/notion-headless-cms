@@ -1,10 +1,16 @@
 export interface DataSourceFieldOptions {
-	/** slug に使う Notion プロパティ名（デフォルト: title 型プロパティ） */
+	/** slug に使う Notion プロパティ名（自動検出: title 型プロパティ） */
 	slug?: string;
-	/** status に使う Notion プロパティ名（デフォルト: "Status" / "状態" などの select 型） */
+	/** status に使う Notion プロパティ名（自動検出: "Status" / "状態" などの select 型） */
 	status?: string;
-	/** publishedAt に使う Notion プロパティ名（デフォルト: "PublishedAt" などの date 型） */
+	/** publishedAt に使う Notion プロパティ名（自動検出: "PublishedAt" などの date 型） */
 	publishedAt?: string;
+	/**
+	 * Notion プロパティ名 → TypeScript フィールド名の明示マッピング。
+	 * ASCII に変換できないプロパティ名（日本語など）は必須指定。
+	 * @example { "タイトル": "title", "カテゴリ": "category" }
+	 */
+	properties?: Record<string, string>;
 }
 
 interface DataSourceWithId {

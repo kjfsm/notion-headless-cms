@@ -17,12 +17,12 @@ export default defineConfig({
 			// id を直接指定することもできます（id が優先されます）
 			// id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
 			// fields: {
-			// 	// slug に使う Notion プロパティ名（省略時: title 型プロパティを自動検出）
-			// 	// slug: "Slug",
-			// 	// status に使う Notion プロパティ名（省略時: "Status" などを自動検出）
-			// 	// status: "Status",
-			// 	// publishedAt に使う Notion プロパティ名（省略時: "PublishedAt" などを自動検出）
-			// 	// publishedAt: "PublishedAt",
+			// 	// 自動検出が当たらない場合のみ指定してください
+			// 	// slug: "Slug",        // slug に使う Notion プロパティ名
+			// 	// status: "Status",    // status に使う Notion プロパティ名
+			// 	// publishedAt: "公開日", // publishedAt に使う Notion プロパティ名
+			// 	// 日本語など ASCII 変換できないプロパティ名は必須指定
+			// 	// properties: { "タイトル": "title", "カテゴリ": "category" },
 			// },
 		},
 	],
