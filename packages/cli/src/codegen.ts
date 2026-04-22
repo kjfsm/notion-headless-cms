@@ -51,6 +51,102 @@ function toTsCamelCase(name: string): string | null {
 	return normalized.charAt(0).toLowerCase() + normalized.slice(1);
 }
 
+type SemanticKind = "slug" | "status" | "publishedAt" | null;
+
+/** Notion プロパティ型 → TS/Zod 表現と、semantic 検出の許容カテゴリのマップ */
+const PROPERTY_TYPE_MAP: Record<
+	string,
+	{
+		tsType: string;
+		zodExpr: string;
+		notionFieldType: string;
+		semanticKind: SemanticKind;
+	}
+> = {
+	title: {
+		tsType: "string | null",
+		zodExpr: "z.string().nullable()",
+		notionFieldType: "title",
+		semanticKind: "slug",
+	},
+	rich_text: {
+		tsType: "string | null",
+		zodExpr: "z.string().nullable()",
+		notionFieldType: "richText",
+		semanticKind: "slug",
+	},
+	select: {
+		tsType: "string | null",
+		zodExpr: "z.string().nullable()",
+		notionFieldType: "select",
+		semanticKind: "status",
+	},
+	status: {
+		tsType: "string | null",
+		zodExpr: "z.string().nullable()",
+		notionFieldType: "select",
+		semanticKind: "status",
+	},
+	multi_select: {
+		tsType: "string[]",
+		zodExpr: "z.array(z.string())",
+		notionFieldType: "multiSelect",
+		semanticKind: null,
+	},
+	date: {
+		tsType: "string | null",
+		zodExpr: "z.string().nullable()",
+		notionFieldType: "date",
+		semanticKind: "publishedAt",
+	},
+	number: {
+		tsType: "number | null",
+		zodExpr: "z.number().nullable()",
+		notionFieldType: "number",
+		semanticKind: null,
+	},
+	checkbox: {
+		tsType: "boolean",
+		zodExpr: "z.boolean()",
+		notionFieldType: "checkbox",
+		semanticKind: null,
+	},
+	url: {
+		tsType: "string | null",
+		zodExpr: "z.string().nullable()",
+		notionFieldType: "url",
+		semanticKind: null,
+	},
+};
+
+function detectSlug(
+	propName: string,
+	type: string,
+	fields: DataSourceFieldOptions | undefined,
+): boolean {
+	if (fields?.slug) return fields.slug === propName;
+	return SLUG_NAMES.has(propName) || type === "title";
+}
+
+function detectStatus(
+	propName: string,
+	fields: DataSourceFieldOptions | undefined,
+): boolean {
+	if (fields?.status) return fields.status === propName;
+	return STATUS_NAMES.has(propName) || STATUS_NAMES.has(propName.toLowerCase());
+}
+
+function detectPublishedAt(
+	propName: string,
+	fields: DataSourceFieldOptions | undefined,
+): boolean {
+	if (fields?.publishedAt) return fields.publishedAt === propName;
+	return (
+		PUBLISHED_AT_NAMES.has(propName) ||
+		PUBLISHED_AT_NAMES.has(propName.toLowerCase())
+	);
+}
+
 /** Notion プロパティ型から MappedField を生成 */
 function mapProperty(
 	propName: string,
@@ -58,134 +154,37 @@ function mapProperty(
 	fields: DataSourceFieldOptions | undefined,
 ): MappedField {
 	// 明示マッピング優先 → 自動 camelCase → null（semantic/skipped フィールド以外はエラーになる）
-	const tsName: string | null =
-		fields?.properties?.[propName] ?? toTsCamelCase(propName) ?? null;
+	const tsName = fields?.properties?.[propName] ?? toTsCamelCase(propName);
 
-	const isSlug =
-		fields?.slug === propName ||
-		(!fields?.slug && (SLUG_NAMES.has(propName) || prop.type === "title"));
-	const isStatus =
-		fields?.status === propName ||
-		(!fields?.status &&
-			(STATUS_NAMES.has(propName) || STATUS_NAMES.has(propName.toLowerCase())));
-	const isPublishedAt =
-		fields?.publishedAt === propName ||
-		(!fields?.publishedAt &&
-			(PUBLISHED_AT_NAMES.has(propName) ||
-				PUBLISHED_AT_NAMES.has(propName.toLowerCase())));
-
-	switch (prop.type) {
-		case "title":
-			return {
-				tsName,
-				tsType: "string | null",
-				zodExpr: "z.string().nullable()",
-				notionFieldType: "title",
-				notionPropName: propName,
-				isSlug,
-				isStatus: false,
-				isPublishedAt: false,
-			};
-
-		case "rich_text":
-			return {
-				tsName,
-				tsType: "string | null",
-				zodExpr: "z.string().nullable()",
-				notionFieldType: "richText",
-				notionPropName: propName,
-				isSlug,
-				isStatus: false,
-				isPublishedAt: false,
-			};
-
-		case "select":
-		case "status":
-			return {
-				tsName,
-				tsType: "string | null",
-				zodExpr: "z.string().nullable()",
-				notionFieldType: "select",
-				notionPropName: propName,
-				isSlug: false,
-				isStatus,
-				isPublishedAt: false,
-			};
-
-		case "multi_select":
-			return {
-				tsName,
-				tsType: "string[]",
-				zodExpr: "z.array(z.string())",
-				notionFieldType: "multiSelect",
-				notionPropName: propName,
-				isSlug: false,
-				isStatus: false,
-				isPublishedAt: false,
-			};
-
-		case "date":
-			return {
-				tsName,
-				tsType: "string | null",
-				zodExpr: "z.string().nullable()",
-				notionFieldType: "date",
-				notionPropName: propName,
-				isSlug: false,
-				isStatus: false,
-				isPublishedAt,
-			};
-
-		case "number":
-			return {
-				tsName,
-				tsType: "number | null",
-				zodExpr: "z.number().nullable()",
-				notionFieldType: "number",
-				notionPropName: propName,
-				isSlug: false,
-				isStatus: false,
-				isPublishedAt: false,
-			};
-
-		case "checkbox":
-			return {
-				tsName,
-				tsType: "boolean",
-				zodExpr: "z.boolean()",
-				notionFieldType: "checkbox",
-				notionPropName: propName,
-				isSlug: false,
-				isStatus: false,
-				isPublishedAt: false,
-			};
-
-		case "url":
-			return {
-				tsName,
-				tsType: "string | null",
-				zodExpr: "z.string().nullable()",
-				notionFieldType: "url",
-				notionPropName: propName,
-				isSlug: false,
-				isStatus: false,
-				isPublishedAt: false,
-			};
-
-		default:
-			return {
-				tsName,
-				tsType: "unknown",
-				zodExpr: "z.unknown()",
-				notionFieldType: "richText",
-				notionPropName: propName,
-				isSlug: false,
-				isStatus: false,
-				isPublishedAt: false,
-				skipped: true,
-				skipReason: `未対応のプロパティ型: ${prop.type}`,
-			};
+	const typeInfo = PROPERTY_TYPE_MAP[prop.type];
+	if (!typeInfo) {
+		return {
+			tsName,
+			tsType: "unknown",
+			zodExpr: "z.unknown()",
+			notionFieldType: "richText",
+			notionPropName: propName,
+			isSlug: false,
+			isStatus: false,
+			isPublishedAt: false,
+			skipped: true,
+			skipReason: `未対応のプロパティ型: ${prop.type}`,
+		};
 	}
+
+	// semantic 検出はプロパティ型が許容するカテゴリのみ有効化
+	const kind = typeInfo.semanticKind;
+	return {
+		tsName,
+		tsType: typeInfo.tsType,
+		zodExpr: typeInfo.zodExpr,
+		notionFieldType: typeInfo.notionFieldType,
+		notionPropName: propName,
+		isSlug: kind === "slug" && detectSlug(propName, prop.type, fields),
+		isStatus: kind === "status" && detectStatus(propName, fields),
+		isPublishedAt:
+			kind === "publishedAt" && detectPublishedAt(propName, fields),
+	};
 }
 
 /** 名前の先頭を大文字に（例: posts → Posts） */
@@ -249,10 +248,11 @@ function generateSourceBlock(source: ResolvedSource): string {
 	const publishedAtField = mapped.find((f) => f.isPublishedAt);
 
 	// ── extraFields: slug/status/publishedAt/title/skipped を除いた追加フィールド ──
+	// isSlug=true のフィールドは選択されなかったスラッグ候補も含め除外する（重複 slug キー防止）
 	const extraFields = mapped.filter(
 		(f) =>
 			!f.skipped &&
-			f !== slugField &&
+			!f.isSlug &&
 			f !== statusField &&
 			f !== publishedAtField &&
 			f.notionFieldType !== "title",
@@ -272,15 +272,25 @@ function generateSourceBlock(source: ResolvedSource): string {
 	// TS interface のフィールド（BaseContentItem 由来の slug/status/publishedAt は除く）
 	const interfaceFields = extraFields.filter((f) => !f.skipped);
 
+	// status/publishedAt が検出された場合はオプションを必須に絞り込む semantic override
+	const semanticOverrides: { tsName: string; tsType: string }[] = [];
+	if (statusField)
+		semanticOverrides.push({ tsName: "status", tsType: "string" });
+	if (publishedAtField)
+		semanticOverrides.push({ tsName: "publishedAt", tsType: "string" });
+	const hasInterface =
+		semanticOverrides.length > 0 || interfaceFields.length > 0;
+
 	// Zod schema のフィールド（id + updatedAt は常に含む）
+	// BaseContentItem の string 型と整合させるため null → "" に変換
+	const NULLABLE_STRING = 'z.string().nullable().transform((s) => s ?? "")';
 	const zodFields: string[] = [
 		"\t\tid: z.string(),",
 		"\t\tupdatedAt: z.string(),",
-		"\t\tslug: z.string().nullable(),",
+		`\t\tslug: ${NULLABLE_STRING},`,
 	];
-	if (statusField) zodFields.push("\t\tstatus: z.string().nullable(),");
-	if (publishedAtField)
-		zodFields.push("\t\tpublishedAt: z.string().nullable(),");
+	if (statusField) zodFields.push(`\t\tstatus: ${NULLABLE_STRING},`);
+	if (publishedAtField) zodFields.push(`\t\tpublishedAt: ${NULLABLE_STRING},`);
 	for (const f of interfaceFields) {
 		zodFields.push(`\t\t${f.tsName}: ${f.zodExpr},`);
 	}
@@ -324,8 +334,11 @@ function generateSourceBlock(source: ResolvedSource): string {
 	];
 
 	// interface
-	if (interfaceFields.length > 0) {
+	if (hasInterface) {
 		lines.push(`export interface ${typeName} extends BaseContentItem {`);
+		for (const f of semanticOverrides) {
+			lines.push(`\t${f.tsName}: ${f.tsType};`);
+		}
 		for (const f of interfaceFields) {
 			lines.push(`\t${f.tsName}: ${f.tsType};`);
 		}
@@ -342,7 +355,7 @@ function generateSourceBlock(source: ResolvedSource): string {
 	lines.push("");
 
 	// defineMapping
-	if (interfaceFields.length > 0) {
+	if (hasInterface) {
 		lines.push(`const _${varPrefix}Mapping = defineMapping<${typeName}>({`);
 	} else {
 		lines.push(`const _${varPrefix}Mapping = defineMapping<BaseContentItem>({`);

@@ -1,14 +1,17 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fileExists } from "../fs-utils.js";
 
 export interface InitOptions {
 	output?: string;
 	force?: boolean;
 }
 
-const CONFIG_TEMPLATE = `import { defineConfig } from "@notion-headless-cms/cli";
+const CONFIG_TEMPLATE = `import { defineConfig, env } from "@notion-headless-cms/cli";
 
 export default defineConfig({
+	// Notion インテグレーションのシークレット（環境変数 NOTION_TOKEN から読み込む）
+	notionToken: env("NOTION_TOKEN"),
 	dataSources: [
 		{
 			name: "posts",
@@ -26,8 +29,8 @@ export default defineConfig({
 			// },
 		},
 	],
-	// 生成ファイルの出力先（省略時: ./nhc-schema.ts）
-	// output: "./nhc-schema.ts",
+	// 生成ファイルの出力先
+	output: "./app/generated/nhc-schema.ts",
 });
 
 // 生成後: createNodeMultiCMS / createCloudflareCMSMulti の sources オプションで
@@ -41,12 +44,7 @@ export async function runInit(opts: InitOptions): Promise<void> {
 		opts.output ?? "nhc.config.ts",
 	);
 
-	const exists = await fs
-		.access(outputPath)
-		.then(() => true)
-		.catch(() => false);
-
-	if (exists && !opts.force) {
+	if (!opts.force && (await fileExists(outputPath))) {
 		throw new Error(
 			`${outputPath} はすでに存在します。上書きするには --force を指定してください。`,
 		);

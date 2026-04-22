@@ -3,17 +3,28 @@ import type { NHCConfig } from "./index.js";
 export async function loadConfig(configPath: string): Promise<NHCConfig> {
 	const { createJiti } = await import("jiti");
 	const jiti = createJiti(import.meta.url);
-	const mod = (await jiti.import(configPath)) as
-		| { default?: NHCConfig }
-		| NHCConfig;
+	const mod = await jiti.import<{ default?: NHCConfig } | NHCConfig>(
+		configPath,
+	);
 
-	const config = (mod as { default?: NHCConfig }).default ?? (mod as NHCConfig);
+	// default export 優先、無ければ module 自体を config として扱う
+	const config = (
+		mod && typeof mod === "object" && "default" in mod && mod.default
+			? mod.default
+			: mod
+	) as NHCConfig;
 
-	if (!config || !Array.isArray((config as NHCConfig).dataSources)) {
+	if (!config || !Array.isArray(config.dataSources)) {
 		throw new Error(
 			`設定ファイルが不正です。defineConfig() の戻り値を default export してください。\nPath: ${configPath}`,
 		);
 	}
 
-	return config as NHCConfig;
+	if (!config.output) {
+		throw new Error(
+			`設定ファイルに output の指定が必要です。\n例: output: "./app/generated/nhc-schema.ts"\nPath: ${configPath}`,
+		);
+	}
+
+	return config;
 }

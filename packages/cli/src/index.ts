@@ -34,11 +34,22 @@ export type DataSourceConfig = DataSourceWithId | DataSourceWithDbName;
 
 export interface NHCConfig {
 	dataSources: DataSourceConfig[];
-	/** 生成ファイルの出力パス（デフォルト: ./nhc-schema.ts） */
-	output?: string;
+	/** 生成ファイルの出力パス */
+	output: string;
+	/** Notion API トークン。env() で環境変数から読み込むか、直接文字列を指定する */
+	notionToken?: string;
 }
 
 /** nhc.config.ts で使う設定ヘルパー。型推論のみで実体は恒等関数。 */
 export function defineConfig(config: NHCConfig): NHCConfig {
 	return config;
+}
+
+/**
+ * 環境変数を読み込む設定ヘルパー（Prisma の env() と同様の使い方）。
+ * 環境変数が未設定の場合は空文字を返す。トークン未設定エラーは nhc generate 実行時に表示される。
+ * @example notionToken: env("NOTION_TOKEN")
+ */
+export function env(name: string): string {
+	return process.env[name] ?? "";
 }

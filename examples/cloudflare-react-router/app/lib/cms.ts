@@ -1,55 +1,16 @@
 import type { CloudflareCMSEnv } from "@notion-headless-cms/adapter-cloudflare";
 import { createCloudflareCMS } from "@notion-headless-cms/adapter-cloudflare";
-import {
-	defineMapping,
-	defineSchema,
-} from "@notion-headless-cms/source-notion";
-import { z } from "zod";
+import type { PostsItem } from "../generated/nhc-schema";
+import { postsSchema } from "../generated/nhc-schema";
 
-const BlogSchema = z.object({
-	id: z.string(),
-	updatedAt: z.string(),
-	slug: z
-		.string()
-		.nullable()
-		.transform((s) => s ?? ""),
-	status: z
-		.string()
-		.nullable()
-		.transform((s) => s ?? ""),
-	publishedAt: z
-		.string()
-		.nullable()
-		.transform((s) => s ?? ""),
-	title: z.string().nullable(),
-	tags: z.array(z.string()),
-	description: z.string().nullable(),
-});
-
-export type BlogPost = z.infer<typeof BlogSchema>;
+export type { PostsItem as BlogPost };
 
 export type Env = CloudflareCMSEnv;
 
-const mapping = defineMapping<BlogPost>({
-	slug: { type: "title", notion: "Slug" },
-	status: {
-		type: "select",
-		notion: "Status",
-		published: ["公開"],
-		accessible: ["公開", "下書き"],
-	},
-	publishedAt: { type: "date", notion: "PublishedAt" },
-	title: { type: "richText", notion: "Title" },
-	tags: { type: "multiSelect", notion: "Tags" },
-	description: { type: "richText", notion: "Description" },
-});
-
-const blogSchema = defineSchema(BlogSchema, mapping);
-
 export function createCMS(env: Env) {
-	return createCloudflareCMS<BlogPost>({
+	return createCloudflareCMS<PostsItem>({
 		env,
-		schema: blogSchema,
+		schema: postsSchema,
 		ttlMs: 5 * 60_000,
 	});
 }

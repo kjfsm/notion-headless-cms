@@ -79,7 +79,7 @@ describe("generateSchemaFile", () => {
 		expect(code).toContain(
 			'publishedAt: { type: "date", notion: "PublishedAt" }',
 		);
-		expect(code).toContain("publishedAt: z.string().nullable()");
+		expect(code).toContain("publishedAt: z.string().nullable().transform(");
 	});
 
 	it("各プロパティ型が正しい Zod 式と TypeScript 型に変換される", () => {
@@ -109,8 +109,8 @@ describe("generateSchemaFile", () => {
 		expect(code).toContain("z.boolean()");
 		// url
 		expect(code).toContain('type: "url"');
-		// date
-		expect(code).toContain("publishedAt: z.string().nullable()");
+		// date (with transform)
+		expect(code).toContain("publishedAt: z.string().nullable().transform(");
 	});
 
 	it("サポート外のプロパティ型はスキップしてコメントを出力する", () => {
@@ -145,11 +145,24 @@ describe("generateSchemaFile", () => {
 		const source = makeSource({
 			properties: {
 				Name: makeProp("title"),
-				Status: makeProp("status"),
 			},
 		});
 		const code = generateSchemaFile([source]);
 		expect(code).toContain("export type PostsItem = BaseContentItem;");
+	});
+
+	it("status が検出された場合は interface に status: string が含まれる", () => {
+		const source = makeSource({
+			properties: {
+				Name: makeProp("title"),
+				Status: makeProp("status"),
+			},
+		});
+		const code = generateSchemaFile([source]);
+		expect(code).toContain(
+			"export interface PostsItem extends BaseContentItem",
+		);
+		expect(code).toContain("status: string;");
 	});
 
 	it("defineSchema・defineMapping・エクスポート定数が出力される", () => {

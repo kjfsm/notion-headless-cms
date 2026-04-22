@@ -21,8 +21,9 @@ describe("runInit", () => {
 
 		const content = await fs.readFile(outputPath, "utf-8");
 		expect(content).toContain(
-			'import { defineConfig } from "@notion-headless-cms/cli"',
+			'import { defineConfig, env } from "@notion-headless-cms/cli"',
 		);
+		expect(content).toContain('notionToken: env("NOTION_TOKEN")');
 		expect(content).toContain("defineConfig(");
 		expect(content).toContain("dataSources:");
 	});
