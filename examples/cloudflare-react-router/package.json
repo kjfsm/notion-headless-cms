@@ -4,7 +4,7 @@
 	"version": "0.0.4",
 	"type": "module",
 	"scripts": {
-		"build": "react-router build",
+		"build": "nhc generate && react-router build",
 		"cf-typegen": "wrangler types && react-router typegen",
 		"check": "tsc && nhc generate && react-router build && wrangler deploy --dry-run",
 		"deploy": "wrangler deploy",

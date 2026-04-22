@@ -24,5 +24,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
       - run: pnpm build
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
       - run: pnpm typecheck
       - run: pnpm test
