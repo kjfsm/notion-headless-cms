@@ -1,4 +1,4 @@
-name = "example-cloudflare-react-router"
+name = "nhc-example-cloudflare-react-router"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 assets = { directory = "./build/client" }
