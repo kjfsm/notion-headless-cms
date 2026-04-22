@@ -1,5 +1,12 @@
 # example-node-express
 
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies [b453f2e]
+  - @notion-headless-cms/adapter-node@0.1.5
+
 ## 0.0.3
 
 ### Patch Changes
