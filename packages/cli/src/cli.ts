@@ -35,16 +35,22 @@ program
 		"-t, --token <token>",
 		"Notion API トークン（省略時は NOTION_TOKEN 環境変数を使用）",
 	)
-	.action(async (opts: { config?: string; token?: string }) => {
-		try {
-			await runGenerate(opts);
-		} catch (err) {
-			console.error(
-				"エラー:",
-				err instanceof Error ? err.message : String(err),
-			);
-			process.exit(1);
-		}
-	});
+	.option(
+		"-e, --env-file <path>",
+		"環境変数ファイルのパス（例: .dev.vars, .env.local）",
+	)
+	.action(
+		async (opts: { config?: string; token?: string; envFile?: string }) => {
+			try {
+				await runGenerate(opts);
+			} catch (err) {
+				console.error(
+					"エラー:",
+					err instanceof Error ? err.message : String(err),
+				);
+				process.exit(1);
+			}
+		},
+	);
 
 program.parse();

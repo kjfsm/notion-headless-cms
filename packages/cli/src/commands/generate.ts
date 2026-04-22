@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { config as dotenvConfig } from "dotenv";
 import type { ResolvedSource } from "../codegen.js";
 import { generateSchemaFile } from "../codegen.js";
 import { loadConfig } from "../config-loader.js";
@@ -8,9 +9,21 @@ import { createNotionCLIClient } from "../notion-client.js";
 export interface GenerateOptions {
 	config?: string;
 	token?: string;
+	envFile?: string;
 }
 
 export async function runGenerate(opts: GenerateOptions): Promise<void> {
+	if (opts.envFile) {
+		const envFilePath = path.resolve(process.cwd(), opts.envFile);
+		try {
+			await fs.access(envFilePath);
+		} catch {
+			throw new Error(`環境変数ファイルが見つかりません: ${envFilePath}`);
+		}
+		dotenvConfig({ path: envFilePath });
+		console.log(`環境変数ファイルを読み込み中: ${envFilePath}`);
+	}
+
 	const configPath = path.resolve(
 		process.cwd(),
 		opts.config ?? "nhc.config.ts",
@@ -25,6 +38,7 @@ export async function runGenerate(opts: GenerateOptions): Promise<void> {
 			"Notion トークンが設定されていません。以下のいずれかで指定してください:\n" +
 				'  - nhc.config.ts に notionToken: env("NOTION_TOKEN") を追加\n' +
 				"  - 環境変数 NOTION_TOKEN を設定\n" +
+				"  - --env-file .dev.vars で環境変数ファイルを指定\n" +
 				"  - --token フラグを使用",
 		);
 	}
