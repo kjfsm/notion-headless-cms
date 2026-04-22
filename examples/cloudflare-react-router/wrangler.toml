@@ -1,8 +1,12 @@
 name = "nhc-example-cloudflare-react-router"
 main = "./workers/app.ts"
-compatibility_date = "2025-01-01"
+compatibility_date = "2026-04-22"
 compatibility_flags = ["nodejs_compat"]
 assets = { directory = "./build/client" }
+
+# Workers の組み込み観測機能を有効化（ダッシュボードでログ・メトリクスを閲覧可能）
+[observability]
+enabled = true
 
 # モノリポのルートから依存インストール・パッケージビルド・本 example ビルドを順に実行する。
 # NOTION_TOKEN はビルド時に nhc generate が Notion API へアクセスするために必要。
