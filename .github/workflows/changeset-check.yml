@@ -14,7 +14,7 @@ jobs:
     # ラベル `skip-changeset` が付いた PR はスキップ
     if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changeset') }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           # changeset の差分判定に必要
           fetch-depth: 0
