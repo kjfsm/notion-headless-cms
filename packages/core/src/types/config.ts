@@ -1,10 +1,16 @@
-import type { PluggableList } from "@notion-headless-cms/renderer";
 import type { CacheConfig } from "./cache";
-import type { BaseContentItem, CMSSchemaProperties } from "./content";
+import type { BaseContentItem } from "./content";
+import type { DataSource } from "./data-source";
 import type { CMSHooks } from "./hooks";
 import type { Logger } from "./logger";
 import type { CMSPlugin } from "./plugin";
-import type { DataSourceAdapter } from "./source";
+
+/**
+ * renderer プラグインの不透明型。
+ * core は unified / remark / rehype に依存せず、このリストをそのまま renderer に渡すだけ。
+ */
+// biome-ignore lint/suspicious/noExplicitAny: core はプラグイン詳細を知らない
+export type RendererPluginList = any[];
 
 /**
  * render() オプション。core は renderer の実装を知らず、この型だけを扱う。
@@ -13,8 +19,8 @@ import type { DataSourceAdapter } from "./source";
 export interface RenderOptions {
 	imageProxyBase?: string;
 	cacheImage?: (url: string) => Promise<string>;
-	remarkPlugins?: PluggableList;
-	rehypePlugins?: PluggableList;
+	remarkPlugins?: RendererPluginList;
+	rehypePlugins?: RendererPluginList;
 }
 
 /** カスタムレンダラー関数の型。デフォルトは @notion-headless-cms/renderer の renderMarkdown。 */
@@ -23,24 +29,14 @@ export type RendererFn = (
 	opts?: RenderOptions,
 ) => Promise<string>;
 
-/** スキーマ設定。公開ステータスのフィルタやプロパティ名マッピングを制御する。 */
-export interface SchemaConfig<T extends BaseContentItem = BaseContentItem> {
-	/** list() で返す「公開済み」ステータス値の配列。デフォルト: [] （全件返す） */
-	publishedStatuses?: string[];
-	/** findBySlug() でアクセス可能なステータス値の配列。デフォルト: [] （全件許可） */
-	accessibleStatuses?: string[];
-	/** mapItem 未使用時のプロパティ名マッピング。source-notion 経由で渡す場合は不要。 */
-	properties?: CMSSchemaProperties;
-}
-
 /** レンダリング・コンテンツ処理設定。 */
 export interface ContentConfig {
 	/** 画像プロキシのベースURL。デフォルト: '/api/images' */
 	imageProxyBase?: string;
 	/** 追加する remark プラグイン。 */
-	remarkPlugins?: PluggableList;
+	remarkPlugins?: RendererPluginList;
 	/** 追加する rehype プラグイン。 */
-	rehypePlugins?: PluggableList;
+	rehypePlugins?: RendererPluginList;
 }
 
 /** レートリミット・リトライ設定。 */
@@ -55,27 +51,35 @@ export interface RateLimiterConfig {
 	baseDelayMs?: number;
 }
 
+/** `createCMS({ dataSources })` の map 型。 */
+// biome-ignore lint/suspicious/noExplicitAny: 各コレクションの T が異なる
+export type DataSourceMap = Record<string, DataSource<any>>;
+
+/** `DataSourceMap` から各 T を抽出するユーティリティ型。 */
+export type InferDataSourceItem<D> =
+	D extends DataSource<infer T> ? T : BaseContentItem;
+
 /**
- * createCMS() に渡すオプション。
- * ジェネリクス型 T にカスタムコンテンツ型を指定できる（デフォルト: BaseContentItem）。
+ * `createCMS()` に渡すオプション。v1 の正式な入力シグネチャ。
+ * ユーザーは `nhc generate` が生成した `nhcDataSources` を渡すだけ。
  */
-export interface CreateCMSOptions<T extends BaseContentItem = BaseContentItem> {
-	/** データソースアダプタ（Notion など）。 */
-	source: DataSourceAdapter<T>;
+export interface CreateCMSOptions<D extends DataSourceMap = DataSourceMap> {
+	/** コレクション名 → DataSource のマップ (CLI 生成の `nhcDataSources`)。 */
+	dataSources: D;
 	/** レンダラー関数。未指定時は @notion-headless-cms/renderer の renderMarkdown を使用。 */
 	renderer?: RendererFn;
 	/** キャッシュ設定。未設定時はキャッシュなし。 */
-	cache?: CacheConfig<T>;
-	/** スキーマ・ステータス設定。 */
-	schema?: SchemaConfig<T>;
+	cache?: CacheConfig;
 	/** レンダリング・コンテンツ処理設定。 */
 	content?: ContentConfig;
 	/** Cloudflare Workers の waitUntil に相当する非同期処理の登録関数。 */
 	waitUntil?: (p: Promise<unknown>) => void;
-	/** ライフサイクルフック。 */
-	hooks?: CMSHooks<T>;
-	/** プラグイン配列。フックとロガーを組み合わせて提供できる。 */
-	plugins?: CMSPlugin<T>[];
+	/** ライフサイクルフック (全コレクション共通)。 */
+	// biome-ignore lint/suspicious/noExplicitAny: 全コレクション共通
+	hooks?: CMSHooks<any>;
+	/** プラグイン配列。 */
+	// biome-ignore lint/suspicious/noExplicitAny: 全コレクション共通
+	plugins?: CMSPlugin<any>[];
 	/** ロガー。 */
 	logger?: Logger;
 	/** レートリミット・リトライ設定。 */

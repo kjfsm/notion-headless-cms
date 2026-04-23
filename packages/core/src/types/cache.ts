@@ -5,6 +5,18 @@ import type {
 	StorageBinary,
 } from "./content";
 
+/**
+ * キャッシュ無効化のスコープ。
+ * v1 API では `{ collection, slug? }` が主形式。
+ * 旧 `{ tag }` 形式は後方互換のため残す。
+ */
+export type InvalidateScope =
+	| "all"
+	| { slug: string }
+	| { tag: string }
+	| { collection: string }
+	| { collection: string; slug: string };
+
 /** ドキュメントキャッシュを抽象化するインターフェース。 */
 export interface DocumentCacheAdapter<
 	T extends BaseContentItem = BaseContentItem,
@@ -14,7 +26,7 @@ export interface DocumentCacheAdapter<
 	setList(data: CachedItemList<T>): Promise<void>;
 	getItem(slug: string): Promise<CachedItem<T> | null>;
 	setItem(slug: string, data: CachedItem<T>): Promise<void>;
-	invalidate?(scope: "all" | { slug: string } | { tag: string }): Promise<void>;
+	invalidate?(scope: InvalidateScope): Promise<void>;
 }
 
 /** 画像キャッシュを抽象化するインターフェース。 */

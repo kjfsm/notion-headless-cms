@@ -13,8 +13,8 @@ pnpm add @notion-headless-cms/adapter-node @notionhq/client zod
 pnpm add -D @notion-headless-cms/cli
 ```
 
-`adapter-node` は `core` / `source-notion` / `renderer` を推移依存として含む。
-ただし `source-notion` の `@notionhq/client` / `zod`、`renderer` の `unified` / `remark-*` / `rehype-*` は `peerDependencies` のため、利用側で明示的にインストールする必要がある。
+`adapter-node` は `core` / `notion-orm`（内部 ORM 層）/ `renderer` を推移依存として含む。
+ただし `notion-orm` の `@notionhq/client` / `zod`、`renderer` の `unified` / `remark-*` / `rehype-*` は `peerDependencies` のため、利用側で明示的にインストールする必要がある。
 
 <details>
 <summary>必要な peer 依存をまとめて入れるコマンド</summary>
@@ -56,20 +56,20 @@ NOTION_TOKEN=secret_xxx npx nhc generate
 
 ```ts
 import { createNodeCMS } from "@notion-headless-cms/adapter-node";
-import { nhcSchema } from "./generated/nhc-schema";
+import { nhcDataSources } from "./generated/nhc-schema";
 
 // NOTION_TOKEN は process.env から自動読み込み
-const client = createNodeCMS({ schema: nhcSchema });
+const cms = createNodeCMS({ dataSources: nhcDataSources });
 
-// 一覧取得（ソース直接）
-const posts = await client.posts.list();
+// 一覧取得
+const posts = await cms.posts.getList();
 console.log(posts);
 
-// スラッグで取得 → Markdown/HTML レンダリング
-const post = await client.posts.find("my-first-post");
+// スラッグで取得 → 本文を blocks / html / markdown で取り出す
+const post = await cms.posts.getItem("my-first-post");
 if (post) {
-  const rendered = await client.posts.render(post);
-  console.log(rendered.html);
+  console.log(post.content.blocks);        // ContentBlock[]
+  console.log(await post.content.html());  // HTML 文字列 (遅延)
 }
 ```
 
@@ -77,13 +77,10 @@ if (post) {
 
 ```ts
 import { createNodeCMS } from "@notion-headless-cms/adapter-node";
-import { nhcSchema } from "./generated/nhc-schema";
+import { nhcDataSources } from "./generated/nhc-schema";
 
-const client = createNodeCMS({
-  schema: nhcSchema,
-  sources: {
-    posts: { published: ["公開"] },
-  },
+const cms = createNodeCMS({
+  dataSources: nhcDataSources,
   cache: {
     document: "memory",
     image: "memory",
@@ -91,36 +88,26 @@ const client = createNodeCMS({
   },
 });
 
-// SWR でキャッシュ優先取得
-const { items, isStale, cachedAt } = await client.posts.cache.getList();
-
-// SWR で単一アイテム取得（HTML 付き）
-const cached = await client.posts.cache.get("my-first-post");
-console.log(cached?.html);
+// getItem / getList は SWR キャッシュ経由で動作する
+const posts = await cms.posts.getList();
+const post = await cms.posts.getItem("my-first-post");
+const html = post ? await post.content.html() : null;
 ```
 
 `cache` は `"disabled"`（完全無効化）か、`{ document?: "memory"; image?: "memory"; ttlMs?: number }` を受け取る。`document` / `image` を省略するとキャッシュなし（noop）で動作する。
 
 ## core を直接使う（アダプタを使わない構成）
 
-アダプタを経由せず、`createCMS` に自分で `source` / `renderer` / `cache` を組み立てることもできる。カスタムキャッシュ（例: `nextCache`）を使う場合はこの構成になる。
+アダプタを経由せず、`createCMS` に自分で `dataSources` / `renderer` / `cache` を組み立てることもできる。カスタムキャッシュ（例: `nextCache`）を使う場合はこの構成になる。
 
 ```ts
 import { createCMS, memoryDocumentCache, memoryImageCache } from "@notion-headless-cms/core";
-import { notionAdapter } from "@notion-headless-cms/source-notion";
 import { renderMarkdown } from "@notion-headless-cms/renderer";
-import { nhcSchema } from "./generated/nhc-schema";
-
-const { posts } = nhcSchema;
+import { nhcDataSources } from "./generated/nhc-schema";
 
 const cms = createCMS({
-  source: notionAdapter({
-    token: process.env.NOTION_TOKEN!,
-    dataSourceId: posts.id,
-    schema: posts.schema,
-  }),
+  dataSources: nhcDataSources,
   renderer: renderMarkdown,
-  schema: { publishedStatuses: ["公開"] },
   cache: {
     document: memoryDocumentCache({ maxItems: 500 }),
     image: memoryImageCache({ maxItems: 200, maxSizeBytes: 64 * 1024 * 1024 }),
@@ -133,33 +120,27 @@ const cms = createCMS({
 
 ## 複数の DB を扱う場合
 
-`nhc.config.ts` に複数の `dataSources` を書けば、`client.posts` / `client.news` のように型安全にアクセスできる。
+`nhc.config.ts` に複数の `dataSources` を書けば、`cms.posts` / `cms.news` のように型安全にアクセスできる。
 
 ```ts
 import { defineConfig } from "@notion-headless-cms/cli";
 
 export default defineConfig({
   dataSources: [
-    { name: "posts", dbName: "ブログ記事DB", fields: { published: ["公開"] } },
-    { name: "news",  dbName: "ニュースDB",   fields: { published: ["掲載中"] } },
+    { name: "posts", dbName: "ブログ記事DB" },
+    { name: "news",  dbName: "ニュースDB" },
   ],
 });
 ```
 
 ```ts
 import { createNodeCMS } from "@notion-headless-cms/adapter-node";
-import { nhcSchema } from "./generated/nhc-schema";
+import { nhcDataSources } from "./generated/nhc-schema";
 
-const client = createNodeCMS({
-  schema: nhcSchema,
-  sources: {
-    posts: { published: ["公開"] },
-    news:  { published: ["掲載中"] },
-  },
-});
+const cms = createNodeCMS({ dataSources: nhcDataSources });
 
-const posts = await client.posts.list();  // PostsItem[]
-const news  = await client.news.list();   // NewsItem[]
+const posts = await cms.posts.getList();  // PostsItem[]
+const news  = await cms.news.getList();   // NewsItem[]
 ```
 
 詳細は [CLI ドキュメント](./cli.md) と [マルチソースレシピ](./recipes/multi-source.md) を参照。

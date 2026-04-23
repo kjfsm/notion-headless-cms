@@ -15,7 +15,7 @@
 	"dependencies": {
 		"@notion-headless-cms/adapter-cloudflare": "workspace:*",
 		"@notion-headless-cms/core": "workspace:*",
-		"@notion-headless-cms/source-notion": "workspace:*",
+		"@notion-headless-cms/notion-orm": "workspace:*",
 		"zod": "^4.1.12"
 	},
 	"devDependencies": {

@@ -4,23 +4,23 @@ import { createCMS } from "../../lib/cms";
 
 const cms = createCMS(env as unknown as Parameters<typeof createCMS>[0]);
 const { slug } = Astro.params;
-const entry = await cms.cache.get(slug!);
+const post = await cms.posts.getItem(slug!);
 
-if (!entry) return Astro.redirect("/404");
+if (!post) return Astro.redirect("/404");
 
-const { html, item } = entry;
+const html = await post.content.html();
 ---
 
 <html lang="ja">
   <head>
     <meta charset="utf-8" />
-    <title>{item.slug}</title>
+    <title>{post.slug}</title>
   </head>
   <body>
     <article>
-      <h1>{item.slug}</h1>
-      {item.publishedAt && <time>{item.publishedAt}</time>}
-      {item.author && <p>Author: {item.author}</p>}
+      <h1>{post.slug}</h1>
+      {post.publishedAt && <time>{post.publishedAt}</time>}
+      {post.author && <p>Author: {post.author}</p>}
       <div set:html={html} />
     </article>
   </body>

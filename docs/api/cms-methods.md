@@ -1,112 +1,165 @@
 # CMS API リファレンス
 
-`@notion-headless-cms/core` の `createCMS()` / `CMS` クラスが公開する API の一覧。
+`@notion-headless-cms/core` の `createCMS()` が返す `CMSClient<D>` が公開する API の一覧。
 
-## 目次
-
-- [コンテンツ取得（ソース直接）](#コンテンツ取得ソース直接)
-- [キャッシュ API（`cms.cache`）](#キャッシュ-apicmscache)
-- [クエリビルダー](#クエリビルダー)
-- [画像配信](#画像配信)
-- [`createCMS()` オプション](#createcms-オプション)
-- [ライフサイクルフック](#ライフサイクルフック)
-- [エラーハンドリング](#エラーハンドリング)
-- [サブパスエクスポート](#サブパスエクスポート)
-
-## コンテンツ取得（ソース直接）
-
-| メソッド | 戻り値 | 説明 |
-|---|---|---|
-| `list()` | `Promise<T[]>` | 公開済みコンテンツ一覧をソースから直接取得（`publishedStatuses` でフィルタ） |
-| `find(slug)` | `Promise<T \| null>` | スラッグでコンテンツを取得（`accessibleStatuses` でフィルタ） |
-| `findMany(slugs[])` | `Promise<Map<string, T>>` | 複数スラッグを並列取得。見つからないスラッグは Map に含まれない |
-| `render(item)` | `Promise<CachedItem<T>>` | アイテムを Markdown → HTML にレンダリング |
-| `isPublished(item)` | `boolean` | `publishedStatuses` に含まれるかどうかを返す |
-
-## キャッシュ API（`cms.cache`）
-
-Stale-While-Revalidate: キャッシュがあれば即返し、TTL 切れや未ヒットの場合はソースから取得して書き戻す。`createCMS({ waitUntil })` 指定時は書き戻しを非同期化する。
-
-| メソッド | 戻り値 | 説明 |
-|---|---|---|
-| `cache.getList()` | `Promise<{ items: T[]; isStale: boolean; cachedAt: number }>` | キャッシュ優先で一覧を返す |
-| `cache.get(slug)` | `Promise<CachedItem<T> \| null>` | キャッシュ優先で単一アイテムを返す |
-| `cache.prefetchAll({ concurrency?, onProgress? })` | `Promise<{ ok: number; failed: number }>` | 全コンテンツを事前レンダリングしてキャッシュに保存 |
-| `cache.revalidate(scope?)` | `Promise<void>` | 指定スコープ（`"all"` または `{ slug }`）のキャッシュを無効化 |
-| `cache.sync({ slug? })` | `Promise<{ updated: string[] }>` | Webhook ペイロードを元にキャッシュを同期。`slug` 省略時は全件 |
-| `cache.checkList(version)` | `Promise<{ changed: false } \| { changed: true; items: T[] }>` | 一覧の更新有無を返す |
-| `cache.checkItem(slug, lastEdited)` | `Promise<{ changed: false } \| { changed: true; html: string; item: T; notionUpdatedAt: string }>` | 単一アイテムの更新有無を返す |
-
-`CachedItem<T>`:
+## 全体像
 
 ```ts
-interface CachedItem<T> {
-  html: string;
-  item: T;
-  notionUpdatedAt: string;
-  cachedAt: number;
+const cms = createCMS({
+  dataSources: { posts, authors, ... },
+  cache?, content?, hooks?, plugins?, logger?, rateLimiter?, waitUntil?,
+});
+
+// コレクション別
+cms.posts.getItem(slug)
+cms.posts.getList(opts?)
+cms.posts.getStaticParams()
+cms.posts.getStaticPaths()
+cms.posts.adjacent(slug, opts?)
+cms.posts.revalidate(scope?)
+cms.posts.prefetch(opts?)
+
+// グローバル ($ プレフィックス)
+cms.$collections
+cms.$revalidate(scope?)
+cms.$getCachedImage(hash)
+cms.$handler(opts?)
+```
+
+## コレクション別メソッド (`CollectionClient<T>`)
+
+### `getItem(slug)`
+
+スラッグで単件取得。SWR キャッシュ経由で動作し、本文は `content` プロパティに同梱される。
+
+```ts
+const post = await cms.posts.getItem("hello-world");
+if (post) {
+  console.log(post.slug, post.status);            // item のプロパティ
+  console.log(post.content.blocks);               // ContentBlock[] (常に同梱)
+  console.log(await post.content.html());         // HTML (遅延)
+  console.log(await post.content.markdown());     // Markdown (遅延)
 }
 ```
 
-> `prefetchAll` の `concurrency` デフォルトは `rateLimiter.maxConcurrent`（未指定時は `3`）。Notion API のレート制限を踏まえて設定する。
+返り値: `Promise<(T & { content: ContentResult }) | null>`
 
-## クエリビルダー
+### `getList(opts?)`
 
-`cms.query()` で `QueryBuilder` を取得し、フィルタ・ソート・ページネーションを連鎖指定できる。
+公開済みアイテムの一覧を取得（本文なし、SWR キャッシュ経由）。
+
+```ts
+interface GetListOptions<T> {
+  statuses?: string[];   // ステータス絞り込み
+  where?: Partial<T>;    // プロパティ一致フィルタ
+  tag?: string;          // タグ絞り込み (schema に tags フィールドがある場合)
+  sort?: { by: keyof T & string; direction?: "asc" | "desc" };
+  limit?: number;
+  skip?: number;
+}
+
+const posts = await cms.posts.getList({ limit: 10 });
+const featured = await cms.posts.getList({ tag: "featured" });
+```
+
+### `getStaticParams()` / `getStaticPaths()`
+
+SSG のパス列挙用。
+
+```ts
+// Next.js App Router
+export async function generateStaticParams() {
+  return await cms.posts.getStaticParams();   // [{ slug: "a" }, { slug: "b" }]
+}
+
+// React Router / SvelteKit
+const paths = await cms.posts.getStaticPaths();   // ["a", "b"]
+```
+
+### `adjacent(slug, opts?)`
+
+前後記事を返す。
+
+```ts
+const { prev, next } = await cms.posts.adjacent("current-slug");
+```
+
+### `revalidate(scope?)` / `prefetch(opts?)`
+
+キャッシュ無効化とプリフェッチ。
+
+```ts
+await cms.posts.revalidate();             // コレクション全体
+await cms.posts.revalidate({ slug });     // 特定 slug のみ
+await cms.posts.prefetch({ concurrency: 5, onProgress: (done, total) => {} });
+```
+
+## グローバル操作
 
 | メソッド | 説明 |
 |---|---|
-| `query().status(s \| [s])` | ステータスフィルタ（省略時は `publishedStatuses`） |
-| `query().tag(t \| [t])` | `item.tags` に対するフィルタ |
-| `query().where(predicate)` | 任意の述語でフィルタ |
-| `query().sortBy(field, "asc" \| "desc")` | ソート指定 |
-| `query().paginate({ page, perPage })` | ページネーション |
-| `query().execute()` | `{ items, total, page, perPage, hasNext, hasPrev }` を返す |
-| `query().executeOne()` | 最初の 1 件を返す |
-| `query().first()` | `.paginate({ page: 1, perPage: 1 }).executeOne()` の短縮形 |
-| `query().adjacent(slug)` | 前後のコンテンツを返す（`{ prev, next }`）。`sortBy()` のソート順を適用 |
+| `cms.$collections` | 登録されたコレクション名の配列 |
+| `cms.$revalidate(scope?)` | 全体・コレクション単位・slug 単位のキャッシュ無効化 |
+| `cms.$getCachedImage(hash)` | 画像キャッシュから `{ data, contentType }` を取得 |
+| `cms.$handler(opts?)` | Web Standard な `(req: Request) => Promise<Response>` を返す |
 
-`DataSourceAdapter.query` を実装しているソースでは、`where()` 未使用時に限り Notion API へクエリを委譲する（push-down）。
+### `$handler` のルート
 
-## 画像配信
+`basePath` (デフォルト `/api/cms`) 以下に以下のルートをマウント:
 
-| メソッド | 戻り値 | 説明 |
-|---|---|---|
-| `getCachedImage(hash)` | `Promise<StorageBinary \| null>` | ハッシュキーで画像バイナリを取得 |
-| `createCachedImageResponse(hash)` | `Promise<Response \| null>` | ハッシュキーで `Response` を生成。`cache-control: public, max-age=31536000, immutable` を付与 |
-| `getStaticSlugs()` | `Promise<string[]>` | 静的生成用のスラッグ一覧 |
+- `GET {basePath}/images/:hash` — 画像プロキシ
+- `POST {basePath}/revalidate` — Webhook 受信 → `$revalidate(scope)`
+
+```ts
+// Next.js App Router
+// app/api/cms/[[...slug]]/route.ts
+const handler = cms.$handler({
+  basePath: "/api/cms",
+  webhookSecret: process.env.REVALIDATE_SECRET,
+});
+export const GET = handler;
+export const POST = handler;
+
+// Hono
+app.all("/api/cms/*", (c) => cms.$handler({ basePath: "/api/cms" })(c.req.raw));
+```
+
+### `InvalidateScope`
+
+```ts
+type InvalidateScope =
+  | "all"
+  | { collection: string }
+  | { collection: string; slug: string };
+```
 
 ## `createCMS()` オプション
 
 ```ts
-createCMS<T>({
-  source,         // DataSourceAdapter<T> — 必須
-  renderer?,      // RendererFn — 未指定時は @notion-headless-cms/renderer を動的 import
-  cache?,         // CacheConfig<T>
-  schema?,        // SchemaConfig<T> — publishedStatuses / accessibleStatuses など
-  content?,       // ContentConfig — imageProxyBase / remarkPlugins / rehypePlugins
-  waitUntil?,     // (p: Promise<unknown>) => void — Cloudflare Workers 用
-  hooks?,         // CMSHooks<T>
-  plugins?,       // CMSPlugin<T>[]
-  logger?,        // Logger
-  rateLimiter?,   // { maxConcurrent?, retryOn?, maxRetries?, baseDelayMs? }
-});
+interface CreateCMSOptions<D> {
+  dataSources: D;                                        // 必須
+  cache?: CacheConfig;                                   // "disabled" | { document?, image?, ttlMs? }
+  content?: ContentConfig;                               // imageProxyBase, remarkPlugins, rehypePlugins
+  renderer?: RendererFn;                                 // 未指定時は @notion-headless-cms/renderer を動的 import
+  hooks?: CMSHooks;
+  plugins?: CMSPlugin[];
+  logger?: Logger;
+  rateLimiter?: RateLimiterConfig;
+  waitUntil?: (p: Promise<unknown>) => void;
+}
 ```
 
-### `CacheConfig<T>`
+### `CacheConfig`
 
 ```ts
-type CacheConfig<T> =
+type CacheConfig =
   | "disabled"
   | {
-      document?: DocumentCacheAdapter<T>;
+      document?: DocumentCacheAdapter;
       image?: ImageCacheAdapter;
       ttlMs?: number; // 未指定時は TTL なし（常にフレッシュと判定）
     };
 ```
-
-- `"disabled"` を渡すと `document` / `image` 双方が noop アダプタになる
-- オブジェクト形式で `document` だけ指定することもできる（`image` は noop にフォールバック）
 
 ### `RateLimiterConfig`
 
@@ -117,11 +170,28 @@ type CacheConfig<T> =
 | `maxRetries` | `number` | `4` |
 | `baseDelayMs` | `number` | `1000` |
 
-`maxConcurrent` は `cache.prefetchAll()` の `concurrency` デフォルト値にも反映される。
+## `ContentBlock` AST
+
+```ts
+type ContentBlock =
+  | { type: "paragraph"; children: InlineNode[] }
+  | { type: "heading"; level: 1 | 2 | 3; children: InlineNode[] }
+  | { type: "image"; src: string; alt?: string; cachedHash?: string }
+  | { type: "code"; lang?: string; value: string }
+  | { type: "list"; ordered: boolean; items: ContentBlock[][] }
+  | { type: "quote"; children: ContentBlock[] }
+  | { type: "divider" }
+  | { type: "raw"; html: string };   // 対応不可なブロックのフォールバック
+
+type InlineNode =
+  | { type: "text"; value: string; bold?: boolean; italic?: boolean; code?: boolean }
+  | { type: "link"; url: string; children: InlineNode[] }
+  | { type: "break" };
+```
 
 ## ライフサイクルフック
 
-`createCMS({ hooks })` または `plugins` 経由で注入する。観測フック（`onCache*` / `onRender*`）は例外を投げても他のフックに波及しない（`logger.error` に流される）。
+`createCMS({ hooks })` または `plugins` 経由で注入する。
 
 | フック | シグネチャ | 呼び出しタイミング |
 |---|---|---|
@@ -131,38 +201,24 @@ type CacheConfig<T> =
 | `onCacheMiss` | `(slug: string) => void` | アイテムキャッシュミス時 |
 | `onListCacheHit` | `(items: T[], cachedAt: number) => void` | 一覧キャッシュヒット時 |
 | `onListCacheMiss` | `() => void` | 一覧キャッシュミス時 |
-| `onRenderStart` | `(slug: string) => void` | `render` / `buildCachedItem` 開始時 |
+| `onRenderStart` | `(slug: string) => void` | レンダリング開始時 |
 | `onRenderEnd` | `(slug: string, durationMs: number) => void` | レンダリング完了時（所要時間付き） |
 | `onError` | `(error: Error) => void` | 内部エラー通知 |
 
-```ts
-createCMS({
-  source,
-  hooks: {
-    onRenderStart: (slug) => console.time(`render:${slug}`),
-    onRenderEnd: (slug, ms) => console.log(`render:${slug} ${ms}ms`),
-    onCacheHit: (slug) => metrics.increment("cache.hit", { slug }),
-  },
-});
-```
-
 ## エラーハンドリング
 
-すべての内部エラーは `CMSError` に統一される（`code` / `message` / `cause` / `context` を保持）。
+すべての内部エラーは `CMSError` に統一される:
 
 ```ts
 import { CMSError, isCMSError, isCMSErrorInNamespace } from "@notion-headless-cms/core";
 
 try {
-  await cms.list();
+  await cms.posts.getItem(slug);
 } catch (err) {
   if (isCMSErrorInNamespace(err, "source/")) {
     // Notion 取得系エラー
-    console.error(err.code, err.context);
-  } else if (isCMSError(err)) {
-    console.error(err.code, err.message);
-  } else {
-    throw err;
+  } else if (isCMSErrorInNamespace(err, "cache/")) {
+    // キャッシュ I/O 系エラー
   }
 }
 ```
@@ -171,31 +227,21 @@ try {
 
 | コード | 発生箇所 |
 |---|---|
-| `core/config_invalid` | 必須設定の欠落（例: `NOTION_TOKEN` 未設定） |
+| `core/config_invalid` | 必須設定の欠落 |
 | `core/schema_invalid` | Zod / スキーマ検証失敗 |
 | `source/fetch_items_failed` | `list()` の Notion 取得失敗 |
-| `source/fetch_item_failed` | `find()` の Notion 取得失敗 |
+| `source/fetch_item_failed` | `findBySlug()` の Notion 取得失敗 |
 | `source/load_markdown_failed` | ブロック → Markdown 変換失敗 |
-| `cache/io_failed` | キャッシュ R/W 失敗・ネットワークレベルの画像 fetch 失敗 |
-| `cache/image_fetch_failed` | 画像 fetch の HTTP エラー（4xx / 5xx） |
+| `cache/io_failed` | キャッシュ R/W 失敗 |
+| `cache/image_fetch_failed` | 画像 fetch の HTTP エラー |
 | `renderer/failed` | Markdown → HTML レンダリング失敗 |
-
-サードパーティアダプタは任意の `namespace/kind` 文字列をコードに使える（`CMSErrorCode = BuiltInCMSErrorCode | (string & {})`）。
 
 ## サブパスエクスポート
 
-`core` は以下のサブパスを公開しており、バレルを経由せず必要な型だけをインポートできる。ツリーシェイク・バンドルサイズ最適化に有用。
-
 | サブパス | 内容 |
 |---|---|
-| `@notion-headless-cms/core` | 全エクスポート（`createCMS` / `CMS` / `CacheAccessor` / フック関連など） |
-| `@notion-headless-cms/core/errors` | `CMSError` / `isCMSError` / `isCMSErrorInNamespace` / `CMSErrorCode` |
+| `@notion-headless-cms/core` | 全エクスポート |
+| `@notion-headless-cms/core/errors` | `CMSError` / `isCMSError` / `isCMSErrorInNamespace` |
 | `@notion-headless-cms/core/hooks` | `mergeHooks` / `mergeLoggers` |
-| `@notion-headless-cms/core/cache/memory` | `memoryDocumentCache` / `memoryImageCache` / 各 `*Options` |
+| `@notion-headless-cms/core/cache/memory` | `memoryDocumentCache` / `memoryImageCache` |
 | `@notion-headless-cms/core/cache/noop` | `noopDocumentCache` / `noopImageCache` |
-
-```ts
-import { CMSError } from "@notion-headless-cms/core/errors";
-import { memoryDocumentCache } from "@notion-headless-cms/core/cache/memory";
-import { noopDocumentCache } from "@notion-headless-cms/core/cache/noop";
-```

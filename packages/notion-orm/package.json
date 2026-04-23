@@ -1,14 +1,15 @@
 {
-	"name": "@notion-headless-cms/source-notion",
-	"version": "0.2.2",
-	"description": "Notion DataSourceAdapter for notion-headless-cms — fetches pages from Notion databases",
+	"name": "@notion-headless-cms/notion-orm",
+	"version": "0.0.0",
+	"private": true,
+	"description": "Notion ORM layer for notion-headless-cms — implements DataSource<T> (internal use only)",
 	"keywords": [
 		"notion",
 		"notion-api",
 		"headless-cms",
 		"cms",
 		"datasource",
-		"adapter",
+		"orm",
 		"typescript"
 	],
 	"license": "MIT",
@@ -19,7 +20,7 @@
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/kjfsm/notion-headless-cms.git",
-		"directory": "packages/source-notion"
+		"directory": "packages/notion-orm"
 	},
 	"type": "module",
 	"sideEffects": false,
@@ -39,10 +40,6 @@
 		"build": "tsdown src/index.ts --format esm --dts --sourcemap --out-dir dist",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run"
-	},
-	"publishConfig": {
-		"access": "public",
-		"provenance": true
 	},
 	"dependencies": {
 		"@notion-headless-cms/core": "workspace:*",

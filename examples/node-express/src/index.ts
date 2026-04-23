@@ -5,21 +5,22 @@ const app = express();
 const port = process.env.PORT ?? 3000;
 
 app.get("/posts", async (_req, res) => {
-	const { items } = await cms.cache.getList();
+	const items = await cms.posts.getList();
 	res.json({ items });
 });
 
 app.get("/posts/:slug", async (req, res) => {
-	const entry = await cms.cache.get(req.params.slug);
-	if (!entry) {
+	const post = await cms.posts.getItem(req.params.slug);
+	if (!post) {
 		res.status(404).json({ error: "Not Found" });
 		return;
 	}
-	res.json({ html: entry.html, item: entry.item });
+	const html = await post.content.html();
+	res.json({ html, item: post });
 });
 
 app.get("/api/images/:hash", async (req, res) => {
-	const binary = await cms.getCachedImage(req.params.hash);
+	const binary = await cms.$getCachedImage(req.params.hash);
 	if (!binary) {
 		res.status(404).send("Not Found");
 		return;

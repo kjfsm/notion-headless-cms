@@ -6,16 +6,17 @@ const posts = new Hono<{ Bindings: Env }>();
 
 posts.get("/", async (c) => {
 	const cms = createCMS(c.env);
-	const { items } = await cms.cache.getList();
+	const items = await cms.posts.getList();
 	return c.json({ items });
 });
 
 posts.get("/:slug", async (c) => {
 	const cms = createCMS(c.env);
 	const slug = c.req.param("slug");
-	const entry = await cms.cache.get(slug);
-	if (!entry) return c.json({ error: "Not Found" }, 404);
-	return c.json({ html: entry.html, item: entry.item });
+	const post = await cms.posts.getItem(slug);
+	if (!post) return c.json({ error: "Not Found" }, 404);
+	const html = await post.content.html();
+	return c.json({ html, item: post });
 });
 
 export default posts;

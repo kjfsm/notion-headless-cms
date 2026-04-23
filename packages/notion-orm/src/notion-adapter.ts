@@ -1,7 +1,8 @@
 import type {
 	BaseContentItem,
 	CMSSchemaProperties,
-	DataSourceAdapter,
+	ContentBlock,
+	DataSource,
 } from "@notion-headless-cms/core";
 import { CMSError, isCMSError } from "@notion-headless-cms/core";
 import {
@@ -9,6 +10,7 @@ import {
 	queryAllPages,
 	queryPageBySlug,
 } from "./internal/fetcher/index";
+import { markdownToBlocks } from "./internal/md-to-blocks";
 import { Transformer } from "./internal/transformer/transformer";
 import type { BlockHandler } from "./internal/transformer/types";
 import { mapItem } from "./mapper";
@@ -21,51 +23,52 @@ const DEFAULT_PROPERTIES: Required<CMSSchemaProperties> = {
 	date: "CreatedAt",
 };
 
-interface NotionAdapterCommonOptions {
+interface NotionCollectionCommonOptions {
 	/** Notion API 認証トークン。 */
 	token: string;
 	/**
-	 * Notion データベース（データソース）ID。
-	 * `dbName` を指定する場合は省略可能（最初のアクセス時に解決される）。
+	 * Notion データベース (データソース) ID。
+	 * `dbName` を指定する場合は省略可能 (最初のアクセス時に解決される)。
 	 */
 	dataSourceId?: string;
 	/**
 	 * Notion データベース名。`dataSourceId` の代わりに指定すると、
-	 * 最初の API 呼び出し時に `client.search` で解決される（結果はキャッシュされる）。
+	 * 最初の API 呼び出し時に `client.search` で解決される (結果はキャッシュ)。
 	 */
 	dbName?: string;
 	/** カスタムブロックハンドラーのマップ。 */
 	blocks?: Record<string, BlockHandler>;
 }
 
-/** デフォルトマッパー利用時（T = BaseContentItem）の入力。 */
-export interface NotionAdapterDefaultOptions
-	extends NotionAdapterCommonOptions {
-	/** Notionプロパティ名マッピング。 */
+/** デフォルトマッパー利用時 (T = BaseContentItem) の入力。 */
+export interface NotionCollectionDefaultOptions
+	extends NotionCollectionCommonOptions {
 	properties?: CMSSchemaProperties;
 }
 
 /** カスタム `mapItem` で任意の T に写像するときの入力。 */
-export interface NotionAdapterMapItemOptions<T extends BaseContentItem>
-	extends NotionAdapterCommonOptions {
+export interface NotionCollectionMapItemOptions<T extends BaseContentItem>
+	extends NotionCollectionCommonOptions {
 	properties?: CMSSchemaProperties;
 	mapItem: (page: NotionPage) => T;
 }
 
-/** 宣言的スキーマ（`defineSchema()`）で任意の T に写像するときの入力。 */
-export interface NotionAdapterSchemaOptions<T extends BaseContentItem>
-	extends NotionAdapterCommonOptions {
+/** 宣言的スキーマ (`defineSchema()`) で任意の T に写像するときの入力。 */
+export interface NotionCollectionSchemaOptions<T extends BaseContentItem>
+	extends NotionCollectionCommonOptions {
 	schema: NotionSchema<T>;
 }
 
-export type NotionAdapterOptions<T extends BaseContentItem = BaseContentItem> =
-	| NotionAdapterDefaultOptions
-	| NotionAdapterMapItemOptions<T>
-	| NotionAdapterSchemaOptions<T>;
+export type NotionCollectionOptions<
+	T extends BaseContentItem = BaseContentItem,
+> =
+	| NotionCollectionDefaultOptions
+	| NotionCollectionMapItemOptions<T>
+	| NotionCollectionSchemaOptions<T>;
 
-/** Notion を DataSourceAdapter として実装するアダプタ。 */
-class NotionAdapter<T extends BaseContentItem = BaseContentItem>
-	implements DataSourceAdapter<T>
+/** Notion を `DataSource<T>` として実装するコレクションクラス。 */
+class NotionCollection<T extends BaseContentItem = BaseContentItem>
+	implements DataSource<T>
 {
 	readonly name = "notion";
 	readonly publishedStatuses?: readonly string[];
@@ -78,13 +81,13 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 	private readonly slugPropName: string;
 	private readonly blocksConfig: Record<string, BlockHandler> | undefined;
 
-	constructor(opts: NotionAdapterOptions<T>) {
+	constructor(opts: NotionCollectionOptions<T>) {
 		if (!opts.dataSourceId && !opts.dbName) {
 			throw new CMSError({
 				code: "core/config_invalid",
 				message:
-					"NotionAdapter requires either `dataSourceId` or `dbName` to be set.",
-				context: { operation: "NotionAdapter.constructor" },
+					"NotionCollection requires either `dataSourceId` or `dbName` to be set.",
+				context: { operation: "NotionCollection.constructor" },
 			});
 		}
 		this.client = createClient({ NOTION_TOKEN: opts.token });
@@ -113,7 +116,6 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 				...("properties" in opts ? opts.properties : undefined),
 			};
 			this.slugPropName = props.slug;
-			// この分岐はファクトリのオーバーロードにより T = BaseContentItem が保証される。
 			this.itemMapper = ((page: NotionPage) => mapItem(page, props)) as (
 				page: NotionPage,
 			) => T;
@@ -129,7 +131,7 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 			throw new CMSError({
 				code: "core/config_invalid",
 				message: "dataSourceId is not set and dbName was not provided.",
-				context: { operation: "NotionAdapter.getDataSourceId" },
+				context: { operation: "NotionCollection.getDataSourceId" },
 			});
 		}
 		this.resolvingDataSourceId = (async () => {
@@ -153,7 +155,7 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 				throw new CMSError({
 					code: "source/fetch_items_failed",
 					message: `Notion データベース "${dbName}" が見つかりませんでした。インテグレーションが DB にアクセスできるか確認してください。`,
-					context: { operation: "NotionAdapter.getDataSourceId", dbName },
+					context: { operation: "NotionCollection.getDataSourceId", dbName },
 				});
 			}
 			this.resolvedDataSourceId = first.id;
@@ -191,7 +193,7 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 				message: "Failed to fetch items from Notion data source.",
 				cause: err,
 				context: {
-					operation: "NotionAdapter.list",
+					operation: "NotionCollection.list",
 					dataSourceId: this.resolvedDataSourceId,
 					dbName: this.dbName,
 				},
@@ -217,7 +219,7 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 				message: "Failed to fetch item by slug from Notion data source.",
 				cause: err,
 				context: {
-					operation: "NotionAdapter.findBySlug",
+					operation: "NotionCollection.findBySlug",
 					dataSourceId: this.resolvedDataSourceId,
 					dbName: this.dbName,
 					slug,
@@ -239,29 +241,51 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 				message: "Failed to load markdown from Notion.",
 				cause: err,
 				context: {
-					operation: "NotionAdapter.loadMarkdown",
+					operation: "NotionCollection.loadMarkdown",
 					pageId: item.id,
 					slug: item.slug,
 				},
 			});
 		}
 	}
+
+	async loadBlocks(item: T): Promise<ContentBlock[]> {
+		const markdown = await this.loadMarkdown(item);
+		return markdownToBlocks(markdown);
+	}
+
+	getLastModified(item: T): string {
+		return item.updatedAt;
+	}
+
+	getListVersion(items: T[]): string {
+		return items.map((item) => `${item.id}:${item.updatedAt}`).join("|");
+	}
 }
 
-/** デフォルトマッパーで `BaseContentItem` を返す Notion アダプタを生成する。 */
-export function notionAdapter(
-	opts: NotionAdapterDefaultOptions,
-): DataSourceAdapter<BaseContentItem>;
-/** カスタム `mapItem` で任意の `T` に写像するアダプタを生成する。 */
-export function notionAdapter<T extends BaseContentItem>(
-	opts: NotionAdapterMapItemOptions<T>,
-): DataSourceAdapter<T>;
-/** 宣言的 `schema` で任意の `T` に写像するアダプタを生成する。 */
-export function notionAdapter<T extends BaseContentItem>(
-	opts: NotionAdapterSchemaOptions<T>,
-): DataSourceAdapter<T>;
-export function notionAdapter<T extends BaseContentItem = BaseContentItem>(
-	opts: NotionAdapterOptions<T>,
-): DataSourceAdapter<T> {
-	return new NotionAdapter<T>(opts);
+/** デフォルトマッパーで `BaseContentItem` を返す Notion コレクションを生成する。 */
+export function createNotionCollection(
+	opts: NotionCollectionDefaultOptions,
+): DataSource<BaseContentItem>;
+/** カスタム `mapItem` で任意の `T` に写像する Notion コレクションを生成する。 */
+export function createNotionCollection<T extends BaseContentItem>(
+	opts: NotionCollectionMapItemOptions<T>,
+): DataSource<T>;
+/** 宣言的 `schema` で任意の `T` に写像する Notion コレクションを生成する。 */
+export function createNotionCollection<T extends BaseContentItem>(
+	opts: NotionCollectionSchemaOptions<T>,
+): DataSource<T>;
+export function createNotionCollection<
+	T extends BaseContentItem = BaseContentItem,
+>(opts: NotionCollectionOptions<T>): DataSource<T> {
+	return new NotionCollection<T>(opts);
 }
+
+/**
+ * @deprecated `createNotionCollection` に改名。互換性のためエイリアスとして残す。
+ */
+export const notionAdapter = createNotionCollection;
+
+/** @deprecated 旧名。互換性のため残す。 */
+export type NotionAdapterOptions<T extends BaseContentItem = BaseContentItem> =
+	NotionCollectionOptions<T>;

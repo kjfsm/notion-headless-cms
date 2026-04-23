@@ -1,24 +1,24 @@
 {
-	"name": "example-node-express",
+	"name": "example-node-hono",
 	"private": true,
-	"version": "0.0.4",
+	"version": "0.0.0",
 	"type": "module",
 	"scripts": {
 		"dev": "nhc generate && tsx watch src/index.ts",
 		"start": "node dist/index.js",
 		"build": "nhc generate && tsc",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "nhc generate && tsc --noEmit"
 	},
 	"dependencies": {
+		"@hono/node-server": "^1.14.0",
 		"@notion-headless-cms/adapter-node": "workspace:*",
 		"@notion-headless-cms/core": "workspace:*",
 		"@notion-headless-cms/notion-orm": "workspace:*",
-		"express": "^5.2.1",
+		"hono": "^4.6.0",
 		"zod": "^4.1.12"
 	},
 	"devDependencies": {
 		"@notion-headless-cms/cli": "workspace:*",
-		"@types/express": "^5.0.6",
 		"@types/node": "^25.6.0",
 		"tsx": "^4.19.0",
 		"typescript": "^6.0.3"

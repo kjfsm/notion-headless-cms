@@ -36,6 +36,7 @@ export class NtmConverter implements BlockConverter {
 		}
 
 		const blocks = await ntm.pageToMarkdown(pageId);
-		return ntm.toMarkdownString(blocks).parent;
+		// ブロックが空のとき toMarkdownString(blocks).parent は undefined になる
+		return ntm.toMarkdownString(blocks).parent ?? "";
 	}
 }

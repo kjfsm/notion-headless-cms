@@ -1,3 +1,4 @@
+import type { ContentBlock } from "./content/blocks";
 import { CMSError, isCMSError } from "./errors";
 import { buildCacheImageFn } from "./image";
 import type {
@@ -5,7 +6,7 @@ import type {
 	CachedItem,
 	CMSHooks,
 	ContentConfig,
-	DataSourceAdapter,
+	DataSource,
 	ImageCacheAdapter,
 	Logger,
 	RendererFn,
@@ -13,7 +14,7 @@ import type {
 
 /** `buildCachedItem` に必要な CMS の依存を束ねたコンテキスト。 */
 export interface RenderContext<T extends BaseContentItem> {
-	source: DataSourceAdapter<T>;
+	source: DataSource<T>;
 	rendererFn: RendererFn | undefined;
 	imgCache: ImageCacheAdapter;
 	hasImageCache: boolean;
@@ -24,13 +25,22 @@ export interface RenderContext<T extends BaseContentItem> {
 }
 
 /**
- * コンテンツアイテムをソースから Markdown ロード → HTML レンダリング → フック適用
- * までを実行し、キャッシュ保存用の `CachedItem` を返す。副作用はロガー呼び出しのみ。
+ * キャッシュに保存する CachedItem を拡張し、`blocks` を同梱できるようにする。
+ * `CachedItem<T>` の構造互換性を保ちつつ blocks を optional で載せる。
+ */
+export type CachedItemWithBlocks<T extends BaseContentItem> = CachedItem<T> & {
+	blocks?: ContentBlock[];
+	markdown?: string;
+};
+
+/**
+ * コンテンツアイテムをソースから Markdown ロード → blocks 生成 → HTML レンダリング
+ * → フック適用まで実行し、キャッシュ保存用の `CachedItem` を返す。
  */
 export async function buildCachedItem<T extends BaseContentItem>(
 	item: T,
 	ctx: RenderContext<T>,
-): Promise<CachedItem<T>> {
+): Promise<CachedItemWithBlocks<T>> {
 	const start = Date.now();
 	ctx.logger?.info?.("コンテンツのレンダリング開始", {
 		slug: item.slug,
@@ -53,6 +63,17 @@ export async function buildCachedItem<T extends BaseContentItem>(
 				slug: item.slug,
 			},
 		});
+	}
+
+	let blocks: ContentBlock[] = [];
+	try {
+		blocks = await ctx.source.loadBlocks(item);
+	} catch (err) {
+		ctx.logger?.warn?.("loadBlocks に失敗したため raw フォールバック", {
+			slug: item.slug,
+			error: err instanceof Error ? err.message : String(err),
+		});
+		blocks = [];
 	}
 
 	const cacheImage = ctx.hasImageCache
@@ -86,15 +107,17 @@ export async function buildCachedItem<T extends BaseContentItem>(
 		html = await ctx.hooks.afterRender(html, item);
 	}
 
-	let result: CachedItem<T> = {
+	let result: CachedItemWithBlocks<T> = {
 		html,
+		blocks,
+		markdown,
 		item,
-		notionUpdatedAt: item.updatedAt,
+		notionUpdatedAt: ctx.source.getLastModified(item),
 		cachedAt: Date.now(),
 	};
 
 	if (ctx.hooks.beforeCache) {
-		result = await ctx.hooks.beforeCache(result);
+		result = (await ctx.hooks.beforeCache(result)) as CachedItemWithBlocks<T>;
 	}
 
 	const durationMs = Date.now() - start;
@@ -115,7 +138,7 @@ export async function buildCachedItem<T extends BaseContentItem>(
 export async function loadDefaultRenderer(): Promise<RendererFn> {
 	try {
 		const mod = await import("@notion-headless-cms/renderer");
-		return mod.renderMarkdown;
+		return mod.renderMarkdown as RendererFn;
 	} catch (err) {
 		throw new CMSError({
 			code: "renderer/failed",

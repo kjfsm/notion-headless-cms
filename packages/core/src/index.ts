@@ -1,6 +1,6 @@
-// ── メインAPI ──────────────────────────────────────────────────────────────
+// ── メイン API ──────────────────────────────────────────────────────────
 
-// ── キャッシュユーティリティ ───────────────────────────────────────────────
+// ── キャッシュユーティリティ ───────────────────────────────────────────
 export { isStale, sha256Hex } from "./cache";
 export type {
 	MemoryDocumentCacheOptions,
@@ -12,48 +12,66 @@ export {
 	memoryImageCache,
 } from "./cache/memory";
 export { noopDocumentCache, noopImageCache } from "./cache/noop";
-export type { CacheAccessor } from "./cms";
-export { CMS, createCMS } from "./cms";
-
-// ── エラー ────────────────────────────────────────────────────────────────
+export type { CMSClient, CMSGlobalOps } from "./cms";
+export { createCMS } from "./cms";
+export type { CollectionContext } from "./collection";
+// ── コレクション ─────────────────────────────────────────────────────────
+export { CollectionClientImpl, collectionKey } from "./collection";
+// ── コンテンツ AST ──────────────────────────────────────────────────────
+export type {
+	ContentBlock,
+	ContentResult,
+	ImageRef,
+	InlineNode,
+} from "./content/blocks";
+// ── エラー ──────────────────────────────────────────────────────────────
 export type { CMSErrorCode, CMSErrorContext } from "./errors";
 export { CMSError, isCMSError, isCMSErrorInNamespace } from "./errors";
+export type { HandlerAdapter, HandlerOptions } from "./handler";
+// ── $handler ───────────────────────────────────────────────────────────
+export { createHandler } from "./handler";
 
-// ── フック・ロガー・プラグイン ──────────────────────────────────────────────
+// ── フック・ロガー・プラグイン ────────────────────────────────────────
 export { mergeHooks, mergeLoggers } from "./hooks";
-export type { QueryResult } from "./query";
-// ── クエリ ────────────────────────────────────────────────────────────────
-export { QueryBuilder } from "./query";
+
+// ── リトライ ───────────────────────────────────────────────────────────
 export type { RetryConfig } from "./retry";
-// ── リトライ ──────────────────────────────────────────────────────────────
 export { DEFAULT_RETRY_CONFIG, withRetry } from "./retry";
-// ── 公開型 ────────────────────────────────────────────────────────────────
+
+// ── 公開型 ──────────────────────────────────────────────────────────────
 export type {
-	CacheConfig,
-	DocumentCacheAdapter,
-	ImageCacheAdapter,
-} from "./types/cache";
-export type {
-	ContentConfig,
-	CreateCMSOptions,
-	RateLimiterConfig,
-	RendererFn,
-	RenderOptions,
-	SchemaConfig,
-} from "./types/config";
-export type {
+	AdjacencyOptions,
 	BaseContentItem,
+	CacheConfig,
 	CachedItem,
 	CachedItemList,
+	CacheInvalidateScope,
+	CMSHooks,
+	CMSPlugin,
 	CMSSchemaProperties,
+	CollectionClient,
+	CollectionConfig,
+	ContentConfig,
+	CreateCMSOptions,
+	DataSource,
+	DataSourceFactory,
+	DataSourceMap,
+	DocumentCacheAdapter,
+	GetListOptions,
+	ImageCacheAdapter,
+	InferCollectionItem,
+	InferDataSourceItem,
+	InvalidateScope,
+	ItemWithContent,
+	Logger,
+	MaybePromise,
+	NHCSchema,
+	RateLimiterConfig,
+	RendererFn,
+	RendererPluginList,
+	RenderOptions,
+	SortOption,
 	StorageBinary,
-} from "./types/content";
-export type { CMSHooks, MaybePromise } from "./types/hooks";
-export type { Logger } from "./types/logger";
-export type { CMSPlugin } from "./types/plugin";
+	WebhookConfig,
+} from "./types/index";
 export { definePlugin } from "./types/plugin";
-export type {
-	DataSourceAdapter,
-	SourceQueryOptions,
-	SourceQueryResult,
-} from "./types/source";
