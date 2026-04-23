@@ -2,6 +2,7 @@ import type {
 	BaseContentItem,
 	CachedItem,
 	CachedItemList,
+	CacheInvalidateScope,
 	DocumentCacheAdapter,
 	ImageCacheAdapter,
 	StorageBinary,
@@ -65,9 +66,7 @@ export class MemoryDocumentCache<T extends BaseContentItem = BaseContentItem>
 		return Promise.resolve();
 	}
 
-	async invalidate(
-		scope: "all" | { slug: string } | { tag: string },
-	): Promise<void> {
+	async invalidate(scope: CacheInvalidateScope): Promise<void> {
 		if (scope === "all") {
 			this.list = null;
 			this.items.clear();

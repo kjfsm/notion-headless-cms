@@ -24,12 +24,12 @@ describe("generateSchemaFile", () => {
 	it("ヘッダーにインポート文が含まれる", () => {
 		const code = generateSchemaFile([makeSource()]);
 		expect(code).toContain('import { z } from "zod"');
-		expect(code).toContain(
-			'import { defineMapping, defineSchema } from "@notion-headless-cms/source-notion"',
-		);
+		expect(code).toContain("createNotionCollection");
+		expect(code).toContain('from "@notion-headless-cms/notion-orm"');
 		expect(code).toContain(
 			'import type { BaseContentItem } from "@notion-headless-cms/core"',
 		);
+		expect(code).toContain('import { env } from "@notion-headless-cms/cli"');
 	});
 
 	it("自動生成コメントを含む", () => {
@@ -175,17 +175,20 @@ describe("generateSchemaFile", () => {
 		expect(code).toContain('export const postsSourceId = "abc-123";');
 	});
 
-	it("nhcSchema オブジェクトが出力される", () => {
+	it("nhcDataSources オブジェクトが出力される", () => {
 		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain("export const nhcSchema = {");
-		expect(code).toContain("id: postsSourceId,");
-		expect(code).toContain('dbName: "ブログ記事DB",');
+		expect(code).toContain("export const nhcDataSources = {");
+		expect(code).toContain("posts: createNotionCollection({");
+		expect(code).toContain('token: env("NOTION_TOKEN")');
+		expect(code).toContain("dataSourceId: postsSourceId,");
 		expect(code).toContain("schema: postsSchema,");
 		expect(code).toContain("} as const;");
-		expect(code).toContain("export type NHCSchema = typeof nhcSchema;");
+		expect(code).toContain(
+			"export type NHCDataSources = typeof nhcDataSources;",
+		);
 	});
 
-	it("複数ソースが nhcSchema に含まれる", () => {
+	it("複数ソースが nhcDataSources に含まれる", () => {
 		const sources: ResolvedSource[] = [
 			makeSource(),
 			{
@@ -196,10 +199,10 @@ describe("generateSchemaFile", () => {
 			} as ResolvedSource,
 		];
 		const code = generateSchemaFile(sources);
-		expect(code).toContain("id: postsSourceId,");
-		expect(code).toContain("id: newsSourceId,");
-		expect(code).toContain('dbName: "ブログ記事DB",');
-		expect(code).toContain('dbName: "ニュースDB",');
+		expect(code).toContain("posts: createNotionCollection({");
+		expect(code).toContain("news: createNotionCollection({");
+		expect(code).toContain("dataSourceId: postsSourceId,");
+		expect(code).toContain("dataSourceId: newsSourceId,");
 	});
 
 	it("日本語プロパティ名は fields.properties がないとエラーになる", () => {

@@ -53,7 +53,7 @@
 		"@notion-headless-cms/cache-r2": "workspace:*",
 		"@notion-headless-cms/core": "workspace:*",
 		"@notion-headless-cms/renderer": "workspace:*",
-		"@notion-headless-cms/source-notion": "workspace:*",
+		"@notion-headless-cms/notion-orm": "workspace:*",
 		"@notionhq/client": "^5.20.0",
 		"rehype-stringify": "^10.0.1",
 		"remark-gfm": "^4.0.1",

@@ -40,9 +40,14 @@ pnpm install   # または npm install / yarn install
 cp .env.example .env
 # .env を編集して NOTION_TOKEN と NOTION_DATA_SOURCE_ID を入力
 
-# 4. 開発サーバーを起動
+# 4. スキーマを生成（Notion DB の構造変更時に再実行）
+pnpm generate
+
+# 5. 開発サーバーを起動
 pnpm dev
 ```
+
+> モノレポのルートで `pnpm generate` を実行すると、`examples/*` 全部の `nhc generate` を一括で走らせることもできます。
 
 ## Cloudflare R2 のセットアップ（Cloudflare 系 example）
 

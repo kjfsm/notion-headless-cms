@@ -1,9 +1,14 @@
+import type { DataSource } from "@notion-headless-cms/core";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createNodeCMS } from "../cms";
 
-vi.mock("@notion-headless-cms/source-notion", () => ({
-	notionAdapter: vi.fn().mockReturnValue({
-		name: "notion",
+vi.mock("@notion-headless-cms/renderer", () => ({
+	renderMarkdown: vi.fn().mockResolvedValue("<p>rendered</p>"),
+}));
+
+function makeStubDataSource(): DataSource {
+	return {
+		name: "notion-stub",
 		list: vi.fn().mockResolvedValue([
 			{
 				id: "id-1",
@@ -14,19 +19,12 @@ vi.mock("@notion-headless-cms/source-notion", () => ({
 		]),
 		findBySlug: vi.fn().mockResolvedValue(null),
 		loadMarkdown: vi.fn().mockResolvedValue("# Hello"),
-	}),
-	defineMapping: vi.fn(),
-	defineSchema: vi.fn(),
-	isNotionSchema: vi.fn().mockReturnValue(false),
-}));
-
-vi.mock("@notion-headless-cms/renderer", () => ({
-	renderMarkdown: vi.fn().mockResolvedValue("<p>rendered</p>"),
-}));
-
-const schema = {
-	posts: { id: "test-db-id", dbName: "記事DB" },
-} as const;
+		loadBlocks: vi.fn().mockResolvedValue([]),
+		getLastModified: (item) => item.updatedAt,
+		getListVersion: (items) =>
+			items.map((i) => `${i.id}:${i.updatedAt}`).join("|"),
+	};
+}
 
 describe("createNodeCMS", () => {
 	const origEnv = { ...process.env };
@@ -39,51 +37,63 @@ describe("createNodeCMS", () => {
 		process.env.NOTION_TOKEN = origEnv.NOTION_TOKEN;
 	});
 
-	it("NOTION_TOKEN があれば各ソースの CMS インスタンスを作成できる", () => {
-		const client = createNodeCMS({ schema });
-		expect(typeof client.posts.list).toBe("function");
-		expect(typeof client.posts.find).toBe("function");
+	it("NOTION_TOKEN があればコレクション別クライアントを作成できる", () => {
+		const cms = createNodeCMS({
+			dataSources: { posts: makeStubDataSource() },
+		});
+		expect(typeof cms.posts.getItem).toBe("function");
+		expect(typeof cms.posts.getList).toBe("function");
 	});
 
 	it("NOTION_TOKEN が未設定の場合はエラーをスローする", () => {
 		delete process.env.NOTION_TOKEN;
-		expect(() => createNodeCMS({ schema })).toThrow("NOTION_TOKEN");
+		expect(() =>
+			createNodeCMS({ dataSources: { posts: makeStubDataSource() } }),
+		).toThrow("NOTION_TOKEN");
 	});
 
 	it("token オプションで環境変数を上書きできる", () => {
 		delete process.env.NOTION_TOKEN;
-		const client = createNodeCMS({ schema, token: "custom-token" });
-		expect(client.posts).toBeDefined();
+		const cms = createNodeCMS({
+			dataSources: { posts: makeStubDataSource() },
+			token: "custom-token",
+		});
+		expect(cms.posts).toBeDefined();
 	});
 
-	it("list() がソースのアイテムを返す", async () => {
-		const client = createNodeCMS({ schema });
-		const items = await client.posts.list();
+	it("getList() が DataSource のアイテムを返す", async () => {
+		const cms = createNodeCMS({
+			dataSources: { posts: makeStubDataSource() },
+		});
+		const items = await cms.posts.getList();
 		expect(items).toHaveLength(1);
-		expect(items[0].slug).toBe("post-a");
+		expect(items[0]?.slug).toBe("post-a");
 	});
 
 	it("cache: { document: 'memory' } でインメモリキャッシュを有効化できる", () => {
-		const client = createNodeCMS({
-			schema,
+		const cms = createNodeCMS({
+			dataSources: { posts: makeStubDataSource() },
 			cache: { document: "memory", ttlMs: 60_000 },
 		});
-		expect(typeof client.posts.cache.getList).toBe("function");
-		expect(typeof client.posts.cache.get).toBe("function");
+		expect(cms.posts).toBeDefined();
+		expect(typeof cms.$revalidate).toBe("function");
 	});
 
 	it("cache: 'disabled' でキャッシュ無効で動作する", () => {
-		const client = createNodeCMS({ schema, cache: "disabled" });
-		expect(client.posts).toBeDefined();
+		const cms = createNodeCMS({
+			dataSources: { posts: makeStubDataSource() },
+			cache: "disabled",
+		});
+		expect(cms.posts).toBeDefined();
 	});
 
-	it("sources でソースごとの publishedStatuses を上書きできる", () => {
-		const client = createNodeCMS({
-			schema,
-			sources: {
-				posts: { published: ["公開"], accessible: ["公開", "下書き"] },
+	it("$collections で登録されたコレクション名を取得できる", () => {
+		const cms = createNodeCMS({
+			dataSources: {
+				posts: makeStubDataSource(),
+				news: makeStubDataSource(),
 			},
 		});
-		expect(client.posts).toBeDefined();
+		expect(cms.$collections).toEqual(["posts", "news"]);
 	});
 });

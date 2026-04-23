@@ -28,6 +28,7 @@ program
 	.description("nhc.config.ts のテンプレートを生成します")
 	.option("-o, --output <path>", "出力先ファイルパス", "nhc.config.ts")
 	.option("-f, --force", "既存ファイルを上書きする")
+	.option("-s, --silent", "ログ出力を抑制する")
 	.action(run(runInit));
 
 program
@@ -44,6 +45,7 @@ program
 		"-e, --env-file <path>",
 		"環境変数ファイルのパス（例: .dev.vars, .env.local）",
 	)
+	.option("-s, --silent", "ログ出力を抑制する")
 	.action(run(runGenerate));
 
 program.parse();

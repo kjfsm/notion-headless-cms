@@ -3,8 +3,15 @@ import { createCMS } from "$lib/cms";
 import type { PageServerLoad } from "./$types";
 
 export const load: PageServerLoad = async ({ params, platform }) => {
-	const cms = createCMS(platform!.env);
-	const entry = await cms.cache.get(params.slug);
-	if (!entry) error(404, "Not Found");
-	return entry;
+	if (!params.slug) {
+		error(404, "Not Found");
+	}
+	if (!platform) {
+		error(500, "Platform not found");
+	}
+	const cms = createCMS(platform.env);
+	const post = await cms.posts.getItem(params.slug);
+	if (!post) error(404, "Not Found");
+	const html = await post.content.html();
+	return { html, item: post };
 };

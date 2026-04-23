@@ -4,19 +4,20 @@
 	"version": "0.0.4",
 	"type": "module",
 	"scripts": {
-		"build": "nhc generate && react-router build",
+		"build": "react-router build",
 		"cf-typegen": "wrangler types && react-router typegen",
-		"check": "tsc && nhc generate && react-router build && wrangler deploy --dry-run",
+		"check": "tsc && react-router build && wrangler deploy --dry-run",
 		"deploy": "wrangler deploy",
 		"dev": "react-router dev",
 		"env": "dotenv -e .dev.vars",
+		"generate": "nhc generate",
 		"preview": "pnpm run build && vite preview",
 		"typecheck": "pnpm run cf-typegen && tsc -b"
 	},
 	"dependencies": {
 		"@notion-headless-cms/adapter-cloudflare": "workspace:*",
 		"@notion-headless-cms/core": "workspace:*",
-		"@notion-headless-cms/source-notion": "workspace:*",
+		"@notion-headless-cms/notion-orm": "workspace:*",
 		"@react-router/cloudflare": "^7.14.2",
 		"dotenv": "^17.4.2",
 		"react": "^19.2.5",

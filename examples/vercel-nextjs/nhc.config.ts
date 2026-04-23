@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { defineConfig, env } from "@notion-headless-cms/cli";
 
 export default defineConfig({

@@ -379,27 +379,38 @@ function generateSourceBlock(source: ResolvedSource): string {
 	return lines.join("\n");
 }
 
-/** nhcSchema オブジェクトのコードを生成 */
-function generateNhcSchema(sources: ResolvedSource[]): string {
+/**
+ * `nhcDataSources` オブジェクトのコードを生成。
+ * 各コレクションを `createNotionCollection` で生成済みの `DataSource<T>` として出力する。
+ * ユーザーは `createCMS({ dataSources: nhcDataSources, ... })` にそのまま渡せる。
+ *
+ * `NOTION_TOKEN` は env() ヘルパー経由で遅延評価する。
+ */
+function generateNhcDataSources(sources: ResolvedSource[]): string {
 	const lines: string[] = [
 		"// =".padEnd(62, "="),
-		"// NHC Multi-Source Schema",
+		"// NHC DataSources",
 		"// =".padEnd(62, "="),
 		"",
-		"export const nhcSchema = {",
+		"/**",
+		" * 各コレクション名 → DataSource<T> のマップ。",
+		" * createCMS({ dataSources: nhcDataSources, cache, ... }) に渡す。",
+		" * ユーザーは notion-orm を直接 import する必要はない (CLI が自動生成する)。",
+		" */",
+		"export const nhcDataSources = {",
 	];
 
 	for (const source of sources) {
-		lines.push(`\t${source.config.name}: {`);
-		lines.push(`\t\tid: ${source.config.name}SourceId,`);
-		lines.push(`\t\tdbName: "${source.dbName}",`);
+		lines.push(`\t${source.config.name}: createNotionCollection({`);
+		lines.push('\t\ttoken: env("NOTION_TOKEN"),');
+		lines.push(`\t\tdataSourceId: ${source.config.name}SourceId,`);
 		lines.push(`\t\tschema: ${source.config.name}Schema,`);
-		lines.push("\t},");
+		lines.push("\t}),");
 	}
 
 	lines.push("} as const;");
 	lines.push("");
-	lines.push("export type NHCSchema = typeof nhcSchema;");
+	lines.push("export type NHCDataSources = typeof nhcDataSources;");
 
 	return lines.join("\n");
 }
@@ -411,15 +422,20 @@ export function generateSchemaFile(sources: ResolvedSource[]): string {
 		`// Generated: ${new Date().toISOString()}`,
 		"",
 		'import { z } from "zod";',
-		'import { defineMapping, defineSchema } from "@notion-headless-cms/source-notion";',
+		"import {",
+		"\tcreateNotionCollection,",
+		"\tdefineMapping,",
+		"\tdefineSchema,",
+		'} from "@notion-headless-cms/notion-orm";',
 		'import type { BaseContentItem } from "@notion-headless-cms/core";',
+		'import { env } from "@notion-headless-cms/cli";',
 		"",
 	].join("\n");
 
 	const blocks = sources.map((s) => generateSourceBlock(s));
-	const nhcSchema = generateNhcSchema(sources);
+	const nhcDataSources = generateNhcDataSources(sources);
 
-	return [header, ...blocks, "", nhcSchema, ""].join("\n");
+	return [header, ...blocks, "", nhcDataSources, ""].join("\n");
 }
 
 export type { ResolvedSource };

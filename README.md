@@ -9,20 +9,20 @@ Cloudflare Workers + R2 を中心としつつ、Node.js / Next.js / Astro / Hono
 flowchart LR
   notion[(Notion DB)]
 
-  subgraph source["@notion-headless-cms/source-notion"]
+  subgraph orm["@notion-headless-cms/notion-orm (内部)"]
     direction LR
-    fetch["API 取得"]
-    transform["blocks → Markdown"]
+    fetch["Notion API 取得"]
+    transform["blocks → Markdown → ContentBlock AST"]
     fetch --> transform
   end
 
   renderer["@notion-headless-cms/renderer\nMarkdown → HTML"]
-  core["@notion-headless-cms/core\nCMS エンジン・キャッシュ統合"]
+  core["@notion-headless-cms/core\nCMS エンジン・キャッシュ統合\n・コレクション別 API"]
   cache[(R2 / メモリ / Next.js\nキャッシュ)]
   output["Workers / Node.js /\nNext.js / …"]
 
-  notion -->|"blocks"| source
-  source -->|"Markdown"| core
+  notion -->|"blocks"| orm
+  orm -->|"DataSource<T>"| core
   core --> renderer
   renderer -->|"HTML"| core
   core <-->|"SWR"| cache
@@ -37,22 +37,21 @@ flowchart LR
 ### コア
 
 #### [`@notion-headless-cms/core`](./packages/core)
-CMS エンジン本体。データソース・キャッシュ・レンダラーを統合し、Stale-While-Revalidate / 更新検知 / クエリビルダー / フック / リトライを提供する。**外部ランタイム依存ゼロ**。
-- `createCMS(options)` / `CMS` — CMS インスタンス生成
-- `cms.list()` / `cms.find(slug)` / `cms.render(item)` — ソースから直接取得
-- `cms.cache.read.list()` / `cms.cache.read.get(slug)` — SWR 取得
-- `cms.cache.manage.prefetchAll()` / `revalidate()` / `sync()` / `checkList()` / `checkItem()` — キャッシュ管理
-- `cms.query()` — ステータス・タグ・述語・ソート・ページネーション
+CMS エンジン本体。`DataSource<T>` 抽象・キャッシュ・レンダラー統合・SWR / 更新検知 / フック / リトライ / Web Standard Route Handler を提供する。**外部ランタイム依存ゼロ**。
+- `createCMS({ dataSources, cache?, ... })` — コレクション別にアクセスできる CMS クライアントを生成
+- `cms.posts.getItem(slug)` — 本文込みで単件取得（SWR）。返り値は `T & { content: { blocks, html(), markdown() } }`
+- `cms.posts.getList(opts?)` — 公開済み一覧（本文なし）
+- `cms.posts.getStaticParams()` / `getStaticPaths()` — SSG 用
+- `cms.posts.adjacent(slug)` — 前後記事ナビゲーション
+- `cms.posts.revalidate()` / `cms.posts.prefetch()` — コレクション別キャッシュ操作
+- `cms.$revalidate(scope?)` / `cms.$getCachedImage(hash)` / `cms.$handler(opts)` — グローバル操作
+- `ContentBlock` AST（paragraph / heading / list / code / quote / image / divider / raw）
 - `memoryDocumentCache({ maxItems? })` / `memoryImageCache({ maxItems?, maxSizeBytes? })` — LRU 対応インメモリキャッシュ
 - `CMSError` / `isCMSError` / `isCMSErrorInNamespace` — 名前空間付きエラー
 - サブパスエクスポート `/errors` · `/hooks` · `/cache/memory` — 必要な型だけをインポート可
 
-#### [`@notion-headless-cms/source-notion`](./packages/source-notion)
-Notion データベースを `DataSourceAdapter` として実装するアダプタ。Zod スキーマを使った型安全マッピングに対応。
-- `notionAdapter({ token, dataSourceId, schema?, mapItem?, properties?, blocks? })`
-- `defineSchema(zodSchema, mapping)` / `defineMapping<T>(mapping)` — 型安全なスキーマ定義
-- `NotionPage` / `NotionRichTextItem` 型を再エクスポート（`mapItem` 用）
-- `@notionhq/client` と `zod` は `peerDependencies`。利用側でのインストールが必要
+#### `@notion-headless-cms/notion-orm` — 内部パッケージ（private）
+Notion API 呼び出しとスキーマ解釈を担う ORM 層。`DataSource<T>` インターフェースを実装する。**ユーザーは直接 import しない**（CLI が生成した `nhcDataSources` 経由で利用）。将来的にリポジトリ分離を予定。
 
 #### [`@notion-headless-cms/renderer`](./packages/renderer)
 Markdown → HTML レンダラー。remark / rehype パイプラインで変換し、GFM と画像 URL のプロキシ書き換えをサポート。
@@ -71,11 +70,11 @@ Notion DB を introspect して TypeScript スキーマを自動生成する CLI
 
 #### [`@notion-headless-cms/adapter-cloudflare`](./packages/adapter-cloudflare)
 Cloudflare Workers 向けファクトリ。`env.CACHE_BUCKET`（R2）を自動で `DocumentCacheAdapter` / `ImageCacheAdapter` に変換して注入する。
-- `createCloudflareCMS({ schema, env, sources?, content?, ttlMs? })` — `nhc generate` が生成した `nhcSchema` を受け取り、ソース名でアクセスできる CMS マップを返す。`env.CACHE_BUCKET` 未設定時はキャッシュなしで動作
+- `createCloudflareCMS({ dataSources, env, content?, ttlMs?, waitUntil? })` — `nhc generate` が生成した `nhcDataSources` を受け取り、コレクション別にアクセスできる CMS クライアントを返す。`env.CACHE_BUCKET` 未設定時はキャッシュなしで動作
 
 #### [`@notion-headless-cms/adapter-node`](./packages/adapter-node)
 Node.js 向けファクトリ。`process.env.NOTION_TOKEN` を読み取り、オプションでインメモリキャッシュを注入する。
-- `createNodeCMS({ schema, sources?, token?, cache?, content? })` — `nhcSchema` を受け取り各ソースに対応する CMS マップを返す。`cache: "disabled" | { document?: "memory"; image?: "memory"; ttlMs? }`
+- `createNodeCMS({ dataSources, token?, cache?, content? })` — `nhcDataSources` を受け取りコレクション別にアクセスできる CMS クライアントを返す。`cache: "disabled" | { document?: "memory"; image?: "memory"; ttlMs? }`
 
 #### [`@notion-headless-cms/adapter-next`](./packages/adapter-next)
 Next.js App Router 向けルートハンドラー。画像プロキシ配信と Notion Webhook によるキャッシュ再検証を提供する。

@@ -2,6 +2,7 @@ import type {
 	BaseContentItem,
 	CachedItem,
 	CachedItemList,
+	CacheInvalidateScope,
 	DocumentCacheAdapter,
 	ImageCacheAdapter,
 	StorageBinary,
@@ -29,9 +30,7 @@ class NoopDocumentCache<T extends BaseContentItem = BaseContentItem>
 		return Promise.resolve();
 	}
 
-	invalidate(
-		_scope: "all" | { slug: string } | { tag: string },
-	): Promise<void> {
+	invalidate(_scope: CacheInvalidateScope): Promise<void> {
 		return Promise.resolve();
 	}
 }

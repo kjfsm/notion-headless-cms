@@ -4,7 +4,7 @@ import type { Route } from "./+types/home";
 
 export async function loader({ context }: Route.LoaderArgs) {
 	const cms = createCMS(context.cloudflare.env);
-	const { items } = await cms.cache.getList();
+	const items = await cms.posts.getList();
 	return { items };
 }
 

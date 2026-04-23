@@ -1,32 +1,51 @@
-import { isStale } from "./cache";
 import { noopDocumentCache, noopImageCache } from "./cache/noop";
+import { CollectionClientImpl, type CollectionContext } from "./collection";
+import { createHandler, type HandlerOptions } from "./handler";
 import { mergeHooks, mergeLoggers } from "./hooks";
-import { QueryBuilder } from "./query";
 import type { RenderContext } from "./rendering";
-import { buildCachedItem } from "./rendering";
 import type { RetryConfig } from "./retry";
-import { DEFAULT_RETRY_CONFIG, withRetry } from "./retry";
+import { DEFAULT_RETRY_CONFIG } from "./retry";
 import type {
 	BaseContentItem,
 	CacheConfig,
-	CachedItem,
 	CMSHooks,
+	CollectionClient,
 	CreateCMSOptions,
-	DataSourceAdapter,
+	DataSource,
+	DataSourceMap,
 	DocumentCacheAdapter,
 	ImageCacheAdapter,
+	InferDataSourceItem,
+	InvalidateScope,
 	Logger,
 	RendererFn,
-	StorageBinary,
 } from "./types/index";
 
 const DEFAULT_IMAGE_PROXY_BASE = "/api/images";
 
-function resolveDocumentCache<T extends BaseContentItem>(
-	cache: CacheConfig<T> | undefined,
-): DocumentCacheAdapter<T> {
+/** `CMSClient<D>` — コレクション別アクセス + グローバル操作の合成型。 */
+export type CMSClient<D extends DataSourceMap> = {
+	[K in keyof D]: CollectionClient<InferDataSourceItem<D[K]>>;
+} & CMSGlobalOps<D>;
+
+/** `CMSClient` のグローバル名前空間。`$` プレフィックス。 */
+export interface CMSGlobalOps<D extends DataSourceMap> {
+	/** 登録されているコレクション名の一覧。 */
+	readonly $collections: readonly (keyof D & string)[];
+	/** 全コレクションまたは特定コレクションのキャッシュを無効化する。 */
+	$revalidate(scope?: InvalidateScope): Promise<void>;
+	/** Web Standard なルーティングハンドラ (画像プロキシ / webhook) を生成する。 */
+	$handler(opts?: HandlerOptions): (req: Request) => Promise<Response>;
+	/** ハッシュキーでキャッシュ画像を取得する。 */
+	$getCachedImage(hash: string): ReturnType<ImageCacheAdapter["get"]>;
+}
+
+function resolveDocumentCache(
+	cache: CacheConfig | undefined,
+	// biome-ignore lint/suspicious/noExplicitAny: 横断的に利用
+): DocumentCacheAdapter<any> {
 	if (!cache || cache === "disabled" || !cache.document) {
-		return noopDocumentCache<T>();
+		return noopDocumentCache();
 	}
 	return cache.document;
 }
@@ -48,359 +67,206 @@ function hasImageCacheConfigured(cache: CacheConfig | undefined): boolean {
 	return !!cache.image;
 }
 
-/** キャッシュ系の公開名前空間。SWR 読み取りとキャッシュ管理を統合する。 */
-export interface CacheAccessor<T extends BaseContentItem> {
-	/** キャッシュ優先でコンテンツ一覧を返す（SWR）。 */
-	getList(): Promise<{ items: T[]; isStale: boolean; cachedAt: number }>;
-	/** キャッシュ優先で単一コンテンツを返す（SWR）。HTML 付きの CachedItem を返す。 */
-	get(slug: string): Promise<CachedItem<T> | null>;
-	/** 全コンテンツを事前レンダリングしてキャッシュに保存する。 */
-	prefetchAll(opts?: {
-		concurrency?: number;
-		onProgress?: (done: number, total: number) => void;
-	}): Promise<{ ok: number; failed: number }>;
-	/** 指定スコープのキャッシュを無効化する。 */
-	revalidate(scope?: "all" | { slug: string }): Promise<void>;
-	/** Webhook ペイロードを元にキャッシュを同期する。 */
-	sync(payload?: { slug?: string }): Promise<{ updated: string[] }>;
-	/** リスト全体の変更を検知する。version はリスト取得時の buildListVersion の値。 */
-	checkList(
-		version: string,
-	): Promise<{ changed: false } | { changed: true; items: T[] }>;
-	/** 単一アイテムの変更を検知し、変更があれば再レンダリングしてキャッシュを更新する。 */
-	checkItem(
-		slug: string,
-		lastEdited: string,
-	): Promise<
-		| { changed: false }
-		| { changed: true; html: string; item: T; notionUpdatedAt: string }
-	>;
+/**
+ * `{collection}:{slug}` キー空間で動作するコレクション別キャッシュビューを生成する。
+ * 単一の `DocumentCacheAdapter` に複数コレクションを同居させるためのアダプタ。
+ */
+function scopeDocumentCache<T extends BaseContentItem>(
+	// biome-ignore lint/suspicious/noExplicitAny: 共有ストレージのため
+	base: DocumentCacheAdapter<any>,
+	collection: string,
+): DocumentCacheAdapter<T> {
+	const itemKey = (slug: string): string => `${collection}:${slug}`;
+	const listKey = collection;
+
+	return {
+		name: `${base.name}@${collection}`,
+		async getList() {
+			// biome-ignore lint/suspicious/noExplicitAny: キー別 namespace
+			const anyBase = base as any;
+			if (typeof anyBase.getListByKey === "function") {
+				return anyBase.getListByKey(listKey);
+			}
+			return base.getList();
+		},
+		async setList(data) {
+			// biome-ignore lint/suspicious/noExplicitAny: キー別 namespace
+			const anyBase = base as any;
+			if (typeof anyBase.setListByKey === "function") {
+				return anyBase.setListByKey(listKey, data);
+			}
+			return base.setList(data);
+		},
+		async getItem(slug) {
+			// biome-ignore lint/suspicious/noExplicitAny: キー別 namespace
+			const anyBase = base as any;
+			if (typeof anyBase.getItemByKey === "function") {
+				return anyBase.getItemByKey(itemKey(slug));
+			}
+			return base.getItem(slug);
+		},
+		async setItem(slug, data) {
+			// biome-ignore lint/suspicious/noExplicitAny: キー別 namespace
+			const anyBase = base as any;
+			if (typeof anyBase.setItemByKey === "function") {
+				return anyBase.setItemByKey(itemKey(slug), data);
+			}
+			return base.setItem(slug, data);
+		},
+		async invalidate(scope) {
+			if (!base.invalidate) return;
+			if (scope === "all") {
+				return base.invalidate({ collection });
+			}
+			if ("slug" in scope && !("collection" in scope)) {
+				return base.invalidate({ collection, slug: scope.slug });
+			}
+			return base.invalidate(scope);
+		},
+	};
 }
 
 /**
- * Notion をバックエンドとして使う汎用ヘッドレス CMS クラス。
+ * 複数の DataSource を束ねた CMS クライアントを生成する。
  *
  * @example
  * const cms = createCMS({
- *   source: notionAdapter({ token: '...', dataSourceId: '...' }),
+ *   dataSources: {
+ *     posts: createNotionCollection({ token, databaseId, schema }),
+ *   },
+ *   cache: { document, image, ttlMs: 60_000 },
  * });
- * const items = await cms.list();
- * const entry = await cms.cache.get('my-post');
+ * const post = await cms.posts.getItem("my-slug");
  */
-export class CMS<T extends BaseContentItem = BaseContentItem> {
-	private readonly source: DataSourceAdapter<T>;
-	private readonly docCache: DocumentCacheAdapter<T>;
-	private readonly imgCache: ImageCacheAdapter;
-	private readonly hasImageCache: boolean;
-	private readonly ttlMs: number | undefined;
-	private readonly publishedStatuses: string[];
-	private readonly accessibleStatuses: string[];
-	private readonly imageProxyBase: string;
-	private readonly contentConfig: CreateCMSOptions<T>["content"];
-	private readonly rendererFn: RendererFn | undefined;
-	private readonly waitUntil: ((p: Promise<unknown>) => void) | undefined;
-	private readonly hooks: CMSHooks<T>;
-	private readonly logger: Logger | undefined;
-	private readonly retryConfig: RetryConfig;
-	private readonly maxConcurrent: number;
-
-	readonly cache: CacheAccessor<T>;
-
-	constructor(opts: CreateCMSOptions<T>) {
-		this.source = opts.source;
-		this.docCache = resolveDocumentCache(opts.cache);
-		this.imgCache = resolveImageCache(opts.cache);
-		this.hasImageCache = hasImageCacheConfigured(opts.cache);
-		this.ttlMs = resolveTtl(opts.cache);
-		this.publishedStatuses =
-			opts.schema?.publishedStatuses ??
-			(opts.source.publishedStatuses ? [...opts.source.publishedStatuses] : []);
-		this.accessibleStatuses =
-			opts.schema?.accessibleStatuses ??
-			(opts.source.accessibleStatuses
-				? [...opts.source.accessibleStatuses]
-				: []);
-		this.imageProxyBase =
-			opts.content?.imageProxyBase ?? DEFAULT_IMAGE_PROXY_BASE;
-		this.contentConfig = opts.content;
-		this.rendererFn = opts.renderer;
-		this.waitUntil = opts.waitUntil;
-		this.logger = mergeLoggers(opts.plugins ?? [], opts.logger);
-		this.hooks = mergeHooks(opts.plugins ?? [], opts.hooks, this.logger);
-		this.maxConcurrent = opts.rateLimiter?.maxConcurrent ?? 3;
-		this.retryConfig = {
-			...DEFAULT_RETRY_CONFIG,
-			...(opts.rateLimiter ?? {}),
-		};
-
-		this.cache = {
-			getList: this.cachedList.bind(this),
-			get: this.cachedGet.bind(this),
-			prefetchAll: this.prefetchAll.bind(this),
-			revalidate: this.revalidate.bind(this),
-			sync: this.syncFromWebhook.bind(this),
-			checkList: this.checkListUpdate.bind(this),
-			checkItem: this.checkItemUpdate.bind(this),
-		};
+export function createCMS<D extends DataSourceMap>(
+	opts: CreateCMSOptions<D>,
+): CMSClient<D> {
+	if (!opts.dataSources || Object.keys(opts.dataSources).length === 0) {
+		throw new Error(
+			"createCMS: dataSources に少なくとも1つのコレクションを指定してください。",
+		);
 	}
 
-	private renderContext(): RenderContext<T> {
-		return {
-			source: this.source,
-			rendererFn: this.rendererFn,
-			imgCache: this.imgCache,
-			hasImageCache: this.hasImageCache,
-			imageProxyBase: this.imageProxyBase,
-			contentConfig: this.contentConfig,
-			hooks: this.hooks,
-			logger: this.logger,
+	const baseDocCache = resolveDocumentCache(opts.cache);
+	const imgCache = resolveImageCache(opts.cache);
+	const hasImageCache = hasImageCacheConfigured(opts.cache);
+	const ttlMs = resolveTtl(opts.cache);
+	const imageProxyBase =
+		opts.content?.imageProxyBase ?? DEFAULT_IMAGE_PROXY_BASE;
+	const contentConfig = opts.content;
+	const rendererFn: RendererFn | undefined = opts.renderer;
+	const waitUntil = opts.waitUntil;
+	const logger: Logger | undefined = mergeLoggers(
+		opts.plugins ?? [],
+		opts.logger,
+	);
+	const hooks: CMSHooks<BaseContentItem> = mergeHooks(
+		opts.plugins ?? [],
+		opts.hooks,
+		logger,
+	);
+	const maxConcurrent = opts.rateLimiter?.maxConcurrent ?? 3;
+	const retryConfig: RetryConfig = {
+		...DEFAULT_RETRY_CONFIG,
+		...(opts.rateLimiter ?? {}),
+	};
+
+	const collectionNames = Object.keys(opts.dataSources) as (keyof D & string)[];
+
+	// biome-ignore lint/suspicious/noExplicitAny: 各 T を保持
+	const collections: Record<string, CollectionClient<any>> = {};
+	for (const name of collectionNames) {
+		const source = opts.dataSources[name] as DataSource<BaseContentItem>;
+		const scopedCache = scopeDocumentCache<BaseContentItem>(baseDocCache, name);
+		const renderCtx: RenderContext<BaseContentItem> = {
+			source,
+			rendererFn,
+			imgCache,
+			hasImageCache,
+			imageProxyBase,
+			contentConfig,
+			hooks,
+			logger,
 		};
+		const ctx: CollectionContext<BaseContentItem> = {
+			collection: name,
+			source,
+			docCache: scopedCache,
+			render: renderCtx,
+			hooks,
+			logger,
+			ttlMs,
+			publishedStatuses: source.publishedStatuses
+				? [...source.publishedStatuses]
+				: [],
+			accessibleStatuses: source.accessibleStatuses
+				? [...source.accessibleStatuses]
+				: [],
+			retryConfig,
+			maxConcurrent,
+			waitUntil,
+		};
+		collections[name] = new CollectionClientImpl(ctx);
 	}
 
-	// ── コンテンツ取得 ──────────────────────────────────────────────────────
-
-	/** 公開済みコンテンツ一覧をソースから直接取得する。 */
-	list(): Promise<T[]> {
-		return withRetry(
-			() =>
-				this.source.list({
-					publishedStatuses:
-						this.publishedStatuses.length > 0
-							? this.publishedStatuses
-							: undefined,
-				}),
-			{
-				...this.retryConfig,
-				onRetry: (attempt, status) => {
-					this.logger?.warn?.("list() リトライ中", { attempt, status });
+	const globalOps: CMSGlobalOps<D> = {
+		$collections: collectionNames,
+		async $revalidate(scope?: InvalidateScope): Promise<void> {
+			if (!baseDocCache.invalidate) return;
+			await baseDocCache.invalidate(scope ?? "all");
+		},
+		$handler(handlerOpts?: HandlerOptions) {
+			return createHandler(
+				{
+					imageCache: imgCache,
+					parseWebhook: async (req, webhookSecret) => {
+						// 各 DataSource の parseWebhook を順に試す
+						for (const name of collectionNames) {
+							const ds = opts.dataSources[name] as DataSource<BaseContentItem>;
+							if (ds.parseWebhook) {
+								try {
+									const scope = await ds.parseWebhook(req.clone(), {
+										secret: webhookSecret,
+									});
+									return scope;
+								} catch (err) {
+									logger?.warn?.("parseWebhook 失敗", {
+										collection: name,
+										error: err instanceof Error ? err.message : String(err),
+									});
+								}
+							}
+						}
+						// フォールバック: { slug } だけの汎用 JSON body
+						try {
+							const body = (await req.json()) as {
+								slug?: string;
+								collection?: string;
+							};
+							if (body.slug && body.collection) {
+								return { collection: body.collection, slug: body.slug };
+							}
+							if (body.collection) {
+								return { collection: body.collection };
+							}
+						} catch {
+							// ignore
+						}
+						return null;
+					},
+					revalidate: (scope) => globalOps.$revalidate(scope),
 				},
-			},
-		);
-	}
-
-	/** スラッグでコンテンツをソースから直接取得する。 */
-	async find(slug: string): Promise<T | null> {
-		const item = await withRetry(() => this.source.findBySlug(slug), {
-			...this.retryConfig,
-			onRetry: (attempt, status) => {
-				this.logger?.warn?.("find() リトライ中", { attempt, status, slug });
-			},
-		});
-		if (!item) return null;
-		if (
-			this.accessibleStatuses.length > 0 &&
-			(!item.status || !this.accessibleStatuses.includes(item.status))
-		) {
-			return null;
-		}
-		return item;
-	}
-
-	/** 複数スラッグをまとめてソースから直接取得する。accessibleStatuses フィルタを適用する。 */
-	async findMany(slugs: string[]): Promise<Map<string, T>> {
-		const results = new Map<string, T>();
-		await Promise.all(
-			slugs.map(async (slug) => {
-				const item = await this.find(slug);
-				if (item) results.set(slug, item);
-			}),
-		);
-		return results;
-	}
-
-	/** アイテムが publishedStatuses に含まれるステータスかどうかを返す。 */
-	isPublished(item: T): boolean {
-		if (this.publishedStatuses.length === 0) return true;
-		return !!item.status && this.publishedStatuses.includes(item.status);
-	}
-
-	/** コンテンツを Markdown → HTML にレンダリングし、CachedItem として返す。キャッシュには保存しない。 */
-	render(item: T): Promise<CachedItem<T>> {
-		return buildCachedItem(item, this.renderContext());
-	}
-
-	/** QueryBuilder を返す。ステータス・タグ・ページネーションなどを連鎖で指定できる。 */
-	query(): QueryBuilder<T> {
-		return new QueryBuilder(this.source, this.publishedStatuses);
-	}
-
-	/** 静的生成用のスラッグ一覧を返す。 */
-	async getStaticSlugs(): Promise<string[]> {
-		const items = await this.list();
-		return items.map((item) => item.slug);
-	}
-
-	// ── 画像配信 ──────────────────────────────────────────────────────────
-
-	/** ハッシュキーでキャッシュ画像を取得する。 */
-	getCachedImage(hash: string): Promise<StorageBinary | null> {
-		return this.imgCache.get(hash);
-	}
-
-	/** ハッシュキーでキャッシュ画像を Response として返す。 */
-	async createCachedImageResponse(hash: string): Promise<Response | null> {
-		const object = await this.imgCache.get(hash);
-		if (!object) return null;
-		const headers = new Headers();
-		if (object.contentType) headers.set("content-type", object.contentType);
-		headers.set("cache-control", "public, max-age=31536000, immutable");
-		return new Response(object.data, { headers });
-	}
-
-	// ── キャッシュ優先取得（Stale-While-Revalidate） ─────────────────────
-
-	private async cachedList(): Promise<{
-		items: T[];
-		isStale: boolean;
-		cachedAt: number;
-	}> {
-		const cached = await this.docCache.getList();
-		if (cached && !isStale(cached.cachedAt, this.ttlMs)) {
-			this.hooks.onListCacheHit?.(cached.items, cached.cachedAt);
-			return { items: cached.items, isStale: false, cachedAt: cached.cachedAt };
-		}
-
-		this.hooks.onListCacheMiss?.();
-		const items = await this.list();
-		const cachedAt = Date.now();
-		const save = this.docCache.setList({ items, cachedAt });
-		if (this.waitUntil) {
-			this.waitUntil(save);
-		} else {
-			await save;
-		}
-		return { items, isStale: !!cached, cachedAt };
-	}
-
-	private async cachedGet(slug: string): Promise<CachedItem<T> | null> {
-		const cached = await this.docCache.getItem(slug);
-		if (cached && !isStale(cached.cachedAt, this.ttlMs)) {
-			this.hooks.onCacheHit?.(slug, cached);
-			return cached;
-		}
-
-		this.hooks.onCacheMiss?.(slug);
-		const item = await this.find(slug);
-		if (!item) return null;
-		const entry = await buildCachedItem(item, this.renderContext());
-		const save = this.docCache.setItem(slug, entry);
-		if (this.waitUntil) {
-			this.waitUntil(save);
-		} else {
-			await save;
-		}
-		return entry;
-	}
-
-	// ── キャッシュ管理 ────────────────────────────────────────────────────
-
-	private async prefetchAll(opts?: {
-		concurrency?: number;
-		onProgress?: (done: number, total: number) => void;
-	}): Promise<{ ok: number; failed: number }> {
-		const items = await this.list();
-		const concurrency = opts?.concurrency ?? this.maxConcurrent;
-		const ctx = this.renderContext();
-		let ok = 0;
-		let failed = 0;
-
-		for (let i = 0; i < items.length; i += concurrency) {
-			const chunk = items.slice(i, i + concurrency);
-			await Promise.all(
-				chunk.map(async (item) => {
-					try {
-						const rendered = await buildCachedItem(item, ctx);
-						await this.docCache.setItem(item.slug, rendered);
-						ok++;
-					} catch (err) {
-						failed++;
-						this.logger?.warn?.(
-							"prefetchAll: アイテムの事前レンダリングに失敗",
-							{
-								slug: item.slug,
-								pageId: item.id,
-								error: err instanceof Error ? err.message : String(err),
-							},
-						);
-					}
-				}),
+				handlerOpts,
 			);
-			opts?.onProgress?.(Math.min(i + concurrency, items.length), items.length);
-		}
+		},
+		$getCachedImage(hash) {
+			return imgCache.get(hash);
+		},
+	};
 
-		await this.docCache.setList({ items, cachedAt: Date.now() });
-		return { ok, failed };
-	}
-
-	private async revalidate(scope?: "all" | { slug: string }): Promise<void> {
-		if (!this.docCache.invalidate) return;
-		await this.docCache.invalidate(scope ?? "all");
-	}
-
-	private async syncFromWebhook(payload?: {
-		slug?: string;
-	}): Promise<{ updated: string[] }> {
-		const updated: string[] = [];
-
-		if (payload?.slug) {
-			const item = await this.find(payload.slug);
-			if (item) {
-				const rendered = await buildCachedItem(item, this.renderContext());
-				await this.docCache.setItem(item.slug, rendered);
-				updated.push(item.slug);
-			}
-		} else {
-			const result = await this.prefetchAll();
-			if (result.ok > 0) {
-				const items = await this.list();
-				for (const item of items) updated.push(item.slug);
-			}
-		}
-
-		return { updated };
-	}
-
-	private async checkListUpdate(
-		version: string,
-	): Promise<{ changed: false } | { changed: true; items: T[] }> {
-		const items = await this.list();
-		const serverVersion = buildListVersion(items);
-		if (serverVersion === version) return { changed: false };
-		await this.docCache.setList({ items, cachedAt: Date.now() });
-		return { changed: true, items };
-	}
-
-	private async checkItemUpdate(
-		slug: string,
-		lastEdited: string,
-	): Promise<
-		| { changed: false }
-		| { changed: true; html: string; item: T; notionUpdatedAt: string }
-	> {
-		const item = await this.find(slug);
-		if (!item) return { changed: false };
-		if (!this.isPublished(item)) return { changed: false };
-		if (item.updatedAt === lastEdited) return { changed: false };
-
-		const entry = await buildCachedItem(item, this.renderContext());
-		await this.docCache.setItem(slug, entry);
-
-		return {
-			changed: true,
-			html: entry.html,
-			item: entry.item,
-			notionUpdatedAt: entry.notionUpdatedAt,
-		};
-	}
-}
-
-function buildListVersion<T extends BaseContentItem>(items: T[]): string {
-	return items.map((item) => `${item.id}:${item.updatedAt}`).join("|");
-}
-
-/** 設定済みの CMS インスタンスを生成するファクトリ関数。 */
-export function createCMS<T extends BaseContentItem = BaseContentItem>(
-	opts: CreateCMSOptions<T>,
-): CMS<T> {
-	return new CMS<T>(opts);
+	return Object.assign(
+		Object.create(null) as object,
+		collections,
+		globalOps,
+	) as CMSClient<D>;
 }

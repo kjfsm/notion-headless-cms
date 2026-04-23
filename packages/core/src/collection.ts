@@ -1,0 +1,315 @@
+import { isStale } from "./cache";
+import type { ContentBlock, ContentResult } from "./content/blocks";
+import type { RenderContext } from "./rendering";
+import { buildCachedItem } from "./rendering";
+import type { RetryConfig } from "./retry";
+import { withRetry } from "./retry";
+import type {
+	AdjacencyOptions,
+	BaseContentItem,
+	CachedItem,
+	CMSHooks,
+	CollectionClient,
+	DataSource,
+	DocumentCacheAdapter,
+	GetListOptions,
+	ItemWithContent,
+	Logger,
+	SortOption,
+} from "./types/index";
+
+/**
+ * コレクション別キャッシュキーを生成する。
+ * item: `{collection}:{slug}` / list: `{collection}`
+ */
+export function collectionKey(collection: string, slug?: string): string {
+	return slug ? `${collection}:${slug}` : collection;
+}
+
+/** 単一コレクションの DataSource + SWR キャッシュ依存を束ねたコンテキスト。 */
+export interface CollectionContext<T extends BaseContentItem> {
+	collection: string;
+	source: DataSource<T>;
+	docCache: DocumentCacheAdapter<T>;
+	render: RenderContext<T>;
+	hooks: CMSHooks<T>;
+	logger: Logger | undefined;
+	ttlMs: number | undefined;
+	publishedStatuses: string[];
+	accessibleStatuses: string[];
+	retryConfig: RetryConfig;
+	maxConcurrent: number;
+	waitUntil: ((p: Promise<unknown>) => void) | undefined;
+}
+
+/** CollectionClient の実装。ユーザーは `createCMS` 経由でインスタンスを受け取る。 */
+export class CollectionClientImpl<T extends BaseContentItem>
+	implements CollectionClient<T>
+{
+	constructor(private readonly ctx: CollectionContext<T>) {}
+
+	// ── 基本取得 ──────────────────────────────────────────────────────────
+
+	async getItem(slug: string): Promise<ItemWithContent<T> | null> {
+		const cached = await this.ctx.docCache.getItem(slug);
+		if (cached && !isStale(cached.cachedAt, this.ctx.ttlMs)) {
+			this.ctx.hooks.onCacheHit?.(slug, cached);
+			return this.attachContent(cached.item, cached);
+		}
+
+		this.ctx.hooks.onCacheMiss?.(slug);
+		const item = await this.findRaw(slug);
+		if (!item) return null;
+
+		const entry = await buildCachedItem(item, this.ctx.render);
+		const save = this.ctx.docCache.setItem(slug, entry);
+		if (this.ctx.waitUntil) {
+			this.ctx.waitUntil(save);
+		} else {
+			await save;
+		}
+
+		return this.attachContent(entry.item, entry);
+	}
+
+	async getList(opts?: GetListOptions<T>): Promise<T[]> {
+		const items = await this.fetchList();
+		return applyGetListOptions(items, opts);
+	}
+
+	// ── SSG / ナビゲーション ─────────────────────────────────────────────
+
+	async getStaticParams(): Promise<{ slug: string }[]> {
+		const items = await this.fetchList();
+		return items.map((item) => ({ slug: item.slug }));
+	}
+
+	async getStaticPaths(): Promise<string[]> {
+		const items = await this.fetchList();
+		return items.map((item) => item.slug);
+	}
+
+	async adjacent(
+		slug: string,
+		opts?: AdjacencyOptions<T>,
+	): Promise<{ prev: T | null; next: T | null }> {
+		const items = applyGetListOptions(await this.fetchList(), {
+			sort: opts?.sort,
+		});
+		const index = items.findIndex((it) => it.slug === slug);
+		if (index === -1) return { prev: null, next: null };
+		return {
+			prev: index > 0 ? (items[index - 1] ?? null) : null,
+			next: index < items.length - 1 ? (items[index + 1] ?? null) : null,
+		};
+	}
+
+	// ── キャッシュ ────────────────────────────────────────────────────────
+
+	async revalidate(scope?: "all" | { slug: string }): Promise<void> {
+		if (!this.ctx.docCache.invalidate) return;
+		if (scope === undefined || scope === "all") {
+			await this.ctx.docCache.invalidate({ collection: this.ctx.collection });
+		} else {
+			await this.ctx.docCache.invalidate({
+				collection: this.ctx.collection,
+				slug: scope.slug,
+			});
+		}
+	}
+
+	async prefetch(opts?: {
+		concurrency?: number;
+		onProgress?: (done: number, total: number) => void;
+	}): Promise<{ ok: number; failed: number }> {
+		const items = await this.fetchListRaw();
+		const concurrency = opts?.concurrency ?? this.ctx.maxConcurrent;
+		let ok = 0;
+		let failed = 0;
+
+		for (let i = 0; i < items.length; i += concurrency) {
+			const chunk = items.slice(i, i + concurrency);
+			await Promise.all(
+				chunk.map(async (item) => {
+					try {
+						const rendered = await buildCachedItem(item, this.ctx.render);
+						await this.ctx.docCache.setItem(item.slug, rendered);
+						ok++;
+					} catch (err) {
+						failed++;
+						this.ctx.logger?.warn?.(
+							"prefetch: アイテムの事前レンダリングに失敗",
+							{
+								slug: item.slug,
+								pageId: item.id,
+								error: err instanceof Error ? err.message : String(err),
+							},
+						);
+					}
+				}),
+			);
+			opts?.onProgress?.(Math.min(i + concurrency, items.length), items.length);
+		}
+
+		await this.ctx.docCache.setList({ items, cachedAt: Date.now() });
+		return { ok, failed };
+	}
+
+	// ── 内部 ──────────────────────────────────────────────────────────────
+
+	private attachContent(item: T, cached: CachedItem<T>): ItemWithContent<T> {
+		const ctx = this.ctx;
+		let blocksCache: ContentBlock[] | undefined;
+		let htmlCache: string | undefined = cached.html;
+		let markdownCache: string | undefined;
+
+		const content: ContentResult = {
+			get blocks(): ContentBlock[] {
+				if (!blocksCache) {
+					// lazy: キャッシュに blocks が保存されていない場合、簡易な single-raw に落とす
+					blocksCache = [
+						{ type: "raw", html: cached.html } satisfies ContentBlock,
+					];
+				}
+				return blocksCache;
+			},
+			async html(): Promise<string> {
+				if (htmlCache !== undefined) return htmlCache;
+				htmlCache = cached.html;
+				return htmlCache;
+			},
+			async markdown(): Promise<string> {
+				if (markdownCache !== undefined) return markdownCache;
+				markdownCache = await ctx.source.loadMarkdown(item);
+				return markdownCache;
+			},
+		};
+
+		// blocks が CachedItem に乗っていれば優先的に採用する
+		const maybeBlocks = (cached as CachedItem<T> & { blocks?: ContentBlock[] })
+			.blocks;
+		if (maybeBlocks) blocksCache = maybeBlocks;
+
+		return Object.assign(Object.create(null) as object, item, {
+			content,
+		}) as ItemWithContent<T>;
+	}
+
+	private async fetchList(): Promise<T[]> {
+		const cached = await this.ctx.docCache.getList();
+		if (cached && !isStale(cached.cachedAt, this.ctx.ttlMs)) {
+			this.ctx.hooks.onListCacheHit?.(cached.items, cached.cachedAt);
+			return cached.items;
+		}
+
+		this.ctx.hooks.onListCacheMiss?.();
+		const items = await this.fetchListRaw();
+		const cachedAt = Date.now();
+		const save = this.ctx.docCache.setList({ items, cachedAt });
+		if (this.ctx.waitUntil) {
+			this.ctx.waitUntil(save);
+		} else {
+			await save;
+		}
+		return items;
+	}
+
+	private fetchListRaw(): Promise<T[]> {
+		return withRetry(
+			() =>
+				this.ctx.source.list({
+					publishedStatuses:
+						this.ctx.publishedStatuses.length > 0
+							? this.ctx.publishedStatuses
+							: undefined,
+				}),
+			{
+				...this.ctx.retryConfig,
+				onRetry: (attempt, status) => {
+					this.ctx.logger?.warn?.("getList() リトライ中", { attempt, status });
+				},
+			},
+		);
+	}
+
+	private async findRaw(slug: string): Promise<T | null> {
+		const item = await withRetry(() => this.ctx.source.findBySlug(slug), {
+			...this.ctx.retryConfig,
+			onRetry: (attempt, status) => {
+				this.ctx.logger?.warn?.("getItem() リトライ中", {
+					attempt,
+					status,
+					slug,
+				});
+			},
+		});
+		if (!item) return null;
+		if (
+			this.ctx.accessibleStatuses.length > 0 &&
+			(!item.status || !this.ctx.accessibleStatuses.includes(item.status))
+		) {
+			return null;
+		}
+		return item;
+	}
+}
+
+function applyGetListOptions<T extends BaseContentItem>(
+	items: T[],
+	opts?: GetListOptions<T>,
+): T[] {
+	if (!opts) return items;
+	let result = items;
+
+	if (opts.statuses && opts.statuses.length > 0) {
+		const allow = new Set(opts.statuses);
+		result = result.filter(
+			(it) => it.status !== undefined && allow.has(it.status),
+		);
+	}
+
+	if (opts.tag) {
+		const tag = opts.tag;
+		result = result.filter((it) => {
+			const tags = (it as unknown as { tags?: unknown }).tags;
+			return Array.isArray(tags) && tags.includes(tag);
+		});
+	}
+
+	if (opts.where) {
+		const where = opts.where;
+		result = result.filter((it) =>
+			Object.entries(where).every(
+				([key, value]) => (it as Record<string, unknown>)[key] === value,
+			),
+		);
+	}
+
+	if (opts.sort) {
+		result = [...result].sort(makeComparator(opts.sort));
+	}
+
+	const skip = opts.skip ?? 0;
+	const limit = opts.limit;
+	if (skip > 0 || limit !== undefined) {
+		result = result.slice(skip, limit !== undefined ? skip + limit : undefined);
+	}
+
+	return result;
+}
+
+function makeComparator<T extends BaseContentItem>(
+	sort: SortOption<T>,
+): (a: T, b: T) => number {
+	const by = sort.by;
+	const dir = sort.direction === "asc" ? 1 : -1;
+	return (a, b) => {
+		const av = (a as Record<string, unknown>)[by];
+		const bv = (b as Record<string, unknown>)[by];
+		if (av === bv) return 0;
+		if (av === undefined) return 1;
+		if (bv === undefined) return -1;
+		// biome-ignore lint/suspicious/noExplicitAny: 汎用比較
+		return (av as any) > (bv as any) ? dir : -dir;
+	};
+}
