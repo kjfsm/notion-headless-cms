@@ -89,7 +89,7 @@ export interface CollectionConfig<T extends BaseContentItem = BaseContentItem> {
  * コレクション名をキーとして、各コレクションの設定を保持する。
  */
 // biome-ignore lint/suspicious/noExplicitAny: 各コレクションの T が異なるため
-export type NHCSchema = Record<string, CollectionConfig<any>>;
+export type CMSSchema = Record<string, CollectionConfig<any>>;
 
 /** `CollectionConfig<T>` から `T` を抽出するユーティリティ型。 */
 export type InferCollectionItem<C> =

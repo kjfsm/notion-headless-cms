@@ -175,20 +175,20 @@ describe("generateSchemaFile", () => {
 		expect(code).toContain('export const postsSourceId = "abc-123";');
 	});
 
-	it("nhcDataSources オブジェクトが出力される", () => {
+	it("cmsDataSources オブジェクトが出力される", () => {
 		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain("export const nhcDataSources = {");
+		expect(code).toContain("export const cmsDataSources = {");
 		expect(code).toContain("posts: createNotionCollection({");
 		expect(code).toContain('token: env("NOTION_TOKEN")');
 		expect(code).toContain("dataSourceId: postsSourceId,");
 		expect(code).toContain("schema: postsSchema,");
 		expect(code).toContain("} as const;");
 		expect(code).toContain(
-			"export type NHCDataSources = typeof nhcDataSources;",
+			"export type CMSDataSources = typeof cmsDataSources;",
 		);
 	});
 
-	it("複数ソースが nhcDataSources に含まれる", () => {
+	it("複数ソースが cmsDataSources に含まれる", () => {
 		const sources: ResolvedSource[] = [
 			makeSource(),
 			{

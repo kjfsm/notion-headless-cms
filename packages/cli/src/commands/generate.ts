@@ -6,7 +6,7 @@ import type { ResolvedSource } from "../codegen.js";
 import { generateSchemaFile } from "../codegen.js";
 import { loadConfig } from "../config-loader.js";
 import { fileExists } from "../fs-utils.js";
-import type { DataSourceConfig, NHCConfig } from "../index.js";
+import type { CMSConfig, DataSourceConfig } from "../index.js";
 import {
 	createNotionCLIClient,
 	type NotionCLIClient,
@@ -49,7 +49,7 @@ async function loadEnvFile(
 	}
 }
 
-function resolveToken(opts: GenerateOptions, config: NHCConfig): string {
+function resolveToken(opts: GenerateOptions, config: CMSConfig): string {
 	const token = opts.token || config.notionToken || process.env.NOTION_TOKEN;
 	if (token) return token;
 	throw new CMSError({
@@ -130,7 +130,7 @@ export async function runGenerate(opts: GenerateOptions): Promise<void> {
 	if (!silent) {
 		console.log(`\n生成完了: ${outputPath}`);
 		console.log(
-			"次のステップ: createNodeCMS / createCloudflareCMS の sources オプションで published / accessible を設定してください。",
+			"次のステップ: createCMS({ ...nodePreset() | ...cloudflarePreset({ env }), dataSources }) で CMS クライアントを組み立ててください。",
 		);
 
 		const relPath = path.relative(process.cwd(), outputPath);

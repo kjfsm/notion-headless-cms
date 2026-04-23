@@ -418,24 +418,24 @@ function generateSourceBlock(source: ResolvedSource): string {
 }
 
 /**
- * `nhcDataSources` オブジェクトのコードを生成。
+ * `cmsDataSources` オブジェクトのコードを生成。
  * 各コレクションを `createNotionCollection` で生成済みの `DataSource<T>` として出力する。
- * ユーザーは `createCMS({ dataSources: nhcDataSources, ... })` にそのまま渡せる。
+ * ユーザーは `createCMS({ dataSources: cmsDataSources, ... })` にそのまま渡せる。
  *
  * `NOTION_TOKEN` は env() ヘルパー経由で遅延評価する。
  */
-function generateNhcDataSources(sources: ResolvedSource[]): string {
+function generateCmsDataSources(sources: ResolvedSource[]): string {
 	const lines: string[] = [
 		"// =".padEnd(62, "="),
-		"// NHC DataSources",
+		"// CMS DataSources",
 		"// =".padEnd(62, "="),
 		"",
 		"/**",
 		" * 各コレクション名 → DataSource<T> のマップ。",
-		" * createCMS({ dataSources: nhcDataSources, cache, ... }) に渡す。",
+		" * createCMS({ dataSources: cmsDataSources, cache, ... }) に渡す。",
 		" * ユーザーは notion-orm を直接 import する必要はない (CLI が自動生成する)。",
 		" */",
-		"export const nhcDataSources = {",
+		"export const cmsDataSources = {",
 	];
 
 	for (const source of sources) {
@@ -448,7 +448,7 @@ function generateNhcDataSources(sources: ResolvedSource[]): string {
 
 	lines.push("} as const;");
 	lines.push("");
-	lines.push("export type NHCDataSources = typeof nhcDataSources;");
+	lines.push("export type CMSDataSources = typeof cmsDataSources;");
 
 	return lines.join("\n");
 }
@@ -471,9 +471,9 @@ export function generateSchemaFile(sources: ResolvedSource[]): string {
 	].join("\n");
 
 	const blocks = sources.map((s) => generateSourceBlock(s));
-	const nhcDataSources = generateNhcDataSources(sources);
+	const cmsDataSources = generateCmsDataSources(sources);
 
-	return [header, ...blocks, "", nhcDataSources, ""].join("\n");
+	return [header, ...blocks, "", cmsDataSources, ""].join("\n");
 }
 
 export type { ResolvedSource };

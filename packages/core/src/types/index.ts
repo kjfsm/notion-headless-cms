@@ -28,12 +28,12 @@ export type {
 	StorageBinary,
 } from "./content";
 export type {
+	CMSSchema,
 	CollectionConfig,
 	DataSource,
 	DataSourceFactory,
 	InferCollectionItem,
 	InvalidateScope,
-	NHCSchema,
 	WebhookConfig,
 } from "./data-source";
 export type { CMSHooks, MaybePromise } from "./hooks";

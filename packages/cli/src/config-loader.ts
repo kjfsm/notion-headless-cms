@@ -1,10 +1,10 @@
 import { CMSError } from "@notion-headless-cms/core";
-import type { NHCConfig } from "./index.js";
+import type { CMSConfig } from "./index.js";
 
-export async function loadConfig(configPath: string): Promise<NHCConfig> {
+export async function loadConfig(configPath: string): Promise<CMSConfig> {
 	const { createJiti } = await import("jiti");
 	const jiti = createJiti(import.meta.url);
-	const mod = await jiti.import<{ default?: NHCConfig } | NHCConfig>(
+	const mod = await jiti.import<{ default?: CMSConfig } | CMSConfig>(
 		configPath,
 	);
 
@@ -13,7 +13,7 @@ export async function loadConfig(configPath: string): Promise<NHCConfig> {
 		mod && typeof mod === "object" && "default" in mod && mod.default
 			? mod.default
 			: mod
-	) as NHCConfig;
+	) as CMSConfig;
 
 	if (!config || !Array.isArray(config.dataSources)) {
 		throw new CMSError({

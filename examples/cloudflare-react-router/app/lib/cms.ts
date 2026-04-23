@@ -1,6 +1,6 @@
 import { cloudflarePreset } from "@notion-headless-cms/cache-r2";
 import { createCMS as createCore } from "@notion-headless-cms/core";
-import { nhcDataSources, type PostsItem } from "../generated/nhc-schema";
+import { cmsDataSources, type PostsItem } from "../generated/nhc-schema";
 
 export type { PostsItem as BlogPost };
 
@@ -17,6 +17,6 @@ export interface Env {
 export function createCMS(env: Env) {
 	return createCore({
 		...cloudflarePreset({ env, ttlMs: 5 * 60_000 }),
-		dataSources: nhcDataSources,
+		dataSources: cmsDataSources,
 	});
 }
