@@ -1,3 +1,5 @@
+import type { KVNamespaceLike } from "@notion-headless-cms/cache-kv";
+import { kvCache } from "@notion-headless-cms/cache-kv";
 import type { R2BucketLike } from "@notion-headless-cms/cache-r2";
 import { r2Cache } from "@notion-headless-cms/cache-r2";
 import type {
@@ -12,7 +14,9 @@ import { renderMarkdown } from "@notion-headless-cms/renderer";
 /** Cloudflare Workers 向け env の必要最小構成。 */
 export interface CloudflareCMSEnv {
 	NOTION_TOKEN: string;
-	/** R2 バケット (未設定時はキャッシュなし) */
+	/** KV namespace (テキスト/ドキュメントキャッシュ用。未設定時はキャッシュなし) */
+	CACHE_KV?: KVNamespaceLike;
+	/** R2 バケット (画像キャッシュ用。未設定時はキャッシュなし) */
 	CACHE_BUCKET?: R2BucketLike;
 }
 
@@ -30,9 +34,8 @@ export interface CreateCloudflareCMSOptions<D extends DataSourceMap> {
 
 /**
  * Cloudflare Workers 向け CMS ファクトリ。
- * `nhc generate` で生成した `nhcDataSources` を渡すと、コレクション別にアクセス可能な
- * CMS クライアントを返す。`env.CACHE_BUCKET` が未設定の場合は
- * キャッシュなしで動作する (ローカル開発向け)。
+ * テキスト（ドキュメント）は KV、画像は R2 でキャッシュする。
+ * どちらも未設定の場合はキャッシュなしで動作する（ローカル開発向け）。
  *
  * @example
  * const cms = createCloudflareCMS({ dataSources: nhcDataSources, env });
@@ -42,11 +45,14 @@ export function createCloudflareCMS<D extends DataSourceMap>(
 	opts: CreateCloudflareCMSOptions<D>,
 ): CMSClient<D> {
 	const { dataSources, env, content, ttlMs, waitUntil } = opts;
-	const r2 = r2Cache({ bucket: env.CACHE_BUCKET });
 
-	const cache: CacheConfig | undefined = r2
-		? { document: r2, image: r2, ttlMs }
-		: undefined;
+	const documentCache = kvCache({ kv: env.CACHE_KV });
+	const imageCache = r2Cache({ bucket: env.CACHE_BUCKET });
+
+	const cache: CacheConfig | undefined =
+		documentCache || imageCache
+			? { document: documentCache, image: imageCache, ttlMs }
+			: undefined;
 
 	return createCMS({
 		dataSources,
