@@ -44,13 +44,7 @@
 	},
 	"publishConfig": {
 		"access": "public",
-		"provenance": true,
-		"exports": {
-			".": {
-				"types": "./dist/index.d.mts",
-				"import": "./dist/index.mjs"
-			}
-		}
+		"provenance": true
 	},
 	"dependencies": {
 		"@types/hast": "^3.0.4",

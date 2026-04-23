@@ -40,13 +40,7 @@
 	},
 	"publishConfig": {
 		"access": "public",
-		"provenance": true,
-		"exports": {
-			".": {
-				"types": "./dist/index.d.mts",
-				"import": "./dist/index.mjs"
-			}
-		}
+		"provenance": true
 	},
 	"dependencies": {
 		"@notion-headless-cms/core": "workspace:*",
