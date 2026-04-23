@@ -64,16 +64,11 @@
 			"Write(**/pnpm-lock.yaml)",
 			"Edit(**/pnpm-lock.yaml)",
 			"Write(**/.dev.vars)",
-			"Bash(rm -rf:*)",
-			"Bash(git push --force:*)",
-			"Bash(git push -f:*)",
-			"Bash(git reset --hard:*)",
 			"Bash(npm publish:*)",
 			"Bash(pnpm publish:*)",
 			"Bash(wrangler secret delete:*)"
 		],
 		"ask": [
-			"Bash(git push:*)",
 			"Bash(gh pr merge:*)",
 			"Bash(pnpm changeset publish:*)",
 			"Bash(pnpm release)",
