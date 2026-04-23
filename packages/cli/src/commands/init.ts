@@ -7,7 +7,8 @@ export interface InitOptions {
 	force?: boolean;
 }
 
-const CONFIG_TEMPLATE = `import { defineConfig, env } from "@notion-headless-cms/cli";
+const CONFIG_TEMPLATE = `import "dotenv/config";
+import { defineConfig, env } from "@notion-headless-cms/cli";
 
 export default defineConfig({
 	// Notion インテグレーションのシークレット（環境変数 NOTION_TOKEN から読み込む）
@@ -32,10 +33,6 @@ export default defineConfig({
 	// 生成ファイルの出力先
 	output: "./app/generated/nhc-schema.ts",
 });
-
-// 生成後: createNodeCMS / createCloudflareCMS の sources オプションで
-// published / accessible を設定してください。
-// 例: sources: { posts: { published: ["公開"], accessible: ["公開", "下書き"] } }
 `;
 
 export async function runInit(opts: InitOptions): Promise<void> {

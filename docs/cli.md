@@ -37,6 +37,7 @@ npx nhc init
 生成されるテンプレート:
 
 ```ts
+import "dotenv/config";
 import { defineConfig } from "@notion-headless-cms/cli";
 
 export default defineConfig({
@@ -50,9 +51,6 @@ export default defineConfig({
       fields: {
         // slug に使う Notion プロパティ名（省略時: title 型プロパティを自動検出）
         // slug: "Slug",
-        // 公開ステータス値（nhc generate 後に手動設定することも可能）
-        // published: ["公開"],
-        // accessible: ["公開", "下書き"],
       },
     },
   ],
@@ -60,6 +58,8 @@ export default defineConfig({
   // output: "./nhc-schema.ts",
 });
 ```
+
+先頭の `import "dotenv/config";` は `.env` ファイルから `NOTION_TOKEN` 等を読み込むためのもの。`.env` を使わない場合（シェル側で export する / CI / Cloudflare の `wrangler secret`）は削除してよい。
 
 ## `nhc generate` — スキーマの生成
 
@@ -128,6 +128,7 @@ fields: {
 ### 複数 DB の設定例
 
 ```ts
+import "dotenv/config";
 import { defineConfig } from "@notion-headless-cms/cli";
 
 export default defineConfig({

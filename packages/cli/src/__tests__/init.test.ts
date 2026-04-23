@@ -20,6 +20,7 @@ describe("runInit", () => {
 		await runInit({ output: outputPath });
 
 		const content = await fs.readFile(outputPath, "utf-8");
+		expect(content).toContain('import "dotenv/config"');
 		expect(content).toContain(
 			'import { defineConfig, env } from "@notion-headless-cms/cli"',
 		);

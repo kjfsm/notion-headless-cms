@@ -38,11 +38,12 @@ npx nhc init
 `nhc.config.ts` を編集して DB を設定する:
 
 ```ts
+import "dotenv/config";
 import { defineConfig } from "@notion-headless-cms/cli";
 
 export default defineConfig({
   dataSources: [
-    { name: "posts", dbName: "ブログ記事DB", fields: { published: ["公開"] } },
+    { name: "posts", dbName: "ブログ記事DB" },
   ],
 });
 ```
@@ -123,6 +124,7 @@ const cms = createCMS({
 `nhc.config.ts` に複数の `dataSources` を書けば、`cms.posts` / `cms.news` のように型安全にアクセスできる。
 
 ```ts
+import "dotenv/config";
 import { defineConfig } from "@notion-headless-cms/cli";
 
 export default defineConfig({
