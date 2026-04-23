@@ -5,6 +5,7 @@ import { fileExists } from "../fs-utils.js";
 export interface InitOptions {
 	output?: string;
 	force?: boolean;
+	silent?: boolean;
 }
 
 const CONFIG_TEMPLATE = `import "dotenv/config";
@@ -49,12 +50,14 @@ export async function runInit(opts: InitOptions): Promise<void> {
 
 	await fs.writeFile(outputPath, CONFIG_TEMPLATE, "utf-8");
 
-	console.log(`✓ ${outputPath} を作成しました。`);
-	console.log("");
-	console.log("次のステップ:");
-	console.log("  1. nhc.config.ts を編集して dataSources を設定する");
-	console.log(
-		"  2. NOTION_TOKEN 環境変数を設定する（Notion インテグレーションのシークレット）",
-	);
-	console.log("  3. pnpm nhc generate でスキーマを生成する");
+	if (!opts.silent) {
+		console.log(`✓ ${outputPath} を作成しました。`);
+		console.log("");
+		console.log("次のステップ:");
+		console.log("  1. nhc.config.ts を編集して dataSources を設定する");
+		console.log(
+			"  2. NOTION_TOKEN 環境変数を設定する（Notion インテグレーションのシークレット）",
+		);
+		console.log("  3. pnpm nhc generate でスキーマを生成する");
+	}
 }

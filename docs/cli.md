@@ -32,6 +32,7 @@ npx nhc init
 オプション:
   -o, --output <path>   出力先ファイルパス（デフォルト: nhc.config.ts）
   -f, --force           既存ファイルを上書きする
+  -s, --silent          ログ出力を抑制する
 ```
 
 生成されるテンプレート:
@@ -73,6 +74,7 @@ NOTION_TOKEN=secret_xxx npx nhc generate
 オプション:
   -c, --config <path>   設定ファイルのパス（デフォルト: nhc.config.ts）
   -t, --token <token>   Notion API トークン（省略時は NOTION_TOKEN 環境変数）
+  -s, --silent          ログ出力を抑制する
 ```
 
 Notion インテグレーショントークンの取得: [Notion Developers](https://www.notion.so/my-integrations)
