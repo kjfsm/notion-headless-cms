@@ -1,3 +1,4 @@
+import { CMSError } from "@notion-headless-cms/core";
 import { Client } from "@notionhq/client";
 import type { DataSourceObjectResponse } from "@notionhq/client/build/src/api-endpoints/data-sources.js";
 
@@ -100,7 +101,11 @@ export function createNotionCLIClient(token: string): NotionCLIClient {
 			client.dataSources.retrieve({ data_source_id: id }),
 		);
 		if (result.object !== "data_source") {
-			throw new Error(`ID ${id} のデータソースが見つかりませんでした。`);
+			throw new CMSError({
+				code: "cli/notion_api_failed",
+				message: `ID ${id} のデータソースが見つかりませんでした。`,
+				context: { operation: "retrieveDataSource", dataSourceId: id },
+			});
 		}
 		return result as DataSourceObjectResponse;
 	}

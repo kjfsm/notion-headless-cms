@@ -1,5 +1,6 @@
 import { noopDocumentCache, noopImageCache } from "./cache/noop";
 import { CollectionClientImpl, type CollectionContext } from "./collection";
+import { CMSError } from "./errors";
 import { createHandler, type HandlerOptions } from "./handler";
 import { mergeHooks, mergeLoggers } from "./hooks";
 import type { RenderContext } from "./rendering";
@@ -139,9 +140,12 @@ export function createCMS<D extends DataSourceMap>(
 	opts: CreateCMSOptions<D>,
 ): CMSClient<D> {
 	if (!opts.dataSources || Object.keys(opts.dataSources).length === 0) {
-		throw new Error(
-			"createCMS: dataSources に少なくとも1つのコレクションを指定してください。",
-		);
+		throw new CMSError({
+			code: "core/config_invalid",
+			message:
+				"createCMS: dataSources に少なくとも1つのコレクションを指定してください。",
+			context: { operation: "createCMS" },
+		});
 	}
 
 	const baseDocCache = resolveDocumentCache(opts.cache);

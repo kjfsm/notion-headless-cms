@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { CMSError } from "@notion-headless-cms/core";
 import { fileExists } from "../fs-utils.js";
 
 export interface InitOptions {
@@ -43,9 +44,11 @@ export async function runInit(opts: InitOptions): Promise<void> {
 	);
 
 	if (!opts.force && (await fileExists(outputPath))) {
-		throw new Error(
-			`${outputPath} はすでに存在します。上書きするには --force を指定してください。`,
-		);
+		throw new CMSError({
+			code: "cli/init_failed",
+			message: `${outputPath} はすでに存在します。上書きするには --force を指定してください。`,
+			context: { operation: "runInit", outputPath },
+		});
 	}
 
 	await fs.writeFile(outputPath, CONFIG_TEMPLATE, "utf-8");

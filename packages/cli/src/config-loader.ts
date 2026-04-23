@@ -1,3 +1,4 @@
+import { CMSError } from "@notion-headless-cms/core";
 import type { NHCConfig } from "./index.js";
 
 export async function loadConfig(configPath: string): Promise<NHCConfig> {
@@ -15,15 +16,21 @@ export async function loadConfig(configPath: string): Promise<NHCConfig> {
 	) as NHCConfig;
 
 	if (!config || !Array.isArray(config.dataSources)) {
-		throw new Error(
-			`設定ファイルが不正です。defineConfig() の戻り値を default export してください。\nPath: ${configPath}`,
-		);
+		throw new CMSError({
+			code: "cli/config_invalid",
+			message:
+				"設定ファイルが不正です。defineConfig() の戻り値を default export してください。",
+			context: { operation: "loadConfig", configPath },
+		});
 	}
 
 	if (!config.output) {
-		throw new Error(
-			`設定ファイルに output の指定が必要です。\n例: output: "./app/generated/nhc-schema.ts"\nPath: ${configPath}`,
-		);
+		throw new CMSError({
+			code: "cli/config_invalid",
+			message:
+				'設定ファイルに output の指定が必要です。例: output: "./app/generated/nhc-schema.ts"',
+			context: { operation: "loadConfig", configPath },
+		});
 	}
 
 	return config;

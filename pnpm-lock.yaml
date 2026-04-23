@@ -445,6 +445,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../core
       '@notionhq/client':
         specifier: ^5.20.0
         version: 5.20.0

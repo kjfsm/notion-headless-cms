@@ -1,3 +1,4 @@
+import { CMSError } from "@notion-headless-cms/core";
 import type { DataSourceConfig, DataSourceFieldOptions } from "./index.js";
 import type { DataSourceObjectResponse } from "./notion-client.js";
 
@@ -202,25 +203,49 @@ function generateSourceBlock(source: ResolvedSource): string {
 	// ── 事前検証: fields で指定したプロパティが DB に存在するか ──────────────────
 	const hint = `nhc.config.ts の "${config.name}" の fields を確認してください。`;
 	if (fields?.slug && !(fields.slug in properties)) {
-		throw new Error(
-			`[${config.name}] fields.slug に "${fields.slug}" が指定されていますが、DB "${dbName}" に該当するプロパティが見つかりません。${hint}`,
-		);
+		throw new CMSError({
+			code: "cli/schema_invalid",
+			message: `[${config.name}] fields.slug に "${fields.slug}" が指定されていますが、DB "${dbName}" に該当するプロパティが見つかりません。${hint}`,
+			context: {
+				operation: "generateSourceBlock",
+				collection: config.name,
+				dbName,
+			},
+		});
 	}
 	if (fields?.status && !(fields.status in properties)) {
-		throw new Error(
-			`[${config.name}] fields.status に "${fields.status}" が指定されていますが、DB "${dbName}" に該当するプロパティが見つかりません。${hint}`,
-		);
+		throw new CMSError({
+			code: "cli/schema_invalid",
+			message: `[${config.name}] fields.status に "${fields.status}" が指定されていますが、DB "${dbName}" に該当するプロパティが見つかりません。${hint}`,
+			context: {
+				operation: "generateSourceBlock",
+				collection: config.name,
+				dbName,
+			},
+		});
 	}
 	if (fields?.publishedAt && !(fields.publishedAt in properties)) {
-		throw new Error(
-			`[${config.name}] fields.publishedAt に "${fields.publishedAt}" が指定されていますが、DB "${dbName}" に該当するプロパティが見つかりません。${hint}`,
-		);
+		throw new CMSError({
+			code: "cli/schema_invalid",
+			message: `[${config.name}] fields.publishedAt に "${fields.publishedAt}" が指定されていますが、DB "${dbName}" に該当するプロパティが見つかりません。${hint}`,
+			context: {
+				operation: "generateSourceBlock",
+				collection: config.name,
+				dbName,
+			},
+		});
 	}
 	for (const notionPropName of Object.keys(fields?.properties ?? {})) {
 		if (!(notionPropName in properties)) {
-			throw new Error(
-				`[${config.name}] fields.properties に "${notionPropName}" が指定されていますが、DB "${dbName}" に該当するプロパティが見つかりません。${hint}`,
-			);
+			throw new CMSError({
+				code: "cli/schema_invalid",
+				message: `[${config.name}] fields.properties に "${notionPropName}" が指定されていますが、DB "${dbName}" に該当するプロパティが見つかりません。${hint}`,
+				context: {
+					operation: "generateSourceBlock",
+					collection: config.name,
+					dbName,
+				},
+			});
 		}
 	}
 
@@ -239,9 +264,15 @@ function generateSourceBlock(source: ResolvedSource): string {
 		const suggestion = fields?.slug
 			? ""
 			: `\n  → fields.slug に title 型プロパティ名を指定してください。`;
-		throw new Error(
-			`[${config.name}] slug フィールドが見つかりませんでした。DB "${dbName}" に title 型プロパティが存在するか確認してください。${suggestion}`,
-		);
+		throw new CMSError({
+			code: "cli/schema_invalid",
+			message: `[${config.name}] slug フィールドが見つかりませんでした。DB "${dbName}" に title 型プロパティが存在するか確認してください。${suggestion}`,
+			context: {
+				operation: "generateSourceBlock",
+				collection: config.name,
+				dbName,
+			},
+		});
 	}
 
 	const statusField = mapped.find((f) => f.isStatus);
@@ -261,11 +292,18 @@ function generateSourceBlock(source: ResolvedSource): string {
 	// ── tsName が null の extraField はエラー（フォールバック廃止） ────────────────
 	for (const f of extraFields) {
 		if (f.tsName === null) {
-			throw new Error(
-				`[${config.name}] プロパティ "${f.notionPropName}" は TypeScript 識別子に自動変換できません。\n` +
+			throw new CMSError({
+				code: "cli/schema_invalid",
+				message:
+					`[${config.name}] プロパティ "${f.notionPropName}" は TypeScript 識別子に自動変換できません。\n` +
 					`  → nhc.config.ts の fields.properties に追加してください:\n` +
 					`     properties: { "${f.notionPropName}": "フィールド名" }`,
-			);
+				context: {
+					operation: "generateSourceBlock",
+					collection: config.name,
+					notionPropName: f.notionPropName,
+				},
+			});
 		}
 	}
 
