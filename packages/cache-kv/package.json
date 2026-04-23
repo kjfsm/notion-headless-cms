@@ -55,6 +55,6 @@
 		"@notion-headless-cms/core": "workspace:*"
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20260423.1"
+		"@cloudflare/workers-types": "catalog:"
 	}
 }

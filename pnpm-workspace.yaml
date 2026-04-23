@@ -3,3 +3,14 @@ packages:
   - "packages/*"
 allowBuilds:
   esbuild: true
+
+catalog:
+  "@notionhq/client": "^5.20.0"
+  zod: "^4.0.0"
+  "@cloudflare/workers-types": "^4.20260423.1"
+  "@types/node": "^25.6.0"
+  unified: "^11.0.5"
+  "remark-parse": "^11.0.0"
+  "remark-gfm": "^4.0.1"
+  "remark-rehype": "^11.1.2"
+  "rehype-stringify": "^10.0.1"

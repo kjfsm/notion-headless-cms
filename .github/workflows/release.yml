@@ -30,9 +30,17 @@ jobs:
           registry-url: "https://registry.npmjs.org"
           cache: "pnpm"
 
+      # CI でビルド済みの turbo キャッシュを引き継いで高速化
+      - uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-refs/heads/main-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-refs/heads/main-
+
       - run: pnpm install --frozen-lockfile
       # publish 時に dist が必要なので build のみ実施。typecheck / test は CI で通過済み前提
-      - run: pnpm build
+      - run: pnpm turbo build --filter="./packages/*"
 
       - name: バージョン更新PRの作成 または npm 公開
         uses: changesets/action@v1
