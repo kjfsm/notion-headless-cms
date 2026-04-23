@@ -1,7 +1,7 @@
-import { createNodeMultiCMS } from "@notion-headless-cms/adapter-node";
+import { createNodeCMS } from "@notion-headless-cms/adapter-node";
 import { nhcSchema, type PostsItem } from "../generated/nhc-schema.js";
 
-const client = createNodeMultiCMS({
+const client = createNodeCMS({
 	schema: nhcSchema,
 	sources: {
 		posts: {

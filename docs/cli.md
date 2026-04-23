@@ -16,7 +16,7 @@ nhc init          →  nhc.config.ts テンプレートを生成
 ↓ （DB 名 / ID を設定）
 nhc generate      →  Notion DB を introspect して nhc-schema.ts を生成（編集不要）
 ↓
-createNodeMultiCMS / createCloudflareCMSMulti で型安全に利用
+createNodeCMS / createCloudflareCMS で型安全に利用
 （published / accessible は sources オプションで差し込む）
 ```
 
@@ -275,9 +275,9 @@ export type NHCSchema = typeof nhcSchema;
 
 ```ts
 import { nhcSchema } from "./nhc-schema.ts";
-import { createNodeMultiCMS } from "@notion-headless-cms/adapter-node";
+import { createNodeCMS } from "@notion-headless-cms/adapter-node";
 
-const client = createNodeMultiCMS({
+const client = createNodeCMS({
   schema: nhcSchema,
   sources: {
     posts: { published: ["公開"], accessible: ["公開", "下書き"] },
@@ -294,9 +294,9 @@ const client = createNodeMultiCMS({
 
 ```ts
 import { nhcSchema } from "./nhc-schema.ts";
-import { createNodeMultiCMS } from "@notion-headless-cms/adapter-node";
+import { createNodeCMS } from "@notion-headless-cms/adapter-node";
 
-const client = createNodeMultiCMS({
+const client = createNodeCMS({
   schema: nhcSchema,
   cache: { document: "memory", image: "memory", ttlMs: 5 * 60_000 },
 });

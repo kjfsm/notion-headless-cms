@@ -54,13 +54,28 @@ export class QueryBuilder<T extends BaseContentItem> {
 		return this;
 	}
 
+	/** `status()` 未指定時はコンストラクタの `defaultStatuses` にフォールバックする。 */
+	private resolveStatuses(): string[] | undefined {
+		if (this._statuses.length > 0) return this._statuses;
+		if (this.defaultStatuses.length > 0) return this.defaultStatuses;
+		return undefined;
+	}
+
+	/** `sortBy()` の設定に従って items を新しい配列として並び替える。未設定時は入力をそのまま返す。 */
+	private applySort(items: T[]): T[] {
+		const field = this._sortField;
+		if (!field) return items;
+		const dir = this._sortDir;
+		return [...items].sort((a, b) => {
+			const av = a[field] as string | number;
+			const bv = b[field] as string | number;
+			const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+			return dir === "asc" ? cmp : -cmp;
+		});
+	}
+
 	async execute(): Promise<QueryResult<T>> {
-		const statuses =
-			this._statuses.length > 0
-				? this._statuses
-				: this.defaultStatuses.length > 0
-					? this.defaultStatuses
-					: undefined;
+		const statuses = this.resolveStatuses();
 
 		// push-down: source.query が存在 かつ where() 未使用 → Notion API に委譲
 		if (this.source.query && !this._predicate) {
@@ -102,16 +117,7 @@ export class QueryBuilder<T extends BaseContentItem> {
 			items = items.filter(this._predicate);
 		}
 
-		if (this._sortField) {
-			const field = this._sortField;
-			const dir = this._sortDir;
-			items = [...items].sort((a, b) => {
-				const av = a[field] as string | number;
-				const bv = b[field] as string | number;
-				const cmp = av < bv ? -1 : av > bv ? 1 : 0;
-				return dir === "asc" ? cmp : -cmp;
-			});
-		}
+		items = this.applySort(items);
 
 		const total = items.length;
 		const start = (this._page - 1) * this._perPage;
@@ -134,24 +140,10 @@ export class QueryBuilder<T extends BaseContentItem> {
 
 	/** 前後アイテムを返す。sortBy() で指定したソート順を適用する。 */
 	async adjacent(slug: string): Promise<{ prev: T | null; next: T | null }> {
-		const statuses =
-			this._statuses.length > 0
-				? this._statuses
-				: this.defaultStatuses.length > 0
-					? this.defaultStatuses
-					: undefined;
-		let items = await this.source.list({ publishedStatuses: statuses });
-
-		if (this._sortField) {
-			const field = this._sortField;
-			const dir = this._sortDir;
-			items = [...items].sort((a, b) => {
-				const av = a[field] as string | number;
-				const bv = b[field] as string | number;
-				const cmp = av < bv ? -1 : av > bv ? 1 : 0;
-				return dir === "asc" ? cmp : -cmp;
-			});
-		}
+		const statuses = this.resolveStatuses();
+		const items = this.applySort(
+			await this.source.list({ publishedStatuses: statuses }),
+		);
 
 		const idx = items.findIndex((item) => item.slug === slug);
 		if (idx === -1) return { prev: null, next: null };

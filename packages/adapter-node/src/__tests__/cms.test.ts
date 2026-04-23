@@ -17,72 +17,73 @@ vi.mock("@notion-headless-cms/source-notion", () => ({
 	}),
 	defineMapping: vi.fn(),
 	defineSchema: vi.fn(),
+	isNotionSchema: vi.fn().mockReturnValue(false),
 }));
 
 vi.mock("@notion-headless-cms/renderer", () => ({
 	renderMarkdown: vi.fn().mockResolvedValue("<p>rendered</p>"),
 }));
 
+const schema = {
+	posts: { id: "test-db-id", dbName: "記事DB" },
+} as const;
+
 describe("createNodeCMS", () => {
 	const origEnv = { ...process.env };
 
 	beforeEach(() => {
 		process.env.NOTION_TOKEN = "test-token";
-		process.env.NOTION_DATA_SOURCE_ID = "test-db-id";
-		delete process.env.DB_NAME;
-		delete process.env.NOTION_DB_NAME;
 	});
 
 	afterEach(() => {
 		process.env.NOTION_TOKEN = origEnv.NOTION_TOKEN;
-		process.env.NOTION_DATA_SOURCE_ID = origEnv.NOTION_DATA_SOURCE_ID;
-		if (origEnv.DB_NAME !== undefined) process.env.DB_NAME = origEnv.DB_NAME;
-		if (origEnv.NOTION_DB_NAME !== undefined)
-			process.env.NOTION_DB_NAME = origEnv.NOTION_DB_NAME;
 	});
 
-	it("環境変数が設定されていれば CMS インスタンスを作成できる", () => {
-		const cms = createNodeCMS();
-		expect(cms).toBeDefined();
-		expect(typeof cms.list).toBe("function");
-		expect(typeof cms.find).toBe("function");
+	it("NOTION_TOKEN があれば各ソースの CMS インスタンスを作成できる", () => {
+		const client = createNodeCMS({ schema });
+		expect(typeof client.posts.list).toBe("function");
+		expect(typeof client.posts.find).toBe("function");
 	});
 
 	it("NOTION_TOKEN が未設定の場合はエラーをスローする", () => {
 		delete process.env.NOTION_TOKEN;
-		expect(() => createNodeCMS()).toThrow("NOTION_TOKEN");
+		expect(() => createNodeCMS({ schema })).toThrow("NOTION_TOKEN");
 	});
 
-	it("NOTION_DATA_SOURCE_ID と DB_NAME が両方未設定の場合はエラーをスローする", () => {
-		delete process.env.NOTION_DATA_SOURCE_ID;
-		delete process.env.DB_NAME;
-		delete process.env.NOTION_DB_NAME;
-		expect(() => createNodeCMS()).toThrow("NOTION_DATA_SOURCE_ID");
-	});
-
-	it("DB_NAME のみ設定でも CMS インスタンスを作成できる", () => {
-		delete process.env.NOTION_DATA_SOURCE_ID;
-		process.env.DB_NAME = "ブログ記事DB";
-		const cms = createNodeCMS();
-		expect(cms).toBeDefined();
+	it("token オプションで環境変数を上書きできる", () => {
+		delete process.env.NOTION_TOKEN;
+		const client = createNodeCMS({ schema, token: "custom-token" });
+		expect(client.posts).toBeDefined();
 	});
 
 	it("list() がソースのアイテムを返す", async () => {
-		const cms = createNodeCMS();
-		const items = await cms.list();
+		const client = createNodeCMS({ schema });
+		const items = await client.posts.list();
 		expect(items).toHaveLength(1);
 		expect(items[0].slug).toBe("post-a");
 	});
 
-	it("cache: { document: 'memory' } でインメモリキャッシュ付き CMS を作成できる", () => {
-		const cms = createNodeCMS({ cache: { document: "memory", ttlMs: 60_000 } });
-		expect(cms).toBeDefined();
-		expect(typeof cms.cache.getList).toBe("function");
-		expect(typeof cms.cache.get).toBe("function");
+	it("cache: { document: 'memory' } でインメモリキャッシュを有効化できる", () => {
+		const client = createNodeCMS({
+			schema,
+			cache: { document: "memory", ttlMs: 60_000 },
+		});
+		expect(typeof client.posts.cache.getList).toBe("function");
+		expect(typeof client.posts.cache.get).toBe("function");
 	});
 
 	it("cache: 'disabled' でキャッシュ無効で動作する", () => {
-		const cms = createNodeCMS({ cache: "disabled" });
-		expect(cms).toBeDefined();
+		const client = createNodeCMS({ schema, cache: "disabled" });
+		expect(client.posts).toBeDefined();
+	});
+
+	it("sources でソースごとの publishedStatuses を上書きできる", () => {
+		const client = createNodeCMS({
+			schema,
+			sources: {
+				posts: { published: ["公開"], accessible: ["公開", "下書き"] },
+			},
+		});
+		expect(client.posts).toBeDefined();
 	});
 });

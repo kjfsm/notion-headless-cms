@@ -25,9 +25,9 @@ NOTION_TOKEN=secret_xxx npx nhc generate
 
 ```ts
 import { nhcSchema } from "./nhc-schema.ts";
-import { createNodeMultiCMS } from "@notion-headless-cms/adapter-node";
+import { createNodeCMS } from "@notion-headless-cms/adapter-node";
 
-const client = createNodeMultiCMS({
+const client = createNodeCMS({
   schema: nhcSchema,
   sources: {
     posts: { published: ["公開"], accessible: ["公開", "下書き"] },
@@ -73,7 +73,7 @@ export default defineConfig({
 | `fields.publishedAt` | `string`（任意） | publishedAt に使う Notion プロパティ名（省略時: `PublishedAt` / `公開日` 等を自動検出） |
 | `fields.properties` | `Record<string, string>`（任意） | Notion プロパティ名 → TypeScript フィールド名の明示マッピング。日本語など ASCII 変換できない名前は必須 |
 
-> `published` / `accessible` は `nhc.config.ts` で設定しない。クライアント作成時（`createNodeMultiCMS` / `createCloudflareCMSMulti`）の `sources` オプションで差し込む。
+> `published` / `accessible` は `nhc.config.ts` で設定しない。クライアント作成時（`createNodeCMS` / `createCloudflareCMS`）の `sources` オプションで差し込む。
 
 ## コマンド一覧
 
@@ -159,7 +159,7 @@ export type NHCSchema = typeof nhcSchema;
 
 ## 関連パッケージ
 
-- [`@notion-headless-cms/adapter-node`](../adapter-node) — Node.js 向け `createNodeMultiCMS`
-- [`@notion-headless-cms/adapter-cloudflare`](../adapter-cloudflare) — Cloudflare Workers 向け `createCloudflareCMSMulti`
+- [`@notion-headless-cms/adapter-node`](../adapter-node) — Node.js 向け `createNodeCMS`
+- [`@notion-headless-cms/adapter-cloudflare`](../adapter-cloudflare) — Cloudflare Workers 向け `createCloudflareCMS`
 - [`@notion-headless-cms/source-notion`](../source-notion) — Notion データソースアダプタ
 - [`@notion-headless-cms/core`](../core) — CMS エンジン本体

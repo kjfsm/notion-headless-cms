@@ -111,7 +111,7 @@ export async function runGenerate(opts: GenerateOptions): Promise<void> {
 
 	console.log(`\n生成完了: ${outputPath}`);
 	console.log(
-		"次のステップ: createNodeMultiCMS / createCloudflareCMSMulti の sources オプションで published / accessible を設定してください。",
+		"次のステップ: createNodeCMS / createCloudflareCMS の sources オプションで published / accessible を設定してください。",
 	);
 
 	const relPath = path.relative(process.cwd(), outputPath);

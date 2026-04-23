@@ -1,9 +1,9 @@
 import { isStale } from "./cache";
 import { noopDocumentCache, noopImageCache } from "./cache/noop";
-import { CMSError, isCMSError } from "./errors";
 import { mergeHooks, mergeLoggers } from "./hooks";
-import { buildCacheImageFn } from "./image";
 import { QueryBuilder } from "./query";
+import type { RenderContext } from "./rendering";
+import { buildCachedItem } from "./rendering";
 import type { RetryConfig } from "./retry";
 import { DEFAULT_RETRY_CONFIG, withRetry } from "./retry";
 import type {
@@ -144,6 +144,19 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		};
 	}
 
+	private renderContext(): RenderContext<T> {
+		return {
+			source: this.source,
+			rendererFn: this.rendererFn,
+			imgCache: this.imgCache,
+			hasImageCache: this.hasImageCache,
+			imageProxyBase: this.imageProxyBase,
+			contentConfig: this.contentConfig,
+			hooks: this.hooks,
+			logger: this.logger,
+		};
+	}
+
 	// ── コンテンツ取得 ──────────────────────────────────────────────────────
 
 	/** 公開済みコンテンツ一覧をソースから直接取得する。 */
@@ -202,8 +215,8 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 	}
 
 	/** コンテンツを Markdown → HTML にレンダリングし、CachedItem として返す。キャッシュには保存しない。 */
-	async render(item: T): Promise<CachedItem<T>> {
-		return this.buildCachedItem(item);
+	render(item: T): Promise<CachedItem<T>> {
+		return buildCachedItem(item, this.renderContext());
 	}
 
 	/** QueryBuilder を返す。ステータス・タグ・ページネーションなどを連鎖で指定できる。 */
@@ -269,7 +282,7 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		this.hooks.onCacheMiss?.(slug);
 		const item = await this.find(slug);
 		if (!item) return null;
-		const entry = await this.buildCachedItem(item);
+		const entry = await buildCachedItem(item, this.renderContext());
 		const save = this.docCache.setItem(slug, entry);
 		if (this.waitUntil) {
 			this.waitUntil(save);
@@ -287,6 +300,7 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 	}): Promise<{ ok: number; failed: number }> {
 		const items = await this.list();
 		const concurrency = opts?.concurrency ?? this.maxConcurrent;
+		const ctx = this.renderContext();
 		let ok = 0;
 		let failed = 0;
 
@@ -295,7 +309,7 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 			await Promise.all(
 				chunk.map(async (item) => {
 					try {
-						const rendered = await this.buildCachedItem(item);
+						const rendered = await buildCachedItem(item, ctx);
 						await this.docCache.setItem(item.slug, rendered);
 						ok++;
 					} catch (err) {
@@ -331,7 +345,7 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		if (payload?.slug) {
 			const item = await this.find(payload.slug);
 			if (item) {
-				const rendered = await this.buildCachedItem(item);
+				const rendered = await buildCachedItem(item, this.renderContext());
 				await this.docCache.setItem(item.slug, rendered);
 				updated.push(item.slug);
 			}
@@ -368,7 +382,7 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 		if (!this.isPublished(item)) return { changed: false };
 		if (item.updatedAt === lastEdited) return { changed: false };
 
-		const entry = await this.buildCachedItem(item);
+		const entry = await buildCachedItem(item, this.renderContext());
 		await this.docCache.setItem(slug, entry);
 
 		return {
@@ -377,108 +391,6 @@ export class CMS<T extends BaseContentItem = BaseContentItem> {
 			item: entry.item,
 			notionUpdatedAt: entry.notionUpdatedAt,
 		};
-	}
-
-	// ── プライベートヘルパー ────────────────────────────────────────────────
-
-	private async buildCachedItem(item: T): Promise<CachedItem<T>> {
-		const start = Date.now();
-		this.logger?.info?.("コンテンツのレンダリング開始", {
-			slug: item.slug,
-			pageId: item.id,
-		});
-		this.hooks.onRenderStart?.(item.slug);
-
-		let markdown: string;
-		try {
-			markdown = await this.source.loadMarkdown(item);
-		} catch (err) {
-			if (isCMSError(err)) throw err;
-			throw new CMSError({
-				code: "source/load_markdown_failed",
-				message: "Failed to load markdown from source.",
-				cause: err,
-				context: {
-					operation: "buildCachedItem:loadMarkdown",
-					pageId: item.id,
-					slug: item.slug,
-				},
-			});
-		}
-
-		const cacheImage = this.hasImageCache
-			? buildCacheImageFn(this.imgCache, this.imageProxyBase)
-			: undefined;
-
-		let html: string;
-		const rendererFn = this.rendererFn ?? (await loadDefaultRenderer());
-		try {
-			html = await rendererFn(markdown, {
-				imageProxyBase: this.imageProxyBase,
-				cacheImage,
-				remarkPlugins: this.contentConfig?.remarkPlugins,
-				rehypePlugins: this.contentConfig?.rehypePlugins,
-			});
-		} catch (err) {
-			if (isCMSError(err)) throw err;
-			throw new CMSError({
-				code: "renderer/failed",
-				message: "Failed to render markdown.",
-				cause: err,
-				context: {
-					operation: "buildCachedItem:renderMarkdown",
-					pageId: item.id,
-					slug: item.slug,
-				},
-			});
-		}
-
-		// afterRender フック
-		if (this.hooks.afterRender) {
-			html = await this.hooks.afterRender(html, item);
-		}
-
-		let result: CachedItem<T> = {
-			html,
-			item,
-			notionUpdatedAt: item.updatedAt,
-			cachedAt: Date.now(),
-		};
-
-		// beforeCache フック
-		if (this.hooks.beforeCache) {
-			result = await this.hooks.beforeCache(result);
-		}
-
-		const durationMs = Date.now() - start;
-		this.logger?.info?.("コンテンツのレンダリング完了", {
-			slug: item.slug,
-			durationMs,
-		});
-		this.hooks.onRenderEnd?.(item.slug, durationMs);
-
-		return result;
-	}
-}
-
-/**
- * renderer オプション未指定時のフォールバック。
- * @notion-headless-cms/renderer を動的 import する。
- * adapter-cloudflare / adapter-node は renderer を明示注入するためこのパスは通らない。
- */
-async function loadDefaultRenderer(): Promise<RendererFn> {
-	try {
-		const mod = await import("@notion-headless-cms/renderer");
-		return mod.renderMarkdown;
-	} catch (err) {
-		throw new CMSError({
-			code: "renderer/failed",
-			message:
-				"renderer オプションが未指定で @notion-headless-cms/renderer が見つかりません。" +
-				" createCMS({ renderer }) でレンダラーを注入するか、@notion-headless-cms/renderer をインストールしてください。",
-			cause: err,
-			context: { operation: "loadDefaultRenderer" },
-		});
 	}
 }
 

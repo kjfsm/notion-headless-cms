@@ -11,24 +11,39 @@ export interface NotionCLIClient {
 }
 
 const RETRY_STATUSES = new Set([429, 502, 503, 504]);
+const RETRIABLE_NETWORK_CODES = new Set([
+	"ECONNRESET",
+	"ECONNREFUSED",
+	"ETIMEDOUT",
+	"ENOTFOUND",
+	"EAI_AGAIN",
+	"UND_ERR_SOCKET",
+]);
 const MAX_RETRIES = 4;
 const BASE_DELAY_MS = 1000;
 
+/** エラーオブジェクトから OS/ネットワークレベルの `code` を取り出す。 */
+function getErrorCode(err: unknown): string | undefined {
+	if (typeof err !== "object" || err === null) return undefined;
+	const record = err as { code?: unknown; cause?: { code?: unknown } };
+	const direct = typeof record.code === "string" ? record.code : undefined;
+	const nested =
+		typeof record.cause?.code === "string" ? record.cause.code : undefined;
+	return nested ?? direct;
+}
+
+/** HTTP レスポンスを持つエラーの status を取り出す。 */
+function getHttpStatus(err: unknown): number | undefined {
+	if (typeof err !== "object" || err === null) return undefined;
+	const status = (err as { status?: unknown }).status;
+	return typeof status === "number" ? status : undefined;
+}
+
 /** ネットワーク起因のエラー（fetch failed / ECONN* など）かどうか判定する。 */
 function isRetriableNetworkError(err: unknown): boolean {
-	if (!(err instanceof Error)) return false;
-	if (err.message === "fetch failed") return true;
-	const cause = (err as { cause?: { code?: string } }).cause;
-	const code = cause?.code ?? (err as { code?: string }).code;
-	if (!code) return false;
-	return [
-		"ECONNRESET",
-		"ECONNREFUSED",
-		"ETIMEDOUT",
-		"ENOTFOUND",
-		"EAI_AGAIN",
-		"UND_ERR_SOCKET",
-	].includes(code);
+	if (err instanceof Error && err.message === "fetch failed") return true;
+	const code = getErrorCode(err);
+	return code !== undefined && RETRIABLE_NETWORK_CODES.has(code);
 }
 
 /** Notion API の一時的な失敗（429 / 5xx / ネットワークエラー）を指数バックオフでリトライする。 */
@@ -38,7 +53,7 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
 		try {
 			return await fn();
 		} catch (err) {
-			const status = (err as { status?: number }).status;
+			const status = getHttpStatus(err);
 			const isRetriable =
 				(status !== undefined && RETRY_STATUSES.has(status)) ||
 				isRetriableNetworkError(err);

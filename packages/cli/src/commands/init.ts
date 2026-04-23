@@ -33,7 +33,7 @@ export default defineConfig({
 	output: "./app/generated/nhc-schema.ts",
 });
 
-// 生成後: createNodeMultiCMS / createCloudflareCMSMulti の sources オプションで
+// 生成後: createNodeCMS / createCloudflareCMS の sources オプションで
 // published / accessible を設定してください。
 // 例: sources: { posts: { published: ["公開"], accessible: ["公開", "下書き"] } }
 `;

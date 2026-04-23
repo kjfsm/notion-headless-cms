@@ -1,5 +1,5 @@
 import type { R2BucketLike, R2ObjectLike } from "@notion-headless-cms/cache-r2";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createCloudflareCMS } from "../cms";
 
 vi.mock("@notion-headless-cms/source-notion", () => ({
@@ -18,6 +18,7 @@ vi.mock("@notion-headless-cms/source-notion", () => ({
 	}),
 	defineMapping: vi.fn(),
 	defineSchema: vi.fn(),
+	isNotionSchema: vi.fn().mockReturnValue(false),
 }));
 
 vi.mock("@notion-headless-cms/renderer", () => ({
@@ -47,38 +48,48 @@ function makeMockBucket(): R2BucketLike {
 	};
 }
 
-describe("createCloudflareCMS", () => {
-	const baseEnv = {
-		NOTION_TOKEN: "mock-token",
-		NOTION_DATA_SOURCE_ID: "mock-db-id",
-	};
+const schema = {
+	posts: { id: "mock-db-id", dbName: "記事DB" },
+} as const;
 
-	it("CACHE_BUCKET なしで CMS インスタンスを作成できる", () => {
-		const cms = createCloudflareCMS({ env: baseEnv });
-		expect(cms).toBeDefined();
-		expect(typeof cms.list).toBe("function");
-		expect(typeof cms.find).toBe("function");
-		expect(typeof cms.render).toBe("function");
+describe("createCloudflareCMS", () => {
+	const baseEnv = { NOTION_TOKEN: "mock-token" };
+
+	it("CACHE_BUCKET なしで各ソースの CMS インスタンスを作成できる", () => {
+		const client = createCloudflareCMS({ schema, env: baseEnv });
+		expect(typeof client.posts.list).toBe("function");
+		expect(typeof client.posts.find).toBe("function");
+		expect(typeof client.posts.render).toBe("function");
 	});
 
-	it("CACHE_BUCKET ありで CMS インスタンスを作成できる（mock R2BucketLike）", () => {
+	it("CACHE_BUCKET ありで CMS インスタンスを作成できる", () => {
 		const env = { ...baseEnv, CACHE_BUCKET: makeMockBucket() };
-		const cms = createCloudflareCMS({ env });
-		expect(cms).toBeDefined();
-		expect(typeof cms.cache.getList).toBe("function");
-		expect(typeof cms.cache.get).toBe("function");
+		const client = createCloudflareCMS({ schema, env });
+		expect(typeof client.posts.cache.getList).toBe("function");
+		expect(typeof client.posts.cache.get).toBe("function");
 	});
 
 	it("list() がソースのアイテムを返す", async () => {
-		const cms = createCloudflareCMS({ env: baseEnv });
-		const items = await cms.list();
+		const client = createCloudflareCMS({ schema, env: baseEnv });
+		const items = await client.posts.list();
 		expect(items).toHaveLength(1);
 		expect(items[0].slug).toBe("post-a");
 	});
 
-	it("ttlMs オプションが cache に反映される", () => {
+	it("ttlMs オプションを指定できる", () => {
 		const env = { ...baseEnv, CACHE_BUCKET: makeMockBucket() };
-		const cms = createCloudflareCMS({ env, ttlMs: 30_000 });
-		expect(cms).toBeDefined();
+		const client = createCloudflareCMS({ schema, env, ttlMs: 30_000 });
+		expect(client.posts).toBeDefined();
+	});
+
+	it("sources でソースごとの publishedStatuses を上書きできる", () => {
+		const client = createCloudflareCMS({
+			schema,
+			env: baseEnv,
+			sources: {
+				posts: { published: ["公開"], accessible: ["公開", "下書き"] },
+			},
+		});
+		expect(client.posts).toBeDefined();
 	});
 });

@@ -244,6 +244,40 @@ type CMSErrorCode = BuiltInCMSErrorCode | (string & {});
 
 全パッケージの `engines.node` が `>=24` に引き上げられた。
 
+### `createNodeCMS` / `createCloudflareCMS` をマルチソース一本に統合
+
+単一ソース版の `createCloudflareCMS` / `createNodeCMS` と、マルチソース版 `createCloudflareCMSMulti` / `createNodeMultiCMS` に分かれていた API を 1 つに統合した。同名の `createCloudflareCMS` / `createNodeCMS` が `nhc generate` の `nhcSchema` を受け取り、各ソースに対応する `CMS` インスタンスのマップを返す形に変更されている。
+
+```ts
+// before (single)
+const cms = createNodeCMS({ schema: { publishedStatuses: ["公開"] } });
+await cms.list();
+
+// before (multi)
+const client = createNodeMultiCMS({ schema: nhcSchema });
+await client.posts.list();
+
+// after（統合後）
+const client = createNodeCMS({
+  schema: nhcSchema,
+  sources: { posts: { published: ["公開"] } },
+});
+await client.posts.list();
+```
+
+旧 `createNodeMultiCMS` / `createCloudflareCMSMulti` および旧 `NodeCMSOptions` / `CreateCloudflareCMSOptions`（単一版）/ `CloudflareMultiCMSEnv` / `MultiSourceEntry` / `MultiSourceSchema` / `MultiCMSResult` は削除された。型名は次のように改名されている:
+
+| 旧 | 新 |
+|----|----|
+| `MultiSourceEntry<T>` | `SourceEntry<T>`（`source-notion` から export） |
+| `MultiSourceSchema` | `NHCSchema` |
+| `MultiCMSResult<S>` | `CMSMap<S>` |
+| `CloudflareMultiCMSEnv` | `CloudflareCMSEnv` |
+| `CreateCloudflareCMSMultiOptions` | `CreateCloudflareCMSOptions` |
+| `CreateNodeMultiCMSOptions` | `CreateNodeCMSOptions` |
+
+あわせて `adapter-cloudflare` の `CloudflareCMSEnv` からは旧 `NOTION_DATA_SOURCE_ID` / `DB_NAME` フィールドが削除された（各ソースの `id` は `nhcSchema` から取得）。単一 DB で運用したい場合も `nhc.config.ts` に 1 件だけ登録する構成にする。
+
 ## 新規追加 API
 
 - `cms.query()` — QueryBuilder（status / tag / where / sortBy / paginate / execute / executeOne / adjacent）
