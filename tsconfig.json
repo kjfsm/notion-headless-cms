@@ -5,6 +5,7 @@
 		"skipLibCheck": true,
 		"strict": true,
 		"useUnknownInCatchVariables": true,
-		"noEmit": true
+		"noEmit": true,
+		"ignoreDeprecations": "6.0"
 	}
 }
