@@ -54,23 +54,24 @@ describe("nextCache", () => {
 	});
 
 	describe("invalidate()", () => {
-		it("'all' で全タグを revalidateTag する", async () => {
+		it("'all' でユーザー指定タグを全て revalidateTag する", async () => {
 			const cache = nextCache({ tags: ["posts", "pages"] });
 			await cache.invalidate?.("all");
 			expect(revalidateTag).toHaveBeenCalledWith("posts");
 			expect(revalidateTag).toHaveBeenCalledWith("pages");
 		});
 
-		it("{ tag } で指定タグを revalidateTag する", async () => {
-			const cache = nextCache({ tags: ["posts"] });
-			await cache.invalidate?.({ tag: "custom-tag" });
-			expect(revalidateTag).toHaveBeenCalledWith("custom-tag");
+		it("{ collection } でコレクション規約タグを revalidateTag する", async () => {
+			const cache = nextCache();
+			await cache.invalidate?.({ collection: "posts" });
+			expect(revalidateTag).toHaveBeenCalledWith("nhc:col:posts");
 		});
 
-		it("{ slug } で slug: プレフィックス付きタグを revalidateTag する", async () => {
+		it("{ collection, slug } でコレクションと slug の規約タグを両方 revalidateTag する", async () => {
 			const cache = nextCache();
-			await cache.invalidate?.({ slug: "my-post" });
-			expect(revalidateTag).toHaveBeenCalledWith("slug:my-post");
+			await cache.invalidate?.({ collection: "posts", slug: "my-post" });
+			expect(revalidateTag).toHaveBeenCalledWith("nhc:col:posts");
+			expect(revalidateTag).toHaveBeenCalledWith("nhc:col:posts:slug:my-post");
 		});
 	});
 });

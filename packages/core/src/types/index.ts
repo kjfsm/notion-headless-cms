@@ -2,7 +2,6 @@ export type {
 	CacheConfig,
 	DocumentCacheAdapter,
 	ImageCacheAdapter,
-	InvalidateScope as CacheInvalidateScope,
 } from "./cache";
 export type {
 	AdjacencyOptions,

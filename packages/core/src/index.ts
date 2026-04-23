@@ -45,7 +45,6 @@ export type {
 	CacheConfig,
 	CachedItem,
 	CachedItemList,
-	CacheInvalidateScope,
 	CMSHooks,
 	CMSPlugin,
 	CMSSchemaProperties,

@@ -118,9 +118,6 @@ function scopeDocumentCache<T extends BaseContentItem>(
 			if (scope === "all") {
 				return base.invalidate({ collection });
 			}
-			if ("slug" in scope && !("collection" in scope)) {
-				return base.invalidate({ collection, slug: scope.slug });
-			}
 			return base.invalidate(scope);
 		},
 	};

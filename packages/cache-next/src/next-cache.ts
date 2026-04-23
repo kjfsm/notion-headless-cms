@@ -3,19 +3,34 @@ import type {
 	CachedItem,
 	CachedItemList,
 	DocumentCacheAdapter,
+	InvalidateScope,
 } from "@notion-headless-cms/core";
 
 export interface NextCacheOptions {
 	/** Next.js ISR の revalidate 秒数。デフォルト: 300 */
 	revalidate?: number;
-	/** Next.js のキャッシュタグ。revalidateTag() で一括無効化できる。 */
+	/**
+	 * ユーザーが任意に設定する追加タグ。
+	 * `invalidate("all")` 時にまとめて revalidateTag される。
+	 */
 	tags?: string[];
+}
+
+/** コレクション単位の規約タグ。 */
+function collectionTag(collection: string): string {
+	return `nhc:col:${collection}`;
+}
+
+/** スラッグ単位の規約タグ。 */
+function slugTag(collection: string, slug: string): string {
+	return `nhc:col:${collection}:slug:${slug}`;
 }
 
 /**
  * Next.js App Router の unstable_cache / revalidateTag を利用した DocumentCacheAdapter。
  * setList / setItem は no-op（Next.js がキャッシュを管理するため）。
- * invalidate({ tag }) で revalidateTag() を呼ぶ。
+ * invalidate は規約タグ (`nhc:col:<name>` / `nhc:col:<name>:slug:<slug>`) と
+ * ユーザー指定タグを revalidateTag で失効させる。
  */
 class NextDocumentCache<T extends BaseContentItem = BaseContentItem>
 	implements DocumentCacheAdapter<T>
@@ -46,9 +61,7 @@ class NextDocumentCache<T extends BaseContentItem = BaseContentItem>
 		// Next.js のキャッシュ層が管理するため no-op
 	}
 
-	async invalidate(
-		scope: "all" | { slug: string } | { tag: string },
-	): Promise<void> {
+	async invalidate(scope: InvalidateScope): Promise<void> {
 		// next/cache は動的インポートで参照（ビルド時の型エラー回避）
 		const nc = (await import("next/cache")) as unknown as {
 			revalidateTag: (tag: string) => void;
@@ -58,10 +71,12 @@ class NextDocumentCache<T extends BaseContentItem = BaseContentItem>
 			for (const tag of this.opts.tags) {
 				nc.revalidateTag(tag);
 			}
-		} else if ("tag" in scope) {
-			nc.revalidateTag(scope.tag);
-		} else if ("slug" in scope) {
-			nc.revalidateTag(`slug:${scope.slug}`);
+			return;
+		}
+
+		nc.revalidateTag(collectionTag(scope.collection));
+		if ("slug" in scope) {
+			nc.revalidateTag(slugTag(scope.collection, scope.slug));
 		}
 	}
 }

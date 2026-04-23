@@ -2,9 +2,9 @@ import type {
 	BaseContentItem,
 	CachedItem,
 	CachedItemList,
-	CacheInvalidateScope,
 	DocumentCacheAdapter,
 	ImageCacheAdapter,
+	InvalidateScope,
 	StorageBinary,
 } from "../types/index";
 
@@ -30,7 +30,7 @@ class NoopDocumentCache<T extends BaseContentItem = BaseContentItem>
 		return Promise.resolve();
 	}
 
-	invalidate(_scope: CacheInvalidateScope): Promise<void> {
+	invalidate(_scope: InvalidateScope): Promise<void> {
 		return Promise.resolve();
 	}
 }
