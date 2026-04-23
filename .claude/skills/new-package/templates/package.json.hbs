@@ -1,50 +1,50 @@
 {
-	"name": "@notion-headless-cms/<name>",
+"name": "@notion-headless-cms/<name>",
 	"version": "0.0.0",
 	"description": "<description>",
-	"keywords": [
+		"keywords": [
 		"notion",
 		"headless-cms",
 		"<keyword>",
-		"typescript"
-	],
-	"license": "MIT",
-	"homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
-	"bugs": {
-		"url": "https://github.com/kjfsm/notion-headless-cms/issues"
-	},
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/kjfsm/notion-headless-cms.git",
-		"directory": "packages/<name>"
-	},
-	"type": "module",
-	"sideEffects": false,
-	"exports": {
-		".": {
-			"import": "./dist/index.js",
-			"types": "./dist/index.d.ts"
-		}
-	},
-	"files": [
-		"dist"
-	],
-	"engines": {
-		"node": ">=24"
-	},
-	"scripts": {
-		"build": "tsup src/index.ts --format esm --dts --sourcemap --out-dir dist",
-		"typecheck": "tsc --noEmit",
-		"test": "vitest run"
-	},
-	"publishConfig": {
-		"access": "public",
-		"provenance": true
-	},
-	"peerDependencies": {
-		"@notion-headless-cms/core": "workspace:*"
-	},
-	"devDependencies": {
-		"@notion-headless-cms/core": "workspace:*"
-	}
-}
+			"typescript"
+			],
+			"license": "MIT",
+			"homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
+			"bugs": {
+			"url": "https://github.com/kjfsm/notion-headless-cms/issues"
+			},
+			"repository": {
+			"type": "git",
+			"url": "git+https://github.com/kjfsm/notion-headless-cms.git",
+			"directory": "packages/<name>"
+				},
+				"type": "module",
+				"sideEffects": false,
+				"exports": {
+				".": {
+				"import": "./dist/index.js",
+				"types": "./dist/index.d.ts"
+				}
+				},
+				"files": [
+				"dist"
+				],
+				"engines": {
+				"node": ">=24"
+				},
+				"scripts": {
+				"build": "tsup src/index.ts --format esm --dts --sourcemap --out-dir dist",
+				"typecheck": "tsc --noEmit",
+				"test": "vitest run"
+				},
+				"publishConfig": {
+				"access": "public",
+				"provenance": true
+				},
+				"peerDependencies": {
+				"@notion-headless-cms/core": "workspace:*"
+				},
+				"devDependencies": {
+				"@notion-headless-cms/core": "workspace:*"
+				}
+				}

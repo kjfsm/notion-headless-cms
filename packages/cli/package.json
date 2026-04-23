@@ -16,17 +16,17 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "https://github.com/kjfsm/notion-headless-cms.git",
+		"url": "git+https://github.com/kjfsm/notion-headless-cms.git",
 		"directory": "packages/cli"
 	},
 	"type": "module",
 	"bin": {
-		"nhc": "./dist/cli.js"
+		"nhc": "./dist/cli.mjs"
 	},
 	"exports": {
 		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
 		}
 	},
 	"files": [
@@ -37,7 +37,7 @@
 	},
 	"scripts": {
 		"prepare": "pnpm build",
-		"build": "tsup src/index.ts src/cli.ts --format esm --dts --sourcemap --out-dir dist",
+		"build": "tsdown src/index.ts src/cli.ts --format esm --dts --sourcemap --out-dir dist",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run"
 	},
@@ -46,8 +46,8 @@
 		"provenance": true,
 		"exports": {
 			".": {
-				"types": "./dist/index.d.ts",
-				"import": "./dist/index.js"
+				"types": "./dist/index.d.mts",
+				"import": "./dist/index.mjs"
 			}
 		}
 	},
