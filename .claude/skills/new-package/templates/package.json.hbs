@@ -1,14 +1,11 @@
 {
-	"name": "@notion-headless-cms/source-notion",
-	"version": "0.2.2",
-	"description": "Notion DataSourceAdapter for notion-headless-cms — fetches pages from Notion databases",
+	"name": "@notion-headless-cms/<name>",
+	"version": "0.0.0",
+	"description": "<description>",
 	"keywords": [
 		"notion",
-		"notion-api",
 		"headless-cms",
-		"cms",
-		"datasource",
-		"adapter",
+		"<keyword>",
 		"typescript"
 	],
 	"license": "MIT",
@@ -19,14 +16,14 @@
 	"repository": {
 		"type": "git",
 		"url": "https://github.com/kjfsm/notion-headless-cms.git",
-		"directory": "packages/source-notion"
+		"directory": "packages/<name>"
 	},
 	"type": "module",
 	"sideEffects": false,
 	"exports": {
 		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
+			"import": "./dist/index.js",
+			"types": "./dist/index.d.ts"
 		}
 	},
 	"files": [
@@ -44,16 +41,10 @@
 		"access": "public",
 		"provenance": true
 	},
-	"dependencies": {
-		"@notion-headless-cms/core": "workspace:*",
-		"notion-to-md": "^3.1.0"
-	},
 	"peerDependencies": {
-		"@notionhq/client": "^5.18.0",
-		"zod": "^4.0.0"
+		"@notion-headless-cms/core": "workspace:*"
 	},
 	"devDependencies": {
-		"@notionhq/client": "^5.18.0",
-		"zod": "^4.1.12"
+		"@notion-headless-cms/core": "workspace:*"
 	}
 }

@@ -1,177 +1,53 @@
 # CLAUDE.md
 
-## 言語ルール
+Notion をヘッドレス CMS として利用する TypeScript ライブラリ群のモノレポ。
+npm スコープ `@notion-headless-cms/*` で公開。
 
-- コメント、コミットメッセージ、PR概要はすべて**日本語**で記述する
+> 詳細なディレクトリ構成は `@README.md` と `@pnpm-workspace.yaml` を参照。個別パッケージの設計は `packages/*/README.md` と `.claude/rules/` を参照。
 
-## プロジェクト概要
+## 絶対ルール
 
-Notion をヘッドレス CMS として利用するための TypeScript ライブラリ群。
-pnpm モノリポで管理され、npm（`@notion-headless-cms` スコープ）としてパブリック公開される。
+1. **言語**: コメント・コミットメッセージ・PR 概要はすべて**日本語**
+2. **変更後**: 必ず `pnpm typecheck && pnpm test`。失敗を残したままコミットしない
+3. **core はゼロ依存**: `packages/core` は `@notionhq/client` / `unified` / `zod` / `@notion-headless-cms/renderer` に**静的 import で依存しない**（詳細: `@.claude/rules/core.md`）
+4. **シークレット**: コードにハードコードしない。環境変数 / `wrangler secret` / `env()` ヘルパー経由で渡す
 
-依存方向（下が上を使う、core は外部ランタイム依存ゼロ）:
+## 不変ルールの参照先（@import）
 
-```
-Notion DB
-  └─ @notion-headless-cms/source-notion（API 取得 + Notion→Markdown）
-       ├─ @notion-headless-cms/renderer（Markdown→HTML）
-       └─ @notion-headless-cms/core（CMS 統合・キャッシュ・クエリ・フック）
-            ├─ @notion-headless-cms/cache-r2（R2 キャッシュ）
-            ├─ @notion-headless-cms/cache-next（Next.js ISR キャッシュ）
-            ├─ @notion-headless-cms/adapter-cloudflare（Workers 向けファクトリ）
-            ├─ @notion-headless-cms/adapter-node（Node.js 向けファクトリ）
-            └─ @notion-headless-cms/adapter-next（Next.js ルートハンドラ）
-```
+以下はセッション起動時に読み込まれる。
 
-Notion API クライアントと Notion ブロック→Markdown 変換器は `source-notion` の `src/internal/` 配下に実装されており、独立パッケージとしては公開しない。
+- `@.claude/rules/coding-style.md` — Biome / ES Modules / 書式
+- `@.claude/rules/package-boundaries.md` — 依存方向 / internal / peerDeps
+- `@.claude/rules/error-handling.md` — `CMSError` / 名前空間
+- `@.claude/rules/secrets.md` — NOTION_TOKEN / env()
 
-## 技術スタック
+パス固有ルールは `.claude/rules/` 配下で `paths:` frontmatter 付き。該当パスを触る時に自動で注入される（`core.md` / `source-notion.md` / `cache.md` / `adapter.md` / `cli.md` / `docs.md` / `examples.md`）。
 
-| 層 | 技術 |
-|---|---|
-| ランタイム | Node.js 24+（全パッケージ `engines.node: ">=24"`） |
-| ビルド | tsup（ESM + TypeScript declarations） |
-| 型チェック | TypeScript 5.9（strict） |
-| Notion API | @notionhq/client（`source-notion` の `peerDependencies`） |
-| Markdown変換 | notion-to-md |
-| HTMLレンダリング | remark / rehype（unified）（`renderer` の `peerDependencies`） |
-| キャッシュストレージ | Cloudflare R2 / Next.js `unstable_cache` / メモリ（LRU 対応） |
-| バリデーション | Zod（`source-notion` の `peerDependencies`） |
-| リンター/フォーマッター | Biome |
-| パッケージ管理 | pnpm ワークスペース |
-| リリース | changesets |
-| CI | GitHub Actions（Node 24.x） |
+## 作業フロー
 
-## ディレクトリ構成
+1. **実装前**: Plan Mode で関連ファイルを確認
+2. **実装中**: 既存の skill が該当すれば `/skill-name` で呼ぶ（`/changeset-flow`, `/new-package`, `/publish-preflight` など）
+3. **実装後**: `pnpm typecheck && pnpm test && pnpm format` を通してからコミット
+4. **changeset**: `packages/*` を触ったら `pnpm changeset` を実行（詳細: `.claude/skills/changeset-flow/`）
+5. **ドキュメント追従**: 公開 API を変えたら `docs/` と `packages/*/README.md` を同じコミットで更新（詳細: `.claude/rules/docs.md`）
+6. **リリース**: main マージで `release.yml` が "Version Packages" PR を作成。その PR をマージすると npm に公開される
 
-```
-packages/
-  core/                   # CMS エンジン本体（外部ランタイム依存なし）
-    src/
-      cms.ts              # CMS クラス・createCMS()
-      cache.ts            # isStale / sha256Hex
-      cache/memory.ts     # memoryDocumentCache / memoryImageCache
-      cache/noop.ts       # noop 実装
-      query.ts            # QueryBuilder
-      retry.ts            # withRetry / DEFAULT_RETRY_CONFIG
-      hooks.ts            # mergeHooks / mergeLoggers
-      errors.ts           # CMSError / 名前空間付きエラーコード
-      image.ts            # 画像フェッチ・キャッシュ
-      types/              # 型定義（config / content / cache / hooks / logger / plugin / source）
-      index.ts            # 公開 API
-  source-notion/          # Notion データソースアダプタ
-    src/
-      notion-adapter.ts   # notionAdapter() ファクトリ
-      mapper.ts           # デフォルトマッパー・getPlainText
-      schema.ts           # defineSchema / defineMapping
-      internal/fetcher/   # Notion API クライアント（内部実装）
-      internal/transformer/ # Notion ブロック→Markdown 変換（内部実装）
-  renderer/               # Markdown → HTML レンダリング（unified）
-  cache-r2/               # Cloudflare R2 キャッシュアダプタ（R2BucketLike）
-  cache-next/             # Next.js ISR キャッシュアダプタ
-  adapter-cloudflare/     # createCloudflareCMS() ファクトリ（nhcSchema を受け取り各ソースの CMS マップを返す）
-  adapter-node/           # createNodeCMS() ファクトリ（nhcSchema を受け取り各ソースの CMS マップを返す）
-  adapter-next/           # Next.js 用ルートハンドラ
+## 自己更新ルール
 
-examples/                 # フレームワーク別の動作例
+同じ指摘を 2 回以上受けた事項は、明示的な指示が無くてもドキュメントに追記する。ただし追記先は以下の優先順位で判断する：
 
-.github/
-  workflows/
-    ci.yml                # PR・main push 時に build / typecheck / test を実行
-    release.yml           # main push 時に changesets/action で PR 作成または npm 公開
-```
+1. **パス固有の事実** → `.claude/rules/<area>.md` に追記
+2. **手順・テンプレ・ワークフロー** → `.claude/skills/<name>/SKILL.md` に追記
+3. **全セッションで必要な絶対ルール** → この CLAUDE.md に追記
 
-## コマンド
+CLAUDE.md はプロジェクト全体で必ず守るべき最小限のルールのみを保持する。詳細知識は `.claude/rules/` と `.claude/skills/`、`docs/` に置くこと。
 
-```bash
-# ルート（全パッケージ一括）
-pnpm build            # 全パッケージをビルド
-pnpm typecheck        # 全パッケージの型チェック
-pnpm test             # vitest ユニットテスト
-pnpm format           # Biome でフォーマット・Lint 自動修正
-pnpm lint             # Biome ci（CI で失敗させる）
+## 共通コマンド
 
-# 個別パッケージ（例: core）
-cd packages/core
-pnpm build
-pnpm typecheck
-```
+- `pnpm build` / `pnpm typecheck` / `pnpm test` / `pnpm format` / `pnpm lint`
+- `pnpm changeset` — changeset 作成
+- 個別: `pnpm --filter @notion-headless-cms/<pkg> <script>`
 
-コード変更後は必ず `pnpm typecheck && pnpm test` を実行する。
+## Cloudflare Workers
 
-## コードスタイル
-
-Biome の設定に従う（biome.json 参照）。
-
-- インデント: タブ
-- クォート: ダブルクォート（`""`）
-- インポートは自動整理（organizeImports）
-- ES Modules（`import/export`）を使用。CommonJS（`require`）は使わない
-
-## アーキテクチャ上の重要な注意点
-
-### core は外部ランタイム依存ゼロ
-- `@notionhq/client` / `unified` / `zod` / `renderer` のいずれにも依存しない
-- レンダラーは `CreateCMSOptions.renderer`（`RendererFn`）として注入する
-- アダプタ（`adapter-cloudflare` / `adapter-node`）が `renderMarkdown` を自動注入する
-- 何も指定しなかった場合、`core` は動的 `import("@notion-headless-cms/renderer")` でフォールバック
-
-### キャッシュ戦略（Stale-While-Revalidate）
-- まずキャッシュを返し、TTL 切れなら裏で非同期更新
-- `CreateCMSOptions.cache.ttlMs` が有効期間
-- `cache.document` / `cache.image` 未設定時は `noopDocumentCache` / `noopImageCache` が使われる（キャッシュなし）
-- `cms.cache.getList()` / `cms.cache.get(slug)` が SWR アクセサ
-
-### Notion 更新検知
-- `last_edited_time` でキャッシュと比較し、差分があれば HTML 再生成
-- `cms.cache.checkItem(slug, lastEdited)` / `cms.cache.checkList(version)` が差分 API
-
-### 画像処理
-- Notion 画像 URL は期限付きのため、fetch → SHA256 ハッシュキーでストレージに永続保存
-- `core/src/image.ts` の `fetchAndCacheImage` が担当（HTTP 失敗時は `CMSError` を投げる）
-- フロントエンドには `{imageProxyBase}/{hash}` で配信（デフォルト: `/api/images`）
-
-### エラー体系
-- すべての内部エラーは `CMSError` に統一（コード: `namespace/kind` 形式）
-- 組み込みコード: `core/config_invalid` / `core/schema_invalid` / `source/fetch_items_failed` / `source/fetch_item_failed` / `source/load_markdown_failed` / `cache/io_failed` / `cache/image_fetch_failed` / `renderer/failed`
-- サードパーティアダプタは任意の文字列コードを使える（`CMSErrorCode = BuiltInCMSErrorCode | (string & {})`）
-- 名前空間判定は `isCMSErrorInNamespace(err, "source/")` を使う
-
-### キャッシュ抽象
-- `DocumentCacheAdapter<T>` / `ImageCacheAdapter` インターフェース（`core/src/types/cache.ts`）を実装すれば R2 以外に差し替え可能
-- `cache-r2` は Cloudflare R2、`cache-next` は Next.js ISR、`core` は in-memory / noop を提供
-- `cache-r2` は構造型 `R2BucketLike` を受け取るため `@cloudflare/workers-types` への実依存なし
-
-### 環境変数（シークレット）
-- `NOTION_TOKEN`: Notion API キー
-- `NOTION_DATA_SOURCE_ID`: Notion データベース ID
-- Workers は `wrangler secret put` で設定する。コードにハードコードしない
-- `adapter-node` は `process.env` から自動読み込み（未設定時は `CMSError` `core/config_invalid`）
-
-## npm 公開フロー
-
-changesets を使ったセマンティックバージョン管理で自動公開される。
-
-```bash
-# 1. 変更内容を記録する changeset を作成
-pnpm changeset
-
-# 2. main にマージすると release.yml が起動し、
-#    "Version Packages" PR を自動作成する
-
-# 3. その PR をマージすると npm に自動公開される
-```
-
-- `release.yml` は build → typecheck → test の後に `changesets/action` を実行
-- `NPM_TOKEN` と `GITHUB_TOKEN` シークレットが必要（リポジトリ Settings > Secrets）
-- アクセス設定は `.changeset/config.json` の `"access": "public"` で制御
-
-## ワークフロー
-
-1. **実装前**: Plan Mode で関連ファイルを確認してから実装する
-2. **実装後**: `pnpm typecheck` && `pnpm test` && `pnpm format` を通してからコミット
-3. **コミットメッセージ**: 日本語で変更の「なぜ」を記述する
-4. **changeset**: ライブラリを更新したら `pnpm changeset` を実行して changeset を作成する
-5. **リリース**: main にマージすると release.yml が "Version Packages" PR を作成し、その PR をマージすると npm に公開される
-6. **ドキュメント追従**: ライブラリの API・型・挙動を変更したら、関連する `docs/` と各パッケージの `README.md` も同じコミットで更新する
-7. **CLAUDE.md 自己更新**: 同じ指摘を複数回受けたことは、明示的な追記指示がなくても CLAUDE.md に追記する
+Workers / R2 / D1 / KV を扱う場合は `.claude/skills/cloudflare-workers/` を参照。最新の仕様は常に Cloudflare Docs MCP で取得する。

@@ -107,6 +107,7 @@ Next.js の `unstable_cache` / `revalidateTag` を利用した `DocumentCacheAda
   - [カスタムデータソース](./docs/recipes/custom-source.md)
   - [カスタムキャッシュアダプタ](./docs/recipes/custom-cache.md)
 - [v0 → v1 移行ガイド](./docs/migration/v0-to-v1.md)
+- [開発者ガイド](./docs/development.md) — 初期設定・Secrets・MCP・CI の手順
 
 ## クイックスタート（Node.js）
 
@@ -208,6 +209,8 @@ wrangler secret put NOTION_TOKEN
 ```
 
 ## 開発
+
+初期設定・GitHub Secrets・Claude Code 拡張機能（MCP / plugin）の登録手順などは [開発者ガイド](./docs/development.md) を参照。
 
 ### 必要なツール
 

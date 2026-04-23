@@ -1,0 +1,136 @@
+{
+	"$schema": "https://json.schemastore.org/claude-code-settings.json",
+	"permissions": {
+		"allow": [
+			"Bash(pnpm install:*)",
+			"Bash(pnpm build:*)",
+			"Bash(pnpm typecheck:*)",
+			"Bash(pnpm test:*)",
+			"Bash(pnpm lint:*)",
+			"Bash(pnpm format:*)",
+			"Bash(pnpm changeset:*)",
+			"Bash(pnpm --filter:*)",
+			"Bash(pnpm exec:*)",
+			"Bash(pnpm dlx:*)",
+			"Bash(pnpm nhc:*)",
+			"Bash(pnpm release:*)",
+			"Bash(pnpm version:*)",
+			"Bash(git status)",
+			"Bash(git status:*)",
+			"Bash(git diff:*)",
+			"Bash(git log:*)",
+			"Bash(git show:*)",
+			"Bash(git add:*)",
+			"Bash(git commit:*)",
+			"Bash(git branch:*)",
+			"Bash(git checkout:*)",
+			"Bash(git switch:*)",
+			"Bash(git restore:*)",
+			"Bash(git fetch:*)",
+			"Bash(git pull:*)",
+			"Bash(gh pr view:*)",
+			"Bash(gh pr list:*)",
+			"Bash(gh pr create:*)",
+			"Bash(gh pr checks:*)",
+			"Bash(gh pr diff:*)",
+			"Bash(gh pr comment:*)",
+			"Bash(gh run list:*)",
+			"Bash(gh run view:*)",
+			"Bash(gh run watch:*)",
+			"Bash(gh workflow list:*)",
+			"Bash(gh workflow view:*)",
+			"Bash(gh workflow run:*)",
+			"Bash(gh issue list:*)",
+			"Bash(gh issue view:*)",
+			"Bash(npx tsup:*)",
+			"Bash(npx vitest:*)",
+			"Bash(npx wrangler types)",
+			"Bash(npx wrangler types:*)",
+			"Bash(wc:*)",
+			"Bash(ls:*)",
+			"Bash(find:*)",
+			"Bash(cat:*)",
+			"Read(//**)",
+			"Glob(**)",
+			"Grep(**)"
+		],
+		"deny": [
+			"Write(**/dist/**)",
+			"Edit(**/dist/**)",
+			"Write(**/generated/**)",
+			"Edit(**/generated/**)",
+			"Write(**/.turbo/**)",
+			"Edit(**/.turbo/**)",
+			"Write(**/pnpm-lock.yaml)",
+			"Edit(**/pnpm-lock.yaml)",
+			"Write(**/.dev.vars)",
+			"Bash(npm publish:*)",
+			"Bash(pnpm publish:*)",
+			"Bash(wrangler secret delete:*)"
+		],
+		"ask": [
+			"Bash(gh pr merge:*)",
+			"Bash(pnpm changeset publish:*)",
+			"Bash(pnpm release)",
+			"Bash(wrangler secret put:*)"
+		]
+	},
+	"hooks": {
+		"PreToolUse": [
+			{
+				"matcher": "Write|Edit",
+				"hooks": [
+					{
+						"type": "command",
+						"command": ".claude/hooks/block-generated-and-dist.sh"
+					},
+					{
+						"type": "command",
+						"command": ".claude/hooks/block-core-forbidden-imports.sh"
+					}
+				]
+			}
+		],
+		"PostToolUse": [
+			{
+				"matcher": "Write|Edit",
+				"hooks": [
+					{
+						"type": "command",
+						"command": ".claude/hooks/biome-format-on-edit.sh"
+					}
+				]
+			}
+		],
+		"SessionStart": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": ".claude/hooks/session-status.sh"
+					}
+				]
+			}
+		],
+		"UserPromptSubmit": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": ".claude/hooks/japanese-reminder.sh"
+					}
+				]
+			}
+		],
+		"Stop": [
+			{
+				"hooks": [
+					{
+						"type": "command",
+						"command": ".claude/hooks/stop-verify.sh"
+					}
+				]
+			}
+		]
+	}
+}

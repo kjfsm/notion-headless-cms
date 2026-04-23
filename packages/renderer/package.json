@@ -26,8 +26,8 @@
 	"sideEffects": false,
 	"exports": {
 		".": {
-			"import": "./dist/index.js",
-			"types": "./dist/index.d.ts"
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
 		}
 	},
 	"files": [
@@ -47,8 +47,8 @@
 		"provenance": true,
 		"exports": {
 			".": {
-				"import": "./dist/index.js",
-				"types": "./dist/index.d.ts"
+				"types": "./dist/index.d.ts",
+				"import": "./dist/index.js"
 			}
 		}
 	},
