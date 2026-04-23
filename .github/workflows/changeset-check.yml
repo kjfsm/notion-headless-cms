@@ -1,0 +1,41 @@
+name: Changeset Check
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: changeset-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  changeset:
+    runs-on: ubuntu-latest
+    # ラベル `skip-changeset` が付いた PR はスキップ
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changeset') }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # changeset の差分判定に必要
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24.x"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: changeset 有無を確認
+        run: |
+          # packages/** に変更があるのに changeset が 0 件なら失敗させる
+          changed_pkg=$(git diff --name-only origin/main...HEAD -- 'packages/*/src/**' 'packages/*/package.json' || true)
+          changed_cs=$(git diff --name-only origin/main...HEAD -- '.changeset/*.md' | grep -v README.md || true)
+
+          if [ -n "$changed_pkg" ] && [ -z "$changed_cs" ]; then
+            echo "::error::packages/ に変更があるのに changeset が作成されていません。"
+            echo "::error::pnpm changeset を実行するか、PR に skip-changeset ラベルを付けてください。"
+            exit 1
+          fi
+
+          # changeset が正しく読めるか（壊れた frontmatter を検出）
+          pnpm changeset status --since=origin/main

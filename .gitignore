@@ -9,3 +9,6 @@ dist
 
 **/generated
 **/.wrangler
+
+# Claude Code の個人用設定
+.claude/settings.local.json

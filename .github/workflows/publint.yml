@@ -1,0 +1,51 @@
+name: Publint
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "packages/**"
+      - "pnpm-lock.yaml"
+      - "pnpm-workspace.yaml"
+      - ".github/workflows/publint.yml"
+
+concurrency:
+  group: publint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  publint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: pnpm/action-setup@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "24.x"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile --prefer-offline
+
+      # dist が必要
+      - run: pnpm build
+
+      - name: publint で公開設定の不備を検出
+        run: pnpm -r --filter "./packages/*" dlx publint
+
+      - name: attw (are-the-types-wrong) で型解決を検証
+        run: |
+          # 各パッケージを pack → attw に掛ける
+          set -e
+          for pkg in packages/*/; do
+            if [ -f "$pkg/package.json" ]; then
+              is_private=$(node -p "require('./$pkg/package.json').private || false")
+              if [ "$is_private" = "true" ]; then
+                continue
+              fi
+              echo "::group::attw $pkg"
+              (cd "$pkg" && pnpm pack --pack-destination /tmp/attw > /dev/null)
+              pkg_tgz=$(ls -t /tmp/attw/*.tgz | head -1)
+              pnpm dlx @arethetypeswrong/cli --pack "$pkg_tgz" --profile node16 --format table || exit 1
+              rm -f "$pkg_tgz"
+              echo "::endgroup::"
+            fi
+          done
