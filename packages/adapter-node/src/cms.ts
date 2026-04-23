@@ -2,8 +2,6 @@ import type {
 	BaseContentItem,
 	CacheConfig,
 	ContentConfig,
-	CreateCMSOptions,
-	SchemaConfig,
 } from "@notion-headless-cms/core";
 import {
 	CMSError,
@@ -12,34 +10,45 @@ import {
 	memoryImageCache,
 } from "@notion-headless-cms/core";
 import { renderMarkdown } from "@notion-headless-cms/renderer";
-import type { NotionSchema } from "@notion-headless-cms/source-notion";
+import type {
+	CMSMap,
+	NHCSchema,
+	SourceEntry,
+	SourceStatusConfig,
+} from "@notion-headless-cms/source-notion";
 import { notionAdapter } from "@notion-headless-cms/source-notion";
 
-export interface NodeCMSOptions<T extends BaseContentItem = BaseContentItem> {
-	/** defineSchema() の戻り値または SchemaConfig を受け取る。 */
-	schema?: SchemaConfig<T> | NotionSchema<T>;
-	content?: ContentConfig;
-	/**
-	 * キャッシュ設定。`"disabled"` で完全に無効化。
-	 * document/image には `"memory"` でインメモリキャッシュを指定できる。
-	 */
-	cache?:
-		| "disabled"
-		| {
-				document?: "memory";
-				image?: "memory";
-				ttlMs?: number;
-		  };
-}
+/** キャッシュ設定。`"disabled"` で完全に無効化。 */
+export type NodeCacheConfig =
+	| "disabled"
+	| {
+			document?: "memory";
+			image?: "memory";
+			ttlMs?: number;
+	  };
 
-function isNotionSchema<T extends BaseContentItem>(
-	s: SchemaConfig<T> | NotionSchema<T>,
-): s is NotionSchema<T> {
-	return "mapping" in s && "mapItem" in s;
+export interface CreateNodeCMSOptions<S extends NHCSchema> {
+	/** `nhc generate` が生成した `nhcSchema`。 */
+	schema: S;
+	/**
+	 * ソースごとの公開ステータス設定。
+	 * 生成ファイルを編集せずに `published` / `accessible` を差し込む。
+	 *
+	 * @example
+	 * sources: {
+	 *   posts: { published: ["公開"], accessible: ["公開", "下書き"] },
+	 *   news:  { published: ["掲載中"] },
+	 * }
+	 */
+	sources?: { [K in keyof S]?: SourceStatusConfig };
+	/** Notion API トークン（省略時は `process.env.NOTION_TOKEN`）。 */
+	token?: string;
+	cache?: NodeCacheConfig;
+	content?: ContentConfig;
 }
 
 function resolveCacheConfig<T extends BaseContentItem>(
-	cache: NodeCMSOptions["cache"],
+	cache: NodeCacheConfig | undefined,
 ): CacheConfig<T> {
 	if (cache === "disabled" || cache === undefined) return "disabled";
 	return {
@@ -51,16 +60,18 @@ function resolveCacheConfig<T extends BaseContentItem>(
 }
 
 /**
- * Node.js 環境向け CMS ファクトリ。
- * process.env.NOTION_TOKEN / NOTION_DATA_SOURCE_ID を自動で読み取る。
- * createCloudflareCMS() と対称的なインターフェース。
+ * Node.js 向け CMS ファクトリ。
+ * `nhc generate` で生成した `nhcSchema` を渡すと、各ソースに対応する
+ * `CMS` インスタンスのマップを返す。
+ *
+ * @example
+ * const client = createNodeCMS({ schema: nhcSchema });
+ * const posts = await client.posts.list();
  */
-export function createNodeCMS<T extends BaseContentItem = BaseContentItem>(
-	opts?: NodeCMSOptions<T>,
-): ReturnType<typeof createCMS<T>> {
-	const token = process.env.NOTION_TOKEN;
-	const dataSourceId = process.env.NOTION_DATA_SOURCE_ID;
-	const dbName = process.env.DB_NAME ?? process.env.NOTION_DB_NAME;
+export function createNodeCMS<S extends NHCSchema>(
+	opts: CreateNodeCMSOptions<S>,
+): CMSMap<S> {
+	const token = opts.token ?? process.env.NOTION_TOKEN;
 	if (!token) {
 		throw new CMSError({
 			code: "core/config_invalid",
@@ -68,120 +79,16 @@ export function createNodeCMS<T extends BaseContentItem = BaseContentItem>(
 			context: { operation: "createNodeCMS", envVar: "NOTION_TOKEN" },
 		});
 	}
-	if (!dataSourceId && !dbName) {
-		throw new CMSError({
-			code: "core/config_invalid",
-			message:
-				"NOTION_DATA_SOURCE_ID (または DB_NAME) 環境変数が設定されていません",
-			context: {
-				operation: "createNodeCMS",
-				envVar: "NOTION_DATA_SOURCE_ID",
-			},
-		});
-	}
-
-	const schema = opts?.schema;
-	const notionSchema = schema && isNotionSchema(schema) ? schema : undefined;
-	const cmsSchema = schema && !isNotionSchema(schema) ? schema : undefined;
-
-	const source = notionAdapter<T>({
-		token,
-		dataSourceId,
-		dbName: dataSourceId ? undefined : dbName,
-		schema: notionSchema,
-	});
-
-	const cmsOpts: CreateCMSOptions<T> = {
-		source,
-		renderer: renderMarkdown,
-		schema: cmsSchema,
-		content: opts?.content,
-		cache: resolveCacheConfig<T>(opts?.cache),
-	};
-
-	return createCMS<T>(cmsOpts);
-}
-
-// ── Multi-Source ──────────────────────────────────────────────────────────────
-
-/** nhcSchema の各エントリの型。generateSchema() が生成するオブジェクトと対応する。 */
-export interface MultiSourceEntry<T extends BaseContentItem = BaseContentItem> {
-	id: string;
-	dbName: string;
-	schema?: NotionSchema<T>;
-}
-
-export type MultiSourceSchema = Record<
-	string,
-	MultiSourceEntry<BaseContentItem>
->;
-
-type InferSourceItem<E> =
-	E extends MultiSourceEntry<infer T> ? T : BaseContentItem;
-
-export type MultiCMSResult<S extends MultiSourceSchema> = {
-	[K in keyof S]: ReturnType<typeof createCMS<InferSourceItem<S[K]>>>;
-};
-
-/** ソースごとの公開ステータス設定。nhc generate で生成したファイルを編集せずに差し込める。 */
-export interface SourceStatusConfig {
-	/** 公開済みとみなすステータス値。未指定時は全件返す。 */
-	published?: string[];
-	/** アクセス可能とみなすステータス値。未指定時は published と同じ。 */
-	accessible?: string[];
-}
-
-export interface CreateNodeMultiCMSOptions<S extends MultiSourceSchema> {
-	/** nhcSchema（nhc generate で生成されたオブジェクト） */
-	schema: S;
-	/**
-	 * ソースごとの公開ステータス設定。
-	 * 生成ファイルを編集せずに published / accessible を差し込む。
-	 *
-	 * @example
-	 * sources: {
-	 *   posts: { published: ["公開"], accessible: ["公開", "下書き"] },
-	 *   news:  { published: ["掲載中"] },
-	 * }
-	 */
-	sources?: { [K in keyof S]?: SourceStatusConfig };
-	/** Notion API トークン（省略時は process.env.NOTION_TOKEN を使用） */
-	token?: string;
-	cache?: NodeCMSOptions["cache"];
-	content?: ContentConfig;
-}
-
-/**
- * マルチソース向け Node.js CMS ファクトリ。
- * nhc generate で生成した nhcSchema を渡すと、各ソースに対応する CMS インスタンスを返す。
- *
- * @example
- * const client = createNodeMultiCMS({ schema: nhcSchema })
- * const posts = await client.posts.list()
- */
-export function createNodeMultiCMS<S extends MultiSourceSchema>(
-	opts: CreateNodeMultiCMSOptions<S>,
-): MultiCMSResult<S> {
-	const token = opts.token ?? process.env.NOTION_TOKEN;
-	if (!token) {
-		throw new CMSError({
-			code: "core/config_invalid",
-			message: "NOTION_TOKEN environment variable is not set",
-			context: { operation: "createNodeMultiCMS", envVar: "NOTION_TOKEN" },
-		});
-	}
 
 	const cacheConfig = resolveCacheConfig(opts.cache);
-	const result = {} as MultiCMSResult<S>;
+	const result = {} as CMSMap<S>;
 
 	for (const key of Object.keys(opts.schema) as (keyof S & string)[]) {
-		const entry = opts.schema[key] as MultiSourceEntry<BaseContentItem>;
+		const entry = opts.schema[key] as SourceEntry<BaseContentItem>;
 		const statusConfig = opts.sources?.[key];
-		const source = notionAdapter({
-			token,
-			dataSourceId: entry.id,
-			schema: entry.schema,
-		});
+		const source = entry.schema
+			? notionAdapter({ token, dataSourceId: entry.id, schema: entry.schema })
+			: notionAdapter({ token, dataSourceId: entry.id });
 		(result as Record<string, unknown>)[key] = createCMS({
 			source,
 			renderer: renderMarkdown,

@@ -69,8 +69,8 @@ packages/
   renderer/               # Markdown → HTML レンダリング（unified）
   cache-r2/               # Cloudflare R2 キャッシュアダプタ（R2BucketLike）
   cache-next/             # Next.js ISR キャッシュアダプタ
-  adapter-cloudflare/     # createCloudflareCMS() ファクトリ
-  adapter-node/           # createNodeCMS() ファクトリ
+  adapter-cloudflare/     # createCloudflareCMS() ファクトリ（nhcSchema を受け取り各ソースの CMS マップを返す）
+  adapter-node/           # createNodeCMS() ファクトリ（nhcSchema を受け取り各ソースの CMS マップを返す）
   adapter-next/           # Next.js 用ルートハンドラ
 
 examples/                 # フレームワーク別の動作例

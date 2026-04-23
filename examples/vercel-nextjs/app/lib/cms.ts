@@ -8,7 +8,7 @@ export type BlogPost = PostsItem;
 const { posts } = nhcSchema;
 
 export const cms = createCMS<BlogPost>({
-	source: notionAdapter<BlogPost>({
+	source: notionAdapter({
 		token: process.env.NOTION_TOKEN!,
 		dataSourceId: posts.id,
 		schema: posts.schema,

@@ -21,9 +21,7 @@ const DEFAULT_PROPERTIES: Required<CMSSchemaProperties> = {
 	date: "CreatedAt",
 };
 
-export interface NotionAdapterOptions<
-	T extends BaseContentItem = BaseContentItem,
-> {
+interface NotionAdapterCommonOptions {
 	/** Notion API 認証トークン。 */
 	token: string;
 	/**
@@ -36,20 +34,34 @@ export interface NotionAdapterOptions<
 	 * 最初の API 呼び出し時に `client.search` で解決される（結果はキャッシュされる）。
 	 */
 	dbName?: string;
-	/** Notionプロパティ名マッピング。 */
-	properties?: CMSSchemaProperties;
-	/**
-	 * Notionページをコンテンツ型 T にマッピングするカスタム関数。
-	 * T が BaseContentItem を拡張したカスタム型の場合は必ず指定するか、
-	 * 代わりに `schema` を指定すること。指定しない場合、デフォルトマッパーは
-	 * BaseContentItem のフィールドのみ返し、T 固有フィールドは undefined となる。
-	 */
-	mapItem?: (page: NotionPage) => T;
 	/** カスタムブロックハンドラーのマップ。 */
 	blocks?: Record<string, BlockHandler>;
-	/** 宣言的スキーマ定義。指定時は properties / mapItem より優先される。 */
-	schema?: NotionSchema<T>;
 }
+
+/** デフォルトマッパー利用時（T = BaseContentItem）の入力。 */
+export interface NotionAdapterDefaultOptions
+	extends NotionAdapterCommonOptions {
+	/** Notionプロパティ名マッピング。 */
+	properties?: CMSSchemaProperties;
+}
+
+/** カスタム `mapItem` で任意の T に写像するときの入力。 */
+export interface NotionAdapterMapItemOptions<T extends BaseContentItem>
+	extends NotionAdapterCommonOptions {
+	properties?: CMSSchemaProperties;
+	mapItem: (page: NotionPage) => T;
+}
+
+/** 宣言的スキーマ（`defineSchema()`）で任意の T に写像するときの入力。 */
+export interface NotionAdapterSchemaOptions<T extends BaseContentItem>
+	extends NotionAdapterCommonOptions {
+	schema: NotionSchema<T>;
+}
+
+export type NotionAdapterOptions<T extends BaseContentItem = BaseContentItem> =
+	| NotionAdapterDefaultOptions
+	| NotionAdapterMapItemOptions<T>
+	| NotionAdapterSchemaOptions<T>;
 
 /** Notion を DataSourceAdapter として実装するアダプタ。 */
 class NotionAdapter<T extends BaseContentItem = BaseContentItem>
@@ -80,26 +92,31 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 		this.dbName = opts.dbName;
 		this.blocksConfig = opts.blocks;
 
-		if (opts.schema) {
+		if ("schema" in opts && opts.schema) {
 			this.itemMapper = opts.schema.mapItem;
 			this.publishedStatuses = opts.schema.publishedStatuses;
 			this.accessibleStatuses = opts.schema.accessibleStatuses;
-			// schema 経由でも slug プロパティ名を取得（mapping.slug.notion）
 			const slugField = (
 				opts.schema.mapping as Record<string, { notion: string }>
 			).slug;
 			this.slugPropName = slugField?.notion ?? DEFAULT_PROPERTIES.slug;
-		} else {
+		} else if ("mapItem" in opts && opts.mapItem) {
 			const props: Required<CMSSchemaProperties> = {
 				...DEFAULT_PROPERTIES,
 				...opts.properties,
 			};
 			this.slugPropName = props.slug;
-			if (opts.mapItem) {
-				this.itemMapper = opts.mapItem;
-			} else {
-				this.itemMapper = (page) => mapItem(page, props) as unknown as T;
-			}
+			this.itemMapper = opts.mapItem;
+		} else {
+			const props: Required<CMSSchemaProperties> = {
+				...DEFAULT_PROPERTIES,
+				...("properties" in opts ? opts.properties : undefined),
+			};
+			this.slugPropName = props.slug;
+			// この分岐はファクトリのオーバーロードにより T = BaseContentItem が保証される。
+			this.itemMapper = ((page: NotionPage) => mapItem(page, props)) as (
+				page: NotionPage,
+			) => T;
 		}
 	}
 
@@ -120,7 +137,6 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 				query: dbName,
 				filter: { property: "object", value: "data_source" },
 			});
-			// 完全一致を優先
 			for (const result of response.results) {
 				if (result.object !== "data_source") continue;
 				const ds = result as { id: string; title?: { plain_text: string }[] };
@@ -130,7 +146,6 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 					return ds.id;
 				}
 			}
-			// フォールバック: 検索結果の先頭
 			const first = response.results.find((r) => r.object === "data_source") as
 				| { id: string }
 				| undefined;
@@ -233,7 +248,18 @@ class NotionAdapter<T extends BaseContentItem = BaseContentItem>
 	}
 }
 
-/** Notion DataSourceAdapter を生成するファクトリ関数。 */
+/** デフォルトマッパーで `BaseContentItem` を返す Notion アダプタを生成する。 */
+export function notionAdapter(
+	opts: NotionAdapterDefaultOptions,
+): DataSourceAdapter<BaseContentItem>;
+/** カスタム `mapItem` で任意の `T` に写像するアダプタを生成する。 */
+export function notionAdapter<T extends BaseContentItem>(
+	opts: NotionAdapterMapItemOptions<T>,
+): DataSourceAdapter<T>;
+/** 宣言的 `schema` で任意の `T` に写像するアダプタを生成する。 */
+export function notionAdapter<T extends BaseContentItem>(
+	opts: NotionAdapterSchemaOptions<T>,
+): DataSourceAdapter<T>;
 export function notionAdapter<T extends BaseContentItem = BaseContentItem>(
 	opts: NotionAdapterOptions<T>,
 ): DataSourceAdapter<T> {

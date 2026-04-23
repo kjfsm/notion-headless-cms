@@ -71,13 +71,11 @@ Notion DB を introspect して TypeScript スキーマを自動生成する CLI
 
 #### [`@notion-headless-cms/adapter-cloudflare`](./packages/adapter-cloudflare)
 Cloudflare Workers 向けファクトリ。`env.CACHE_BUCKET`（R2）を自動で `DocumentCacheAdapter` / `ImageCacheAdapter` に変換して注入する。
-- `createCloudflareCMS({ env, schema?, content?, ttlMs? })` — `env.CACHE_BUCKET` 未設定時はキャッシュなしで動作
-- `createCloudflareCMSMulti({ schema, env, ttlMs?, content? })` — `nhcSchema` から複数ソースの CMS クライアントを生成
+- `createCloudflareCMS({ schema, env, sources?, content?, ttlMs? })` — `nhc generate` が生成した `nhcSchema` を受け取り、ソース名でアクセスできる CMS マップを返す。`env.CACHE_BUCKET` 未設定時はキャッシュなしで動作
 
 #### [`@notion-headless-cms/adapter-node`](./packages/adapter-node)
-Node.js 向けファクトリ。`process.env.NOTION_TOKEN` / `NOTION_DATA_SOURCE_ID` を読み取り、オプションでインメモリキャッシュを注入する。
-- `createNodeCMS({ schema?, content?, cache? })` — `cache: "disabled" | { document?: "memory"; image?: "memory"; ttlMs? }`
-- `createNodeMultiCMS({ schema, token?, cache?, content? })` — `nhcSchema` から複数ソースの CMS クライアントを生成
+Node.js 向けファクトリ。`process.env.NOTION_TOKEN` を読み取り、オプションでインメモリキャッシュを注入する。
+- `createNodeCMS({ schema, sources?, token?, cache?, content? })` — `nhcSchema` を受け取り各ソースに対応する CMS マップを返す。`cache: "disabled" | { document?: "memory"; image?: "memory"; ttlMs? }`
 
 #### [`@notion-headless-cms/adapter-next`](./packages/adapter-next)
 Next.js App Router 向けルートハンドラー。画像プロキシ配信と Notion Webhook によるキャッシュ再検証を提供する。
@@ -112,12 +110,12 @@ Next.js の `unstable_cache` / `revalidateTag` を利用した `DocumentCacheAda
 
 ## クイックスタート（Node.js）
 
-Notion トークンとデータベース ID があれば、Node.js スクリプトとして最小構成で動かせる。
+Notion トークンを設定し、`nhc init` / `nhc generate` で `nhcSchema` を出力したら Node.js スクリプトとして最小構成で動かせる。
 
 ### インストール
 
 ```bash
-npm install @notion-headless-cms/adapter-node
+npm install @notion-headless-cms/adapter-node @notion-headless-cms/cli
 ```
 
 `adapter-node` は内部で `core` / `source-notion` / `renderer` を依存に含むため、個別インストールは不要。
@@ -127,25 +125,29 @@ npm install @notion-headless-cms/adapter-node
 ```ts
 // fetch-posts.ts
 import { createNodeCMS } from "@notion-headless-cms/adapter-node";
+import { nhcSchema } from "./generated/nhc-schema";
 
-const cms = createNodeCMS({
-  schema: { publishedStatuses: ["公開"] },
+const client = createNodeCMS({
+  schema: nhcSchema,
+  sources: {
+    posts: { published: ["公開"] },
+  },
 });
 
 // 記事一覧を取得
-const posts = await cms.list();
+const posts = await client.posts.list();
 console.log(posts);
 
 // スラッグから HTML を生成
-const post = await cms.find("my-first-post");
+const post = await client.posts.find("my-first-post");
 if (post) {
-  const rendered = await cms.render(post);
+  const rendered = await client.posts.render(post);
   console.log(rendered.html);
 }
 ```
 
 ```bash
-NOTION_TOKEN=xxx NOTION_DATA_SOURCE_ID=yyy npx tsx fetch-posts.ts
+NOTION_TOKEN=xxx npx tsx fetch-posts.ts
 ```
 
 > R2 キャッシュ不要のローカル開発・バッチ処理向け。
@@ -165,14 +167,18 @@ bucket_name = "nhc-example-cache"
 
 ```typescript
 import { createCloudflareCMS, type CloudflareCMSEnv } from "@notion-headless-cms/adapter-cloudflare";
+import { nhcSchema } from "./generated/nhc-schema";
 
 export default {
   async fetch(request: Request, env: CloudflareCMSEnv): Promise<Response> {
-    const cms = createCloudflareCMS({
+    const client = createCloudflareCMS({
+      schema: nhcSchema,
       env,
-      schema: {
-        publishedStatuses: ["公開"],
-        accessibleStatuses: ["公開", "下書き"],
+      sources: {
+        posts: {
+          published: ["公開"],
+          accessible: ["公開", "下書き"],
+        },
       },
       ttlMs: 5 * 60 * 1000,
     });
@@ -180,12 +186,12 @@ export default {
     const url = new URL(request.url);
 
     if (url.pathname === "/posts") {
-      const { items } = await cms.cache.read.list();
+      const { items } = await client.posts.cache.getList();
       return Response.json(items);
     }
 
     const slug = url.pathname.replace("/posts/", "");
-    const cached = await cms.cache.read.get(slug);
+    const cached = await client.posts.cache.get(slug);
     if (!cached) return new Response("Not Found", { status: 404 });
 
     return new Response(cached.html, {
@@ -199,7 +205,6 @@ export default {
 
 ```bash
 wrangler secret put NOTION_TOKEN
-wrangler secret put NOTION_DATA_SOURCE_ID
 ```
 
 ## 開発

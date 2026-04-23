@@ -1,12 +1,12 @@
-import type { CloudflareMultiCMSEnv } from "@notion-headless-cms/adapter-cloudflare";
-import { createCloudflareCMSMulti } from "@notion-headless-cms/adapter-cloudflare";
+import type { CloudflareCMSEnv } from "@notion-headless-cms/adapter-cloudflare";
+import { createCloudflareCMS } from "@notion-headless-cms/adapter-cloudflare";
 import { nhcSchema, type PostsItem } from "../generated/nhc-schema";
 
 export type { PostsItem as BlogPost };
-export type Env = CloudflareMultiCMSEnv;
+export type Env = CloudflareCMSEnv;
 
 export function createCMS(env: Env) {
-	const client = createCloudflareCMSMulti({
+	const client = createCloudflareCMS({
 		schema: nhcSchema,
 		env,
 		sources: {

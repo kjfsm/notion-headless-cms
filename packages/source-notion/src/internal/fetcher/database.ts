@@ -1,26 +1,22 @@
 import type { Client, PageObjectResponse } from "@notionhq/client";
+import { paginate } from "./pagination.js";
 
 /** Notionデータソースをカーソルページネーションで最後まで取得する。 */
 export async function queryAllPages(
 	client: Client,
 	dataSourceId: string,
 ): Promise<PageObjectResponse[]> {
-	const pages: PageObjectResponse[] = [];
-	let cursor: string | undefined;
-	let hasMore = true;
-
-	while (hasMore) {
+	return paginate<PageObjectResponse>(async (cursor) => {
 		const response = await client.dataSources.query({
 			data_source_id: dataSourceId,
 			start_cursor: cursor,
 		});
-
-		pages.push(...(response.results as PageObjectResponse[]));
-		hasMore = response.has_more;
-		cursor = response.next_cursor ?? undefined;
-	}
-
-	return pages;
+		return {
+			results: response.results as PageObjectResponse[],
+			has_more: response.has_more,
+			next_cursor: response.next_cursor,
+		};
+	});
 }
 
 /** スラッグプロパティで絞り込んでページを取得する。存在しない場合はnullを返す。 */
