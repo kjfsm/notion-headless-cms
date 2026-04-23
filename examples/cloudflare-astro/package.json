@@ -16,12 +16,12 @@
 		"@notion-headless-cms/adapter-cloudflare": "workspace:*",
 		"@notion-headless-cms/core": "workspace:*",
 		"@notion-headless-cms/source-notion": "workspace:*",
-		"astro": "^6.1.8",
+		"astro": "^6.1.9",
 		"zod": "^4.3.6"
 	},
 	"devDependencies": {
 		"@astrojs/check": "^0.9.8",
-		"@astrojs/cloudflare": "^13.1.10",
+		"@astrojs/cloudflare": "^13.2.0",
 		"@notion-headless-cms/cli": "workspace:*",
 		"@types/node": "^25.6.0",
 		"typescript": "^5.0.0",
