@@ -52,7 +52,7 @@
 		"@notion-headless-cms/core": "workspace:*",
 		"@notion-headless-cms/renderer": "workspace:*",
 		"@notion-headless-cms/source-notion": "workspace:*",
-		"@notionhq/client": "^5.18.0",
+		"@notionhq/client": "^5.20.0",
 		"rehype-stringify": "^10.0.1",
 		"remark-gfm": "^4.0.1",
 		"remark-parse": "^11.0.0",
