@@ -1,7 +1,6 @@
 ---
 "@notion-headless-cms/adapter-cloudflare": patch
 "@notion-headless-cms/adapter-node": patch
-"@notion-headless-cms/source-notion": patch
 "@notion-headless-cms/core": patch
 "@notion-headless-cms/cli": patch
 ---
