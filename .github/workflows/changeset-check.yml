@@ -12,8 +12,7 @@ jobs:
   changeset:
     runs-on: ubuntu-latest
     # ラベル `skip-changeset` が付いた PR はスキップ
-    #  if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changeset') }}
-    if: ${{ false }}
+    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changeset') }}
     steps:
       - uses: actions/checkout@v6
         with:

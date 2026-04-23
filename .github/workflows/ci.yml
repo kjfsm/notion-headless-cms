@@ -9,6 +9,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -32,11 +35,41 @@ jobs:
         with:
           node-version: "24.x"
           cache: "pnpm"
+      # ブランチ別にキャッシュを保存し、main にフォールバック
       - uses: actions/cache@v5
         with:
           path: .turbo
-          key: ${{ runner.os }}-turbo-${{ github.sha }}
+          key: ${{ runner.os }}-turbo-${{ github.ref }}-${{ github.sha }}
           restore-keys: |
+            ${{ runner.os }}-turbo-${{ github.ref }}-
+            ${{ runner.os }}-turbo-refs/heads/main-
             ${{ runner.os }}-turbo-
       - run: pnpm install --frozen-lockfile --prefer-offline
       - run: pnpm turbo build typecheck test --filter="./packages/*"
+
+  coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.x"
+          cache: "pnpm"
+      - uses: actions/cache@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.ref }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-${{ github.ref }}-
+            ${{ runner.os }}-turbo-refs/heads/main-
+            ${{ runner.os }}-turbo-
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - run: pnpm turbo build --filter="./packages/*"
+      - name: カバレッジ収集
+        run: pnpm turbo test --filter="./packages/*" -- --coverage
+      - uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: "**/coverage/lcov.info"
+          fail_ci_if_error: false

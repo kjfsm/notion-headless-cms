@@ -36,7 +36,8 @@
 	},
 	"scripts": {
 		"build": "tsdown src/index.ts --format esm --dts --sourcemap --out-dir dist",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run"
 	},
 	"publishConfig": {
 		"access": "public",
@@ -52,15 +53,15 @@
 		"@notion-headless-cms/core": "workspace:*",
 		"@notion-headless-cms/renderer": "workspace:*",
 		"@notion-headless-cms/notion-orm": "workspace:*",
-		"@notionhq/client": "^5.20.0",
-		"rehype-stringify": "^10.0.1",
-		"remark-gfm": "^4.0.1",
-		"remark-parse": "^11.0.0",
-		"remark-rehype": "^11.1.2",
-		"unified": "^11.0.5",
-		"zod": "^4.0.0"
+		"@notionhq/client": "catalog:",
+		"rehype-stringify": "catalog:",
+		"remark-gfm": "catalog:",
+		"remark-parse": "catalog:",
+		"remark-rehype": "catalog:",
+		"unified": "catalog:",
+		"zod": "catalog:"
 	},
 	"devDependencies": {
-		"@types/node": "^25.6.0"
+		"@types/node": "catalog:"
 	}
 }

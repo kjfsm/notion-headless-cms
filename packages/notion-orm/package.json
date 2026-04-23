@@ -50,7 +50,7 @@
 		"zod": "^4.0.0"
 	},
 	"devDependencies": {
-		"@notionhq/client": "^5.20.0",
-		"zod": "^4.1.12"
+		"@notionhq/client": "catalog:",
+		"zod": "catalog:"
 	}
 }

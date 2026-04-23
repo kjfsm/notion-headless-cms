@@ -55,13 +55,13 @@
 		"@notion-headless-cms/core": "workspace:*",
 		"@notion-headless-cms/renderer": "workspace:*",
 		"@notion-headless-cms/notion-orm": "workspace:*",
-		"@notionhq/client": "^5.20.0",
-		"rehype-stringify": "^10.0.1",
-		"remark-gfm": "^4.0.1",
-		"remark-parse": "^11.0.0",
-		"remark-rehype": "^11.1.2",
-		"unified": "^11.0.5",
-		"zod": "^4.0.0"
+		"@notionhq/client": "catalog:",
+		"rehype-stringify": "catalog:",
+		"remark-gfm": "catalog:",
+		"remark-parse": "catalog:",
+		"remark-rehype": "catalog:",
+		"unified": "catalog:",
+		"zod": "catalog:"
 	},
 	"peerDependencies": {
 		"@cloudflare/workers-types": ">=4.0.0"
@@ -72,6 +72,6 @@
 		}
 	},
 	"devDependencies": {
-		"@cloudflare/workers-types": "^4.20260423.1"
+		"@cloudflare/workers-types": "catalog:"
 	}
 }
