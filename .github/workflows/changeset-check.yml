@@ -11,21 +11,35 @@ concurrency:
 jobs:
   changeset:
     runs-on: ubuntu-latest
-    # ラベル `skip-changeset` が付いた PR はスキップ
-    if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changeset') }}
     steps:
+      # ラベル `skip-changeset` が付いた PR は後続ステップをスキップ
+      # ジョブ全体を if でスキップすると "skipped" になりブランチ保護を通過できないため
+      # ジョブは常に実行し、ステップレベルで制御する
+      - name: スキップ判定
+        id: skip
+        run: |
+          echo "result=${{ contains(github.event.pull_request.labels.*.name, 'skip-changeset') }}" >> $GITHUB_OUTPUT
+
       - uses: actions/checkout@v6
+        if: steps.skip.outputs.result == 'false'
         with:
           # changeset の差分判定に必要
           fetch-depth: 0
+
       - uses: pnpm/action-setup@v6
+        if: steps.skip.outputs.result == 'false'
+
       - uses: actions/setup-node@v6
+        if: steps.skip.outputs.result == 'false'
         with:
           node-version: "24.x"
           cache: "pnpm"
+
       - run: pnpm install --frozen-lockfile --prefer-offline
+        if: steps.skip.outputs.result == 'false'
 
       - name: changeset 有無を確認
+        if: steps.skip.outputs.result == 'false'
         run: |
           # packages/** に変更があるのに changeset が 0 件なら失敗させる
           changed_pkg=$(git diff --name-only origin/main...HEAD -- 'packages/*/src/**' 'packages/*/package.json' || true)
