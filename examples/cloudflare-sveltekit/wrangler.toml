@@ -10,8 +10,7 @@ enabled = true
 
 [[kv_namespaces]]
 binding = "CACHE_KV"
-# id はデプロイ前に追加する: wrangler kv namespace create nhc-cache
-# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+id = "d949487218794cbe8e8d3cdaee119790"
 
 [[r2_buckets]]
 binding = "CACHE_BUCKET"
