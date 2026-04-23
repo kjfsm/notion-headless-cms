@@ -39,6 +39,4 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-turbo-
       - run: pnpm install --frozen-lockfile --prefer-offline
-      - run: pnpm build
-      - run: pnpm typecheck
-      - run: pnpm test
+      - run: pnpm turbo build typecheck test --filter="./packages/*"
