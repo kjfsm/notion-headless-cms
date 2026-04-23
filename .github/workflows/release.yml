@@ -21,9 +21,8 @@ jobs:
         with:
           fetch-depth: 0
 
+      # pnpm のバージョンは package.json の packageManager フィールドから自動検出させる
       - uses: pnpm/action-setup@v5
-        with:
-          version: "10.33.0"
 
       - uses: actions/setup-node@v5
         with:
@@ -32,12 +31,15 @@ jobs:
           cache: "pnpm"
 
       - run: pnpm install --frozen-lockfile
+      # publish 時に dist が必要なので build のみ実施。typecheck / test は CI で通過済み前提
       - run: pnpm build
-      - run: pnpm typecheck
-      - run: pnpm test
+
       - name: バージョン更新PRの作成 または npm 公開
         uses: changesets/action@v1
         with:
           publish: "pnpm release"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          # npm provenance を有効化（permissions.id-token: write と連動）
+          NPM_CONFIG_PROVENANCE: "true"

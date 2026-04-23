@@ -40,7 +40,7 @@ Notion API クライアントと Notion ブロック→Markdown 変換器は `so
 | リンター/フォーマッター | Biome |
 | パッケージ管理 | pnpm ワークスペース |
 | リリース | changesets |
-| CI | GitHub Actions（Node 24.x / 25.x マトリクス） |
+| CI | GitHub Actions（Node 24.x） |
 
 ## ディレクトリ構成
 

@@ -57,28 +57,7 @@
 	},
 	"publishConfig": {
 		"access": "public",
-		"exports": {
-			".": {
-				"import": "./dist/index.js",
-				"types": "./dist/index.d.ts"
-			},
-			"./errors": {
-				"import": "./dist/errors.js",
-				"types": "./dist/errors.d.ts"
-			},
-			"./hooks": {
-				"import": "./dist/hooks.js",
-				"types": "./dist/hooks.d.ts"
-			},
-			"./cache/memory": {
-				"import": "./dist/cache/memory.js",
-				"types": "./dist/cache/memory.d.ts"
-			},
-			"./cache/noop": {
-				"import": "./dist/cache/noop.js",
-				"types": "./dist/cache/noop.d.ts"
-			}
-		}
+		"provenance": true
 	},
 	"peerDependencies": {
 		"@notion-headless-cms/renderer": "workspace:*"
