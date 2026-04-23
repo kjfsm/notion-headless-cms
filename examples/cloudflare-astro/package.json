@@ -24,7 +24,7 @@
 		"@astrojs/cloudflare": "^13.2.0",
 		"@notion-headless-cms/cli": "workspace:*",
 		"@types/node": "^25.6.0",
-		"typescript": "^5.0.0",
+		"typescript": "^6.0.3",
 		"wrangler": "^4.84.1"
 	}
 }
