@@ -38,7 +38,8 @@
 	},
 	"scripts": {
 		"build": "tsdown src/index.ts --format esm --dts --sourcemap --out-dir dist",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run"
 	},
 	"publishConfig": {
 		"access": "public",
