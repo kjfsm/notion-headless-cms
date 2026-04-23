@@ -327,6 +327,9 @@ importers:
 
   packages/adapter-cloudflare:
     dependencies:
+      '@notion-headless-cms/cache-kv':
+        specifier: workspace:*
+        version: link:../cache-kv
       '@notion-headless-cms/cache-r2':
         specifier: workspace:*
         version: link:../cache-r2
@@ -410,6 +413,16 @@ importers:
       '@types/node':
         specifier: ^25.6.0
         version: 25.6.0
+
+  packages/cache-kv:
+    dependencies:
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../core
+    devDependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20260423.1
+        version: 4.20260423.1
 
   packages/cache-next:
     dependencies:

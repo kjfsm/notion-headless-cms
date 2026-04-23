@@ -4,6 +4,7 @@ export default defineWorkspace([
 	"packages/core",
 	"packages/renderer",
 	"packages/source-notion",
+	"packages/cache-kv",
 	"packages/cache-next",
 	"packages/cache-r2",
 	"packages/adapter-next",

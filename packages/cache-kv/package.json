@@ -1,14 +1,15 @@
 {
-	"name": "@notion-headless-cms/adapter-cloudflare",
-	"version": "0.2.0",
-	"description": "Cloudflare Workers adapter for notion-headless-cms — injects R2 storage and environment bindings",
+	"name": "@notion-headless-cms/cache-kv",
+	"version": "0.1.0",
+	"description": "Cloudflare KV StorageAdapter implementation for notion-headless-cms document cache layer",
 	"keywords": [
 		"notion",
 		"headless-cms",
 		"cloudflare",
-		"cloudflare-workers",
+		"cloudflare-kv",
+		"kv",
+		"cache",
 		"workers",
-		"adapter",
 		"typescript"
 	],
 	"license": "MIT",
@@ -19,7 +20,7 @@
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/kjfsm/notion-headless-cms.git",
-		"directory": "packages/adapter-cloudflare"
+		"directory": "packages/cache-kv"
 	},
 	"type": "module",
 	"sideEffects": false,
@@ -37,7 +38,8 @@
 	},
 	"scripts": {
 		"build": "tsdown src/index.ts --format esm --dts --sourcemap --out-dir dist",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run"
 	},
 	"publishConfig": {
 		"access": "public",
@@ -50,26 +52,7 @@
 		}
 	},
 	"dependencies": {
-		"@notion-headless-cms/cache-kv": "workspace:*",
-		"@notion-headless-cms/cache-r2": "workspace:*",
-		"@notion-headless-cms/core": "workspace:*",
-		"@notion-headless-cms/renderer": "workspace:*",
-		"@notion-headless-cms/notion-orm": "workspace:*",
-		"@notionhq/client": "^5.20.0",
-		"rehype-stringify": "^10.0.1",
-		"remark-gfm": "^4.0.1",
-		"remark-parse": "^11.0.0",
-		"remark-rehype": "^11.1.2",
-		"unified": "^11.0.5",
-		"zod": "^4.0.0"
-	},
-	"peerDependencies": {
-		"@cloudflare/workers-types": ">=4.0.0"
-	},
-	"peerDependenciesMeta": {
-		"@cloudflare/workers-types": {
-			"optional": true
-		}
+		"@notion-headless-cms/core": "workspace:*"
 	},
 	"devDependencies": {
 		"@cloudflare/workers-types": "^4.20260423.1"

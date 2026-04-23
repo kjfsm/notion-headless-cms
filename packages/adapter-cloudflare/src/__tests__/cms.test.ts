@@ -1,3 +1,4 @@
+import type { KVNamespaceLike } from "@notion-headless-cms/cache-kv";
 import type { R2BucketLike, R2ObjectLike } from "@notion-headless-cms/cache-r2";
 import type { DataSource } from "@notion-headless-cms/core";
 import { describe, expect, it, vi } from "vitest";
@@ -27,6 +28,18 @@ function makeStubDataSource(): DataSource {
 	};
 }
 
+function makeMockKV(): KVNamespaceLike {
+	const store = new Map<string, string>();
+	return {
+		get: vi.fn().mockImplementation(async (key: string, _type: "text") => {
+			return store.get(key) ?? null;
+		}),
+		put: vi.fn().mockImplementation(async (key: string, value: string) => {
+			store.set(key, value);
+		}),
+	};
+}
+
 function makeR2ObjectLike(data: unknown): R2ObjectLike {
 	return {
 		json: vi.fn().mockResolvedValue(data),
@@ -53,7 +66,7 @@ function makeMockBucket(): R2BucketLike {
 describe("createCloudflareCMS", () => {
 	const baseEnv = { NOTION_TOKEN: "mock-token" };
 
-	it("CACHE_BUCKET なしでコレクション別クライアントを作成できる", () => {
+	it("CACHE_KV も CACHE_BUCKET もなしでコレクション別クライアントを作成できる", () => {
 		const cms = createCloudflareCMS({
 			dataSources: { posts: makeStubDataSource() },
 			env: baseEnv,
@@ -62,8 +75,31 @@ describe("createCloudflareCMS", () => {
 		expect(typeof cms.posts.getList).toBe("function");
 	});
 
-	it("CACHE_BUCKET ありでキャッシュ付きクライアントを作成できる", () => {
+	it("CACHE_KV ありでキャッシュ付きクライアントを作成できる", () => {
+		const env = { ...baseEnv, CACHE_KV: makeMockKV() };
+		const cms = createCloudflareCMS({
+			dataSources: { posts: makeStubDataSource() },
+			env,
+		});
+		expect(typeof cms.$revalidate).toBe("function");
+		expect(typeof cms.$handler).toBe("function");
+	});
+
+	it("CACHE_BUCKET ありで画像キャッシュ付きクライアントを作成できる", () => {
 		const env = { ...baseEnv, CACHE_BUCKET: makeMockBucket() };
+		const cms = createCloudflareCMS({
+			dataSources: { posts: makeStubDataSource() },
+			env,
+		});
+		expect(typeof cms.$revalidate).toBe("function");
+	});
+
+	it("CACHE_KV と CACHE_BUCKET の両方でキャッシュ付きクライアントを作成できる", () => {
+		const env = {
+			...baseEnv,
+			CACHE_KV: makeMockKV(),
+			CACHE_BUCKET: makeMockBucket(),
+		};
 		const cms = createCloudflareCMS({
 			dataSources: { posts: makeStubDataSource() },
 			env,
@@ -83,7 +119,7 @@ describe("createCloudflareCMS", () => {
 	});
 
 	it("ttlMs オプションを指定できる", () => {
-		const env = { ...baseEnv, CACHE_BUCKET: makeMockBucket() };
+		const env = { ...baseEnv, CACHE_KV: makeMockKV() };
 		const cms = createCloudflareCMS({
 			dataSources: { posts: makeStubDataSource() },
 			env,
