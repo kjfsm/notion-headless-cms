@@ -10,8 +10,8 @@ enabled = true
 
 [[kv_namespaces]]
 binding = "CACHE_KV"
-id = "replace-with-your-kv-namespace-id"
-preview_id = "replace-with-your-kv-namespace-preview-id"
+# id はデプロイ前に追加する: wrangler kv namespace create nhc-cache
+# id = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
 
 [[r2_buckets]]
 binding = "CACHE_BUCKET"
