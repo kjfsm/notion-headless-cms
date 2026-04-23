@@ -4,9 +4,10 @@
 	"version": "0.0.4",
 	"type": "module",
 	"scripts": {
-		"dev": "nhc generate && tsx watch src/index.ts",
+		"dev": "tsx watch src/index.ts",
 		"start": "node dist/index.js",
-		"build": "nhc generate && tsc",
+		"build": "tsc",
+		"generate": "nhc generate",
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {

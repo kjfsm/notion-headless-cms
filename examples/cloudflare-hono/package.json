@@ -5,9 +5,9 @@
 	"type": "module",
 	"scripts": {
 		"cf-typegen": "wrangler types",
-		"build": "nhc generate",
-		"deploy": "npm run build && wrangler deploy",
-		"dev": "nhc generate && wrangler dev",
+		"deploy": "wrangler deploy",
+		"dev": "wrangler dev",
+		"generate": "nhc generate",
 		"typecheck": "npm run cf-typegen && tsc -b"
 	},
 	"dependencies": {

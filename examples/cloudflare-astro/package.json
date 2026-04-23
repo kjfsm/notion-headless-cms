@@ -5,12 +5,13 @@
 	"type": "module",
 	"scripts": {
 		"astro": "astro",
-		"build": "nhc generate && astro build",
+		"build": "astro build",
 		"cf-typegen": "wrangler types",
-		"check": "nhc generate && astro build && tsc && wrangler deploy --dry-run",
+		"check": "astro build && tsc && wrangler deploy --dry-run",
 		"deploy": "wrangler deploy",
-		"dev": "nhc generate && astro dev",
-		"preview": "nhc generate && astro build && wrangler dev"
+		"dev": "astro dev",
+		"generate": "nhc generate",
+		"preview": "astro build && wrangler dev"
 	},
 	"dependencies": {
 		"@notion-headless-cms/adapter-cloudflare": "workspace:*",

@@ -12,6 +12,11 @@
 		"test": {
 			"dependsOn": ["^build"],
 			"outputs": []
+		},
+		"generate": {
+			"dependsOn": ["@notion-headless-cms/cli#build"],
+			"inputs": ["nhc.config.ts"],
+			"outputs": ["src/generated/**", "app/generated/**"]
 		}
 	}
 }

@@ -4,10 +4,11 @@
 	"version": "0.0.0",
 	"type": "module",
 	"scripts": {
-		"dev": "nhc generate && tsx watch src/index.ts",
+		"dev": "tsx watch src/index.ts",
 		"start": "node dist/index.js",
-		"build": "nhc generate && tsc",
-		"typecheck": "nhc generate && tsc --noEmit"
+		"build": "tsc",
+		"generate": "nhc generate",
+		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
 		"@hono/node-server": "^1.14.0",
