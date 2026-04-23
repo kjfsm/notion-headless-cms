@@ -57,7 +57,8 @@ jobs:
               echo "::group::attw $pkg"
               (cd "$pkg" && pnpm pack --pack-destination /tmp/attw > /dev/null)
               pkg_tgz=$(ls -t /tmp/attw/*.tgz | head -1)
-              pnpm dlx @arethetypeswrong/cli --pack "$pkg_tgz" --profile node16 --format table || exit 1
+              # 全パッケージが pure ESM (type: module, CJS ビルド無し) なので esm-only プロファイルを使う
+              pnpm dlx @arethetypeswrong/cli --pack "$pkg_tgz" --profile esm-only --format table || exit 1
               rm -f "$pkg_tgz"
               echo "::endgroup::"
             fi
