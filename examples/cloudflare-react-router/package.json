@@ -15,9 +15,10 @@
 		"typecheck": "pnpm run cf-typegen && tsc -b"
 	},
 	"dependencies": {
-		"@notion-headless-cms/adapter-cloudflare": "workspace:*",
+		"@notion-headless-cms/cache-r2": "workspace:*",
 		"@notion-headless-cms/core": "workspace:*",
 		"@notion-headless-cms/notion-orm": "workspace:*",
+		"@notion-headless-cms/renderer": "workspace:*",
 		"@react-router/cloudflare": "^7.14.2",
 		"dotenv": "^17.4.2",
 		"react": "^19.2.5",

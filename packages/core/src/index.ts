@@ -30,9 +30,10 @@ export { CMSError, isCMSError, isCMSErrorInNamespace } from "./errors";
 export type { HandlerAdapter, HandlerOptions } from "./handler";
 // ── $handler ───────────────────────────────────────────────────────────
 export { createHandler } from "./handler";
-
 // ── フック・ロガー・プラグイン ────────────────────────────────────────
 export { mergeHooks, mergeLoggers } from "./hooks";
+export type { NodePresetOptions } from "./preset-node";
+export { nodePreset } from "./preset-node";
 
 // ── リトライ ───────────────────────────────────────────────────────────
 export type { RetryConfig } from "./retry";

@@ -1,0 +1,95 @@
+import type { KVNamespaceLike } from "@notion-headless-cms/cache-kv";
+import { kvCache } from "@notion-headless-cms/cache-kv";
+import {
+	type CacheConfig,
+	CMSError,
+	type CreateCMSOptions,
+} from "@notion-headless-cms/core";
+import { r2Cache } from "./r2-cache";
+import type { R2BucketLike } from "./types";
+
+/** `cloudflarePreset` が参照する env の最小構成。 */
+export interface CloudflarePresetEnv {
+	/** Notion API トークン (wrangler secret put で設定)。 */
+	NOTION_TOKEN?: string;
+	/** ドキュメントキャッシュ用 KV namespace (未設定時はキャッシュなし)。 */
+	DOC_CACHE?: KVNamespaceLike;
+	/** 画像キャッシュ用 R2 バケット (未設定時はキャッシュなし)。 */
+	IMG_BUCKET?: R2BucketLike;
+	/** 旧 binding 名 (CACHE_KV) も参照できるようにフォールバック。 */
+	CACHE_KV?: KVNamespaceLike;
+	/** 旧 binding 名 (CACHE_BUCKET) も参照できるようにフォールバック。 */
+	CACHE_BUCKET?: R2BucketLike;
+}
+
+/** `cloudflarePreset()` のオプション。 */
+export interface CloudflarePresetOptions {
+	/** Workers の `env` オブジェクト。 */
+	env: CloudflarePresetEnv;
+	/** SWR の TTL (ミリ秒)。未指定時は TTL なし。 */
+	ttlMs?: number;
+	/**
+	 * binding 名をカスタマイズする。既定は `{ docCache: "DOC_CACHE", imgBucket: "IMG_BUCKET" }`。
+	 * env のキー名をそのまま指定する。
+	 */
+	bindings?: {
+		docCache?: string;
+		imgBucket?: string;
+	};
+}
+
+/**
+ * Cloudflare Workers ランタイム向けの `createCMS` オプションプリセット。
+ * env の KV / R2 binding を自動で cache 層に注入する。
+ *
+ * @example
+ * import { createCMS } from "@notion-headless-cms/core";
+ * import { cloudflarePreset } from "@notion-headless-cms/cache-r2";
+ *
+ * export default {
+ *   async fetch(req, env) {
+ *     const cms = createCMS({
+ *       ...cloudflarePreset({ env }),
+ *       dataSources: cmsDataSources,
+ *     });
+ *   },
+ * };
+ *
+ * 既定の binding 名は `DOC_CACHE` (KV) と `IMG_BUCKET` (R2)。
+ * 旧 `CACHE_KV` / `CACHE_BUCKET` もフォールバックとして認識する。
+ */
+export function cloudflarePreset(
+	opts: CloudflarePresetOptions,
+): Pick<CreateCMSOptions, "cache"> {
+	const env = opts.env as Record<string, unknown>;
+	const docCacheKey = opts.bindings?.docCache ?? "DOC_CACHE";
+	const imgBucketKey = opts.bindings?.imgBucket ?? "IMG_BUCKET";
+
+	// 既定キー優先、旧キー (CACHE_KV / CACHE_BUCKET) はフォールバック
+	const kvBinding = (env[docCacheKey] ?? env.CACHE_KV) as
+		| KVNamespaceLike
+		| undefined;
+	const r2Binding = (env[imgBucketKey] ?? env.CACHE_BUCKET) as
+		| R2BucketLike
+		| undefined;
+
+	// NOTION_TOKEN は preset 側で事前チェック (DataSource 層で謎のエラーになるのを防ぐ)
+	if (!env.NOTION_TOKEN) {
+		throw new CMSError({
+			code: "core/config_invalid",
+			message:
+				"env.NOTION_TOKEN が設定されていません。wrangler secret put NOTION_TOKEN で設定してください。",
+			context: { operation: "cloudflarePreset", envVar: "NOTION_TOKEN" },
+		});
+	}
+
+	const documentCache = kvCache({ kv: kvBinding });
+	const imageCache = r2Cache({ bucket: r2Binding });
+
+	const cache: CacheConfig | undefined =
+		documentCache || imageCache
+			? { document: documentCache, image: imageCache, ttlMs: opts.ttlMs }
+			: undefined;
+
+	return { cache };
+}

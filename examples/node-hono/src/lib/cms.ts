@@ -1,4 +1,4 @@
-import { createNodeCMS } from "@notion-headless-cms/adapter-node";
+import { createCMS, nodePreset } from "@notion-headless-cms/core";
 import { nhcDataSources } from "../generated/nhc-schema.js";
 
 /**
@@ -7,11 +7,7 @@ import { nhcDataSources } from "../generated/nhc-schema.js";
  * 内部で notion-orm の createNotionCollection() が呼ばれているが、
  * ユーザーコードは一切 import していない。
  */
-export const cms = createNodeCMS({
+export const cms = createCMS({
+	...nodePreset({ ttlMs: 5 * 60_000 }),
 	dataSources: nhcDataSources,
-	cache: {
-		document: "memory",
-		image: "memory",
-		ttlMs: 5 * 60_000,
-	},
 });

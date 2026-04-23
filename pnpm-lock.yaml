@@ -29,15 +29,18 @@ importers:
 
   examples/cloudflare-astro:
     dependencies:
-      '@notion-headless-cms/adapter-cloudflare':
+      '@notion-headless-cms/cache-r2':
         specifier: workspace:*
-        version: link:../../packages/adapter-cloudflare
+        version: link:../../packages/cache-r2
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@notion-headless-cms/notion-orm':
         specifier: workspace:*
         version: link:../../packages/notion-orm
+      '@notion-headless-cms/renderer':
+        specifier: workspace:*
+        version: link:../../packages/renderer
       astro:
         specifier: ^6.1.9
         version: 6.1.9(@types/node@25.6.0)(jiti@2.6.1)(lightningcss@1.32.0)(rollup@4.60.2)(tsx@4.21.0)(typescript@6.0.3)(yaml@2.8.3)
@@ -69,15 +72,18 @@ importers:
 
   examples/cloudflare-hono:
     dependencies:
-      '@notion-headless-cms/adapter-cloudflare':
+      '@notion-headless-cms/cache-r2':
         specifier: workspace:*
-        version: link:../../packages/adapter-cloudflare
+        version: link:../../packages/cache-r2
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@notion-headless-cms/notion-orm':
         specifier: workspace:*
         version: link:../../packages/notion-orm
+      '@notion-headless-cms/renderer':
+        specifier: workspace:*
+        version: link:../../packages/renderer
       hono:
         specifier: ^4.12.14
         version: 4.12.14
@@ -100,15 +106,18 @@ importers:
 
   examples/cloudflare-react-router:
     dependencies:
-      '@notion-headless-cms/adapter-cloudflare':
+      '@notion-headless-cms/cache-r2':
         specifier: workspace:*
-        version: link:../../packages/adapter-cloudflare
+        version: link:../../packages/cache-r2
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@notion-headless-cms/notion-orm':
         specifier: workspace:*
         version: link:../../packages/notion-orm
+      '@notion-headless-cms/renderer':
+        specifier: workspace:*
+        version: link:../../packages/renderer
       '@react-router/cloudflare':
         specifier: ^7.14.2
         version: 7.14.2(@cloudflare/workers-types@4.20260423.1)(react-router@7.14.2(react-dom@19.2.5(react@19.2.5))(react@19.2.5))(typescript@6.0.3)
@@ -158,15 +167,18 @@ importers:
 
   examples/cloudflare-sveltekit:
     dependencies:
-      '@notion-headless-cms/adapter-cloudflare':
+      '@notion-headless-cms/cache-r2':
         specifier: workspace:*
-        version: link:../../packages/adapter-cloudflare
+        version: link:../../packages/cache-r2
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@notion-headless-cms/notion-orm':
         specifier: workspace:*
         version: link:../../packages/notion-orm
+      '@notion-headless-cms/renderer':
+        specifier: workspace:*
+        version: link:../../packages/renderer
       zod:
         specifier: ^4.1.12
         version: 4.3.6
@@ -204,15 +216,15 @@ importers:
 
   examples/node-express:
     dependencies:
-      '@notion-headless-cms/adapter-node':
-        specifier: workspace:*
-        version: link:../../packages/adapter-node
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@notion-headless-cms/notion-orm':
         specifier: workspace:*
         version: link:../../packages/notion-orm
+      '@notion-headless-cms/renderer':
+        specifier: workspace:*
+        version: link:../../packages/renderer
       express:
         specifier: ^5.2.1
         version: 5.2.1
@@ -244,15 +256,15 @@ importers:
       '@hono/node-server':
         specifier: ^1.14.0
         version: 1.19.14(hono@4.12.14)
-      '@notion-headless-cms/adapter-node':
-        specifier: workspace:*
-        version: link:../../packages/adapter-node
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@notion-headless-cms/notion-orm':
         specifier: workspace:*
         version: link:../../packages/notion-orm
+      '@notion-headless-cms/renderer':
+        specifier: workspace:*
+        version: link:../../packages/renderer
       hono:
         specifier: ^4.6.0
         version: 4.12.14
@@ -325,49 +337,6 @@ importers:
         specifier: ^6.0.3
         version: 6.0.3
 
-  packages/adapter-cloudflare:
-    dependencies:
-      '@notion-headless-cms/cache-kv':
-        specifier: workspace:*
-        version: link:../cache-kv
-      '@notion-headless-cms/cache-r2':
-        specifier: workspace:*
-        version: link:../cache-r2
-      '@notion-headless-cms/core':
-        specifier: workspace:*
-        version: link:../core
-      '@notion-headless-cms/notion-orm':
-        specifier: workspace:*
-        version: link:../notion-orm
-      '@notion-headless-cms/renderer':
-        specifier: workspace:*
-        version: link:../renderer
-      '@notionhq/client':
-        specifier: ^5.20.0
-        version: 5.20.0
-      rehype-stringify:
-        specifier: ^10.0.1
-        version: 10.0.1
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1
-      remark-parse:
-        specifier: ^11.0.0
-        version: 11.0.0
-      remark-rehype:
-        specifier: ^11.1.2
-        version: 11.1.2
-      unified:
-        specifier: ^11.0.5
-        version: 11.0.5
-      zod:
-        specifier: ^4.0.0
-        version: 4.3.6
-    devDependencies:
-      '@cloudflare/workers-types':
-        specifier: ^4.20260423.1
-        version: 4.20260423.1
-
   packages/adapter-next:
     dependencies:
       '@notion-headless-cms/core':
@@ -376,43 +345,6 @@ importers:
       next:
         specifier: '>=14.0.0'
         version: 15.5.15(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-
-  packages/adapter-node:
-    dependencies:
-      '@notion-headless-cms/core':
-        specifier: workspace:*
-        version: link:../core
-      '@notion-headless-cms/notion-orm':
-        specifier: workspace:*
-        version: link:../notion-orm
-      '@notion-headless-cms/renderer':
-        specifier: workspace:*
-        version: link:../renderer
-      '@notionhq/client':
-        specifier: ^5.20.0
-        version: 5.20.0
-      rehype-stringify:
-        specifier: ^10.0.1
-        version: 10.0.1
-      remark-gfm:
-        specifier: ^4.0.1
-        version: 4.0.1
-      remark-parse:
-        specifier: ^11.0.0
-        version: 11.0.0
-      remark-rehype:
-        specifier: ^11.1.2
-        version: 11.1.2
-      unified:
-        specifier: ^11.0.5
-        version: 11.0.5
-      zod:
-        specifier: ^4.0.0
-        version: 4.3.6
-    devDependencies:
-      '@types/node':
-        specifier: ^25.6.0
-        version: 25.6.0
 
   packages/cache-kv:
     dependencies:
@@ -435,6 +367,9 @@ importers:
 
   packages/cache-r2:
     dependencies:
+      '@notion-headless-cms/cache-kv':
+        specifier: workspace:*
+        version: link:../cache-kv
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core

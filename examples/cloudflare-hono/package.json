@@ -11,9 +11,10 @@
 		"typecheck": "npm run cf-typegen && tsc -b"
 	},
 	"dependencies": {
-		"@notion-headless-cms/adapter-cloudflare": "workspace:*",
+		"@notion-headless-cms/cache-r2": "workspace:*",
 		"@notion-headless-cms/core": "workspace:*",
 		"@notion-headless-cms/notion-orm": "workspace:*",
+		"@notion-headless-cms/renderer": "workspace:*",
 		"hono": "^4.12.14",
 		"zod": "^4.3.6"
 	},

@@ -46,6 +46,7 @@
 		"provenance": true
 	},
 	"dependencies": {
+		"@notion-headless-cms/cache-kv": "workspace:*",
 		"@notion-headless-cms/core": "workspace:*"
 	},
 	"devDependencies": {

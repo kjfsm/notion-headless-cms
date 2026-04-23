@@ -1,47 +1,31 @@
 ---
-description: adapter-* パッケージのファクトリ規約
+description: adapter-* パッケージ（フロントエンド連携）の規約
 paths:
-  - "packages/adapter-cloudflare/**"
-  - "packages/adapter-node/**"
   - "packages/adapter-next/**"
 ---
 
 # adapter-* パッケージ
 
-各ランタイム向けに CMS ファクトリを提供する層。`nhcSchema`（CLI が生成）を受け取り、ソース名でアクセスできる CMS マップを返す。
+**v0.3.0 から `adapter-*` は「フロントエンド / フレームワーク連携」に役割を限定した。**
+ランタイム差分（Node / Cloudflare）は `nodePreset` (core) / `cloudflarePreset` (cache-r2) で吸収する。
 
-## 共通方針
+## 歴史的経緯
 
-- ファクトリ関数名は `create<Runtime>CMS`
-- 第一引数は `{ schema: NhcSchema, ... }` を受け取る
-- 返り値はソース名ごとの `CMS` インスタンスのマップ（`client.posts.list()` のように使える）
-- `renderer` の自動注入（`renderMarkdown`）はアダプタの責務
-- 環境変数は**アダプタが読み込む**。`core` は `process.env` を直接触らない
-
-## adapter-cloudflare
-
-- `createCloudflareCMS({ schema, env, sources?, content?, ttlMs? })`
-- `env.CACHE_BUCKET`（R2）を自動で `r2Cache({ bucket })` に変換
-- `env.CACHE_BUCKET` 未設定時は `noopDocumentCache` / `noopImageCache` にフォールバック
-- `CloudflareCMSEnv` 型を公開
-
-## adapter-node
-
-- `createNodeCMS({ schema, sources?, token?, cache?, content? })`
-- `process.env.NOTION_TOKEN` を自動読み込み（`token` 未指定時）
-- `cache: "disabled" | { document?: "memory"; image?: "memory"; ttlMs? }`
-- 未設定時は `CMSError code: "core/config_invalid"`
+- v0.2.x までの `adapter-node` (`createNodeCMS`) / `adapter-cloudflare` (`createCloudflareCMS`) はランタイム別ファクトリとして存在していた
+- v0.3.0 でこれらは廃止。ユーザーは `createCMS({ ...nodePreset(), dataSources })` のように `createCMS` 一本で書く
+- 「adapter」は以後、Next.js / Astro など**フレームワーク側の作法に合わせた薄いグルー**を意味する
 
 ## adapter-next
 
 - Next.js App Router 向けのルートハンドラ群（ファクトリ関数ではなく handler を返す）
 - `createImageRouteHandler(cms)` — `/api/images/[hash]/route.ts` 用
 - `createRevalidateRouteHandler(cms, { secret })` — Webhook 受信用
-- ファクトリではないため `nhcSchema` は受け取らない
+- CMS インスタンスを受け取り、Next.js の `Route Handler` に適合する関数を返す
 
-## 新アダプタ追加時
+## 新 adapter 追加時（SvelteKit / Astro integration 等）
 
-1. `packages/adapter-<runtime>/` を作成
-2. `DocumentCacheAdapter` / `ImageCacheAdapter` の注入経路を設計
-3. `renderer` 自動注入（`renderMarkdown`）を組み込む
-4. README / docs/recipes/ を追加
+1. `packages/adapter-<framework>/` を作成
+2. **CMS ファクトリは提供しない**（`createCMS` を一本化しているため）
+3. 代わりに、そのフレームワークの規約に合った薄いグルー（middleware / route handler / integration プラグイン）を提供
+4. 依存は `@notion-headless-cms/core` と該当フレームワークのみ
+5. README と `docs/recipes/<framework>.md` を追加

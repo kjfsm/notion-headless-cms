@@ -1,13 +1,9 @@
-import { createNodeCMS } from "@notion-headless-cms/adapter-node";
+import { createCMS, nodePreset } from "@notion-headless-cms/core";
 import { nhcDataSources, type PostsItem } from "../generated/nhc-schema.js";
 
-export const cms = createNodeCMS({
+export const cms = createCMS({
+	...nodePreset({ ttlMs: 5 * 60_000 }),
 	dataSources: nhcDataSources,
-	cache: {
-		document: "memory",
-		image: "memory",
-		ttlMs: 5 * 60_000,
-	},
 });
 
 export type BlogPost = PostsItem;
