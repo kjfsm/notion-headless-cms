@@ -58,6 +58,6 @@
 		"jiti": "^2.0.0"
 	},
 	"devDependencies": {
-		"@types/node": "^22.0.0"
+		"@types/node": "^25.6.0"
 	}
 }
