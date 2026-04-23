@@ -1,11 +1,13 @@
 # @notion-headless-cms/adapter-next
 
-Next.js App Router 向けルートハンドラ。`@notion-headless-cms/core` の CMS インスタンスから、画像プロキシ配信と Revalidate Webhook の `GET` / `POST` ハンドラを生成する。
+Next.js App Router 向けルートハンドラ。`@notion-headless-cms/core` の
+CMS インスタンスから、画像プロキシ配信と Revalidate Webhook の
+`GET` / `POST` ハンドラを生成する。
 
 ## インストール
 
 ```bash
-npm install @notion-headless-cms/adapter-next @notion-headless-cms/core
+pnpm add @notion-headless-cms/adapter-next @notion-headless-cms/core
 ```
 
 ## 使い方
@@ -13,29 +15,23 @@ npm install @notion-headless-cms/adapter-next @notion-headless-cms/core
 ### CMS インスタンスの準備
 
 ```ts
-// lib/cms.ts
-import { createCMS, memoryImageCache } from "@notion-headless-cms/core";
+// app/lib/cms.ts
+import { createCMS, nodePreset } from "@notion-headless-cms/core";
 import { nextCache } from "@notion-headless-cms/cache-next";
-import { notionAdapter } from "@notion-headless-cms/source-notion";
-import { renderMarkdown } from "@notion-headless-cms/renderer";
+import { cmsDataSources } from "../generated/nhc-schema";
 
 export const cms = createCMS({
-  source: notionAdapter({
-    token: process.env.NOTION_TOKEN!,
-    dataSourceId: process.env.NOTION_DATA_SOURCE_ID!,
+  ...nodePreset({
+    cache: {
+      document: nextCache({ revalidate: 300, tags: ["posts"] }),
+    },
+    ttlMs: 5 * 60_000,
   }),
-  renderer: renderMarkdown,
-  schema: { publishedStatuses: ["公開"] },
-  cache: {
-    document: nextCache({ revalidate: 300, tags: ["posts"] }),
-    image: memoryImageCache(),
-  },
+  dataSources: cmsDataSources,
 });
 ```
 
 ### 画像プロキシルート
-
-Notion の期限付き画像 URL を永続キャッシュ経由で配信する。
 
 ```ts
 // app/api/images/[hash]/route.ts
@@ -45,7 +41,8 @@ import { createImageRouteHandler } from "@notion-headless-cms/adapter-next";
 export const GET = createImageRouteHandler(cms);
 ```
 
-`createImageRouteHandler` は `/api/images/[hash]` に配置する前提。ハッシュに対応する画像が存在しない場合は `404 Not Found` を返す。
+`/api/images/[hash]` に配置する前提。ハッシュに対応する画像が
+存在しない場合は `404 Not Found` を返す。
 
 ### Revalidate Webhook ルート
 
@@ -59,21 +56,18 @@ export const POST = createRevalidateRouteHandler(cms, {
 });
 ```
 
-Notion 側の変更通知などから `POST /api/revalidate` を呼ぶ際に、`Authorization: Bearer <REVALIDATE_SECRET>` ヘッダが必要。認可に成功すると `cms.cache.sync(payload)` が呼ばれてキャッシュが再生成される。
-
+`POST /api/revalidate` を `Authorization: Bearer <REVALIDATE_SECRET>` で叩く。
 リクエストボディの例:
 
 ```json
-{ "slug": "my-post" }
+{ "collection": "posts", "slug": "my-post" }
 ```
 
-`slug` を省略すると全コンテンツの再生成が走る。レスポンスは `{ "updated": string[] }` 形式で、再生成されたスラッグ配列が返る。
+`collection` / `slug` を省略すると全件 (`"all"`) 扱い。レスポンスで
+`{ "updated": string[] }` が返る。認可失敗時は 401 Unauthorized。
 
-```json
-{ "updated": ["my-post"] }
-```
-
-認可失敗時は `401 Unauthorized` を返す。リクエストボディが JSON として解釈できない場合はエラーにせず、`slug` 省略と同じ「全件再生成」扱いになる。
+`cache-next` と組み合わせた場合、invalidate 時に規約タグ
+`nhc:col:<name>` / `nhc:col:<name>:slug:<slug>` が `revalidateTag` される。
 
 ## API
 
@@ -81,22 +75,21 @@ Notion 側の変更通知などから `POST /api/revalidate` を呼ぶ際に、`
 
 | 引数 | 型 | 説明 |
 |---|---|---|
-| `cms` | `CMS` | `createCMS()` / `createNodeCMS()` / `createCloudflareCMS()` のいずれかの戻り値 |
+| `cms` | `CMSClient` | `createCMS()` の戻り値 |
 
-戻り値は App Router 仕様の `GET` ハンドラ `(request, { params: Promise<{ hash: string }> }) => Promise<Response>`。
+戻り値: App Router 仕様の `GET` ハンドラ。
 
 ### `createRevalidateRouteHandler(cms, opts)`
 
 | 引数 | 型 | 説明 |
 |---|---|---|
-| `cms` | `CMS` | CMS インスタンス |
+| `cms` | `CMSClient` | CMS インスタンス |
 | `opts.secret` | `string` | `Authorization: Bearer <secret>` と照合するシークレット |
 
-戻り値は `POST` ハンドラ `(request) => Promise<Response>`。認可失敗時は `401 Unauthorized`。
+戻り値: `POST` ハンドラ `(request) => Promise<Response>`。
 
 ## 関連パッケージ
 
 - [`@notion-headless-cms/core`](../core) — CMS エンジン本体
 - [`@notion-headless-cms/cache-next`](../cache-next) — Next.js ISR 向けキャッシュ
-- [`@notion-headless-cms/source-notion`](../source-notion) — Notion データソース
 - [`@notion-headless-cms/renderer`](../renderer) — Markdown レンダラー

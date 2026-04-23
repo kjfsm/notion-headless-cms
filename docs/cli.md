@@ -16,8 +16,7 @@ nhc init          →  nhc.config.ts テンプレートを生成
 ↓ （DB 名 / ID を設定）
 nhc generate      →  Notion DB を introspect して nhc-schema.ts を生成（編集不要）
 ↓
-createNodeCMS / createCloudflareCMS で型安全に利用
-（published / accessible は sources オプションで差し込む）
+createCMS({ ...nodePreset() | ...cloudflarePreset({ env }), dataSources: cmsDataSources })
 ```
 
 ## `nhc init` — 設定ファイルの生成
@@ -39,9 +38,10 @@ npx nhc init
 
 ```ts
 import "dotenv/config";
-import { defineConfig } from "@notion-headless-cms/cli";
+import { defineConfig, env } from "@notion-headless-cms/cli";
 
 export default defineConfig({
+  notionToken: env("NOTION_TOKEN"),
   dataSources: [
     {
       name: "posts",
@@ -55,8 +55,7 @@ export default defineConfig({
       },
     },
   ],
-  // 生成ファイルの出力先（省略時: ./nhc-schema.ts）
-  // output: "./nhc-schema.ts",
+  output: "./app/generated/nhc-schema.ts",
 });
 ```
 
@@ -72,9 +71,10 @@ NOTION_TOKEN=secret_xxx npx nhc generate
 
 ```
 オプション:
-  -c, --config <path>   設定ファイルのパス（デフォルト: nhc.config.ts）
-  -t, --token <token>   Notion API トークン（省略時は NOTION_TOKEN 環境変数）
-  -s, --silent          ログ出力を抑制する
+  -c, --config <path>    設定ファイルのパス（デフォルト: nhc.config.ts）
+  -t, --token <token>    Notion API トークン（省略時は NOTION_TOKEN 環境変数）
+  --env-file <path>      任意の env ファイルから読み込み（未指定なら .dev.vars を自動検出）
+  -s, --silent           ログ出力を抑制する
 ```
 
 Notion インテグレーショントークンの取得: [Notion Developers](https://www.notion.so/my-integrations)
@@ -91,7 +91,7 @@ Notion インテグレーショントークンの取得: [Notion Developers](htt
 
 ```ts
 {
-  name: "posts",     // コード上の識別子
+  name: "posts",           // コード上の識別子
   dbName: "ブログ記事DB",  // Notion の DB 名（検索に使用）
 }
 ```
@@ -101,8 +101,8 @@ Notion インテグレーショントークンの取得: [Notion Developers](htt
 ```ts
 {
   name: "posts",
-  id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",  // Notion DB ID
-  dbName: "ブログ記事DB",  // 任意（生成ファイルのコメント用）
+  id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  dbName: "ブログ記事DB", // 任意（生成ファイルのコメント用）
 }
 ```
 
@@ -112,9 +112,9 @@ Notion インテグレーショントークンの取得: [Notion Developers](htt
 
 ```ts
 fields: {
-  slug: "Slug",            // slug に使うプロパティ名
-  status: "Status",        // status に使うプロパティ名
-  publishedAt: "公開日",    // publishedAt に使うプロパティ名
+  slug: "Slug",          // slug に使うプロパティ名
+  status: "Status",      // status に使うプロパティ名
+  publishedAt: "公開日", // publishedAt に使うプロパティ名
   // 日本語など ASCII 変換できないプロパティ名は必須指定
   properties: {
     "タイトル": "title",
@@ -125,34 +125,41 @@ fields: {
 
 `fields` を省略した場合は自動検出ルールが適用される（後述）。
 
-`published` / `accessible` はここでは設定しない。クライアント作成時の `sources` オプションで差し込む（[生成ファイルは編集不要](#生成ファイルは編集不要) 参照）。
+### `notionToken` / `env()`
+
+`notionToken` は CLI が Notion API を叩く際のトークン。遅延評価ヘルパー `env("NAME")` を渡すのが推奨。
+
+```ts
+import { defineConfig, env } from "@notion-headless-cms/cli";
+
+export default defineConfig({
+  notionToken: env("NOTION_TOKEN"),
+  dataSources: [/* ... */],
+  output: "./app/generated/nhc-schema.ts",
+});
+```
+
+`env()` は `process.env[name]` を評価するが、設定評価時には throw せず、`nhc generate` 実行時にトークン不在ならエラーになる。`.dev.vars` を自動検出するため Cloudflare Workers プロジェクトでも追加設定不要。
 
 ### 複数 DB の設定例
 
 ```ts
 import "dotenv/config";
-import { defineConfig } from "@notion-headless-cms/cli";
+import { defineConfig, env } from "@notion-headless-cms/cli";
 
 export default defineConfig({
+  notionToken: env("NOTION_TOKEN"),
   dataSources: [
-    {
-      name: "posts",
-      dbName: "ブログ記事DB",
-      // fields の省略時は自動検出ルールを適用
-    },
+    { name: "posts", dbName: "ブログ記事DB" },
     {
       name: "news",
       id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-      fields: {
-        slug: "Title",
-        status: "公開状態",
-      },
+      fields: { slug: "Title", status: "公開状態" },
     },
     {
       name: "members",
       dbName: "メンバーDB",
       fields: {
-        // 日本語プロパティ名は properties で明示マッピング
         properties: { "氏名": "fullName", "所属": "department" },
       },
     },
@@ -190,12 +197,11 @@ export default defineConfig({
 ASCII に変換できないプロパティ名（日本語など）は `fields.properties` で TypeScript フィールド名を明示する必要がある。未指定の場合はエラーになる。
 
 ```ts
-// nhc.config.ts
 fields: {
   properties: {
-    "タイトル": "title",      // Notion の "タイトル" → TS の title フィールド
+    "タイトル": "title",
     "カテゴリ": "category",
-    "公開日時": "publishedAt", // publishedAt として扱う場合も properties に書く
+    "公開日時": "publishedAt",
   },
 }
 ```
@@ -203,113 +209,84 @@ fields: {
 自動変換できないプロパティに `fields.properties` の指定がない場合:
 
 ```
-Error: [posts] プロパティ "タイトル" は TypeScript 識別子に自動変換できません。
+CMSError [cli/schema_invalid]: [posts] プロパティ "タイトル" は TypeScript 識別子に自動変換できません。
   → nhc.config.ts の fields.properties に追加してください:
      properties: { "タイトル": "フィールド名" }
 ```
 
-スキップされる（サポート外の型の）プロパティはコメントとして記録される:
-
-```ts
-// スキップ: Formula (未対応のプロパティ型: formula)
-```
-
 ## 生成ファイルの構造
 
-`nhc generate` が生成する `nhc-schema.ts` は以下の構造になる。
+`nhc generate` が生成する `nhc-schema.ts` は以下の構造になる（概要）。
 
 ```ts
 // このファイルは nhc generate により自動生成されました。手動編集は nhc generate で上書きされます。
-// Generated: 2024-06-01T00:00:00.000Z
-
 import { z } from "zod";
-import { defineMapping, defineSchema } from "@notion-headless-cms/source-notion";
+import {
+  createNotionCollection,
+  defineMapping,
+  defineSchema,
+} from "@notion-headless-cms/notion-orm";
 import type { BaseContentItem } from "@notion-headless-cms/core";
+import { env } from "@notion-headless-cms/cli";
 
-// ============================================================
+// -------------------------------------
 // posts  (ブログ記事DB)
-// Notion DB ID: abc-123-def-456
-// ============================================================
-
-export interface PostsItem extends BaseContentItem {
-  title: string | null;
-  tags: string[];
-  views: number | null;
-}
-
-const _postsZodSchema = z.object({
-  id: z.string(),
-  updatedAt: z.string(),
-  slug: z.string().nullable(),
-  status: z.string().nullable(),
-  publishedAt: z.string().nullable(),
-  title: z.string().nullable(),
-  tags: z.array(z.string()),
-  views: z.number().nullable(),
-});
-
-const _postsMapping = defineMapping<PostsItem>({
-  slug: { type: "title", notion: "Name" },
-  status: { type: "select", notion: "Status" },
-  publishedAt: { type: "date", notion: "PublishedAt" },
-  title: { type: "richText", notion: "Title" },
-  tags: { type: "multiSelect", notion: "Tags" },
-  views: { type: "number", notion: "Views" },
-});
-
-export const postsSchema = defineSchema(_postsZodSchema, _postsMapping);
+// -------------------------------------
+export interface PostsItem extends BaseContentItem { /* ... */ }
+export const postsSchema = defineSchema(/* ... */);
 export const postsSourceId = "abc-123-def-456";
 
-// ============================================================
-// NHC Multi-Source Schema
-// ============================================================
-
-export const nhcSchema = {
-  posts: { id: postsSourceId, dbName: "ブログ記事DB", schema: postsSchema },
+// -------------------------------------
+// CMS DataSources
+// -------------------------------------
+export const cmsDataSources = {
+  posts: createNotionCollection({
+    token: env("NOTION_TOKEN"),
+    dataSourceId: postsSourceId,
+    schema: postsSchema,
+  }),
 } as const;
-
-export type NHCSchema = typeof nhcSchema;
+export type CMSDataSources = typeof cmsDataSources;
 ```
 
 ### 生成ファイルは編集不要
 
-`nhc generate` で生成した `nhc-schema.ts` は **触らなくてよい**。
-`status` フィールドの `published` / `accessible` は生成ファイルには埋め込まれず、クライアント作成時に `sources` オプションで差し込む。
+生成した `nhc-schema.ts` は **触らなくてよい**。`published` / `accessible` は
+`createCMS` のコレクションレベルオプションではなく、`nhc.config.ts` の
+`fields` + 生成された schema で定義される。
+
+## CMS クライアントでの利用
+
+生成した `cmsDataSources` を `createCMS` にそのまま渡す。
 
 ```ts
-import { nhcSchema } from "./nhc-schema.ts";
-import { createNodeCMS } from "@notion-headless-cms/adapter-node";
+import { createCMS, nodePreset } from "@notion-headless-cms/core";
+import { cmsDataSources } from "./generated/nhc-schema";
 
-const client = createNodeCMS({
-  schema: nhcSchema,
-  sources: {
-    posts: { published: ["公開"], accessible: ["公開", "下書き"] },
-    news:  { published: ["掲載中"] },
-  },
+const cms = createCMS({
+  ...nodePreset({ ttlMs: 5 * 60_000 }),
+  dataSources: cmsDataSources,
+});
+
+// posts は CollectionClient<PostsItem> として推論される
+const posts = await cms.posts.getList();
+const post = await cms.posts.getItem("my-post-slug");
+```
+
+Cloudflare Workers の場合:
+
+```ts
+import { createCMS } from "@notion-headless-cms/core";
+import { cloudflarePreset } from "@notion-headless-cms/cache-r2";
+import { cmsDataSources } from "./generated/nhc-schema";
+
+const cms = createCMS({
+  ...cloudflarePreset({ env }),
+  dataSources: cmsDataSources,
 });
 ```
 
-`nhc generate` を再実行しても `sources` の設定は上書きされない（アプリコード側にあるため）。
-
-## マルチソースクライアントでの利用
-
-生成した `nhcSchema` をアダプタに渡すと、各ソースに対応する型安全な CMS インスタンスが得られる。
-
-```ts
-import { nhcSchema } from "./nhc-schema.ts";
-import { createNodeCMS } from "@notion-headless-cms/adapter-node";
-
-const client = createNodeCMS({
-  schema: nhcSchema,
-  cache: { document: "memory", image: "memory", ttlMs: 5 * 60_000 },
-});
-
-// posts は CMS<PostsItem> として推論される
-const posts = await client.posts.list();
-const post = await client.posts.find("my-post-slug");
-```
-
-詳細は [マルチソースレシピ](./recipes/multi-source.md) を参照。
+詳細は [マルチソースレシピ](./recipes/multi-source.md) と [Cloudflare Workers レシピ](./recipes/cloudflare-workers.md) を参照。
 
 ## 環境変数
 
@@ -318,3 +295,17 @@ const post = await client.posts.find("my-post-slug");
 | `NOTION_TOKEN` | Notion インテグレーションのシークレットキー（必須） |
 
 `nhc generate` は DB の書き込みを一切行わない。読み取り専用で動作する。
+
+## エラーコード
+
+CLI が throw するエラーは `CMSError` の `cli/*` 名前空間で分類される:
+
+- `cli/config_invalid` — `nhc.config.ts` の内容不整合
+- `cli/config_load_failed` — 設定ファイル読み込み失敗
+- `cli/schema_invalid` — スキーマ/マッピング不整合 (生成時の検証エラー)
+- `cli/generate_failed` — `nhc generate` の処理失敗
+- `cli/init_failed` — `nhc init` の処理失敗
+- `cli/notion_api_failed` — Notion API 呼び出し失敗
+- `cli/env_file_not_found` — `--env-file` で指定されたファイルが存在しない
+
+`isCMSErrorInNamespace(err, "cli/")` で分岐できる。

@@ -1,71 +1,78 @@
 # @notion-headless-cms/cache-r2
 
-Cloudflare R2 をバックエンドとするキャッシュアダプタ。
-1 つのインスタンスで `DocumentCacheAdapter` と `ImageCacheAdapter` の両方を実装する。
+Cloudflare R2 をバックエンドとするキャッシュアダプタ + Workers 向けプリセット。
+1 つの `r2Cache` インスタンスで `DocumentCacheAdapter` と `ImageCacheAdapter`
+の両方を実装する。`cloudflarePreset` は env binding を自動解決する便利ヘルパー。
 
 ## インストール
 
 ```bash
-npm install @notion-headless-cms/cache-r2
+pnpm add @notion-headless-cms/cache-r2 @notion-headless-cms/core
 ```
 
-Cloudflare Workers 環境では [`@notion-headless-cms/adapter-cloudflare`](../adapter-cloudflare) が推移依存として含むため、直接インストールする必要はない。
+## 使い方: `cloudflarePreset` (推奨)
 
-## 使い方
-
-```typescript
-import { createCMS, memoryImageCache } from "@notion-headless-cms/core";
-import { r2Cache } from "@notion-headless-cms/cache-r2";
-import { notionAdapter } from "@notion-headless-cms/source-notion";
-import { renderMarkdown } from "@notion-headless-cms/renderer";
+```ts
+import { createCMS } from "@notion-headless-cms/core";
+import { cloudflarePreset } from "@notion-headless-cms/cache-r2";
+import { cmsDataSources } from "./generated/nhc-schema";
 
 export default {
-  async fetch(request: Request, env: { CACHE_BUCKET: R2Bucket }) {
-    const cache = r2Cache({ bucket: env.CACHE_BUCKET });
-
+  async fetch(req: Request, env: Env, ctx: ExecutionContext) {
     const cms = createCMS({
-      source: notionAdapter({
-        token: env.NOTION_TOKEN,
-        dataSourceId: env.NOTION_DATA_SOURCE_ID,
-      }),
-      renderer: renderMarkdown,
-      cache: {
-        document: cache,
-        image: cache, // 同じインスタンスで両対応
-        ttlMs: 5 * 60 * 1000,
-      },
+      ...cloudflarePreset({ env, ttlMs: 5 * 60_000 }),
+      dataSources: cmsDataSources,
+      waitUntil: ctx.waitUntil.bind(ctx),
     });
-
-    const { items } = await cms.cache.read.list();
-    return Response.json(items);
+    const posts = await cms.posts.getList();
+    return Response.json(posts);
   },
 };
 ```
 
-`bucket` が `undefined` の場合（例: `wrangler.toml` で R2 バインディングを設定していない）、`r2Cache` は `undefined` を返す。`CacheConfig` は `"disabled"` への切り替えか、`document` / `image` の個別指定（未指定は noop）を受け付けるので、以下のように組み立てられる。
+### 既定の binding 名
 
-```typescript
-import type { CacheConfig } from "@notion-headless-cms/core";
+- `DOC_CACHE` — KV namespace (ドキュメントキャッシュ)
+- `IMG_BUCKET` — R2 バケット (画像キャッシュ)
+- `NOTION_TOKEN` — Notion API トークン (`wrangler secret put NOTION_TOKEN`)
 
-const cache = r2Cache({ bucket: env.CACHE_BUCKET }); // 未バインド時は undefined
+旧名 `CACHE_KV` / `CACHE_BUCKET` もフォールバックとして認識する。カスタマイズ:
 
-const cacheConfig: CacheConfig = cache
-  ? { document: cache, image: cache, ttlMs: 5 * 60_000 }
-  : "disabled";
-
-createCMS({
-  source,
-  renderer: renderMarkdown,
-  cache: cacheConfig,
+```ts
+cloudflarePreset({
+  env,
+  bindings: { docCache: "MY_KV", imgBucket: "MY_R2" },
 });
+```
+
+binding が設定されていなければキャッシュなし (noop) にフォールバック。
+`NOTION_TOKEN` が未設定の場合は `CMSError code: "core/config_invalid"` を throw。
+
+## 使い方: `r2Cache` を直接
+
+```ts
+import { createCMS } from "@notion-headless-cms/core";
+import { r2Cache } from "@notion-headless-cms/cache-r2";
+import { cmsDataSources } from "./generated/nhc-schema";
+
+export default {
+  async fetch(req: Request, env: { IMG_BUCKET: R2Bucket }) {
+    const cache = r2Cache({ bucket: env.IMG_BUCKET });
+    const cms = createCMS({
+      cache: { document: cache, image: cache, ttlMs: 5 * 60_000 },
+      dataSources: cmsDataSources,
+    });
+    // ...
+  },
+};
 ```
 
 ### プレフィックスの分離
 
-同じバケットを別プロジェクトと共有する場合は `prefix` を指定する。
+同じバケットを別プロジェクトと共有する場合は `prefix` を指定:
 
-```typescript
-r2Cache({ bucket: env.CACHE_BUCKET, prefix: "blog/" });
+```ts
+r2Cache({ bucket: env.IMG_BUCKET, prefix: "blog/" });
 ```
 
 生成されるキー構造:
@@ -78,33 +85,33 @@ r2Cache({ bucket: env.CACHE_BUCKET, prefix: "blog/" });
 
 ## API
 
+### `cloudflarePreset(opts)`
+
+| オプション | 型 | 説明 |
+|---|---|---|
+| `env` | `CloudflarePresetEnv` | Workers の env |
+| `ttlMs` | `number` (任意) | SWR の TTL (ミリ秒) |
+| `bindings` | `{ docCache?, imgBucket? }` (任意) | binding 名をカスタム |
+
+戻り値: `Pick<CreateCMSOptions, "cache">` (createCMS にスプレッドで渡す)
+
 ### `r2Cache(opts)`
 
 | オプション | 型 | 説明 |
 |---|---|---|
-| `bucket` | `R2BucketLike \| undefined` | R2 バケットバインディング。`undefined` の場合は `r2Cache` も `undefined` を返す |
-| `prefix` | `string` | キャッシュキーのプレフィックス（デフォルト: `""`） |
+| `bucket` | `R2BucketLike` | R2 バケットバインディング |
+| `prefix` | `string` (任意) | キャッシュキーのプレフィックス |
 
-戻り値は `DocumentCacheAdapter<T>` かつ `ImageCacheAdapter` を同時に満たすインスタンス。
+戻り値: `DocumentCacheAdapter<T>` & `ImageCacheAdapter` を同時に満たすインスタンス。
 
-### 型
+## 型
 
-- `R2BucketLike` — R2 バケットの構造的インターフェース。Cloudflare Workers の `R2Bucket` とそのまま互換で、`@cloudflare/workers-types` に直接依存しない。
-- `R2ObjectLike` — R2 オブジェクトの構造的インターフェース（`json<T>()` / `arrayBuffer()` / `httpMetadata`）。
-
-`R2BucketLike` を実装すれば Node.js のテストやモックでもそのまま使える。
-
-```ts
-import type { R2BucketLike } from "@notion-headless-cms/cache-r2";
-
-const mock: R2BucketLike = {
-  async get() { return null; },
-  async put() { return undefined; },
-};
-```
+- `R2BucketLike` — R2 バケットの構造的インターフェース。`@cloudflare/workers-types` に直接依存しない
+- `R2ObjectLike` — R2 オブジェクトの構造的インターフェース
+- `CloudflarePresetEnv` — cloudflarePreset が読む env の最小構成
 
 ## 関連パッケージ
 
 - [`@notion-headless-cms/core`](../core) — `DocumentCacheAdapter` / `ImageCacheAdapter` の型定義
-- [`@notion-headless-cms/adapter-cloudflare`](../adapter-cloudflare) — Workers 向けファクトリ
+- [`@notion-headless-cms/cache-kv`](../cache-kv) — KV 単独のドキュメントキャッシュ
 - [`@notion-headless-cms/cache-next`](../cache-next) — Next.js ISR 向けキャッシュ
