@@ -48,11 +48,19 @@ describe("CMSError", () => {
 		const codes = [
 			"core/config_invalid",
 			"core/schema_invalid",
+			"core/notion_orm_missing",
 			"source/fetch_items_failed",
 			"source/fetch_item_failed",
 			"source/load_markdown_failed",
 			"cache/io_failed",
 			"renderer/failed",
+			"cli/config_invalid",
+			"cli/config_load_failed",
+			"cli/schema_invalid",
+			"cli/generate_failed",
+			"cli/init_failed",
+			"cli/notion_api_failed",
+			"cli/env_file_not_found",
 		] as const;
 		for (const code of codes) {
 			const err = new CMSError({
@@ -62,6 +70,16 @@ describe("CMSError", () => {
 			});
 			expect(err.code).toBe(code);
 		}
+	});
+
+	it("cli/* 名前空間で判定できる", () => {
+		const err = new CMSError({
+			code: "cli/config_invalid",
+			message: "test",
+			context: { operation: "loadConfig" },
+		});
+		expect(isCMSErrorInNamespace(err, "cli/")).toBe(true);
+		expect(isCMSErrorInNamespace(err, "core/")).toBe(false);
 	});
 
 	it("サードパーティのカスタムコードでも生成できる", () => {
