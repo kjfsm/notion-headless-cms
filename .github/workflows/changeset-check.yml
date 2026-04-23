@@ -15,12 +15,12 @@ jobs:
     #  if: ${{ !contains(github.event.pull_request.labels.*.name, 'skip-changeset') }}
     if: ${{ false }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
         with:
           # changeset の差分判定に必要
           fetch-depth: 0
-      - uses: pnpm/action-setup@v5
-      - uses: actions/setup-node@v5
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
         with:
           node-version: "24.x"
           cache: "pnpm"
