@@ -1,7 +1,7 @@
 version: 2
 
 updates:
-  # pnpm モノリポ全体の依存更新。minor / patch はまとめて 1 PR に集約する
+  # pnpm モノリポ全体の依存更新。minor/patch と major をそれぞれ 1 PR に集約する
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -18,6 +18,9 @@ updates:
         update-types:
           - "minor"
           - "patch"
+      major:
+        update-types:
+          - "major"
 
   # GitHub Actions の更新
   - package-ecosystem: "github-actions"
@@ -33,5 +36,6 @@ updates:
     groups:
       github-actions:
         update-types:
+          - "major"
           - "minor"
           - "patch"
