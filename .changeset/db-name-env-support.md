@@ -1,5 +1,4 @@
 ---
-"@notion-headless-cms/source-notion": minor
 "@notion-headless-cms/adapter-node": minor
 "@notion-headless-cms/adapter-cloudflare": minor
 ---
