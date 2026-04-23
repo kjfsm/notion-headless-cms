@@ -26,8 +26,8 @@
 	"sideEffects": false,
 	"exports": {
 		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
 		}
 	},
 	"files": [
@@ -37,7 +37,7 @@
 		"node": ">=24"
 	},
 	"scripts": {
-		"build": "tsup src/index.ts --format esm --dts --sourcemap --out-dir dist",
+		"build": "tsdown src/index.ts --format esm --dts --sourcemap --out-dir dist",
 		"typecheck": "tsc --noEmit"
 	},
 	"publishConfig": {
@@ -45,8 +45,8 @@
 		"provenance": true,
 		"exports": {
 			".": {
-				"types": "./dist/index.d.ts",
-				"import": "./dist/index.js"
+				"types": "./dist/index.d.mts",
+				"import": "./dist/index.mjs"
 			}
 		}
 	},

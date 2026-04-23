@@ -24,24 +24,24 @@
 	"sideEffects": false,
 	"exports": {
 		".": {
-			"types": "./dist/index.d.ts",
-			"import": "./dist/index.js"
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
 		},
 		"./errors": {
-			"types": "./dist/errors.d.ts",
-			"import": "./dist/errors.js"
+			"types": "./dist/errors.d.mts",
+			"import": "./dist/errors.mjs"
 		},
 		"./hooks": {
-			"types": "./dist/hooks.d.ts",
-			"import": "./dist/hooks.js"
+			"types": "./dist/hooks.d.mts",
+			"import": "./dist/hooks.mjs"
 		},
 		"./cache/memory": {
-			"types": "./dist/cache/memory.d.ts",
-			"import": "./dist/cache/memory.js"
+			"types": "./dist/cache/memory.d.mts",
+			"import": "./dist/cache/memory.mjs"
 		},
 		"./cache/noop": {
-			"types": "./dist/cache/noop.d.ts",
-			"import": "./dist/cache/noop.js"
+			"types": "./dist/cache/noop.d.mts",
+			"import": "./dist/cache/noop.mjs"
 		}
 	},
 	"files": [
@@ -51,7 +51,7 @@
 		"node": ">=24"
 	},
 	"scripts": {
-		"build": "tsup src/index.ts src/errors.ts src/hooks.ts src/cache/memory.ts src/cache/noop.ts --format esm --dts --sourcemap --out-dir dist",
+		"build": "tsdown src/index.ts src/errors.ts src/hooks.ts src/cache/memory.ts src/cache/noop.ts --format esm --dts --sourcemap --out-dir dist",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run"
 	},
