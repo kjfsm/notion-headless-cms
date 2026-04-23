@@ -29,7 +29,20 @@ jobs:
       - run: pnpm build
 
       - name: publint で公開設定の不備を検出
-        run: pnpm -r --filter "./packages/*" dlx publint
+        run: |
+          # pnpm -r と dlx は組み合わせられないのでパッケージごとに回す
+          set -e
+          for pkg in packages/*/; do
+            if [ -f "$pkg/package.json" ]; then
+              is_private=$(node -p "require('./$pkg/package.json').private || false")
+              if [ "$is_private" = "true" ]; then
+                continue
+              fi
+              echo "::group::publint $pkg"
+              (cd "$pkg" && pnpm dlx publint)
+              echo "::endgroup::"
+            fi
+          done
 
       - name: attw (are-the-types-wrong) で型解決を検証
         run: |

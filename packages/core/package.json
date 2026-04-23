@@ -24,24 +24,24 @@
 	"sideEffects": false,
 	"exports": {
 		".": {
-			"import": "./dist/index.js",
-			"types": "./dist/index.d.ts"
+			"types": "./dist/index.d.ts",
+			"import": "./dist/index.js"
 		},
 		"./errors": {
-			"import": "./dist/errors.js",
-			"types": "./dist/errors.d.ts"
+			"types": "./dist/errors.d.ts",
+			"import": "./dist/errors.js"
 		},
 		"./hooks": {
-			"import": "./dist/hooks.js",
-			"types": "./dist/hooks.d.ts"
+			"types": "./dist/hooks.d.ts",
+			"import": "./dist/hooks.js"
 		},
 		"./cache/memory": {
-			"import": "./dist/cache/memory.js",
-			"types": "./dist/cache/memory.d.ts"
+			"types": "./dist/cache/memory.d.ts",
+			"import": "./dist/cache/memory.js"
 		},
 		"./cache/noop": {
-			"import": "./dist/cache/noop.js",
-			"types": "./dist/cache/noop.d.ts"
+			"types": "./dist/cache/noop.d.ts",
+			"import": "./dist/cache/noop.js"
 		}
 	},
 	"files": [
