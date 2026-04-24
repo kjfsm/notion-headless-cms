@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { defineMapping, defineSchema } from "../schema";
 import { notionAdapter } from "../notion-adapter";
+import { defineMapping, defineSchema } from "../schema";
 
 vi.mock("../internal/fetcher/index", () => ({
 	createClient: vi.fn().mockReturnValue({}),
