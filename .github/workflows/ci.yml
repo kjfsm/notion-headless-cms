@@ -50,6 +50,7 @@ jobs:
       - run: pnpm verify
 
   coverage:
+    needs: [verify]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6

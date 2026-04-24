@@ -38,7 +38,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-turbo-refs/heads/main-
 
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --prefer-offline
       # publish 時に dist が必要なので build のみ実施。typecheck / test は CI で通過済み前提
       - run: pnpm turbo build --filter="./packages/*"
 
