@@ -326,6 +326,7 @@ function generateSourceBlock(source: ResolvedSource): string {
 		"\t\tid: z.string(),",
 		"\t\tupdatedAt: z.string(),",
 		`\t\tslug: ${NULLABLE_STRING},`,
+		"\t\ttitle: z.string().nullable().optional(),",
 	];
 	if (statusField) zodFields.push(`\t\tstatus: ${NULLABLE_STRING},`);
 	if (publishedAtField) zodFields.push(`\t\tpublishedAt: ${NULLABLE_STRING},`);

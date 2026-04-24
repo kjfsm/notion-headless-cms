@@ -165,6 +165,11 @@ describe("generateSchemaFile", () => {
 		expect(code).toContain("status: string;");
 	});
 
+	it("_postsZodSchema に title フィールドが含まれる", () => {
+		const code = generateSchemaFile([makeSource()]);
+		expect(code).toContain("title: z.string().nullable().optional()");
+	});
+
 	it("defineSchema・defineMapping・エクスポート定数が出力される", () => {
 		const code = generateSchemaFile([makeSource()]);
 		expect(code).toContain("const _postsZodSchema = z.object({");
