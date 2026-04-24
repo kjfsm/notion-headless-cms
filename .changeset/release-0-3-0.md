@@ -1,9 +1,9 @@
 ---
-"@notion-headless-cms/core": minor
-"@notion-headless-cms/cli": minor
-"@notion-headless-cms/cache-r2": minor
-"@notion-headless-cms/cache-kv": minor
-"@notion-headless-cms/cache-next": minor
+"@notion-headless-cms/core": patch
+"@notion-headless-cms/cli": patch
+"@notion-headless-cms/cache-r2": patch
+"@notion-headless-cms/cache-kv": patch
+"@notion-headless-cms/cache-next": patch
 "@notion-headless-cms/renderer": patch
 "@notion-headless-cms/adapter-next": patch
 ---
