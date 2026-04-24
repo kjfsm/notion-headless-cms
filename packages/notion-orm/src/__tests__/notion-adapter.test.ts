@@ -22,6 +22,7 @@ const makePage = (slug: string, status: string) => ({
 	last_edited_time: "2024-01-01T00:00:00.000Z",
 	created_time: "2024-01-01T00:00:00.000Z",
 	properties: {
+		Name: { type: "title", title: [{ plain_text: slug }] },
 		Slug: { rich_text: [{ plain_text: slug }] },
 		Status: { status: { name: status } },
 		CreatedAt: { date: { start: "2024-01-01" } },
@@ -62,6 +63,33 @@ describe("notionAdapter", () => {
 			const items = await adapter.list({ publishedStatuses: ["公開"] });
 			expect(items).toHaveLength(1);
 			expect(items[0].slug).toBe("slug-a");
+		});
+
+		it("ページ名を title として返す", async () => {
+			vi.mocked(queryAllPages).mockResolvedValue([
+				makePage("my-post", "公開") as never,
+			]);
+
+			const items = await adapter.list();
+			expect(items[0].title).toBe("my-post");
+		});
+
+		it("title 型プロパティがない場合は title が null になる", async () => {
+			vi.mocked(queryAllPages).mockResolvedValue([
+				{
+					id: "id-no-title",
+					last_edited_time: "2024-01-01T00:00:00.000Z",
+					created_time: "2024-01-01T00:00:00.000Z",
+					properties: {
+						Slug: { rich_text: [{ plain_text: "no-title" }] },
+						Status: { status: { name: "公開" } },
+						CreatedAt: { date: { start: "2024-01-01" } },
+					},
+				} as never,
+			]);
+
+			const items = await adapter.list();
+			expect(items[0].title).toBeNull();
 		});
 
 		it("publishedAt の降順でソートする", async () => {

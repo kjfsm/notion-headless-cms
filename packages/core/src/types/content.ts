@@ -14,6 +14,8 @@ export interface BaseContentItem {
 	id: string;
 	/** URL キー（必須）。 */
 	slug: string;
+	/** Notion ページ名（title 型プロパティのテキスト）。 */
+	title?: string | null;
 	/** 最終更新タイムスタンプ（変更検知に必須）。 */
 	updatedAt: string;
 	/** コンテンツのステータス。ステータスのない DB では省略可能。 */
