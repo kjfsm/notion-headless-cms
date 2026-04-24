@@ -41,7 +41,8 @@
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
 		"publint": "publint --strict",
-		"attw": "attw --pack . --profile esm-only"
+		"attw": "attw --pack . --profile esm-only",
+		"prepublishOnly": "pnpm run build"
 	},
 	"publishConfig": {
 		"access": "public",
