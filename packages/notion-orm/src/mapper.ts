@@ -55,7 +55,10 @@ export function mapItemFromPropertyMap(
 
 type PropValue = NotionPage["properties"][string] | undefined;
 
-function extractPropertyValue(prop: PropValue, type: PropertyMap[string]["type"]): unknown {
+function extractPropertyValue(
+	prop: PropValue,
+	type: PropertyMap[string]["type"],
+): unknown {
 	if (!prop) {
 		if (type === "checkbox") return false;
 		if (type === "multiSelect") return [];
@@ -71,7 +74,9 @@ function extractPropertyValue(prop: PropValue, type: PropertyMap[string]["type"]
 		case "select":
 			if (prop.type === "select") return prop.select?.name ?? null;
 			if (prop.type === "status")
-				return (prop as { status?: { name: string } | null }).status?.name ?? null;
+				return (
+					(prop as { status?: { name: string } | null }).status?.name ?? null
+				);
 			return null;
 		case "multiSelect":
 			return prop.type === "multi_select"

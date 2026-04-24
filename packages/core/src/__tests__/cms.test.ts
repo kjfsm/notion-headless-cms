@@ -68,8 +68,7 @@ describe("createCMS - Feature 1: collections.slug 検証", () => {
 			caught = e;
 		}
 		expect(caught).toSatisfy(
-			(err: unknown) =>
-				isCMSError(err) && err.code === "core/config_invalid",
+			(err: unknown) => isCMSError(err) && err.code === "core/config_invalid",
 		);
 	});
 });
@@ -91,16 +90,18 @@ describe("createCMS - Feature 2: collections.publishedStatuses オーバーラ�
 			},
 		];
 
-		const listMock = vi.fn().mockImplementation(
-			async (opts?: { publishedStatuses?: readonly string[] }) => {
-				if (opts?.publishedStatuses?.length) {
-					return publishedItems.filter(
-						(i) => i.status && opts.publishedStatuses!.includes(i.status),
-					);
-				}
-				return publishedItems;
-			},
-		);
+		const listMock = vi
+			.fn()
+			.mockImplementation(
+				async (opts?: { publishedStatuses?: readonly string[] }) => {
+					if (opts?.publishedStatuses?.length) {
+						return publishedItems.filter(
+							(i) => i.status && opts.publishedStatuses?.includes(i.status),
+						);
+					}
+					return publishedItems;
+				},
+			);
 
 		const source = makeMockSource({ list: listMock });
 

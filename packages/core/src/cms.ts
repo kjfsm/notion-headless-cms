@@ -12,6 +12,7 @@ import type {
 	CacheConfig,
 	CMSHooks,
 	CollectionClient,
+	CollectionSemantics,
 	CreateCMSOptions,
 	DataSource,
 	DataSourceMap,
@@ -22,7 +23,6 @@ import type {
 	Logger,
 	RendererFn,
 } from "./types/index";
-import type { CollectionSemantics } from "./types/config";
 
 const DEFAULT_IMAGE_PROXY_BASE = "/api/images";
 
@@ -245,10 +245,14 @@ export function createCMS<D extends DataSourceMap>(
 			// collections で指定した値を優先し、未指定時は DataSource 側のデフォルトを使う
 			publishedStatuses: col?.publishedStatuses
 				? [...col.publishedStatuses]
-				: (source.publishedStatuses ? [...source.publishedStatuses] : []),
+				: source.publishedStatuses
+					? [...source.publishedStatuses]
+					: [],
 			accessibleStatuses: col?.accessibleStatuses
 				? [...col.accessibleStatuses]
-				: (source.accessibleStatuses ? [...source.accessibleStatuses] : []),
+				: source.accessibleStatuses
+					? [...source.accessibleStatuses]
+					: [],
 			retryConfig,
 			maxConcurrent,
 			waitUntil,

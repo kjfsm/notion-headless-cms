@@ -83,7 +83,8 @@ function generateSourceBlock(
 		}
 
 		// TypeScript フィールド名の決定: columnMappings 優先 → 自動camelCase
-		let tsName = columnMappings[notionPropName] ?? toTsCamelCase(notionPropName);
+		let tsName =
+			columnMappings[notionPropName] ?? toTsCamelCase(notionPropName);
 
 		if (tsName === null) {
 			// 非ASCII名で自動変換不可 → property_N を割り当てて warn

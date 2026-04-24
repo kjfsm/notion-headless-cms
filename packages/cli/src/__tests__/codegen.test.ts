@@ -24,8 +24,8 @@ function makeSource(overrides: Partial<ResolvedSource> = {}): ResolvedSource {
 describe("generateSchemaFile", () => {
 	it("ヘッダーにインポート文が含まれる", () => {
 		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain('import type { PropertyMap }');
-		expect(code).toContain('@notion-headless-cms/core');
+		expect(code).toContain("import type { PropertyMap }");
+		expect(code).toContain("@notion-headless-cms/core");
 	});
 
 	it("自動生成コメントを含む", () => {
@@ -54,17 +54,23 @@ describe("generateSchemaFile", () => {
 
 	it("PostsProperties 型がエクスポートされる", () => {
 		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain("export type PostsProperties = typeof postsProperties;");
+		expect(code).toContain(
+			"export type PostsProperties = typeof postsProperties;",
+		);
 	});
 
 	it("rich_text プロパティが richText として出力される", () => {
 		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain('slug: { type: "richText" as const, notion: "Slug" }');
+		expect(code).toContain(
+			'slug: { type: "richText" as const, notion: "Slug" }',
+		);
 	});
 
 	it("status プロパティが select として出力される", () => {
 		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain('status: { type: "select" as const, notion: "Status" }');
+		expect(code).toContain(
+			'status: { type: "select" as const, notion: "Status" }',
+		);
 	});
 
 	it("title プロパティが title として出力される", () => {

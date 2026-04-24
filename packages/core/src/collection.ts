@@ -15,7 +15,6 @@ import type {
 	GetListOptions,
 	ItemWithContent,
 	Logger,
-	PropertyMap,
 	SortOption,
 } from "./types/index";
 
@@ -260,16 +259,12 @@ export class CollectionClientImpl<T extends BaseContentItem>
 			: undefined;
 
 		let item: T | null;
-		if (notionPropName && this.ctx.source.findByProp) {
-			item = await withRetry(
-				() => this.ctx.source.findByProp!(notionPropName, slug),
-				retryOpts,
-			);
-		} else if (this.ctx.source.findBySlug) {
-			item = await withRetry(
-				() => this.ctx.source.findBySlug!(slug),
-				retryOpts,
-			);
+		const findByProp = this.ctx.source.findByProp?.bind(this.ctx.source);
+		const findBySlug = this.ctx.source.findBySlug?.bind(this.ctx.source);
+		if (notionPropName && findByProp) {
+			item = await withRetry(() => findByProp(notionPropName, slug), retryOpts);
+		} else if (findBySlug) {
+			item = await withRetry(() => findBySlug(slug), retryOpts);
 		} else {
 			const all = await withRetry(() => this.ctx.source.list(), retryOpts);
 			item = all.find((i) => i.slug === slug) ?? null;
