@@ -10,7 +10,7 @@ paths:
 
 ```
 Notion DB
-  └─ @notion-headless-cms/notion-orm（API 取得 + Notion→Markdown、private: true）
+  └─ @notion-headless-cms/notion-orm（API 取得 + Notion→Markdown、ユーザーは直接 import しない）
        ├─ @notion-headless-cms/renderer（Markdown→HTML）
        └─ @notion-headless-cms/core（CMS 統合・キャッシュ・クエリ・フック・nodePreset）
             ├─ @notion-headless-cms/cache-r2（r2Cache + cloudflarePreset）
@@ -26,7 +26,7 @@ Notion DB
   - フォールバックが必要な場合のみ動的 `import("@notion-headless-cms/renderer")` を使う
 - **`internal/` は非公開**。`packages/*/src/internal/**` を他パッケージから参照してはならない
   - 現状 `notion-orm` の `internal/fetcher/` と `internal/transformer/` が該当
-- **`notion-orm` は `private: true`**。user は直接 import しない。CLI 生成物 (`nhc-schema.ts`) が唯一の消費者
+- **`notion-orm` は npm に公開するがユーザーは直接 import しない**。CLI 生成物 (`nhc-schema.ts`) が唯一の消費者。利用側は `pnpm add` で依存に入れるだけでよい（生成物が解決時に必要になる）
 - **`peerDependencies`** は利用側でインストールしてもらう。パッケージ間依存は `workspace:*`
 - **公開パッケージ**（npm 公開されるもの）は `exports` サブパスを明示し、`dist/` 以外を公開しない（`files: ["dist"]`）
 - **パッケージ名の namespace**: すべて `@notion-headless-cms/` スコープ

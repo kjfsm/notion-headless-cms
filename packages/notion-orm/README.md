@@ -1,8 +1,9 @@
 # @notion-headless-cms/notion-orm
 
-> **Internal package** — npm には公開されない。`private: true`。
-> ユーザーは直接 import しない。`nhc generate` が生成する `nhc-schema.ts`
-> から参照される内部実装。
+> **内部利用向けパッケージ** — npm に公開されるが、ユーザーは直接 import しない。
+> `nhc generate` が生成する `nhc-schema.ts` から参照される ORM 層。
+> 利用側プロジェクトは依存として本パッケージをインストールするだけで、
+> import は生成物経由になる。
 
 Notion API を叩いて `@notion-headless-cms/core` の `DataSource<T>` を
 返す ORM 層。`createNotionCollection()` でページ取得・Markdown 変換を行う。
@@ -29,11 +30,15 @@ Notion API を叩いて `@notion-headless-cms/core` の `DataSource<T>` を
 
 CLI が生成する `nhc-schema.ts` はこれらを透過的に呼び出す。
 
-## なぜ internal か
+## なぜ「直接 import しない」設計か
 
-- ユーザーが直接 ORM レイヤーを触る必要はないため (CLI が隠蔽する)
-- Notion API 依存を user の package.json に露出させないため
-- 将来 `googledocs-orm` 等を追加する際に抽象を変更しやすいため
+- ユーザーが直接 ORM レイヤーを触る必要はない (CLI が隠蔽する)
+- 生成物経由に揃えることで Notion API の差分を吸収しやすい
+- 将来 `googledocs-orm` 等を追加する際に抽象を変更しやすい
+
+npm には公開されるので、別リポジトリから
+`pnpm add @notion-headless-cms/notion-orm` でインストールできる
+(インストール後、`import` は CLI 生成物経由で行う)。
 
 ## 関連
 
