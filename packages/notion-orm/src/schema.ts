@@ -98,9 +98,16 @@ function parseMapping<T>(
 	page: NotionPage,
 	mapping: { [K in keyof T]: NotionFieldType },
 ): Record<string, unknown> {
+	const titleProp = Object.values(page.properties).find(
+		(p) => p.type === "title",
+	);
 	const result: Record<string, unknown> = {
 		id: page.id,
 		updatedAt: page.last_edited_time,
+		title:
+			titleProp?.type === "title"
+				? getPlainText(titleProp.title) || null
+				: null,
 	};
 	for (const [key, fieldDef] of Object.entries(mapping) as [
 		string,

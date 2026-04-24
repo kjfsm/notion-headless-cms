@@ -124,6 +124,25 @@ describe("defineSchema", () => {
 			expect(item.title).toBeNull();
 		});
 
+		it("mapping に title がなくてもページタイトルを自動セットする", () => {
+			const NoTitleSchema = z.object({
+				id: z.string(),
+				updatedAt: z.string(),
+				title: z.string().nullable().optional(),
+				slug: z.string().nullable(),
+			});
+			const noTitleMapping = defineMapping<z.infer<typeof NoTitleSchema>>({
+				slug: { type: "richText", notion: "Slug" },
+			});
+			const noTitleSchema = defineSchema(NoTitleSchema, noTitleMapping);
+			const page = makePage({
+				Name: { type: "title", title: [{ plain_text: "Auto Title" }] },
+				Slug: { type: "rich_text", rich_text: [{ plain_text: "auto" }] },
+			});
+			const item = noTitleSchema.mapItem(page as never);
+			expect(item.title).toBe("Auto Title");
+		});
+
 		it("Zod バリデーションエラーでスローする", () => {
 			const StrictSchema = z.object({
 				id: z.string(),
