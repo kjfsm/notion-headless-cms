@@ -25,7 +25,7 @@ const makePage = (slug: string, status: string) => ({
 	created_time: "2024-01-01T00:00:00.000Z",
 	properties: {
 		Name: { type: "title", title: [{ plain_text: slug }] },
-		Slug: { rich_text: [{ plain_text: slug }] },
+		Slug: { type: "rich_text", rich_text: [{ plain_text: slug }] },
 		Status: { status: { name: status } },
 		CreatedAt: { date: { start: "2024-01-01" } },
 	},
@@ -130,7 +130,6 @@ describe("notionAdapter", () => {
 				"test-db-id",
 				"my-post",
 				"Slug",
-				undefined,
 			);
 		});
 
@@ -141,20 +140,20 @@ describe("notionAdapter", () => {
 			expect(item).toBeNull();
 		});
 
-		it("schema で slug が title 型の場合、slugPropType=title を渡す", async () => {
-			const SlugTitleSchema = z.object({
+		it("schema で slug プロパティ名を指定した場合、そのプロパティ名で rich_text 検索する", async () => {
+			const SlugSchema = z.object({
 				id: z.string(),
 				updatedAt: z.string(),
 				slug: z.string(),
 				title: z.string().nullable().optional(),
 			});
-			const slugTitleMapping = defineMapping<z.infer<typeof SlugTitleSchema>>({
-				slug: { type: "title", notion: "Name" },
+			const slugMapping = defineMapping<z.infer<typeof SlugSchema>>({
+				slug: { type: "richText", notion: "Slug" },
 			});
 			const schemaAdapter = notionAdapter({
 				token: "test-token",
 				dataSourceId: "test-db-id",
-				schema: defineSchema(SlugTitleSchema, slugTitleMapping),
+				schema: defineSchema(SlugSchema, slugMapping),
 			});
 
 			vi.mocked(queryPageBySlug).mockResolvedValue(
@@ -166,8 +165,7 @@ describe("notionAdapter", () => {
 				expect.anything(),
 				"test-db-id",
 				"my-post",
-				"Name",
-				"title",
+				"Slug",
 			);
 		});
 	});
