@@ -2,8 +2,11 @@ import type { KVNamespaceLike } from "@notion-headless-cms/cache-kv";
 import { kvCache } from "@notion-headless-cms/cache-kv";
 import {
 	type CacheConfig,
+	type CMSClient,
 	CMSError,
 	type CreateCMSOptions,
+	createCMS,
+	type DataSourceMap,
 } from "@notion-headless-cms/core";
 import { r2Cache } from "./r2-cache";
 import type { R2BucketLike } from "./types";
@@ -35,6 +38,60 @@ export interface CloudflarePresetOptions {
 	bindings?: {
 		docCache?: string;
 		imgBucket?: string;
+	};
+}
+
+/**
+ * `createCloudflareFactory()` に渡すオプション。
+ * `CreateCMSOptions` から `preset` を除いた全フィールドを受け取る。
+ * `bindings` は `cloudflarePreset` に転送される Cloudflare 固有のオプション。
+ */
+export type CreateCloudflareFactoryOptions<
+	D extends DataSourceMap = DataSourceMap,
+> = Omit<CreateCMSOptions<D>, "preset"> & {
+	/**
+	 * KV / R2 binding 名のカスタマイズ。`cloudflarePreset` に転送される。
+	 * @default { docCache: "DOC_CACHE", imgBucket: "IMG_BUCKET" }
+	 */
+	bindings?: CloudflarePresetOptions["bindings"];
+};
+
+/**
+ * Cloudflare Workers 向けの `createCMS` ファクトリを生成する。
+ * 全 Cloudflare example で繰り返されていたボイラープレートを1行に削減する。
+ *
+ * 返り値の関数は Workers の `env` を受け取り、`CMSClient` を返す。
+ * リクエストごとに呼び出すことを想定している。
+ *
+ * @example
+ * // Before（手書きのボイラープレートが必要だった）
+ * import { createCMS as createCore } from "@notion-headless-cms/core";
+ * import { cloudflarePreset } from "@notion-headless-cms/cache-r2";
+ *
+ * export function createCMS(env: Env) {
+ *   return createCore({ ...cloudflarePreset({ env, ttlMs: 5 * 60_000 }), dataSources });
+ * }
+ *
+ * // After
+ * import { createCloudflareFactory } from "@notion-headless-cms/cache-r2";
+ *
+ * export const createCMS = createCloudflareFactory({ dataSources, ttlMs: 5 * 60_000 });
+ * // 使い方は変わらない: createCMS(env).posts.getList()
+ */
+export function createCloudflareFactory<D extends DataSourceMap>(
+	factoryOpts: CreateCloudflareFactoryOptions<D>,
+): (env: CloudflarePresetEnv) => CMSClient<D> {
+	const { bindings, ...cmsOpts } = factoryOpts;
+	return (env) => {
+		const presetResult = cloudflarePreset({
+			env,
+			ttlMs: cmsOpts.ttlMs,
+			bindings,
+		});
+		return createCMS({
+			...cmsOpts,
+			cache: cmsOpts.cache ?? presetResult.cache,
+		});
 	};
 }
 
