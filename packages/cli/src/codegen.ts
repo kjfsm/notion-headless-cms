@@ -68,7 +68,7 @@ const PROPERTY_TYPE_MAP: Record<
 		tsType: "string | null",
 		zodExpr: "z.string().nullable()",
 		notionFieldType: "title",
-		semanticKind: "slug",
+		semanticKind: null,
 	},
 	rich_text: {
 		tsType: "string | null",
@@ -122,11 +122,10 @@ const PROPERTY_TYPE_MAP: Record<
 
 function detectSlug(
 	propName: string,
-	type: string,
 	fields: DataSourceFieldOptions | undefined,
 ): boolean {
 	if (fields?.slug) return fields.slug === propName;
-	return SLUG_NAMES.has(propName) || type === "title";
+	return SLUG_NAMES.has(propName);
 }
 
 function detectStatus(
@@ -181,7 +180,7 @@ function mapProperty(
 		zodExpr: typeInfo.zodExpr,
 		notionFieldType: typeInfo.notionFieldType,
 		notionPropName: propName,
-		isSlug: kind === "slug" && detectSlug(propName, prop.type, fields),
+		isSlug: kind === "slug" && detectSlug(propName, fields),
 		isStatus: kind === "status" && detectStatus(propName, fields),
 		isPublishedAt:
 			kind === "publishedAt" && detectPublishedAt(propName, fields),
@@ -256,17 +255,17 @@ function generateSourceBlock(source: ResolvedSource): string {
 	}
 
 	// ── slug / status / publishedAt を特定 ────────────────────────────────────
-	const slugField =
-		mapped.find((f) => f.isSlug && f.notionFieldType === "title") ??
-		mapped.find((f) => f.isSlug && f.notionFieldType === "richText");
+	const slugField = mapped.find(
+		(f) => f.isSlug && f.notionFieldType === "richText",
+	);
 
 	if (!slugField) {
 		const suggestion = fields?.slug
 			? ""
-			: `\n  → fields.slug に title 型プロパティ名を指定してください。`;
+			: `\n  → fields.slug に rich_text 型プロパティ名を指定してください。`;
 		throw new CMSError({
 			code: "cli/schema_invalid",
-			message: `[${config.name}] slug フィールドが見つかりませんでした。DB "${dbName}" に title 型プロパティが存在するか確認してください。${suggestion}`,
+			message: `[${config.name}] slug フィールドが見つかりませんでした。DB "${dbName}" に "slug" / "Slug" という名前の rich_text 型プロパティが存在するか確認してください。${suggestion}`,
 			context: {
 				operation: "generateSourceBlock",
 				collection: config.name,

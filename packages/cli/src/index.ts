@@ -1,5 +1,5 @@
 export interface DataSourceFieldOptions {
-	/** slug に使う Notion プロパティ名（自動検出: title 型プロパティ） */
+	/** slug に使う Notion プロパティ名（自動検出: "slug" / "Slug" / "スラッグ" という名前の rich_text 型プロパティ） */
 	slug?: string;
 	/** status に使う Notion プロパティ名（自動検出: "Status" / "状態" などの select 型） */
 	status?: string;
