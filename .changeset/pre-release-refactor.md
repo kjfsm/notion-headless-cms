@@ -8,9 +8,9 @@
 "@notion-headless-cms/adapter-next": patch
 ---
 
-v0.3.0 リリース前リファクタリング (正式 v1 に向けた骨格整備)。
+リリース前リファクタリング (0.x 帯のため patch bump)。
 
-## 破壊的変更
+## API 変更 (0.x につき patch で許容)
 
 - **`createCMS` 一本化**: `createNodeCMS` / `createCloudflareCMS` を廃止。
   ランタイム差分は `nodePreset()` (core) と `cloudflarePreset({ env })` (cache-r2) で吸収する。
