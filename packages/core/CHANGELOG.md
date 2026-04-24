@@ -1,5 +1,11 @@
 # @notion-headless-cms/core
 
+## 0.2.1
+
+### Patch Changes
+
+- cea9495: update add title properties
+
 ## 0.2.0
 
 ### Minor Changes
