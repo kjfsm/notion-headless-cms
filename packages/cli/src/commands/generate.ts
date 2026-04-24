@@ -122,7 +122,11 @@ export async function runGenerate(opts: GenerateOptions): Promise<void> {
 		resolvedSources.push(resolved);
 	}
 
-	const code = generateSchemaFile(resolvedSources);
+	const code = generateSchemaFile(resolvedSources, {
+		warn: (msg) => {
+			if (!silent) console.warn(`\n⚠  ${msg}`);
+		},
+	});
 	const outputPath = path.resolve(process.cwd(), config.output);
 	await fs.mkdir(path.dirname(outputPath), { recursive: true });
 	await fs.writeFile(outputPath, code, "utf-8");

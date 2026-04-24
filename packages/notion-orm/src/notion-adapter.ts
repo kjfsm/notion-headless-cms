@@ -3,17 +3,19 @@ import type {
 	CMSSchemaProperties,
 	ContentBlock,
 	DataSource,
+	PropertyMap,
 } from "@notion-headless-cms/core";
 import { CMSError, isCMSError } from "@notion-headless-cms/core";
 import {
 	createClient,
 	queryAllPages,
+	queryPageByProp,
 	queryPageBySlug,
 } from "./internal/fetcher/index";
 import { markdownToBlocks } from "./internal/md-to-blocks";
 import { Transformer } from "./internal/transformer/transformer";
 import type { BlockHandler } from "./internal/transformer/types";
-import { mapItem } from "./mapper";
+import { mapItem, mapItemFromPropertyMap } from "./mapper";
 import type { NotionSchema } from "./schema";
 import type { NotionPage } from "./types";
 
@@ -59,12 +61,23 @@ export interface NotionCollectionSchemaOptions<T extends BaseContentItem>
 	schema: NotionSchema<T>;
 }
 
+/**
+ * CLI が生成した `*Properties` オブジェクトを使うオプション。
+ * ページ構成の知識（slug/status の意味）を持たない型付きNotionクライアント。
+ * slug/status/publishedStatuses は `createCMS({ collections })` で指定する。
+ */
+export interface NotionCollectionPropertiesOptions
+	extends NotionCollectionCommonOptions {
+	properties: PropertyMap;
+}
+
 export type NotionCollectionOptions<
 	T extends BaseContentItem = BaseContentItem,
 > =
 	| NotionCollectionDefaultOptions
 	| NotionCollectionMapItemOptions<T>
-	| NotionCollectionSchemaOptions<T>;
+	| NotionCollectionSchemaOptions<T>
+	| NotionCollectionPropertiesOptions;
 
 /** Notion を `DataSource<T>` として実装するコレクションクラス。 */
 class NotionCollection<T extends BaseContentItem = BaseContentItem>
@@ -73,6 +86,8 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
 	readonly name = "notion";
 	readonly publishedStatuses?: readonly string[];
 	readonly accessibleStatuses?: readonly string[];
+	/** CLI 生成の `*Properties` に対応するプロパティマップ。properties オプション使用時のみ設定される。 */
+	readonly properties?: PropertyMap;
 	private readonly client: ReturnType<typeof createClient>;
 	private readonly dbName: string | undefined;
 	private resolvedDataSourceId: string | undefined;
@@ -110,10 +125,21 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
 			};
 			this.slugPropName = props.slug;
 			this.itemMapper = opts.mapItem;
+		} else if ("properties" in opts && opts.properties && !("fields" in opts)) {
+			// CLI 生成の PropertyMap を使う新形式。
+			// slug/status/publishedStatuses はページ構成の知識を持たないため設定しない。
+			// createCMS({ collections }) で指定する。
+			const propMap = opts.properties as PropertyMap;
+			this.properties = propMap;
+			this.slugPropName = DEFAULT_PROPERTIES.slug; // findByProp で上書きされるため実質未使用
+			this.itemMapper = ((page: NotionPage) =>
+				mapItemFromPropertyMap(page, propMap)) as (page: NotionPage) => T;
 		} else {
 			const props: Required<CMSSchemaProperties> = {
 				...DEFAULT_PROPERTIES,
-				...("properties" in opts ? opts.properties : undefined),
+				...("properties" in opts
+					? (opts.properties as CMSSchemaProperties)
+					: undefined),
 			};
 			this.slugPropName = props.slug;
 			this.itemMapper = ((page: NotionPage) => mapItem(page, props)) as (
@@ -228,6 +254,34 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
 		}
 	}
 
+	async findByProp(notionPropName: string, value: string): Promise<T | null> {
+		try {
+			const dataSourceId = await this.getDataSourceId();
+			const page = await queryPageByProp(
+				this.client,
+				dataSourceId,
+				notionPropName,
+				value,
+			);
+			if (!page) return null;
+			return this.itemMapper(page);
+		} catch (err) {
+			if (isCMSError(err)) throw err;
+			throw new CMSError({
+				code: "source/fetch_item_failed",
+				message: "Failed to fetch item by property from Notion data source.",
+				cause: err,
+				context: {
+					operation: "NotionCollection.findByProp",
+					dataSourceId: this.resolvedDataSourceId,
+					dbName: this.dbName,
+					notionPropName,
+					value,
+				},
+			});
+		}
+	}
+
 	async loadMarkdown(item: T): Promise<string> {
 		const transformer = new Transformer(
 			this.blocksConfig ? { blocks: this.blocksConfig } : undefined,
@@ -275,6 +329,14 @@ export function createNotionCollection<T extends BaseContentItem>(
 export function createNotionCollection<T extends BaseContentItem>(
 	opts: NotionCollectionSchemaOptions<T>,
 ): DataSource<T>;
+/**
+ * CLI 生成の `*Properties` オブジェクトを使う新形式。
+ * ページ構成の知識（slug/status/publishedStatuses の意味）を持たず、
+ * すべての設定は `createCMS({ collections })` で行う。
+ */
+export function createNotionCollection(
+	opts: NotionCollectionPropertiesOptions,
+): DataSource<BaseContentItem>;
 export function createNotionCollection<
 	T extends BaseContentItem = BaseContentItem,
 >(opts: NotionCollectionOptions<T>): DataSource<T> {

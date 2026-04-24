@@ -1,6 +1,7 @@
 import type {
 	BaseContentItem,
 	CMSSchemaProperties,
+	PropertyMap,
 } from "@notion-headless-cms/core";
 import { CMSError } from "@notion-headless-cms/core";
 import { z } from "zod";
@@ -18,6 +19,75 @@ const baseContentItemSchema = z.object({
 /** Notionリッチテキスト配列をプレーンテキストに結合する。 */
 export function getPlainText(items: NotionRichTextItem[] | undefined): string {
 	return items?.map((item) => item.plain_text).join("") ?? "";
+}
+
+/**
+ * Notion ページを CLI 生成の PropertyMap に従ってフラットな Record に変換する。
+ * ページ構成の知識（slug/status の意味）を持たず、すべてのプロパティを等しく扱う。
+ * slug・title・updatedAt などの BaseContentItem フィールドも含む。
+ */
+export function mapItemFromPropertyMap(
+	page: NotionPage,
+	properties: PropertyMap,
+): BaseContentItem {
+	const titleProp = Object.values(page.properties).find(
+		(p) => p.type === "title",
+	);
+	const title =
+		titleProp !== undefined && titleProp.type === "title"
+			? getPlainText(titleProp.title) || null
+			: null;
+
+	const result: Record<string, unknown> = {
+		id: page.id,
+		updatedAt: page.last_edited_time,
+		title,
+		slug: "",
+	};
+
+	for (const [tsName, propDef] of Object.entries(properties)) {
+		const prop = page.properties[propDef.notion];
+		result[tsName] = extractPropertyValue(prop, propDef.type);
+	}
+
+	return result as unknown as BaseContentItem;
+}
+
+type PropValue = NotionPage["properties"][string] | undefined;
+
+function extractPropertyValue(prop: PropValue, type: PropertyMap[string]["type"]): unknown {
+	if (!prop) {
+		if (type === "checkbox") return false;
+		if (type === "multiSelect") return [];
+		return null;
+	}
+	switch (type) {
+		case "title":
+			return prop.type === "title" ? getPlainText(prop.title) || null : null;
+		case "richText":
+			return prop.type === "rich_text"
+				? getPlainText(prop.rich_text) || null
+				: null;
+		case "select":
+			if (prop.type === "select") return prop.select?.name ?? null;
+			if (prop.type === "status")
+				return (prop as { status?: { name: string } | null }).status?.name ?? null;
+			return null;
+		case "multiSelect":
+			return prop.type === "multi_select"
+				? prop.multi_select.map((s: { name: string }) => s.name)
+				: [];
+		case "date":
+			return prop.type === "date" ? (prop.date?.start ?? null) : null;
+		case "number":
+			return prop.type === "number" ? prop.number : null;
+		case "checkbox":
+			return prop.type === "checkbox" ? prop.checkbox : false;
+		case "url":
+			return prop.type === "url" ? prop.url : null;
+		default:
+			return null;
+	}
 }
 
 /**

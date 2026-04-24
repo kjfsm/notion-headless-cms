@@ -55,6 +55,29 @@ export interface RateLimiterConfig {
 // biome-ignore lint/suspicious/noExplicitAny: 各コレクションの T が異なる
 export type DataSourceMap = Record<string, DataSource<any>>;
 
+/**
+ * コレクション別のページ構成セマンティクス。
+ * `createCMS({ collections: { posts: { ... } } })` に渡す。
+ */
+export interface CollectionSemantics {
+	/**
+	 * slug として使うフィールド名（必須）。
+	 * DataSource の `properties` マップのキーと一致させる。
+	 */
+	slug: string;
+	/** status として使うフィールド名。 */
+	status?: string;
+	/**
+	 * 公開扱いするステータス値。DataSource 側の `publishedStatuses` より優先される。
+	 * 例: ["公開済み", "Published"]
+	 */
+	publishedStatuses?: readonly string[];
+	/**
+	 * アクセス許可するステータス値。DataSource 側の `accessibleStatuses` より優先される。
+	 */
+	accessibleStatuses?: readonly string[];
+}
+
 /** `DataSourceMap` から各 T を抽出するユーティリティ型。 */
 export type InferDataSourceItem<D> =
 	D extends DataSource<infer T> ? T : BaseContentItem;
@@ -111,4 +134,24 @@ export interface CreateCMSOptions<D extends DataSourceMap = DataSourceMap> {
 	logger?: Logger;
 	/** レートリミット・リトライ設定。 */
 	rateLimiter?: RateLimiterConfig;
+	/**
+	 * コレクション別のページ構成セマンティクス。
+	 * slug・status・公開条件を指定する。
+	 * 指定したコレクションでは `slug` が必須（未指定時はエラー）。
+	 * 指定したコレクションの `publishedStatuses`/`accessibleStatuses` は
+	 * DataSource 側の設定より優先される。
+	 *
+	 * @example
+	 * createCMS({
+	 *   dataSources: { posts: createNotionCollection({ ... }) },
+	 *   collections: {
+	 *     posts: {
+	 *       slug: "slug",
+	 *       status: "status",
+	 *       publishedStatuses: ["公開済み"],
+	 *     }
+	 *   }
+	 * })
+	 */
+	collections?: Partial<Record<keyof D & string, CollectionSemantics>>;
 }

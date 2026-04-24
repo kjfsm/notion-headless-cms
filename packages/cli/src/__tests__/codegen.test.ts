@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { ResolvedSource } from "../codegen.js";
 import { generateSchemaFile } from "../codegen.js";
 
@@ -24,13 +24,8 @@ function makeSource(overrides: Partial<ResolvedSource> = {}): ResolvedSource {
 describe("generateSchemaFile", () => {
 	it("ヘッダーにインポート文が含まれる", () => {
 		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain('import { z } from "zod"');
-		expect(code).toContain("createNotionCollection");
-		expect(code).toContain('from "@notion-headless-cms/notion-orm"');
-		expect(code).toContain(
-			'import type { BaseContentItem } from "@notion-headless-cms/core"',
-		);
-		expect(code).toContain('import { env } from "@notion-headless-cms/cli"');
+		expect(code).toContain('import type { PropertyMap }');
+		expect(code).toContain('@notion-headless-cms/core');
 	});
 
 	it("自動生成コメントを含む", () => {
@@ -46,51 +41,49 @@ describe("generateSchemaFile", () => {
 		expect(code).toContain("// Notion DB ID: abc-123");
 	});
 
-	it("rich_text の Slug プロパティが slug として自動検出される", () => {
+	it("postsSourceId がエクスポートされる", () => {
 		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain('slug: { type: "richText", notion: "Slug" }');
+		expect(code).toContain('export const postsSourceId = "abc-123";');
 	});
 
-	it("Status プロパティが status として自動検出される", () => {
+	it("postsProperties オブジェクトがエクスポートされる", () => {
 		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain('status: { type: "select", notion: "Status" }');
-		// published/accessible は生成しない（クライアント側で sources オプションで差し込む）
-		expect(code).not.toContain("published:");
-		expect(code).not.toContain("// TODO");
+		expect(code).toContain("export const postsProperties = {");
+		expect(code).toContain("} as const;");
 	});
 
-	it("status フィールドは published/accessible なしで生成される（クライアント側で差し込む）", () => {
+	it("PostsProperties 型がエクスポートされる", () => {
 		const code = generateSchemaFile([makeSource()]);
-		// published/accessible は生成ファイルに含まれない
-		expect(code).not.toContain("published:");
-		expect(code).not.toContain("accessible:");
-		expect(code).not.toContain("// TODO");
-		// status フィールドは notion プロパティ名だけ保持する
-		expect(code).toContain('status: { type: "select", notion: "Status" }');
+		expect(code).toContain("export type PostsProperties = typeof postsProperties;");
 	});
 
-	it("PublishedAt date プロパティが publishedAt として自動検出される", () => {
+	it("rich_text プロパティが richText として出力される", () => {
+		const code = generateSchemaFile([makeSource()]);
+		expect(code).toContain('slug: { type: "richText" as const, notion: "Slug" }');
+	});
+
+	it("status プロパティが select として出力される", () => {
+		const code = generateSchemaFile([makeSource()]);
+		expect(code).toContain('status: { type: "select" as const, notion: "Status" }');
+	});
+
+	it("title プロパティが title として出力される", () => {
 		const source = makeSource({
 			properties: {
 				Name: makeProp("title"),
 				Slug: makeProp("rich_text"),
-				PublishedAt: makeProp("date"),
 			},
 		});
 		const code = generateSchemaFile([source]);
-		expect(code).toContain(
-			'publishedAt: { type: "date", notion: "PublishedAt" }',
-		);
-		expect(code).toContain("publishedAt: z.string().nullable().transform(");
+		expect(code).toContain('name: { type: "title" as const, notion: "Name" }');
 	});
 
-	it("各プロパティ型が正しい Zod 式と TypeScript 型に変換される", () => {
+	it("各プロパティ型が正しい type 値に変換される", () => {
 		const source = makeSource({
 			config: { name: "posts", dbName: "DB" },
 			properties: {
 				Name: makeProp("title"),
 				Slug: makeProp("rich_text"),
-				Body: makeProp("rich_text"),
 				Category: makeProp("select"),
 				Tags: makeProp("multi_select"),
 				Views: makeProp("number"),
@@ -100,20 +93,13 @@ describe("generateSchemaFile", () => {
 			},
 		});
 		const code = generateSchemaFile([source]);
-		// rich_text → richText
-		expect(code).toContain('type: "richText"');
-		// select → select
-		expect(code).toContain('type: "select"');
-		// multi_select → multiSelect
-		expect(code).toContain('type: "multiSelect"');
-		// number
-		expect(code).toContain("z.number().nullable()");
-		// checkbox
-		expect(code).toContain("z.boolean()");
-		// url
-		expect(code).toContain('type: "url"');
-		// date (with transform)
-		expect(code).toContain("publishedAt: z.string().nullable().transform(");
+		expect(code).toContain('"richText"');
+		expect(code).toContain('"select"');
+		expect(code).toContain('"multiSelect"');
+		expect(code).toContain('"number"');
+		expect(code).toContain('"checkbox"');
+		expect(code).toContain('"url"');
+		expect(code).toContain('"date"');
 	});
 
 	it("サポート外のプロパティ型はスキップしてコメントを出力する", () => {
@@ -130,77 +116,101 @@ describe("generateSchemaFile", () => {
 		expect(code).toContain("// スキップ: Relation");
 	});
 
-	it("interface に追加フィールドが含まれる", () => {
+	it("スペース・ハイフン入りのプロパティ名を camelCase に変換する", () => {
 		const source = makeSource({
 			config: { name: "posts", dbName: "DB" },
 			properties: {
 				Name: makeProp("title"),
 				Slug: makeProp("rich_text"),
-				Tags: makeProp("multi_select"),
+				"Published At": makeProp("date"),
+				"my-field": makeProp("number"),
 			},
 		});
 		const code = generateSchemaFile([source]);
-		expect(code).toContain(
-			"export interface PostsItem extends BaseContentItem",
-		);
-		expect(code).toContain("tags: string[];");
+		expect(code).toContain("publishedAt:");
+		expect(code).toContain("myField:");
 	});
 
-	it("追加フィールドがない場合は type alias を出力する", () => {
+	it("日本語プロパティ名は property_N に自動変換して warn を呼ぶ（エラーにしない）", () => {
+		const warn = vi.fn();
 		const source = makeSource({
+			config: { name: "posts", dbName: "DB" },
 			properties: {
 				Name: makeProp("title"),
 				Slug: makeProp("rich_text"),
+				あいうえお: makeProp("number"),
 			},
 		});
-		const code = generateSchemaFile([source]);
-		expect(code).toContain("export type PostsItem = BaseContentItem;");
+		const code = generateSchemaFile([source], { warn });
+		expect(() => generateSchemaFile([source], { warn })).not.toThrow();
+		expect(warn).toHaveBeenCalled();
+		expect(warn.mock.calls[0][0]).toContain("あいうえお");
+		expect(warn.mock.calls[0][0]).toContain("property_1");
+		expect(code).toContain("property_1");
+		expect(code).toContain('notion: "あいうえお"');
 	});
 
-	it("status が検出された場合は interface に status: string が含まれる", () => {
+	it("複数の非ASCII名がある場合は property_1, property_2 が生成される", () => {
+		const warn = vi.fn();
 		const source = makeSource({
+			config: { name: "posts", dbName: "DB" },
 			properties: {
 				Name: makeProp("title"),
 				Slug: makeProp("rich_text"),
-				Status: makeProp("status"),
+				あいうえお: makeProp("number"),
+				かきくけこ: makeProp("select"),
 			},
 		});
-		const code = generateSchemaFile([source]);
-		expect(code).toContain(
-			"export interface PostsItem extends BaseContentItem",
-		);
-		expect(code).toContain("status: string;");
+		const code = generateSchemaFile([source], { warn });
+		expect(code).toContain("property_1");
+		expect(code).toContain("property_2");
+		expect(warn).toHaveBeenCalledTimes(2);
 	});
 
-	it("_postsZodSchema に title フィールドが含まれる", () => {
-		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain("title: z.string().nullable().optional()");
+	it("warn なしで generateSchemaFile を呼んでも動作する（後方互換）", () => {
+		const source = makeSource({
+			config: { name: "posts", dbName: "DB" },
+			properties: {
+				Name: makeProp("title"),
+				Slug: makeProp("rich_text"),
+				あいうえお: makeProp("number"),
+			},
+		});
+		expect(() => generateSchemaFile([source])).not.toThrow();
 	});
 
-	it("defineSchema・defineMapping・エクスポート定数が出力される", () => {
-		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain("const _postsZodSchema = z.object({");
-		expect(code).toContain("const _postsMapping = defineMapping");
-		expect(code).toContain(
-			"export const postsSchema = defineSchema(_postsZodSchema, _postsMapping);",
-		);
-		expect(code).toContain('export const postsSourceId = "abc-123";');
+	it("columnMappings で日本語プロパティ名を明示マッピングできる", () => {
+		const warn = vi.fn();
+		const source = makeSource({
+			config: {
+				name: "posts",
+				dbName: "DB",
+				columnMappings: { あいうえお: "japaneseField" },
+			},
+			properties: {
+				Name: makeProp("title"),
+				Slug: makeProp("rich_text"),
+				あいうえお: makeProp("number"),
+			},
+		});
+		const code = generateSchemaFile([source], { warn });
+		expect(code).toContain("japaneseField");
+		expect(code).toContain('notion: "あいうえお"');
+		expect(warn).not.toHaveBeenCalled();
 	});
 
-	it("cmsDataSources オブジェクトが出力される", () => {
-		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain("export const cmsDataSources = {");
-		expect(code).toContain("posts: createNotionCollection({");
-		expect(code).toContain('token: env("NOTION_TOKEN")');
-		expect(code).toContain("dataSourceId: postsSourceId,");
-		expect(code).toContain("schema: postsSchema,");
-		expect(code).toContain("} as const;");
-		expect(code).toContain(
-			"export type CMSDataSources = typeof cmsDataSources;",
-		);
+	it("columnMappings に存在しないプロパティを指定するとエラーになる", () => {
+		const source = makeSource({
+			config: {
+				name: "posts",
+				dbName: "DB",
+				columnMappings: { 存在しない: "missing" },
+			},
+		});
+		expect(() => generateSchemaFile([source])).toThrow("存在しない");
 	});
 
-	it("複数ソースが cmsDataSources に含まれる", () => {
+	it("複数ソースがそれぞれ出力される", () => {
 		const sources: ResolvedSource[] = [
 			makeSource(),
 			{
@@ -211,105 +221,17 @@ describe("generateSchemaFile", () => {
 			} as ResolvedSource,
 		];
 		const code = generateSchemaFile(sources);
-		expect(code).toContain("posts: createNotionCollection({");
-		expect(code).toContain("news: createNotionCollection({");
-		expect(code).toContain("dataSourceId: postsSourceId,");
-		expect(code).toContain("dataSourceId: newsSourceId,");
+		expect(code).toContain("postsSourceId");
+		expect(code).toContain("postsProperties");
+		expect(code).toContain("newsSourceId");
+		expect(code).toContain("newsProperties");
 	});
 
-	it("日本語プロパティ名は fields.properties がないとエラーになる", () => {
-		const source = makeSource({
-			config: { name: "posts", dbName: "DB" },
-			properties: {
-				Name: makeProp("title"),
-				Slug: makeProp("rich_text"),
-				あいうえお: makeProp("number"),
-			},
-		});
-		expect(() => generateSchemaFile([source])).toThrow(
-			"fields.properties に追加してください",
-		);
-	});
-
-	it("fields.properties で日本語プロパティ名を明示マッピングできる", () => {
-		const source = makeSource({
-			config: {
-				name: "posts",
-				dbName: "DB",
-				fields: { properties: { あいうえお: "japaneseField" } },
-			},
-			properties: {
-				Name: makeProp("title"),
-				Slug: makeProp("rich_text"),
-				あいうえお: makeProp("number"),
-			},
-		});
-		const code = generateSchemaFile([source]);
-		expect(code).toContain("japaneseField");
-		expect(code).toContain('notion: "あいうえお"');
-	});
-
-	it("slug が見つからない場合はエラーになる", () => {
-		const source = makeSource({
-			properties: {
-				Body: makeProp("rich_text"),
-				Status: makeProp("status"),
-			},
-		});
-		expect(() => generateSchemaFile([source])).toThrow(
-			"slug フィールドが見つかりませんでした",
-		);
-	});
-
-	it("fields.slug に存在しないプロパティを指定するとエラーになる", () => {
-		const source = makeSource({
-			config: {
-				name: "posts",
-				dbName: "DB",
-				fields: { slug: "NoSuchProp" },
-			},
-		});
-		expect(() => generateSchemaFile([source])).toThrow("NoSuchProp");
-	});
-
-	it("fields.properties に存在しないプロパティを指定するとエラーになる", () => {
-		const source = makeSource({
-			config: {
-				name: "posts",
-				dbName: "DB",
-				fields: { properties: { 存在しない: "missing" } },
-			},
-		});
-		expect(() => generateSchemaFile([source])).toThrow("存在しない");
-	});
-
-	it("スペースやハイフン入りのプロパティ名を camelCase に変換する", () => {
-		const source = makeSource({
-			config: { name: "posts", dbName: "DB" },
-			properties: {
-				Name: makeProp("title"),
-				Slug: makeProp("rich_text"),
-				"published-at": makeProp("date"),
-			},
-		});
-		const code = generateSchemaFile([source]);
-		// published-at → publishedAt として date フィールドが検出される
-		expect(code).toContain("publishedAt:");
-	});
-
-	it("fields.slug で slug フィールドを上書き指定できる", () => {
-		const source = makeSource({
-			config: {
-				name: "posts",
-				dbName: "DB",
-				fields: { slug: "Body" },
-			},
-			properties: {
-				Name: makeProp("title"),
-				Body: makeProp("rich_text"),
-			},
-		});
-		const code = generateSchemaFile([source]);
-		expect(code).toContain('slug: { type: "richText", notion: "Body" }');
+	it("Zod や defineSchema は含まれない（新アーキテクチャ）", () => {
+		const code = generateSchemaFile([makeSource()]);
+		expect(code).not.toContain("defineSchema");
+		expect(code).not.toContain("defineMapping");
+		expect(code).not.toContain('from "zod"');
+		expect(code).not.toContain("cmsDataSources");
 	});
 });

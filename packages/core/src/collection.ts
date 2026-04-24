@@ -15,6 +15,7 @@ import type {
 	GetListOptions,
 	ItemWithContent,
 	Logger,
+	PropertyMap,
 	SortOption,
 } from "./types/index";
 
@@ -40,6 +41,13 @@ export interface CollectionContext<T extends BaseContentItem> {
 	retryConfig: RetryConfig;
 	maxConcurrent: number;
 	waitUntil: ((p: Promise<unknown>) => void) | undefined;
+	/**
+	 * slug として使うフィールド名。
+	 * `createCMS({ collections })` で指定した値。
+	 * 設定時は `source.properties[slugField].notion` を Notion プロパティ名として
+	 * `findByProp` を呼び出す。
+	 */
+	slugField?: string;
 }
 
 /** CollectionClient の実装。ユーザーは `createCMS` 経由でインスタンスを受け取る。 */
@@ -233,16 +241,40 @@ export class CollectionClientImpl<T extends BaseContentItem>
 	}
 
 	private async findRaw(slug: string): Promise<T | null> {
-		const item = await withRetry(() => this.ctx.source.findBySlug(slug), {
+		const retryOpts = {
 			...this.ctx.retryConfig,
-			onRetry: (attempt, status) => {
+			onRetry: (attempt: number, status: number) => {
 				this.ctx.logger?.warn?.("getItem() リトライ中", {
 					attempt,
 					status,
 					slug,
 				});
 			},
-		});
+		};
+
+		// slug フィールドが指定され、DataSource が findByProp を持つ場合は
+		// Notion プロパティ名を解決して効率的なフィルタクエリを実行する。
+		const slugField = this.ctx.slugField;
+		const notionPropName = slugField
+			? this.ctx.source.properties?.[slugField]?.notion
+			: undefined;
+
+		let item: T | null;
+		if (notionPropName && this.ctx.source.findByProp) {
+			item = await withRetry(
+				() => this.ctx.source.findByProp!(notionPropName, slug),
+				retryOpts,
+			);
+		} else if (this.ctx.source.findBySlug) {
+			item = await withRetry(
+				() => this.ctx.source.findBySlug!(slug),
+				retryOpts,
+			);
+		} else {
+			const all = await withRetry(() => this.ctx.source.list(), retryOpts);
+			item = all.find((i) => i.slug === slug) ?? null;
+		}
+
 		if (!item) return null;
 		if (
 			this.ctx.accessibleStatuses.length > 0 &&

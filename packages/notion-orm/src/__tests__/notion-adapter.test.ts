@@ -123,7 +123,7 @@ describe("notionAdapter", () => {
 				makePage("my-post", "公開") as never,
 			);
 
-			const item = await adapter.findBySlug("my-post");
+			const item = await adapter.findBySlug!("my-post");
 			expect(item?.slug).toBe("my-post");
 			expect(queryPageBySlug).toHaveBeenCalledWith(
 				expect.anything(),
@@ -136,7 +136,7 @@ describe("notionAdapter", () => {
 		it("見つからない場合は null を返す", async () => {
 			vi.mocked(queryPageBySlug).mockResolvedValue(null);
 
-			const item = await adapter.findBySlug("nonexistent");
+			const item = await adapter.findBySlug!("nonexistent");
 			expect(item).toBeNull();
 		});
 
@@ -160,7 +160,7 @@ describe("notionAdapter", () => {
 				makePage("my-post", "公開") as never,
 			);
 
-			await schemaAdapter.findBySlug("my-post");
+			await schemaAdapter.findBySlug!("my-post");
 			expect(queryPageBySlug).toHaveBeenCalledWith(
 				expect.anything(),
 				"test-db-id",

@@ -22,6 +22,7 @@ import type {
 	Logger,
 	RendererFn,
 } from "./types/index";
+import type { CollectionSemantics } from "./types/config";
 
 const DEFAULT_IMAGE_PROXY_BASE = "/api/images";
 
@@ -177,6 +178,18 @@ export function createCMS<D extends DataSourceMap>(
 		});
 	}
 
+	// collections が指定されたコレクションは slug が必須。
+	for (const [name, col] of Object.entries(opts.collections ?? {})) {
+		const c = col as CollectionSemantics | undefined;
+		if (c && !c.slug) {
+			throw new CMSError({
+				code: "core/config_invalid",
+				message: `createCMS: コレクション "${name}" の collections.slug は必須です。slug として使うフィールド名を指定してください。`,
+				context: { operation: "createCMS", collection: name },
+			});
+		}
+	}
+
 	const resolved = resolvePreset(opts);
 
 	const baseDocCache = resolveDocumentCache(resolved.cache);
@@ -220,6 +233,7 @@ export function createCMS<D extends DataSourceMap>(
 			hooks,
 			logger,
 		};
+		const col = opts.collections?.[name] as CollectionSemantics | undefined;
 		const ctx: CollectionContext<BaseContentItem> = {
 			collection: name,
 			source,
@@ -228,15 +242,17 @@ export function createCMS<D extends DataSourceMap>(
 			hooks,
 			logger,
 			ttlMs,
-			publishedStatuses: source.publishedStatuses
-				? [...source.publishedStatuses]
-				: [],
-			accessibleStatuses: source.accessibleStatuses
-				? [...source.accessibleStatuses]
-				: [],
+			// collections で指定した値を優先し、未指定時は DataSource 側のデフォルトを使う
+			publishedStatuses: col?.publishedStatuses
+				? [...col.publishedStatuses]
+				: (source.publishedStatuses ? [...source.publishedStatuses] : []),
+			accessibleStatuses: col?.accessibleStatuses
+				? [...col.accessibleStatuses]
+				: (source.accessibleStatuses ? [...source.accessibleStatuses] : []),
 			retryConfig,
 			maxConcurrent,
 			waitUntil,
+			slugField: col?.slug,
 		};
 		collections[name] = new CollectionClientImpl(ctx);
 	}
