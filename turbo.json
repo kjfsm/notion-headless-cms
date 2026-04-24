@@ -18,6 +18,11 @@
 			"inputs": ["src/**"],
 			"outputs": []
 		},
+		"test:coverage": {
+			"dependsOn": ["^build"],
+			"inputs": ["src/**"],
+			"outputs": ["coverage/**"]
+		},
 		"publint": {
 			"dependsOn": ["build"],
 			"inputs": ["dist/**", "package.json"],

@@ -14,6 +14,7 @@
 		"publint": "turbo run publint --filter=\"./packages/*\"",
 		"attw": "turbo run attw --filter=\"./packages/*\"",
 		"verify": "turbo run build typecheck test publint attw --filter=\"./packages/*\"",
+		"verify:ci": "turbo run build typecheck test:coverage publint attw --filter=\"./packages/*\"",
 		"generate": "turbo run generate --filter=\"./examples/*\"",
 		"format": "biome check --write",
 		"lint": "biome ci",
