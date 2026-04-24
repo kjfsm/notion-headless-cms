@@ -12,3 +12,6 @@ dist
 
 # Claude Code の個人用設定
 .claude/settings.local.json
+
+# .claude/ 編集作業用フォルダ (CLAUDE.md 参照)
+.claude-next/

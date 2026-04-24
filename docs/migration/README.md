@@ -1,18 +1,25 @@
----
-name: migration-guide
-description: docs/migration/<version>.md を書く時のフォーマット。破壊的変更を before/after 形式で示し、自動化可能な grep/sed コマンドも添える
----
+# マイグレーションガイド
 
-# migration-guide — マイグレーションガイド執筆
+本ディレクトリは破壊的変更を伴うバージョン移行の手順書を置く場所。
 
-## いつ使うか
+## 既存ガイド
 
-- 公開 API の破壊的変更
+- [`v0-to-v1.md`](./v0-to-v1.md) — v0 系から v1 系への初回リファクタ
+- [`v0.3.md`](./v0.3.md) — v0.3.0 のランタイム preset 化
+- [`v1-orm-split.md`](./v1-orm-split.md) — v1 系で `notion-orm` を分離
+
+## いつガイドを書くか
+
+以下のいずれかに該当する変更は必ずガイドを追加する:
+
+- 公開 API の破壊的変更（関数シグネチャ、型、export 変更）
 - エラーコード名前空間の変更
 - キャッシュキー形式の変更
-- パッケージ分割・統合
+- パッケージの分割・統合・廃止
 
-## 書式
+## テンプレ
+
+新規ガイドは `docs/migration/v<old>-to-v<new>.md` に以下の骨子で書く:
 
 ```md
 # v<old> → v<new> 移行ガイド
@@ -29,32 +36,26 @@ description: docs/migration/<version>.md を書く時のフォーマット。破
 **変更理由**: <なぜ変えたか（1-2 行）>
 
 **Before**:
-```ts
+​```ts
 // 旧 API
-```
+​```
 
 **After**:
-```ts
+​```ts
 // 新 API
-```
+​```
 
 **自動化**（任意）:
-```bash
+​```bash
 # 単純な置換で済む場合
 find . -name "*.ts" -exec sed -i 's/oldApi/newApi/g' {} +
-```
+​```
 
 ## 互換性
 
 - 旧 API のラッパーは v<new> では**提供されない**
 - deprecated 警告が v<old-1> から出ていれば明記
 ```
-
-## ファイル配置
-
-- `docs/migration/v<X>-to-v<Y>.md`
-- ルート `README.md` の「ドキュメント」セクションにリンク追加
-- changeset には **major** を明記
 
 ## スタイルルール
 
@@ -64,6 +65,7 @@ find . -name "*.ts" -exec sed -i 's/oldApi/newApi/g' {} +
 - 破壊的変更が複数ある場合は番号付きリストに
 - 該当 PR 番号へのリンクを文末に貼る
 
-## 既存例
+## ガイド追加後の連動更新
 
-- `docs/migration/v0-to-v1.md`
+- ルート `README.md` の「ドキュメント」セクションに項目を追加
+- changeset には **major** を明記

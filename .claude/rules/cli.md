@@ -43,7 +43,27 @@ paths:
 - `NhcSchema` は `defineSchema` / `defineMapping` 経由で生成
 - CLI は出力時にマルチソース対応の型を出す（各ソースが別のスキーマを持つ）
 
+## 実装上の注意
+
+- Node.js 24+ 想定（`engines.node: ">=24"`）
+- `verbatimModuleSyntax: true` に従い `import type` を使う
+- CLI の出力は JSON ではなく人間向けに整形（コード生成結果の要約を出す）
+- `--env-file` は `fs.readFileSync` で KEY=VALUE 形式を読む
+
+## エラー
+
+- token 未設定: `CMSError code: "core/config_invalid"`
+- Notion API 失敗: 原因を含む `CMSError`
+- schema 不整合: `CMSError code: "core/schema_invalid"`
+
 ## テスト
 
-- `__tests__/codegen.test.ts` — コード生成
-- `__tests__/init.test.ts` — テンプレ生成
+- `__tests__/codegen.test.ts` — コード生成結果の snapshot 比較
+- `__tests__/init.test.ts` — `nhc init` のテンプレ生成
+- Notion API は `vi.mock("@notionhq/client")` でモック
+
+## 変更時に連動して更新するもの
+
+- `packages/cli/README.md`
+- `docs/cli.md`
+- `examples/*/nhc.config.ts` が最新 API で動くか

@@ -1,13 +1,18 @@
 ---
-name: cloudflare-workers
-description: Cloudflare Workers / R2 / D1 / KV / Durable Objects / Queues 関連の実装ガイド。adapter-cloudflare / cache-r2 / examples/cloudflare-* を触る時に自動で呼ばれる。旧 AGENTS.md の内容を吸収
+description: Cloudflare Workers / R2 / KV 関連の実装慣行（cache-r2 / cloudflarePreset / examples/cloudflare-*）
+paths:
+  - "packages/cache-r2/**"
+  - "packages/cache-kv/**"
+  - "examples/cloudflare-*/**"
+  - "**/wrangler.toml"
+  - "**/wrangler.jsonc"
 ---
 
-# cloudflare-workers — Cloudflare 実装ガイド
+# Cloudflare Workers 実装ガイド
 
 ## 重要
 
-**Workers API と制限は変わる可能性が高い**。作業前に必ず最新ドキュメントを参照すること。
+**Workers API と制限は変わる可能性が高い**。作業前に必ず最新ドキュメントを参照する。
 
 - 公式ドキュメント: https://developers.cloudflare.com/workers/
 - Cloudflare Docs MCP（推奨登録）: `https://docs.mcp.cloudflare.com/mcp`
@@ -22,7 +27,7 @@ description: Cloudflare Workers / R2 / D1 / KV / Durable Objects / Queues 関連
 | `npx wrangler secret put <NAME>` | シークレット登録 |
 | `npx wrangler r2 bucket create <NAME>` | R2 バケット作成 |
 
-`wrangler.toml` または `wrangler.jsonc` の bindings を変えたら **必ず `wrangler types`** を実行。
+`wrangler.toml` / `wrangler.jsonc` の bindings を変えたら **必ず `wrangler types`** を実行。
 
 ## Node.js 互換
 
@@ -31,23 +36,25 @@ description: Cloudflare Workers / R2 / D1 / KV / Durable Objects / Queues 関連
 
 ## このリポジトリの Cloudflare 対応
 
-### adapter-cloudflare
+v0.3.0 以降、ランタイム別ファクトリ（旧 `adapter-cloudflare` / `createCloudflareCMS`）は廃止された。現状:
 
-- `createCloudflareCMS({ schema, env, ... })` — `env.CACHE_BUCKET` (R2) を自動検出
-- `CloudflareCMSEnv` 型を公開
-- 詳細: `.claude/rules/adapter.md`
+### `cloudflarePreset` (cache-r2)
+
+- `createCMS({ ...cloudflarePreset({ env }), dataSources })` で使う
+- `env.DOC_CACHE` (KV) と `env.IMG_BUCKET` (R2) を自動検出
+- 詳細: `.claude/rules/cache.md` / `.claude/rules/package-boundaries.md`
 
 ### cache-r2
 
-- `r2Cache({ bucket })` を返す
-- 構造型 `R2BucketLike` を受け取る（`@cloudflare/workers-types` に**実依存しない**）
-- 詳細: `.claude/rules/cache.md`
+- `r2Cache({ bucket })` で `DocumentCacheAdapter` + `ImageCacheAdapter` を返す
+- 構造型 `R2BucketLike` を受け取るため `@cloudflare/workers-types` に**実依存しない**
+- ユーザーは `env.IMG_BUCKET` をそのまま渡せる（構造的サブタイプで互換）
 
 ### examples/cloudflare-*
 
 - `cloudflare-astro` / `cloudflare-hono` / `cloudflare-react-router` / `cloudflare-sveltekit`
 - `.dev.vars` で `NOTION_TOKEN` を設定（git 管理外）
-- `wrangler.toml` に `[[r2_buckets]] binding = "CACHE_BUCKET"`
+- `wrangler.toml` に R2 バケットと KV namespace を binding
 
 ## エラーコード
 
@@ -64,7 +71,3 @@ description: Cloudflare Workers / R2 / D1 / KV / Durable Objects / Queues 関連
 - `/d1/platform/limits/`
 - `/durable-objects/platform/limits/`
 - `/queues/platform/limits/`
-
-## このスキルが吸収した情報
-
-旧 `AGENTS.md` の内容（Cloudflare Workers に関する外部エージェント向け記載）を吸収済み。AGENTS.md 自体は他エージェント互換のため残しているが、中身は「CLAUDE.md を読め」のスタブ。

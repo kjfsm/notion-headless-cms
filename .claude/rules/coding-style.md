@@ -1,5 +1,11 @@
 ---
 description: Biome と ES Modules を中心としたプロジェクト共通のコードスタイル
+paths:
+  - "**/*.ts"
+  - "**/*.tsx"
+  - "**/*.js"
+  - "**/*.mjs"
+  - "**/*.cjs"
 ---
 
 # コードスタイル

@@ -3,7 +3,6 @@ name: boundary-reviewer
 description: packages/core のゼロ依存ルールと依存方向違反、internal/ 越境をレビューするエージェント。禁止 import と不正な依存を検出する
 tools: [Read, Grep, Glob, Bash]
 model: sonnet
-skills: [package-boundaries, core, notion-api]
 ---
 
 # boundary-reviewer subagent
@@ -55,7 +54,7 @@ grep -rE 'from ["'"'"']@notion-headless-cms/[^/]+/internal' packages
 1. packages/core/src/cms.ts:14
    - 違反: `import { renderMarkdown } from "@notion-headless-cms/renderer"`
    - 対処: RendererFn として注入するか動的 import に変更
-   - 参考: .claude/skills/package-boundaries/SKILL.md の修正例 1
+   - 参考: .claude/rules/package-boundaries.md の違反パターン
 
 ### 警告
 - packages/adapter-cloudflare/src/x.ts:20 で `@notion-headless-cms/source-notion/internal/...` を参照しているように見える
