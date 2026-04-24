@@ -1,0 +1,47 @@
+[
+	{
+		"name": "core",
+		"path": "packages/core/dist/index.mjs",
+		"limit": "20 kB"
+	},
+	{
+		"name": "renderer",
+		"path": "packages/renderer/dist/index.mjs",
+		"limit": "10 kB"
+	},
+	{
+		"name": "adapter-node",
+		"path": "packages/adapter-node/dist/index.mjs",
+		"limit": "50 kB"
+	},
+	{
+		"name": "adapter-cloudflare",
+		"path": "packages/adapter-cloudflare/dist/index.mjs",
+		"limit": "50 kB"
+	},
+	{
+		"name": "adapter-next",
+		"path": "packages/adapter-next/dist/index.mjs",
+		"limit": "10 kB"
+	},
+	{
+		"name": "cache-r2",
+		"path": "packages/cache-r2/dist/index.mjs",
+		"limit": "5 kB"
+	},
+	{
+		"name": "cache-kv",
+		"path": "packages/cache-kv/dist/index.mjs",
+		"limit": "5 kB"
+	},
+	{
+		"name": "cache-next",
+		"path": "packages/cache-next/dist/index.mjs",
+		"limit": "5 kB"
+	},
+	{
+		"name": "cli",
+		"path": "packages/cli/dist/index.mjs",
+		"limit": "30 kB"
+	}
+]

@@ -1,18 +1,25 @@
 {
 	"$schema": "./node_modules/turbo/schema.json",
-	"globalDependencies": ["tsconfig.json"],
+	"globalDependencies": ["tsconfig.json", "biome.json", "vitest.workspace.ts"],
+	"globalEnv": ["NODE_ENV", "CI"],
 	"tasks": {
 		"build": {
 			"dependsOn": ["^build"],
+			"inputs": ["src/**", "package.json", "tsconfig.json"],
 			"outputs": ["dist/**"]
 		},
 		"typecheck": {
 			"dependsOn": ["^build"],
+			"inputs": ["src/**", "tsconfig.json"],
 			"outputs": []
 		},
 		"test": {
 			"dependsOn": ["^build"],
+			"inputs": ["src/**"],
 			"outputs": []
+		},
+		"lint": {
+			"cache": false
 		},
 		"generate": {
 			"dependsOn": ["@notion-headless-cms/cli#build"],
