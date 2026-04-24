@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { z } from "zod";
 import { notionAdapter } from "../notion-adapter";
+import { defineMapping, defineSchema } from "../schema";
 
 vi.mock("../internal/fetcher/index", () => ({
 	createClient: vi.fn().mockReturnValue({}),
@@ -128,6 +130,7 @@ describe("notionAdapter", () => {
 				"test-db-id",
 				"my-post",
 				"Slug",
+				undefined,
 			);
 		});
 
@@ -136,6 +139,36 @@ describe("notionAdapter", () => {
 
 			const item = await adapter.findBySlug("nonexistent");
 			expect(item).toBeNull();
+		});
+
+		it("schema で slug が title 型の場合、slugPropType=title を渡す", async () => {
+			const SlugTitleSchema = z.object({
+				id: z.string(),
+				updatedAt: z.string(),
+				slug: z.string(),
+				title: z.string().nullable().optional(),
+			});
+			const slugTitleMapping = defineMapping<z.infer<typeof SlugTitleSchema>>({
+				slug: { type: "title", notion: "Name" },
+			});
+			const schemaAdapter = notionAdapter({
+				token: "test-token",
+				dataSourceId: "test-db-id",
+				schema: defineSchema(SlugTitleSchema, slugTitleMapping),
+			});
+
+			vi.mocked(queryPageBySlug).mockResolvedValue(
+				makePage("my-post", "公開") as never,
+			);
+
+			await schemaAdapter.findBySlug("my-post");
+			expect(queryPageBySlug).toHaveBeenCalledWith(
+				expect.anything(),
+				"test-db-id",
+				"my-post",
+				"Name",
+				"title",
+			);
 		});
 	});
 

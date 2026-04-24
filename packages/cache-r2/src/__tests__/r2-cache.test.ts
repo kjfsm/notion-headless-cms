@@ -61,7 +61,9 @@ describe("r2Cache", () => {
 
 		beforeEach(() => {
 			bucket = makeMockBucket();
-			cache = r2Cache({ bucket })!;
+			const c = r2Cache({ bucket });
+			if (!c) throw new Error("unexpected undefined");
+			cache = c;
 		});
 
 		it("setList → getList でリストを取得できる", async () => {
@@ -97,7 +99,8 @@ describe("r2Cache", () => {
 		});
 
 		it("prefix オプションがキーに反映される", async () => {
-			const prefixedCache = r2Cache({ bucket, prefix: "blog/" })!;
+			const prefixedCache = r2Cache({ bucket, prefix: "blog/" });
+			if (!prefixedCache) throw new Error("unexpected undefined");
 			const list: CachedItemList = {
 				items: [makeItem("post-x")],
 				cachedAt: Date.now(),
@@ -117,7 +120,9 @@ describe("r2Cache", () => {
 
 		beforeEach(() => {
 			bucket = makeMockBucket();
-			cache = r2Cache({ bucket })!;
+			const c = r2Cache({ bucket });
+			if (!c) throw new Error("unexpected undefined");
+			cache = c;
 		});
 
 		it("set → get で画像を取得できる", async () => {

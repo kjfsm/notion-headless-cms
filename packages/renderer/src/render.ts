@@ -33,7 +33,7 @@ export async function renderMarkdown(
 	}
 
 	// unified の use はプラグイン追加のたびに型が変化するため any でブリッジする。
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
+	// biome-ignore lint/suspicious/noExplicitAny: unified プラグインチェーンは型推論が困難
 	const proc: any = unified()
 		.use(remarkParse)
 		.use(remarkGfm)

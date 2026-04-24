@@ -79,6 +79,7 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
 	private resolvingDataSourceId: Promise<string> | undefined;
 	private readonly itemMapper: (page: NotionPage) => T;
 	private readonly slugPropName: string;
+	private readonly slugPropType: string | undefined;
 	private readonly blocksConfig: Record<string, BlockHandler> | undefined;
 
 	constructor(opts: NotionCollectionOptions<T>) {
@@ -100,9 +101,10 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
 			this.publishedStatuses = opts.schema.publishedStatuses;
 			this.accessibleStatuses = opts.schema.accessibleStatuses;
 			const slugField = (
-				opts.schema.mapping as Record<string, { notion: string }>
+				opts.schema.mapping as Record<string, { notion: string; type: string }>
 			).slug;
 			this.slugPropName = slugField?.notion ?? DEFAULT_PROPERTIES.slug;
+			this.slugPropType = slugField?.type;
 		} else if ("mapItem" in opts && opts.mapItem) {
 			const props: Required<CMSSchemaProperties> = {
 				...DEFAULT_PROPERTIES,
@@ -209,6 +211,7 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
 				dataSourceId,
 				slug,
 				this.slugPropName,
+				this.slugPropType,
 			);
 			if (!page) return null;
 			return this.itemMapper(page);
