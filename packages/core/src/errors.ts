@@ -1,12 +1,20 @@
 type BuiltInCMSErrorCode =
 	| "core/config_invalid"
 	| "core/schema_invalid"
+	| "core/notion_orm_missing"
 	| "source/fetch_items_failed"
 	| "source/fetch_item_failed"
 	| "source/load_markdown_failed"
 	| "cache/io_failed"
 	| "cache/image_fetch_failed"
-	| "renderer/failed";
+	| "renderer/failed"
+	| "cli/config_invalid"
+	| "cli/config_load_failed"
+	| "cli/schema_invalid"
+	| "cli/generate_failed"
+	| "cli/init_failed"
+	| "cli/notion_api_failed"
+	| "cli/env_file_not_found";
 
 /**
  * CMS エラーコード。

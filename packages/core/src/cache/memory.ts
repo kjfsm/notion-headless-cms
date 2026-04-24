@@ -2,9 +2,9 @@ import type {
 	BaseContentItem,
 	CachedItem,
 	CachedItemList,
-	CacheInvalidateScope,
 	DocumentCacheAdapter,
 	ImageCacheAdapter,
+	InvalidateScope,
 	StorageBinary,
 } from "../types/index";
 
@@ -66,11 +66,16 @@ export class MemoryDocumentCache<T extends BaseContentItem = BaseContentItem>
 		return Promise.resolve();
 	}
 
-	async invalidate(scope: CacheInvalidateScope): Promise<void> {
+	async invalidate(scope: InvalidateScope): Promise<void> {
 		if (scope === "all") {
 			this.list = null;
 			this.items.clear();
-		} else if ("slug" in scope) {
+			return;
+		}
+		// { collection } または { collection, slug }。単一コレクション想定のため
+		// list を必ず破棄し、slug 指定があれば該当 item も削除する
+		this.list = null;
+		if ("slug" in scope) {
 			this.items.delete(scope.slug);
 		}
 	}

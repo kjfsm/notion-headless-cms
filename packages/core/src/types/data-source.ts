@@ -89,7 +89,7 @@ export interface CollectionConfig<T extends BaseContentItem = BaseContentItem> {
  * コレクション名をキーとして、各コレクションの設定を保持する。
  */
 // biome-ignore lint/suspicious/noExplicitAny: 各コレクションの T が異なるため
-export type NHCSchema = Record<string, CollectionConfig<any>>;
+export type CMSSchema = Record<string, CollectionConfig<any>>;
 
 /** `CollectionConfig<T>` から `T` を抽出するユーティリティ型。 */
 export type InferCollectionItem<C> =
@@ -99,10 +99,24 @@ export type InferCollectionItem<C> =
  * DataSource を生成するファクトリ関数の型。
  * `createCMS` はコレクション名 → この関数 → DataSource の経路で組み立てる。
  *
- * ユーザーコードは直接呼ばない。`@notion-headless-cms/notion-orm` 等が provide する。
+ * ユーザーコードは直接呼ばない。`@notion-headless-cms/notion-orm` 等の
+ * ORM パッケージが provide する。ORM 固有のオプション (Notion なら
+ * `{ token }`、Google Docs なら `{ credentials }` 等) は `TOptions` の
+ * generic で受け取る。
+ *
+ * @example
+ * // notion-orm が DataSourceFactory<{ token: string }> として実装する
+ * const factory: DataSourceFactory<{ token: string }> = ({ collection, config, options }) =>
+ *   createNotionCollection({
+ *     token: options.token,
+ *     dataSourceId: config.databaseId,
+ *     schema: config.schema,
+ *   });
  */
-export type DataSourceFactory = <T extends BaseContentItem>(args: {
+export type DataSourceFactory<TOptions = unknown> = <
+	T extends BaseContentItem,
+>(args: {
 	collection: string;
 	config: CollectionConfig<T>;
-	notionToken: string;
+	options: TOptions;
 }) => DataSource<T>;

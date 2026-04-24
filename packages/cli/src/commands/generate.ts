@@ -1,11 +1,12 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { CMSError } from "@notion-headless-cms/core";
 import { config as dotenvConfig } from "dotenv";
 import type { ResolvedSource } from "../codegen.js";
 import { generateSchemaFile } from "../codegen.js";
 import { loadConfig } from "../config-loader.js";
 import { fileExists } from "../fs-utils.js";
-import type { DataSourceConfig, NHCConfig } from "../index.js";
+import type { CMSConfig, DataSourceConfig } from "../index.js";
 import {
 	createNotionCLIClient,
 	type NotionCLIClient,
@@ -29,7 +30,11 @@ async function loadEnvFile(
 	if (envFile) {
 		const envFilePath = path.resolve(process.cwd(), envFile);
 		if (!(await fileExists(envFilePath))) {
-			throw new Error(`環境変数ファイルが見つかりません: ${envFilePath}`);
+			throw new CMSError({
+				code: "cli/env_file_not_found",
+				message: `環境変数ファイルが見つかりません: ${envFilePath}`,
+				context: { operation: "loadEnvFile", envFilePath },
+			});
 		}
 		dotenvConfig({ path: envFilePath });
 		if (!silent) console.log(`環境変数ファイルを読み込み中: ${envFilePath}`);
@@ -44,16 +49,19 @@ async function loadEnvFile(
 	}
 }
 
-function resolveToken(opts: GenerateOptions, config: NHCConfig): string {
+function resolveToken(opts: GenerateOptions, config: CMSConfig): string {
 	const token = opts.token || config.notionToken || process.env.NOTION_TOKEN;
 	if (token) return token;
-	throw new Error(
-		"Notion トークンが設定されていません。以下のいずれかで指定してください:\n" +
+	throw new CMSError({
+		code: "cli/config_invalid",
+		message:
+			"Notion トークンが設定されていません。以下のいずれかで指定してください:\n" +
 			'  - nhc.config.ts に notionToken: env("NOTION_TOKEN") を追加\n' +
 			"  - 環境変数 NOTION_TOKEN を設定\n" +
 			"  - --env-file .dev.vars で環境変数ファイルを指定\n" +
 			"  - --token フラグを使用",
-	);
+		context: { operation: "resolveToken" },
+	});
 }
 
 async function resolveDataSource(
@@ -66,11 +74,14 @@ async function resolveDataSource(
 		const dbName = ds.dbName as string;
 		const found = await client.resolveId(dbName);
 		if (!found) {
-			throw new Error(
-				`データベース "${dbName}" が見つかりませんでした。\n` +
+			throw new CMSError({
+				code: "cli/notion_api_failed",
+				message:
+					`データベース "${dbName}" が見つかりませんでした。\n` +
 					"・Notion トークンにそのデータベースへのアクセス権限があるか確認してください。\n" +
 					"・DB 名が正確に一致しているか確認してください。",
-			);
+				context: { operation: "resolveDataSource", dbName },
+			});
 		}
 		resolvedId = found;
 	}
@@ -119,7 +130,7 @@ export async function runGenerate(opts: GenerateOptions): Promise<void> {
 	if (!silent) {
 		console.log(`\n生成完了: ${outputPath}`);
 		console.log(
-			"次のステップ: createNodeCMS / createCloudflareCMS の sources オプションで published / accessible を設定してください。",
+			"次のステップ: createCMS({ ...nodePreset() | ...cloudflarePreset({ env }), dataSources }) で CMS クライアントを組み立ててください。",
 		);
 
 		const relPath = path.relative(process.cwd(), outputPath);

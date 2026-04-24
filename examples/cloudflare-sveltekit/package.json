@@ -14,9 +14,10 @@
 		"cf-typegen": "wrangler types"
 	},
 	"dependencies": {
-		"@notion-headless-cms/adapter-cloudflare": "workspace:*",
+		"@notion-headless-cms/cache-r2": "workspace:*",
 		"@notion-headless-cms/core": "workspace:*",
 		"@notion-headless-cms/notion-orm": "workspace:*",
+		"@notion-headless-cms/renderer": "workspace:*",
 		"zod": "^4.1.12"
 	},
 	"devDependencies": {

@@ -32,7 +32,7 @@ interface DataSourceWithDbName {
 
 export type DataSourceConfig = DataSourceWithId | DataSourceWithDbName;
 
-export interface NHCConfig {
+export interface CMSConfig {
 	dataSources: DataSourceConfig[];
 	/** 生成ファイルの出力パス */
 	output: string;
@@ -41,7 +41,7 @@ export interface NHCConfig {
 }
 
 /** nhc.config.ts で使う設定ヘルパー。型推論のみで実体は恒等関数。 */
-export function defineConfig(config: NHCConfig): NHCConfig {
+export function defineConfig(config: CMSConfig): CMSConfig {
 	return config;
 }
 

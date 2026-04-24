@@ -57,11 +57,11 @@ describe("MemoryDocumentCache", () => {
 		expect(await cache.getItem("a")).toBeNull();
 	});
 
-	it("invalidate({ slug }) で対象スラッグのみクリアする", async () => {
+	it("invalidate({ collection, slug }) で対象スラッグのみクリアする", async () => {
 		const cache = memoryDocumentCache();
 		await cache.setItem("a", makeCachedItem("a"));
 		await cache.setItem("b", makeCachedItem("b"));
-		await cache.invalidate?.({ slug: "a" });
+		await cache.invalidate?.({ collection: "posts", slug: "a" });
 		expect(await cache.getItem("a")).toBeNull();
 		expect(await cache.getItem("b")).not.toBeNull();
 	});

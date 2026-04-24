@@ -21,7 +21,7 @@ npm スコープ `@notion-headless-cms/*` で公開。
 - `@.claude/rules/error-handling.md` — `CMSError` / 名前空間
 - `@.claude/rules/secrets.md` — NOTION_TOKEN / env()
 
-パス固有ルールは `.claude/rules/` 配下で `paths:` frontmatter 付き。該当パスを触る時に自動で注入される（`core.md` / `source-notion.md` / `cache.md` / `adapter.md` / `cli.md` / `docs.md` / `examples.md`）。
+パス固有ルールは `.claude/rules/` 配下で `paths:` frontmatter 付き。該当パスを触る時に自動で注入される（`core.md` / `source-notion.md` / `cache.md` / `adapter.md` / `cli.md`）。
 
 ## 作業フロー
 
@@ -29,8 +29,7 @@ npm スコープ `@notion-headless-cms/*` で公開。
 2. **実装中**: 既存の skill が該当すれば `/skill-name` で呼ぶ（`/changeset-flow`, `/new-package`, `/publish-preflight` など）
 3. **実装後**: `pnpm typecheck && pnpm test && pnpm format` を通してからコミット
 4. **changeset**: `packages/*` を触ったら `pnpm changeset` を実行（詳細: `.claude/skills/changeset-flow/`）
-5. **ドキュメント追従**: 公開 API を変えたら `docs/` と `packages/*/README.md` を同じコミットで更新（詳細: `.claude/rules/docs.md`）
-6. **リリース**: main マージで `release.yml` が "Version Packages" PR を作成。その PR をマージすると npm に公開される
+5. **リリース**: main マージで `release.yml` が "Version Packages" PR を作成。その PR をマージすると npm に公開される
 
 ## 自己更新ルール
 

@@ -4,18 +4,9 @@ import type {
 	CachedItemList,
 	StorageBinary,
 } from "./content";
+import type { InvalidateScope } from "./data-source";
 
-/**
- * キャッシュ無効化のスコープ。
- * v1 API では `{ collection, slug? }` が主形式。
- * 旧 `{ tag }` 形式は後方互換のため残す。
- */
-export type InvalidateScope =
-	| "all"
-	| { slug: string }
-	| { tag: string }
-	| { collection: string }
-	| { collection: string; slug: string };
+export type { InvalidateScope } from "./data-source";
 
 /** ドキュメントキャッシュを抽象化するインターフェース。 */
 export interface DocumentCacheAdapter<

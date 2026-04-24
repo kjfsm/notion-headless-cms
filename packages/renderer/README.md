@@ -12,7 +12,10 @@ npm install @notion-headless-cms/renderer \
 
 `unified` / `remark-*` / `rehype-*` は `peerDependencies`。複数バージョン同居による unified の `Processor` インスタンス不一致を避けるため、利用側のアプリが明示的にインストールする。
 
-通常は [`@notion-headless-cms/core`](../core) の `createCMS({ renderer: renderMarkdown })` 経由で使う。`adapter-cloudflare` / `adapter-node` はこのレンダラーを自動注入する。
+通常は [`@notion-headless-cms/core`](../core) の `createCMS()` 経由で使う。
+renderer は未指定の場合、core が動的 import でフォールバック注入する。
+明示的に差し替えたい場合は `nodePreset({ renderer: renderMarkdown })` や
+`createCMS({ renderer: renderMarkdown, ... })` で注入する。
 
 ## 使い方
 
@@ -89,4 +92,4 @@ const html = await renderMarkdown(markdown, { render: myRenderer });
 ## 関連パッケージ
 
 - [`@notion-headless-cms/core`](../core) — CMS エンジン
-- [`@notion-headless-cms/source-notion`](../source-notion) — Notion データソース
+- [`@notion-headless-cms/notion-orm`](../notion-orm) — Notion データソース (internal)

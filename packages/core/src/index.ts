@@ -30,9 +30,10 @@ export { CMSError, isCMSError, isCMSErrorInNamespace } from "./errors";
 export type { HandlerAdapter, HandlerOptions } from "./handler";
 // ── $handler ───────────────────────────────────────────────────────────
 export { createHandler } from "./handler";
-
 // ── フック・ロガー・プラグイン ────────────────────────────────────────
 export { mergeHooks, mergeLoggers } from "./hooks";
+export type { NodePresetOptions } from "./preset-node";
+export { nodePreset } from "./preset-node";
 
 // ── リトライ ───────────────────────────────────────────────────────────
 export type { RetryConfig } from "./retry";
@@ -45,9 +46,9 @@ export type {
 	CacheConfig,
 	CachedItem,
 	CachedItemList,
-	CacheInvalidateScope,
 	CMSHooks,
 	CMSPlugin,
+	CMSSchema,
 	CMSSchemaProperties,
 	CollectionClient,
 	CollectionConfig,
@@ -65,7 +66,6 @@ export type {
 	ItemWithContent,
 	Logger,
 	MaybePromise,
-	NHCSchema,
 	RateLimiterConfig,
 	RendererFn,
 	RendererPluginList,

@@ -8,7 +8,9 @@ Cloudflare KV をバックエンドとするドキュメントキャッシュア
 npm install @notion-headless-cms/cache-kv
 ```
 
-Cloudflare Workers 環境では [`@notion-headless-cms/adapter-cloudflare`](../adapter-cloudflare) が推移依存として含むため、直接インストールする必要はない。
+Cloudflare Workers では `@notion-headless-cms/cache-r2` の `cloudflarePreset`
+を使うと KV と R2 を自動注入できる。`cache-r2` が `cache-kv` を推移依存として
+含むため、`cloudflarePreset` を使うなら個別インストール不要。
 
 ## 使い方
 
@@ -24,7 +26,7 @@ export default {
     CACHE_BUCKET: R2Bucket;
   }) {
     const cms = createCMS({
-      dataSources: nhcDataSources,
+      dataSources: cmsDataSources,
       renderer: renderMarkdown,
       cache: {
         document: kvCache({ kv: env.CACHE_KV }),  // テキストは KV
@@ -84,4 +86,4 @@ const mock: KVNamespaceLike = {
 
 - [`@notion-headless-cms/core`](../core) — `DocumentCacheAdapter` の型定義
 - [`@notion-headless-cms/cache-r2`](../cache-r2) — R2 画像キャッシュ
-- [`@notion-headless-cms/adapter-cloudflare`](../adapter-cloudflare) — Workers 向けファクトリ（両方を自動注入）
+- [`@notion-headless-cms/cache-r2`](../cache-r2) — `cloudflarePreset` で KV + R2 を自動注入
