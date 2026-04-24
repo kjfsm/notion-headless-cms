@@ -1,5 +1,11 @@
 # @notion-headless-cms/cli
 
+## 0.1.5
+
+### Patch Changes
+
+- 22ab39f: `nhc generate` が生成する Zod スキーマに `title: z.string().nullable().optional()` を追加。`item.title` が型・ランタイム両方で利用可能になる。
+
 ## 0.1.4
 
 ### Patch Changes
