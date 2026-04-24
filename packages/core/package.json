@@ -56,7 +56,7 @@
 		"test": "vitest run",
 		"publint": "publint --strict",
 		"attw": "attw --pack . --profile esm-only",
-		"publish-dry-run": "npm pack --dry-run"
+		"publish-dry-run": "pnpm pack --dry-run"
 	},
 	"publishConfig": {
 		"access": "public",
