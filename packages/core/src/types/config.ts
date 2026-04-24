@@ -61,11 +61,38 @@ export type InferDataSourceItem<D> =
 
 /**
  * `createCMS()` に渡すオプション。v1 の正式な入力シグネチャ。
- * ユーザーは `nhc generate` が生成した `nhcDataSources` を渡すだけ。
+ * ユーザーは `nhc generate` が生成した `cmsDataSources` を渡すだけ。
  */
 export interface CreateCMSOptions<D extends DataSourceMap = DataSourceMap> {
-	/** コレクション名 → DataSource のマップ (CLI 生成の `nhcDataSources`)。 */
+	/** コレクション名 → DataSource のマップ (CLI 生成の `cmsDataSources`)。 */
 	dataSources: D;
+	/**
+	 * ランタイムプリセット。`cache` / `renderer` のデフォルトを自動設定する。
+	 *
+	 * - `"node"`: Node.js 向け。`memoryDocumentCache` + `memoryImageCache` を有効化。
+	 *   `ttlMs` と組み合わせて SWR の TTL を設定できる。
+	 * - `"disabled"`: キャッシュを完全無効化する。
+	 * - 省略: 従来の動作（`cache` / `renderer` をそのまま使用）。
+	 *   `...nodePreset({ ttlMs })` のスプレッドパターンも引き続き動作する。
+	 *
+	 * `cache` を明示的に指定した場合は `preset` より `cache` が優先される。
+	 *
+	 * @example
+	 * // Before（スプレッドが必要だった）
+	 * const cms = createCMS({ ...nodePreset({ ttlMs: 5 * 60_000 }), dataSources });
+	 *
+	 * // After
+	 * const cms = createCMS({ dataSources, preset: "node", ttlMs: 5 * 60_000 });
+	 */
+	preset?: "node" | "disabled";
+	/**
+	 * SWR キャッシュの有効期間（ミリ秒）。`preset` と組み合わせて使用する。
+	 * `cache` オブジェクトを直接渡す場合は `cache.ttlMs` を使用すること。
+	 *
+	 * @example
+	 * const cms = createCMS({ dataSources, preset: "node", ttlMs: 5 * 60_000 });
+	 */
+	ttlMs?: number;
 	/** レンダラー関数。未指定時は @notion-headless-cms/renderer の renderMarkdown を使用。 */
 	renderer?: RendererFn;
 	/** キャッシュ設定。未設定時はキャッシュなし。 */

@@ -3,6 +3,7 @@ import { CollectionClientImpl, type CollectionContext } from "./collection";
 import { CMSError } from "./errors";
 import { createHandler, type HandlerOptions } from "./handler";
 import { mergeHooks, mergeLoggers } from "./hooks";
+import { nodePreset } from "./preset-node";
 import type { RenderContext } from "./rendering";
 import type { RetryConfig } from "./retry";
 import { DEFAULT_RETRY_CONFIG } from "./retry";
@@ -125,16 +126,44 @@ function scopeDocumentCache<T extends BaseContentItem>(
 }
 
 /**
+ * `preset` オプションを解決して `cache` / `renderer` のデフォルトを補完する内部関数。
+ * 明示的な `cache` / `renderer` がある場合はそちらが優先される。
+ * `preset` 未指定時は opts をそのまま返す（後方互換）。
+ */
+function resolvePreset<D extends DataSourceMap>(
+	opts: CreateCMSOptions<D>,
+): CreateCMSOptions<D> {
+	if (opts.preset === "disabled") {
+		return { ...opts, cache: undefined };
+	}
+	if (opts.preset === "node") {
+		const presetResult = nodePreset({ ttlMs: opts.ttlMs });
+		return {
+			...opts,
+			cache: opts.cache ?? presetResult.cache,
+			renderer: opts.renderer ?? presetResult.renderer,
+		};
+	}
+	return opts;
+}
+
+/**
  * 複数の DataSource を束ねた CMS クライアントを生成する。
  *
  * @example
+ * // Node.js（preset を使った簡潔な記法）
+ * const cms = createCMS({ dataSources: cmsDataSources, preset: "node", ttlMs: 5 * 60_000 });
+ *
+ * @example
+ * // 従来の spread パターン（引き続き動作する）
+ * const cms = createCMS({ ...nodePreset({ ttlMs: 5 * 60_000 }), dataSources: cmsDataSources });
+ *
+ * @example
+ * // キャッシュを細かく指定する場合
  * const cms = createCMS({
- *   dataSources: {
- *     posts: createNotionCollection({ token, databaseId, schema }),
- *   },
+ *   dataSources,
  *   cache: { document, image, ttlMs: 60_000 },
  * });
- * const post = await cms.posts.getItem("my-slug");
  */
 export function createCMS<D extends DataSourceMap>(
 	opts: CreateCMSOptions<D>,
@@ -148,14 +177,16 @@ export function createCMS<D extends DataSourceMap>(
 		});
 	}
 
-	const baseDocCache = resolveDocumentCache(opts.cache);
-	const imgCache = resolveImageCache(opts.cache);
-	const hasImageCache = hasImageCacheConfigured(opts.cache);
-	const ttlMs = resolveTtl(opts.cache);
+	const resolved = resolvePreset(opts);
+
+	const baseDocCache = resolveDocumentCache(resolved.cache);
+	const imgCache = resolveImageCache(resolved.cache);
+	const hasImageCache = hasImageCacheConfigured(resolved.cache);
+	const ttlMs = resolveTtl(resolved.cache);
 	const imageProxyBase =
 		opts.content?.imageProxyBase ?? DEFAULT_IMAGE_PROXY_BASE;
 	const contentConfig = opts.content;
-	const rendererFn: RendererFn | undefined = opts.renderer;
+	const rendererFn: RendererFn | undefined = resolved.renderer;
 	const waitUntil = opts.waitUntil;
 	const logger: Logger | undefined = mergeLoggers(
 		opts.plugins ?? [],

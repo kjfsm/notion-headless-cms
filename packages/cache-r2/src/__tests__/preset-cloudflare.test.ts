@@ -1,6 +1,34 @@
+import type { BaseContentItem, DataSource } from "@notion-headless-cms/core";
 import { isCMSError } from "@notion-headless-cms/core";
 import { describe, expect, it } from "vitest";
-import { cloudflarePreset } from "../preset-cloudflare";
+import {
+	cloudflarePreset,
+	createCloudflareFactory,
+} from "../preset-cloudflare";
+
+function fakeDataSource(): DataSource<BaseContentItem> {
+	return {
+		name: "fake",
+		async list() {
+			return [];
+		},
+		async findBySlug() {
+			return null;
+		},
+		async loadBlocks() {
+			return [];
+		},
+		async loadMarkdown() {
+			return "";
+		},
+		getLastModified(item) {
+			return item.updatedAt;
+		},
+		getListVersion() {
+			return "";
+		},
+	};
+}
 
 function fakeKV(): {
 	get: () => Promise<string | null>;
@@ -99,5 +127,71 @@ describe("cloudflarePreset", () => {
 		if (preset.cache && preset.cache !== "disabled") {
 			expect(preset.cache.ttlMs).toBe(30_000);
 		}
+	});
+});
+
+describe("createCloudflareFactory", () => {
+	const dataSources = { posts: fakeDataSource() };
+
+	it("env を受け取って CMSClient を返す関数を生成する", () => {
+		const factory = createCloudflareFactory({ dataSources, ttlMs: 5_000 });
+		expect(typeof factory).toBe("function");
+
+		const cms = factory({
+			NOTION_TOKEN: "secret",
+			DOC_CACHE: fakeKV() as never,
+			IMG_BUCKET: fakeR2() as never,
+		});
+		expect(cms.$collections).toContain("posts");
+	});
+
+	it("NOTION_TOKEN 未設定時は CMSError を throw する", () => {
+		const factory = createCloudflareFactory({ dataSources });
+		try {
+			factory({ DOC_CACHE: fakeKV() as never });
+			throw new Error("expected throw");
+		} catch (err) {
+			expect(isCMSError(err)).toBe(true);
+			if (isCMSError(err)) {
+				expect(err.code).toBe("core/config_invalid");
+			}
+		}
+	});
+
+	it("binding が未設定でもクライアントを生成できる（キャッシュなし）", () => {
+		const factory = createCloudflareFactory({ dataSources });
+		const cms = factory({ NOTION_TOKEN: "secret" });
+		expect(cms.$collections).toContain("posts");
+	});
+
+	it("ttlMs が cloudflarePreset に伝搬する", () => {
+		const factory = createCloudflareFactory({ dataSources, ttlMs: 30_000 });
+		const cms = factory({
+			NOTION_TOKEN: "secret",
+			DOC_CACHE: fakeKV() as never,
+		});
+		expect(cms.$collections).toContain("posts");
+	});
+
+	it("明示的な cache は cloudflarePreset のキャッシュより優先される", () => {
+		const factory = createCloudflareFactory({
+			dataSources,
+			cache: undefined,
+		});
+		const cms = factory({ NOTION_TOKEN: "secret" });
+		expect(cms.$collections).toContain("posts");
+	});
+
+	it("bindings オプションで binding 名をカスタムできる", () => {
+		const factory = createCloudflareFactory({
+			dataSources,
+			bindings: { docCache: "MY_KV", imgBucket: "MY_R2" },
+		});
+		const cms = factory({
+			NOTION_TOKEN: "secret",
+			MY_KV: fakeKV() as never,
+			MY_R2: fakeR2() as never,
+		} as never);
+		expect(cms.$collections).toContain("posts");
 	});
 });
