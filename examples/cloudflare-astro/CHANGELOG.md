@@ -1,5 +1,11 @@
 # example-cloudflare-astro
 
+## 0.0.8
+
+### Patch Changes
+
+- @notion-headless-cms/cache-r2@0.2.1
+
 ## 0.0.7
 
 ### Patch Changes
