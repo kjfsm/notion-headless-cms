@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
-import { notionAdapter } from "../notion-adapter";
+import { createNotionCollection, notionAdapter } from "../notion-adapter";
 import { defineMapping, defineSchema } from "../schema";
 
 vi.mock("../internal/fetcher/index", () => ({
 	createClient: vi.fn().mockReturnValue({}),
 	queryAllPages: vi.fn(),
 	queryPageBySlug: vi.fn(),
+	queryPageByProp: vi.fn(),
 }));
 
 vi.mock("../internal/transformer/transformer", () => {
@@ -17,7 +18,11 @@ vi.mock("../internal/transformer/transformer", () => {
 	return { Transformer: MockTransformer };
 });
 
-import { queryAllPages, queryPageBySlug } from "../internal/fetcher/index";
+import {
+	queryAllPages,
+	queryPageByProp,
+	queryPageBySlug,
+} from "../internal/fetcher/index";
 
 const makePage = (slug: string, status: string) => ({
 	id: `id-${slug}`,
@@ -182,5 +187,61 @@ describe("notionAdapter", () => {
 			const md = await adapter.loadMarkdown(item);
 			expect(md).toBe("# Hello");
 		});
+	});
+});
+
+describe("createNotionCollection - properties オプション（新形式）", () => {
+	const propertiesAdapter = createNotionCollection({
+		token: "test-token",
+		dataSourceId: "test-db-id",
+		properties: {
+			name: { type: "title", notion: "Name" },
+			slug: { type: "richText", notion: "Slug" },
+			status: { type: "select", notion: "Status" },
+		},
+	});
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+	});
+
+	it("properties オプション使用時、source.properties が設定される", () => {
+		expect(propertiesAdapter.properties).toBeDefined();
+		expect(propertiesAdapter.properties?.slug).toEqual({
+			type: "richText",
+			notion: "Slug",
+		});
+	});
+
+	it("list() が PropertyMap に従ってアイテムをマップする", async () => {
+		vi.mocked(queryAllPages).mockResolvedValue([
+			makePage("my-post", "公開") as never,
+		]);
+
+		const items = await propertiesAdapter.list();
+		expect(items).toHaveLength(1);
+		expect(items[0].slug).toBe("my-post");
+	});
+
+	it("findByProp() が queryPageByProp を呼ぶ", async () => {
+		vi.mocked(queryPageByProp).mockResolvedValue(
+			makePage("my-post", "公開") as never,
+		);
+
+		const item = await propertiesAdapter.findByProp?.("Slug", "my-post");
+		expect(item).not.toBeNull();
+		expect(queryPageByProp).toHaveBeenCalledWith(
+			expect.anything(),
+			"test-db-id",
+			"Slug",
+			"my-post",
+		);
+	});
+
+	it("findByProp() でページが見つからない場合は null を返す", async () => {
+		vi.mocked(queryPageByProp).mockResolvedValue(null);
+
+		const item = await propertiesAdapter.findByProp?.("Slug", "nonexistent");
+		expect(item).toBeNull();
 	});
 });
