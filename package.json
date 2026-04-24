@@ -13,7 +13,7 @@
 		"test": "turbo run test --filter=\"./packages/*\"",
 		"publint": "turbo run publint --filter=\"./packages/*\"",
 		"attw": "turbo run attw --filter=\"./packages/*\"",
-		"verify": "turbo run build typecheck test publint attw publish-dry-run --filter=\"./packages/*\"",
+		"verify": "turbo run build typecheck test publint attw --filter=\"./packages/*\"",
 		"generate": "turbo run generate --filter=\"./examples/*\"",
 		"format": "biome check --write",
 		"lint": "biome ci",

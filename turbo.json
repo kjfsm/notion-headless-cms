@@ -28,11 +28,6 @@
 			"inputs": ["dist/**", "package.json"],
 			"outputs": []
 		},
-		"publish-dry-run": {
-			"dependsOn": ["build"],
-			"inputs": ["dist/**", "package.json"],
-			"outputs": []
-		},
 		"lint": {
 			"cache": false
 		},
