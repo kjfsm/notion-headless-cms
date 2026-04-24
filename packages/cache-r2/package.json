@@ -42,7 +42,7 @@
 		"test": "vitest run",
 		"publint": "publint --strict",
 		"attw": "attw --pack . --profile esm-only",
-		"publish-dry-run": "pnpm publish --dry-run --no-git-checks"
+		"publish-dry-run": "npm pack --dry-run"
 	},
 	"publishConfig": {
 		"access": "public",
