@@ -74,6 +74,24 @@ describe("notionAdapter", () => {
 			expect(items[0].title).toBe("my-post");
 		});
 
+		it("title 型プロパティがない場合は title が null になる", async () => {
+			vi.mocked(queryAllPages).mockResolvedValue([
+				{
+					id: "id-no-title",
+					last_edited_time: "2024-01-01T00:00:00.000Z",
+					created_time: "2024-01-01T00:00:00.000Z",
+					properties: {
+						Slug: { rich_text: [{ plain_text: "no-title" }] },
+						Status: { status: { name: "公開" } },
+						CreatedAt: { date: { start: "2024-01-01" } },
+					},
+				} as never,
+			]);
+
+			const items = await adapter.list();
+			expect(items[0].title).toBeNull();
+		});
+
 		it("publishedAt の降順でソートする", async () => {
 			vi.mocked(queryAllPages).mockResolvedValue([
 				{
