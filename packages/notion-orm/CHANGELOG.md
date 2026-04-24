@@ -1,5 +1,13 @@
 # @notion-headless-cms/source-notion
 
+## 0.0.4
+
+### Patch Changes
+
+- cea9495: update add title properties
+- Updated dependencies [cea9495]
+  - @notion-headless-cms/core@0.2.1
+
 ## 0.0.3
 
 ### Patch Changes
