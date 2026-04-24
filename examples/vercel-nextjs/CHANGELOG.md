@@ -1,5 +1,12 @@
 # example-vercel-nextjs
 
+## 0.0.9
+
+### Patch Changes
+
+- Updated dependencies [15d5091]
+  - @notion-headless-cms/notion-orm@0.0.6
+
 ## 0.0.8
 
 ### Patch Changes
