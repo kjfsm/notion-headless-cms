@@ -37,7 +37,9 @@
 	"scripts": {
 		"build": "tsdown src/index.ts --format esm --dts --sourcemap --out-dir dist",
 		"typecheck": "tsc --noEmit",
-		"test": "vitest run"
+		"test": "vitest run",
+		"publint": "publint --strict",
+		"attw": "attw --pack . --profile esm-only"
 	},
 	"publishConfig": {
 		"access": "public",

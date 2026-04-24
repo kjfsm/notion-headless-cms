@@ -18,6 +18,16 @@
 			"inputs": ["src/**"],
 			"outputs": []
 		},
+		"publint": {
+			"dependsOn": ["build"],
+			"inputs": ["dist/**", "package.json"],
+			"outputs": []
+		},
+		"attw": {
+			"dependsOn": ["build"],
+			"inputs": ["dist/**", "package.json"],
+			"outputs": []
+		},
 		"lint": {
 			"cache": false
 		},

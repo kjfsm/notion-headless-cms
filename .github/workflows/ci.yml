@@ -26,7 +26,9 @@ jobs:
       - run: pnpm install --frozen-lockfile --prefer-offline
       - run: pnpm lint
 
-  build-test:
+  verify:
+    # build / typecheck / test / publint / attw を turbo 1 コマンドで並列実行
+    # 変更のないパッケージは .turbo のキャッシュヒットでスキップされる
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -45,7 +47,7 @@ jobs:
             ${{ runner.os }}-turbo-refs/heads/main-
             ${{ runner.os }}-turbo-
       - run: pnpm install --frozen-lockfile --prefer-offline
-      - run: pnpm turbo build typecheck test --filter="./packages/*"
+      - run: pnpm verify
 
   coverage:
     runs-on: ubuntu-latest
