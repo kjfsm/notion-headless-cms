@@ -243,7 +243,9 @@ export function createCMS<D extends DataSourceMap>(
 			logger,
 			ttlMs,
 			// 公開条件は CollectionSemantics（createCMS の collections オプション）が権威
-			publishedStatuses: col?.publishedStatuses ? [...col.publishedStatuses] : [],
+			publishedStatuses: col?.publishedStatuses
+				? [...col.publishedStatuses]
+				: [],
 			accessibleStatuses: col?.accessibleStatuses
 				? [...col.accessibleStatuses]
 				: [],
