@@ -9,6 +9,7 @@ import type { NotionPage, NotionRichTextItem } from "./types";
 const baseContentItemSchema = z.object({
 	id: z.string().min(1),
 	slug: z.string().min(1),
+	title: z.string().nullable().optional(),
 	updatedAt: z.string().min(1),
 	status: z.string().optional(),
 	publishedAt: z.string().optional(),
@@ -35,6 +36,14 @@ export function mapItem(
 		| { date?: { start: string } | null }
 		| undefined;
 
+	const titleProp = Object.values(page.properties).find(
+		(p) => p.type === "title",
+	);
+	const title =
+		titleProp !== undefined && titleProp.type === "title"
+			? getPlainText(titleProp.title) || null
+			: null;
+
 	const parsed = baseContentItemSchema.safeParse({
 		id: page.id,
 		slug: getPlainText(
@@ -44,6 +53,7 @@ export function mapItem(
 					| undefined
 			)?.rich_text,
 		),
+		title,
 		status: statusProperty?.status?.name ?? statusProperty?.select?.name,
 		publishedAt: dateProperty?.date?.start ?? page.created_time,
 		updatedAt: page.last_edited_time,
