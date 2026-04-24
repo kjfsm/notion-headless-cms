@@ -2,6 +2,27 @@ import type { ContentBlock, ImageRef } from "../content/blocks";
 import type { BaseContentItem } from "./content";
 
 /**
+ * Notion プロパティ1件の型情報とプロパティ名を保持する。
+ * CLI が生成する `*Properties` オブジェクトの各要素の型。
+ */
+export interface PropertyDef {
+	type:
+		| "title"
+		| "richText"
+		| "select"
+		| "multiSelect"
+		| "date"
+		| "number"
+		| "checkbox"
+		| "url";
+	/** Notion DB 上のプロパティ名（表示名）。 */
+	notion: string;
+}
+
+/** Notion DB のプロパティ一覧マップ。CLI 生成の `*Properties` の型。 */
+export type PropertyMap = Record<string, PropertyDef>;
+
+/**
  * キャッシュ無効化のスコープ (DataSource 層で参照する形)。
  */
 export type InvalidateScope =
@@ -33,12 +54,30 @@ export interface DataSource<T extends BaseContentItem = BaseContentItem> {
 	/** アクセス許可するステータス値 (ORM 側デフォルト)。 */
 	readonly accessibleStatuses?: readonly string[];
 
+	/**
+	 * CLI 生成の `*Properties` に対応するプロパティマップ。
+	 * `properties` オプション経由で生成された DataSource のみ設定される。
+	 * Core が `findByProp` の Notion プロパティ名解決に使用する。
+	 */
+	readonly properties?: PropertyMap;
+
 	// --- データ取得 ---
 	/** 公開済みアイテム一覧を取得する。 */
 	list(opts?: { publishedStatuses?: readonly string[] }): Promise<T[]>;
 
-	/** スラッグで単件取得。見つからなければ null。 */
-	findBySlug(slug: string): Promise<T | null>;
+	/**
+	 * スラッグで単件取得。見つからなければ null。
+	 * @deprecated `properties` + `findByProp` を使用する新形式では不要。
+	 *   後方互換のため残す。
+	 */
+	findBySlug?(slug: string): Promise<T | null>;
+
+	/**
+	 * 指定した Notion プロパティ名と値で1件検索する。
+	 * Core が slug フィールドのルックアップに使用する。
+	 * `properties` オプション経由で生成された DataSource が実装する。
+	 */
+	findByProp?(notionPropName: string, value: string): Promise<T | null>;
 
 	/** アイテム本文を ContentBlock 配列で返す。 */
 	loadBlocks(item: T): Promise<ContentBlock[]>;

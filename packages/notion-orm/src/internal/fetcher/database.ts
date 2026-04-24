@@ -35,3 +35,23 @@ export async function queryPageBySlug(
 
 	return (res.results[0] as PageObjectResponse | undefined) ?? null;
 }
+
+/**
+ * 任意の rich_text プロパティで絞り込んでページを取得する。
+ * Core が `findByProp` を通じて slug ルックアップに使用する。
+ */
+export async function queryPageByProp(
+	client: Client,
+	dataSourceId: string,
+	notionPropName: string,
+	value: string,
+): Promise<PageObjectResponse | null> {
+	const filter = { property: notionPropName, rich_text: { equals: value } };
+
+	const res = await client.dataSources.query({
+		data_source_id: dataSourceId,
+		filter,
+	});
+
+	return (res.results[0] as PageObjectResponse | undefined) ?? null;
+}

@@ -11,6 +11,7 @@ export type {
 	SortOption,
 } from "./collection";
 export type {
+	CollectionSemantics,
 	ContentConfig,
 	CreateCMSOptions,
 	DataSourceMap,
@@ -34,6 +35,8 @@ export type {
 	DataSourceFactory,
 	InferCollectionItem,
 	InvalidateScope,
+	PropertyDef,
+	PropertyMap,
 	WebhookConfig,
 } from "./data-source";
 export type { CMSHooks, MaybePromise } from "./hooks";
