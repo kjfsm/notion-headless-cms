@@ -3,7 +3,6 @@ name: security-reviewer
 description: 公開 API の破壊的変更・秘密情報ハードコード・process.env 直接参照などのセキュリティ観点で変更をレビューするエージェント
 tools: [Read, Grep, Glob, Bash]
 model: sonnet
-skills: [env-helper, package-boundaries]
 ---
 
 # security-reviewer subagent

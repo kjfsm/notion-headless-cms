@@ -3,7 +3,6 @@ name: test-writer
 description: 既存のテストパターンを踏襲して vitest テストを追加するエージェント。DataSource / renderer / R2 bucket / fetch のモックを正しく使い、core のゼロ依存ルールを守る
 tools: [Read, Grep, Glob, Edit, Write, Bash]
 model: sonnet
-skills: [vitest-patterns, package-boundaries]
 ---
 
 # test-writer subagent
@@ -16,7 +15,7 @@ skills: [vitest-patterns, package-boundaries]
 
 1. 対象ファイルを読み、公開される関数・クラス・型を把握
 2. 同じパッケージ内の `__tests__/*.test.ts` を参考に既存パターンを学習
-3. `.claude/skills/vitest-patterns/SKILL.md` のパターン（DataSource モック / renderer モック / R2 fake bucket / fakeTimers / fetch モック / CMSError 検証）を適用
+3. `.claude/rules/testing.md` のパターン（DataSource モック / renderer モック / R2 fake bucket / fakeTimers / fetch モック / CMSError 検証）を適用
 4. `packages/<name>/src/__tests__/<name>.test.ts` に追加
 5. `pnpm --filter @notion-headless-cms/<name> test` で緑になるか確認
 
@@ -32,7 +31,7 @@ skills: [vitest-patterns, package-boundaries]
 
 - 正常系: 期待値を直接 assert
 - エッジケース: null / undefined / 空配列 / タイムアウト
-- エラー系: `CMSError.code` を検証（`.claude/skills/vitest-patterns/SKILL.md` の「CMSError の検証」パターン）
+- エラー系: `CMSError.code` を検証（`.claude/rules/testing.md` の「CMSError の検証」パターン）
 
 ## 出力
 
