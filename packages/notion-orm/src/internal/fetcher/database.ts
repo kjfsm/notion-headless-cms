@@ -25,12 +25,8 @@ export async function queryPageBySlug(
 	dataSourceId: string,
 	slug: string,
 	slugPropName: string,
-	slugPropType?: string,
 ): Promise<PageObjectResponse | null> {
-	const filter =
-		slugPropType === "title"
-			? { property: slugPropName, title: { equals: slug } }
-			: { property: slugPropName, rich_text: { equals: slug } };
+	const filter = { property: slugPropName, rich_text: { equals: slug } };
 
 	const res = await client.dataSources.query({
 		data_source_id: dataSourceId,

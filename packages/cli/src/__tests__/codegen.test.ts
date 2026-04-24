@@ -14,6 +14,7 @@ function makeSource(overrides: Partial<ResolvedSource> = {}): ResolvedSource {
 		dbName: "ブログ記事DB",
 		properties: {
 			Name: makeProp("title"),
+			Slug: makeProp("rich_text"),
 			Status: makeProp("status"),
 		},
 		...overrides,
@@ -45,9 +46,9 @@ describe("generateSchemaFile", () => {
 		expect(code).toContain("// Notion DB ID: abc-123");
 	});
 
-	it("title プロパティが slug として自動検出される", () => {
+	it("rich_text の Slug プロパティが slug として自動検出される", () => {
 		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain('slug: { type: "title", notion: "Name" }');
+		expect(code).toContain('slug: { type: "richText", notion: "Slug" }');
 	});
 
 	it("Status プロパティが status として自動検出される", () => {
@@ -72,6 +73,7 @@ describe("generateSchemaFile", () => {
 		const source = makeSource({
 			properties: {
 				Name: makeProp("title"),
+				Slug: makeProp("rich_text"),
 				PublishedAt: makeProp("date"),
 			},
 		});
@@ -87,6 +89,7 @@ describe("generateSchemaFile", () => {
 			config: { name: "posts", dbName: "DB" },
 			properties: {
 				Name: makeProp("title"),
+				Slug: makeProp("rich_text"),
 				Body: makeProp("rich_text"),
 				Category: makeProp("select"),
 				Tags: makeProp("multi_select"),
@@ -117,6 +120,7 @@ describe("generateSchemaFile", () => {
 		const source = makeSource({
 			properties: {
 				Name: makeProp("title"),
+				Slug: makeProp("rich_text"),
 				Formula: makeProp("formula"),
 				Relation: makeProp("relation"),
 			},
@@ -131,6 +135,7 @@ describe("generateSchemaFile", () => {
 			config: { name: "posts", dbName: "DB" },
 			properties: {
 				Name: makeProp("title"),
+				Slug: makeProp("rich_text"),
 				Tags: makeProp("multi_select"),
 			},
 		});
@@ -145,6 +150,7 @@ describe("generateSchemaFile", () => {
 		const source = makeSource({
 			properties: {
 				Name: makeProp("title"),
+				Slug: makeProp("rich_text"),
 			},
 		});
 		const code = generateSchemaFile([source]);
@@ -155,6 +161,7 @@ describe("generateSchemaFile", () => {
 		const source = makeSource({
 			properties: {
 				Name: makeProp("title"),
+				Slug: makeProp("rich_text"),
 				Status: makeProp("status"),
 			},
 		});
@@ -200,7 +207,7 @@ describe("generateSchemaFile", () => {
 				config: { name: "news", id: "xyz-999" },
 				id: "xyz-999",
 				dbName: "ニュースDB",
-				properties: { Title: makeProp("title") },
+				properties: { Title: makeProp("title"), Slug: makeProp("rich_text") },
 			} as ResolvedSource,
 		];
 		const code = generateSchemaFile(sources);
@@ -215,6 +222,7 @@ describe("generateSchemaFile", () => {
 			config: { name: "posts", dbName: "DB" },
 			properties: {
 				Name: makeProp("title"),
+				Slug: makeProp("rich_text"),
 				あいうえお: makeProp("number"),
 			},
 		});
@@ -232,6 +240,7 @@ describe("generateSchemaFile", () => {
 			},
 			properties: {
 				Name: makeProp("title"),
+				Slug: makeProp("rich_text"),
 				あいうえお: makeProp("number"),
 			},
 		});
@@ -279,6 +288,7 @@ describe("generateSchemaFile", () => {
 			config: { name: "posts", dbName: "DB" },
 			properties: {
 				Name: makeProp("title"),
+				Slug: makeProp("rich_text"),
 				"published-at": makeProp("date"),
 			},
 		});
