@@ -90,14 +90,22 @@ claude mcp add --transport http context7 https://mcp.context7.com/mcp
 | Secret | 必須 | 取得元 |
 |---|---|---|
 | `NPM_TOKEN` | 必須 | npm アカウントで **Automation** トークンを発行 |
+| `RELEASE_PAT` | 必須 | 下記参照 |
 | `NOTION_TOKEN` | examples の CI smoke test で使う場合のみ | Notion インテグレーション |
 
 ```bash
 gh secret set NPM_TOKEN --body "<npm automation token>"
+gh secret set RELEASE_PAT --body "<github pat>"
 gh secret set NOTION_TOKEN --body "<notion integration token>"
 ```
 
-> `GITHUB_TOKEN` は GitHub Actions が自動付与するため登録不要。
+> デフォルトの `GITHUB_TOKEN` で作成した PR / push は他ワークフローを起動しない仕様があるため、
+> Version Packages PR 上で `release-dry-run.yml` を走らせるには PAT が必要
+> （[changesets/action 公式の推奨](https://github.com/changesets/action#with-publishing)）。
+>
+> 発行するトークンの権限:
+> - Fine-grained PAT（推奨）: 対象リポジトリに `Contents: Read and write` + `Pull requests: Read and write`
+> - Classic PAT: `repo` スコープ
 
 ### 3-2. npm 側の設定
 

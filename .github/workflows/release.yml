@@ -20,6 +20,11 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          # デフォルトの GITHUB_TOKEN で作成した PR は他ワークフロー (release-dry-run.yml など)
+          # を起動しない仕様のため、PAT 経由で checkout / changesets/action を動かす。
+          # これにより Version Packages PR 上でも publish --dry-run が走る。
+          # 公式: https://github.com/changesets/action#with-publishing
+          token: ${{ secrets.RELEASE_PAT }}
 
       # pnpm のバージョンは package.json の packageManager フィールドから自動検出させる
       - uses: pnpm/action-setup@v6
@@ -47,7 +52,7 @@ jobs:
         with:
           publish: "pnpm release"
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           # npm provenance を有効化（permissions.id-token: write と連動）
           NPM_CONFIG_PROVENANCE: "true"

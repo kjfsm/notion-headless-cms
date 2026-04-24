@@ -27,8 +27,9 @@ jobs:
       - run: pnpm lint
 
   verify:
-    # build / typecheck / test / publint / attw を turbo 1 コマンドで並列実行
-    # 変更のないパッケージは .turbo のキャッシュヒットでスキップされる
+    # build / typecheck / test:coverage / publint / attw を turbo 1 コマンドで並列実行。
+    # test:coverage は vitest --coverage で lcov を生成するため、別ジョブを立てずに
+    # 同一ランで codecov アップロードまで完結させ、install / build / test の重複を排除。
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -37,8 +38,12 @@ jobs:
         with:
           node-version: "24.x"
           cache: "pnpm"
-      # ブランチ別にキャッシュを保存し、main にフォールバック
-      - uses: actions/cache@v5
+      # PR では read-only で restore のみ、main push 時のみ save する。
+      # GitHub キャッシュサービスの transient 5xx によって post-job の save 処理が
+      # 数分リトライし続ける事象を PR 側で避ける ([actions/toolkit#1107] 等)。
+      # main のキャッシュは後続の PR / main 実行が restore-keys でヒットできる。
+      - uses: actions/cache/restore@v5
+        id: turbo-cache
         with:
           path: .turbo
           key: ${{ runner.os }}-turbo-${{ github.ref }}-${{ github.sha }}
@@ -47,32 +52,14 @@ jobs:
             ${{ runner.os }}-turbo-refs/heads/main-
             ${{ runner.os }}-turbo-
       - run: pnpm install --frozen-lockfile --prefer-offline
-      - run: pnpm verify
-
-  coverage:
-    needs: [verify]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - uses: pnpm/action-setup@v6
-      - uses: actions/setup-node@v6
-        with:
-          node-version: "24.x"
-          cache: "pnpm"
-      - uses: actions/cache@v5
-        with:
-          path: .turbo
-          key: ${{ runner.os }}-turbo-${{ github.ref }}-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-turbo-${{ github.ref }}-
-            ${{ runner.os }}-turbo-refs/heads/main-
-            ${{ runner.os }}-turbo-
-      - run: pnpm install --frozen-lockfile --prefer-offline
-      - run: pnpm turbo build --filter="./packages/*"
-      - name: カバレッジ収集
-        run: pnpm turbo test --filter="./packages/*" -- --coverage
+      - run: pnpm verify:ci
       - uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: "**/coverage/lcov.info"
           fail_ci_if_error: false
+      - uses: actions/cache/save@v5
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.ref }}-${{ github.sha }}
