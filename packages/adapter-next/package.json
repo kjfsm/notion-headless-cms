@@ -40,7 +40,7 @@
 		"test": "vitest run",
 		"publint": "publint --strict",
 		"attw": "attw --pack . --profile esm-only",
-		"publish-dry-run": "pnpm pack --dry-run"
+		"publish-dry-run": "pnpm --config.ignore-scripts=true pack --dry-run"
 	},
 	"publishConfig": {
 		"access": "public",
