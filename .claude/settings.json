@@ -91,37 +91,6 @@
 				]
 			}
 		],
-		"PostToolUse": [
-			{
-				"matcher": "Write|Edit",
-				"hooks": [
-					{
-						"type": "command",
-						"command": ".claude/hooks/biome-format-on-edit.sh"
-					}
-				]
-			}
-		],
-		"SessionStart": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": ".claude/hooks/session-status.sh"
-					}
-				]
-			}
-		],
-		"UserPromptSubmit": [
-			{
-				"hooks": [
-					{
-						"type": "command",
-						"command": ".claude/hooks/japanese-reminder.sh"
-					}
-				]
-			}
-		],
 		"Stop": [
 			{
 				"hooks": [
