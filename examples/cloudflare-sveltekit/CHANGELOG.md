@@ -1,5 +1,12 @@
 # example-cloudflare-sveltekit
 
+## 0.0.10
+
+### Patch Changes
+
+- Updated dependencies [1304c1b]
+  - @notion-headless-cms/notion-orm@0.0.5
+
 ## 0.0.9
 
 ### Patch Changes
