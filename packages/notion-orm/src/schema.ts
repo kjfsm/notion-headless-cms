@@ -10,12 +10,7 @@ export type NotionFieldType =
 			notion: string;
 	  }
 	| { type: "multiSelect"; notion: string }
-	| {
-			type: "select";
-			notion: string;
-			published?: string[];
-			accessible?: string[];
-	  };
+	| { type: "select"; notion: string };
 
 // id・updatedAt は Notion ページメタデータから自動設定されるシステムフィールド
 type SystemField = "id" | "updatedAt";
@@ -38,20 +33,19 @@ export function defineMapping<T extends object>(
 export interface NotionSchema<T> {
 	mapping: { [K in keyof T]: NotionFieldType };
 	mapItem: (page: NotionPage) => T;
-	publishedStatuses: readonly string[];
-	accessibleStatuses: readonly string[];
 }
 
 // ── defineSchema ─────────────────────────────────────────────────────────────
 
 /**
  * Zod スキーマとマッピングを結合して NotionSchema を生成する。
+ * 公開条件（publishedStatuses）は createCMS({ collections }) で設定する。
  *
  * @example
  * const PostSchema = z.object({ slug: z.string(), status: z.string() })
  * const mapping = defineMapping<z.infer<typeof PostSchema>>({
  *   slug: { notion: "Slug", type: "richText" },
- *   status: { notion: "Status", type: "select", published: ["Published"] },
+ *   status: { notion: "Status", type: "select" },
  * })
  * const schema = defineSchema(PostSchema, mapping)
  */
@@ -63,16 +57,6 @@ export function defineSchema<S extends z.ZodRawShape>(
 ): NotionSchema<z.infer<z.ZodObject<S>>> {
 	type T = z.infer<z.ZodObject<S>>;
 
-	const published: string[] = [];
-	const accessible: string[] = [];
-
-	for (const fieldDef of Object.values(mapping) as NotionFieldType[]) {
-		if (fieldDef.type === "select") {
-			published.push(...(fieldDef.published ?? []));
-			accessible.push(...(fieldDef.accessible ?? fieldDef.published ?? []));
-		}
-	}
-
 	return {
 		mapping: mapping as { [K in keyof T]: NotionFieldType },
 		mapItem: (page) => {
@@ -82,8 +66,6 @@ export function defineSchema<S extends z.ZodRawShape>(
 			);
 			return zodSchema.parse(raw) as T;
 		},
-		publishedStatuses: published,
-		accessibleStatuses: accessible,
 	};
 }
 

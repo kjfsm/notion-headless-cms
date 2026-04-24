@@ -10,12 +10,15 @@ vi.mock("../internal/fetcher/index", () => ({
 	queryPageByProp: vi.fn(),
 }));
 
-vi.mock("../internal/transformer/transformer", () => {
+vi.mock("@notion-headless-cms/renderer", () => {
 	const transform = vi.fn().mockResolvedValue("# Hello");
 	class MockTransformer {
 		transform = transform;
 	}
-	return { Transformer: MockTransformer };
+	return {
+		Transformer: MockTransformer,
+		markdownToBlocks: vi.fn().mockReturnValue([]),
+	};
 });
 
 import {

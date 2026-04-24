@@ -16,11 +16,7 @@ type Post = z.infer<typeof PostSchema>;
 
 const mapping = defineMapping<Post>({
 	slug: { type: "richText", notion: "Slug" },
-	status: {
-		type: "select",
-		notion: "Status",
-		published: ["Published", "公開"],
-	},
+	status: { type: "select", notion: "Status" },
 	title: { type: "title", notion: "Title" },
 	tags: { type: "multiSelect", notion: "Tags" },
 	views: { type: "number", notion: "Views" },
@@ -29,39 +25,12 @@ const mapping = defineMapping<Post>({
 describe("defineMapping", () => {
 	it("受け取ったオブジェクトをそのまま返す（恒等関数）", () => {
 		expect(mapping.slug).toEqual({ type: "richText", notion: "Slug" });
-		expect(mapping.status).toEqual({
-			type: "select",
-			notion: "Status",
-			published: ["Published", "公開"],
-		});
+		expect(mapping.status).toEqual({ type: "select", notion: "Status" });
 	});
 });
 
 describe("defineSchema", () => {
 	const schema = defineSchema(PostSchema, mapping);
-
-	it("publishedStatuses が select.published から抽出される", () => {
-		expect(schema.publishedStatuses).toEqual(["Published", "公開"]);
-	});
-
-	it("accessibleStatuses が select.published からフォールバックされる", () => {
-		expect(schema.accessibleStatuses).toEqual(["Published", "公開"]);
-	});
-
-	it("accessible を別途指定できる", () => {
-		const m2 = defineMapping<Post>({
-			...mapping,
-			status: {
-				type: "select",
-				notion: "Status",
-				published: ["Published"],
-				accessible: ["Published", "Draft"],
-			},
-		});
-		const s2 = defineSchema(PostSchema, m2);
-		expect(s2.publishedStatuses).toEqual(["Published"]);
-		expect(s2.accessibleStatuses).toEqual(["Published", "Draft"]);
-	});
 
 	it("mapping フィールドが保持される", () => {
 		expect(schema.mapping).toBe(mapping);

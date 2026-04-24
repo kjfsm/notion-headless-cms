@@ -35,6 +35,25 @@ export default defineConfig({
 	// 生成ファイルの出力先
 	output: "./app/generated/nhc-schema.ts",
 });
+
+// ── createCMS でのページ構成設定 ────────────────────────────────────────────
+//
+// 公開条件・slug・ステータスは createCMS({ collections }) で指定します。
+// nhc generate で生成したスキーマを使う場合の例:
+//
+// import { createCMS } from "@notion-headless-cms/core";
+// import { cmsDataSources } from "./app/generated/nhc-schema";
+//
+// export const cms = createCMS({
+//   dataSources: cmsDataSources,
+//   collections: {
+//     posts: {
+//       slug: "slug",               // PropertyMap のキー名（生成スキーマに合わせる）
+//       status: "status",           // PropertyMap のキー名
+//       publishedStatuses: ["公開済み"],  // 公開扱いするステータス値
+//     },
+//   },
+// });
 `;
 
 export async function runInit(opts: InitOptions): Promise<void> {

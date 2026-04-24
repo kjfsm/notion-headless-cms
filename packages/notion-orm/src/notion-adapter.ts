@@ -7,14 +7,16 @@ import type {
 } from "@notion-headless-cms/core";
 import { CMSError, isCMSError } from "@notion-headless-cms/core";
 import {
+	Transformer,
+} from "@notion-headless-cms/renderer";
+import type { BlockHandler } from "@notion-headless-cms/renderer";
+import { markdownToBlocks } from "./internal/md-to-blocks";
+import {
 	createClient,
 	queryAllPages,
 	queryPageByProp,
 	queryPageBySlug,
 } from "./internal/fetcher/index";
-import { markdownToBlocks } from "./internal/md-to-blocks";
-import { Transformer } from "./internal/transformer/transformer";
-import type { BlockHandler } from "./internal/transformer/types";
 import { mapItem, mapItemFromPropertyMap } from "./mapper";
 import type { NotionSchema } from "./schema";
 import type { NotionPage } from "./types";
@@ -84,8 +86,6 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
 	implements DataSource<T>
 {
 	readonly name = "notion";
-	readonly publishedStatuses?: readonly string[];
-	readonly accessibleStatuses?: readonly string[];
 	/** CLI 生成の `*Properties` に対応するプロパティマップ。properties オプション使用時のみ設定される。 */
 	readonly properties?: PropertyMap;
 	private readonly client: ReturnType<typeof createClient>;
@@ -112,8 +112,6 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
 
 		if ("schema" in opts && opts.schema) {
 			this.itemMapper = opts.schema.mapItem;
-			this.publishedStatuses = opts.schema.publishedStatuses;
-			this.accessibleStatuses = opts.schema.accessibleStatuses;
 			const slugField = (
 				opts.schema.mapping as Record<string, { notion: string; type: string }>
 			).slug;

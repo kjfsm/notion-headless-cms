@@ -49,11 +49,6 @@ export interface DataSource<T extends BaseContentItem = BaseContentItem> {
 	/** ソース識別子 (ロギング・デバッグ用)。 */
 	readonly name: string;
 
-	/** 公開扱いするステータス値 (ORM 側デフォルト)。 */
-	readonly publishedStatuses?: readonly string[];
-	/** アクセス許可するステータス値 (ORM 側デフォルト)。 */
-	readonly accessibleStatuses?: readonly string[];
-
 	/**
 	 * CLI 生成の `*Properties` に対応するプロパティマップ。
 	 * `properties` オプション経由で生成された DataSource のみ設定される。
