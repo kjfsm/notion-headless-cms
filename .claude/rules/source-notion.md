@@ -37,7 +37,55 @@ paths:
 - `mapItem` は `(page) => BaseContentItem & { ... }` を返す
 - デフォルトマッパー (`mapper.ts`) は `Name` / `Slug` / `Status` / `Published` / `Updated` を読む
 
+## Notion API 呼び出し
+
+現行 `@notionhq/client` は v5+（`data_sources` 概念が導入済み）。型定義は `@notionhq/client/build/src/api-endpoints` から import 可能。
+
+### 一覧取得（ページネーション）
+
+```ts
+const response = await client.dataSources.query({
+	data_source_id: dataSourceId,
+	filter,
+	sorts,
+	page_size: 100,  // 最大 100
+	start_cursor,
+});
+// response.has_more / response.next_cursor でページング
+```
+
+### ブロック取得
+
+```ts
+const response = await client.blocks.children.list({
+	block_id: pageId,
+	page_size: 100,
+	start_cursor,
+});
+```
+
+- ブロックはネスト可能。`has_children: true` のブロックは再帰的に取得する
+- blocks → Markdown 変換は `notion-to-md` が担当
+
+## rate limit 対応
+
+- Notion API は 3 req/sec（公式）
+- `withRetry()`（`@notion-headless-cms/core`）で指数バックオフ
+- 429 レスポンスは `Retry-After` ヘッダを尊重
+
 ## エラー
 
 - 取得失敗: `CMSError code: "source/fetch_items_failed"` / `"source/fetch_item_failed"`
 - Markdown 読み込み失敗: `CMSError code: "source/load_markdown_failed"`
+- 生の `APIError` は throw しない。必ず `CMSError` に変換
+
+## テスト
+
+- Notion API は `vi.mock("@notionhq/client")` でモック
+- 返り値の構造は `NotionPage` 型に従う
+- `__tests__/notion-adapter.test.ts` を参考
+
+## 最新情報
+
+API 仕様は変わる可能性があるため、不明点は Notion MCP もしくは公式ドキュメントを参照:
+https://developers.notion.com/reference

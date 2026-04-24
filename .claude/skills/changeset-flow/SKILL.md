@@ -1,6 +1,7 @@
 ---
 name: changeset-flow
-description: packages/** に変更があり npm 公開に影響する場合、pnpm changeset を使って変更記録ファイルを作成する。bump 種別 (patch/minor/major) の判定と対象パッケージの列挙、changeset md の雛形提示を行う
+description: packages/** に変更があり npm 公開に影響する場合、pnpm changeset を使って変更記録ファイルを作成する。/changeset-flow で明示的に呼び出す
+disable-model-invocation: true
 allowed-tools:
   - Bash(pnpm changeset:*)
   - Bash(git diff:*)
