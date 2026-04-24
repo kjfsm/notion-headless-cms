@@ -33,7 +33,18 @@ jobs:
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
-          cache: "pnpm"
+          # cache: "pnpm" は restore-keys が設定できず lockfile 変更で完全ミスになるため使わない
+
+      - name: pnpm store パスを取得
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+      - uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       # CI でビルド済みの turbo キャッシュを引き継いで高速化
       - uses: actions/cache@v5

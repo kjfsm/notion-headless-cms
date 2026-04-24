@@ -22,7 +22,16 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: "24.x"
-          cache: "pnpm"
+          # cache: "pnpm" は restore-keys が設定できず lockfile 変更で完全ミスになるため使わない
+      - name: pnpm store パスを取得
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+      - uses: actions/cache@v5
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
       - run: pnpm install --frozen-lockfile --prefer-offline
       - run: pnpm lint
 
@@ -37,11 +46,20 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: "24.x"
-          cache: "pnpm"
+          # cache: "pnpm" は restore-keys が設定できず lockfile 変更で完全ミスになるため使わない
+      - name: pnpm store パスを取得
+        id: pnpm-store
+        run: echo "path=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
       # PR では read-only で restore のみ、main push 時のみ save する。
       # GitHub キャッシュサービスの transient 5xx によって post-job の save 処理が
       # 数分リトライし続ける事象を PR 側で避ける ([actions/toolkit#1107] 等)。
       # main のキャッシュは後続の PR / main 実行が restore-keys でヒットできる。
+      - uses: actions/cache/restore@v5
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
       - uses: actions/cache/restore@v5
         id: turbo-cache
         with:
@@ -58,6 +76,11 @@ jobs:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: "**/coverage/lcov.info"
           fail_ci_if_error: false
+      - uses: actions/cache/save@v5
+        if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        with:
+          path: ${{ steps.pnpm-store.outputs.path }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('pnpm-lock.yaml') }}
       - uses: actions/cache/save@v5
         if: always() && github.event_name == 'push' && github.ref == 'refs/heads/main'
         with:
