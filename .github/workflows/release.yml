@@ -17,22 +17,14 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      # GitHub App トークンを発行して changesets/action に渡す。
-      # デフォルトの GITHUB_TOKEN で作成した PR / push は他ワークフロー (ci.yml / release-dry-run.yml)
-      # を起動しない仕様のため、App トークン経由で作成することで Version Packages PR 上でも
-      # CI と publish --dry-run が走るようにする。
-      - name: App トークン発行
-        id: app-token
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ secrets.RELEASE_APP_ID }}
-          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
-
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          # changesets/action の git push が App 資格で行われるようにする
-          token: ${{ steps.app-token.outputs.token }}
+          # デフォルトの GITHUB_TOKEN で作成した PR は他ワークフロー (release-dry-run.yml など)
+          # を起動しない仕様のため、PAT 経由で checkout / changesets/action を動かす。
+          # これにより Version Packages PR 上でも publish --dry-run が走る。
+          # 公式: https://github.com/changesets/action#with-publishing
+          token: ${{ secrets.RELEASE_PAT }}
 
       # pnpm のバージョンは package.json の packageManager フィールドから自動検出させる
       - uses: pnpm/action-setup@v6
@@ -60,7 +52,7 @@ jobs:
         with:
           publish: "pnpm release"
         env:
-          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           # npm provenance を有効化（permissions.id-token: write と連動）
           NPM_CONFIG_PROVENANCE: "true"

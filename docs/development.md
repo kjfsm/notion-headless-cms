@@ -90,22 +90,22 @@ claude mcp add --transport http context7 https://mcp.context7.com/mcp
 | Secret | 必須 | 取得元 |
 |---|---|---|
 | `NPM_TOKEN` | 必須 | npm アカウントで **Automation** トークンを発行 |
-| `RELEASE_APP_ID` | 必須 | release 用 GitHub App の App ID |
-| `RELEASE_APP_PRIVATE_KEY` | 必須 | 同 App の秘密鍵 (`.pem` 全文) |
+| `RELEASE_PAT` | 必須 | 下記参照 |
 | `NOTION_TOKEN` | examples の CI smoke test で使う場合のみ | Notion インテグレーション |
 
 ```bash
 gh secret set NPM_TOKEN --body "<npm automation token>"
-gh secret set RELEASE_APP_ID --body "<app id>"
-gh secret set RELEASE_APP_PRIVATE_KEY < path/to/private-key.pem
+gh secret set RELEASE_PAT --body "<github pat>"
 gh secret set NOTION_TOKEN --body "<notion integration token>"
 ```
 
 > デフォルトの `GITHUB_TOKEN` で作成した PR / push は他ワークフローを起動しない仕様があるため、
-> Version Packages PR 上で CI / publish dry-run を走らせるには GitHub App トークンが必要。
+> Version Packages PR 上で `release-dry-run.yml` を走らせるには PAT が必要
+> （[changesets/action 公式の推奨](https://github.com/changesets/action#with-publishing)）。
 >
-> App に付与する権限: `contents: write` + `pull-requests: write`。リポジトリにインストールした上で
-> App ID と Private Key を上記 Secret に登録する。
+> 発行するトークンの権限:
+> - Fine-grained PAT（推奨）: 対象リポジトリに `Contents: Read and write` + `Pull requests: Read and write`
+> - Classic PAT: `repo` スコープ
 
 ### 3-2. npm 側の設定
 
