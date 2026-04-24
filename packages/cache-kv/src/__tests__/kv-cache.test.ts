@@ -46,7 +46,9 @@ describe("kvCache", () => {
 
 		beforeEach(() => {
 			kv = makeMockKV();
-			cache = kvCache({ kv })!;
+			const c = kvCache({ kv });
+			if (!c) throw new Error("kvCache returned undefined");
+			cache = c;
 		});
 
 		it("setList → getList でリストを取得できる", async () => {
@@ -82,7 +84,8 @@ describe("kvCache", () => {
 		});
 
 		it("prefix オプションがキーに反映される", async () => {
-			const prefixedCache = kvCache({ kv, prefix: "blog/" })!;
+			const prefixedCache = kvCache({ kv, prefix: "blog/" });
+			if (!prefixedCache) throw new Error("unexpected undefined");
 			const list: CachedItemList = {
 				items: [makeItem("post-x")],
 				cachedAt: Date.now(),

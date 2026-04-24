@@ -4,7 +4,8 @@ import { createCMS } from "../../lib/cms";
 
 const cms = createCMS(env as unknown as Parameters<typeof createCMS>[0]);
 const { slug } = Astro.params;
-const post = await cms.posts.getItem(slug!);
+if (!slug) return Astro.redirect("/404");
+const post = await cms.posts.getItem(slug);
 
 if (!post) return Astro.redirect("/404");
 
