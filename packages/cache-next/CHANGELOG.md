@@ -1,5 +1,12 @@
 # @notion-headless-cms/cache-next
 
+## 0.2.6
+
+### Patch Changes
+
+- Updated dependencies [c955826]
+  - @notion-headless-cms/core@0.3.0
+
 ## 0.2.5
 
 ### Patch Changes
