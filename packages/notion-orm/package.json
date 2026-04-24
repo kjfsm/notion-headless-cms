@@ -1,8 +1,7 @@
 {
 	"name": "@notion-headless-cms/notion-orm",
 	"version": "0.0.2",
-	"private": true,
-	"description": "Notion ORM layer for notion-headless-cms — implements DataSource<T> (internal use only)",
+	"description": "Notion ORM layer for notion-headless-cms — implements DataSource<T>. Consumed via CLI-generated nhc-schema.ts.",
 	"keywords": [
 		"notion",
 		"notion-api",
@@ -40,6 +39,10 @@
 		"build": "tsdown src/index.ts --format esm --dts --sourcemap --out-dir dist",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run"
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
 	},
 	"dependencies": {
 		"@notion-headless-cms/core": "workspace:*",

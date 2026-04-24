@@ -9,7 +9,7 @@ Cloudflare Workers + R2 / KV を中心としつつ、Node.js / Next.js / Astro /
 flowchart LR
   notion[(Notion DB)]
 
-  subgraph orm["@notion-headless-cms/notion-orm (internal)"]
+  subgraph orm["@notion-headless-cms/notion-orm"]
     direction LR
     fetch["Notion API 取得"]
     transform["blocks → Markdown → ContentBlock AST"]
@@ -47,9 +47,10 @@ CMS エンジン本体。`createCMS` は**これ一本**で Node.js / Workers / 
 - `CMSError` / `isCMSError` / `isCMSErrorInNamespace` — 名前空間付きエラー (`core/*` / `cli/*` / `source/*` / `cache/*` / `renderer/*`)
 - サブパスエクスポート `/errors` · `/hooks` · `/cache/memory` — 必要な型だけをインポート可
 
-#### `@notion-headless-cms/notion-orm` — 内部パッケージ (private)
+#### [`@notion-headless-cms/notion-orm`](./packages/notion-orm)
 Notion API 呼び出しとスキーマ解釈を担う ORM 層。`DataSource<T>` インターフェースを実装する。
-**ユーザーは直接 import しない**（CLI が生成した `cmsDataSources` 経由で利用）。
+npm には公開されるが、**ユーザーは直接 import しない**（CLI が生成した `cmsDataSources` 経由で利用）。
+利用側プロジェクトには依存として `pnpm add` するだけでよい。
 
 #### [`@notion-headless-cms/renderer`](./packages/renderer)
 Markdown → HTML レンダラー。remark / rehype パイプラインで変換し、GFM と画像 URL のプロキシ書き換えをサポート。
