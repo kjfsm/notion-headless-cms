@@ -1,6 +1,6 @@
 {
 	"name": "@notion-headless-cms/renderer",
-	"version": "0.1.3",
+	"version": "0.1.4",
 	"description": "Markdown to HTML renderer using remark/rehype for notion-headless-cms",
 	"keywords": [
 		"notion",
