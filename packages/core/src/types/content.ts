@@ -1,3 +1,5 @@
+import type { ContentBlock } from "../content/blocks";
+
 /**
  * ライブラリが動作するために必須なフィールド。
  * 利用者はこのインターフェースを拡張して独自のコンテンツ型を定義する。
@@ -7,7 +9,7 @@
  *   title: string;
  *   author: string;
  * }
- * createCMS<Post>({ source: notionAdapter({ ... }) })
+ * createCMS<Post>({ source: createNotionCollection({ ... }) })
  */
 export interface BaseContentItem {
 	/** Notion ページ ID（変更検知に必須）。 */
@@ -30,6 +32,8 @@ export interface CachedItem<T extends BaseContentItem = BaseContentItem> {
 	item: T;
 	notionUpdatedAt: string;
 	cachedAt: number;
+	blocks?: ContentBlock[];
+	markdown?: string;
 }
 
 /** ストレージにキャッシュされたコンテンツ一覧。 */

@@ -61,13 +61,6 @@ export interface DataSource<T extends BaseContentItem = BaseContentItem> {
 	list(opts?: { publishedStatuses?: readonly string[] }): Promise<T[]>;
 
 	/**
-	 * スラッグで単件取得。見つからなければ null。
-	 * @deprecated `properties` + `findByProp` を使用する新形式では不要。
-	 *   後方互換のため残す。
-	 */
-	findBySlug?(slug: string): Promise<T | null>;
-
-	/**
 	 * 指定した Notion プロパティ名と値で1件検索する。
 	 * Core が slug フィールドのルックアップに使用する。
 	 * `properties` オプション経由で生成された DataSource が実装する。

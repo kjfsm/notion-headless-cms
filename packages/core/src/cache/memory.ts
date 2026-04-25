@@ -149,12 +149,3 @@ export function memoryImageCache(
 	return new MemoryImageCache(options);
 }
 
-/**
- * ドキュメントと画像の両方にインメモリキャッシュを返す便利関数。
- * memoryCache() はドキュメントキャッシュを返す（後方互換）。
- */
-export function memoryCache<T extends BaseContentItem = BaseContentItem>(
-	options?: MemoryDocumentCacheOptions,
-): DocumentCacheAdapter<T> {
-	return new MemoryDocumentCache<T>(options);
-}

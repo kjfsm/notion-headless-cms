@@ -19,10 +19,6 @@ export interface CloudflarePresetEnv {
 	DOC_CACHE?: KVNamespaceLike;
 	/** 画像キャッシュ用 R2 バケット (未設定時はキャッシュなし)。 */
 	IMG_BUCKET?: R2BucketLike;
-	/** 旧 binding 名 (CACHE_KV) も参照できるようにフォールバック。 */
-	CACHE_KV?: KVNamespaceLike;
-	/** 旧 binding 名 (CACHE_BUCKET) も参照できるようにフォールバック。 */
-	CACHE_BUCKET?: R2BucketLike;
 }
 
 /** `cloudflarePreset()` のオプション。 */
@@ -113,7 +109,6 @@ export function createCloudflareFactory<D extends DataSourceMap>(
  * };
  *
  * 既定の binding 名は `DOC_CACHE` (KV) と `IMG_BUCKET` (R2)。
- * 旧 `CACHE_KV` / `CACHE_BUCKET` もフォールバックとして認識する。
  */
 export function cloudflarePreset(
 	opts: CloudflarePresetOptions,
@@ -122,13 +117,8 @@ export function cloudflarePreset(
 	const docCacheKey = opts.bindings?.docCache ?? "DOC_CACHE";
 	const imgBucketKey = opts.bindings?.imgBucket ?? "IMG_BUCKET";
 
-	// 既定キー優先、旧キー (CACHE_KV / CACHE_BUCKET) はフォールバック
-	const kvBinding = (env[docCacheKey] ?? env.CACHE_KV) as
-		| KVNamespaceLike
-		| undefined;
-	const r2Binding = (env[imgBucketKey] ?? env.CACHE_BUCKET) as
-		| R2BucketLike
-		| undefined;
+	const kvBinding = env[docCacheKey] as KVNamespaceLike | undefined;
+	const r2Binding = env[imgBucketKey] as R2BucketLike | undefined;
 
 	// NOTION_TOKEN は preset 側で事前チェック (DataSource 層で謎のエラーになるのを防ぐ)
 	if (!env.NOTION_TOKEN) {

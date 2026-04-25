@@ -25,9 +25,9 @@ pnpm exec vitest --watch                      # watch
 
 ```ts
 import { vi } from "vitest";
-import type { BaseContentItem, DataSourceAdapter } from "../types/index";
+import type { BaseContentItem, DataSource } from "../types/index";
 
-const makeMockSource = (items: BaseContentItem[] = []): DataSourceAdapter => ({
+const makeMockSource = (items: BaseContentItem[] = []): DataSource => ({
 	name: "mock",
 	list: vi.fn().mockImplementation(async (opts) => {
 		if (opts?.publishedStatuses?.length) {
@@ -36,9 +36,6 @@ const makeMockSource = (items: BaseContentItem[] = []): DataSourceAdapter => ({
 			);
 		}
 		return items;
-	}),
-	findBySlug: vi.fn().mockImplementation(async (slug) => {
-		return items.find((i) => i.slug === slug) ?? null;
 	}),
 	loadMarkdown: vi.fn().mockResolvedValue("# Hello"),
 });

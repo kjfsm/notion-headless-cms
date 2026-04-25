@@ -5,13 +5,12 @@ export type {
 } from "@notion-headless-cms/renderer";
 export { getPlainText, mapItem } from "./mapper";
 export type {
-	NotionAdapterOptions,
 	NotionCollectionDefaultOptions,
 	NotionCollectionMapItemOptions,
 	NotionCollectionOptions,
 	NotionCollectionSchemaOptions,
 } from "./notion-adapter";
-export { createNotionCollection, notionAdapter } from "./notion-adapter";
+export { createNotionCollection } from "./notion-adapter";
 export type { NotionFieldType, NotionSchema } from "./schema";
 export { defineMapping, defineSchema } from "./schema";
 export type { NotionPage, NotionRichTextItem } from "./types";

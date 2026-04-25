@@ -1,6 +1,6 @@
-import type { ContentBlock } from "./content/blocks";
 import { CMSError, isCMSError } from "./errors";
 import { buildCacheImageFn } from "./image";
+import type { ContentBlock } from "./content/blocks";
 import type {
 	BaseContentItem,
 	CachedItem,
@@ -25,22 +25,13 @@ export interface RenderContext<T extends BaseContentItem> {
 }
 
 /**
- * キャッシュに保存する CachedItem を拡張し、`blocks` を同梱できるようにする。
- * `CachedItem<T>` の構造互換性を保ちつつ blocks を optional で載せる。
- */
-export type CachedItemWithBlocks<T extends BaseContentItem> = CachedItem<T> & {
-	blocks?: ContentBlock[];
-	markdown?: string;
-};
-
-/**
  * コンテンツアイテムをソースから Markdown ロード → blocks 生成 → HTML レンダリング
  * → フック適用まで実行し、キャッシュ保存用の `CachedItem` を返す。
  */
 export async function buildCachedItem<T extends BaseContentItem>(
 	item: T,
 	ctx: RenderContext<T>,
-): Promise<CachedItemWithBlocks<T>> {
+): Promise<CachedItem<T>> {
 	const start = Date.now();
 	ctx.logger?.info?.("コンテンツのレンダリング開始", {
 		slug: item.slug,
@@ -107,7 +98,7 @@ export async function buildCachedItem<T extends BaseContentItem>(
 		html = await ctx.hooks.afterRender(html, item);
 	}
 
-	let result: CachedItemWithBlocks<T> = {
+	let result: CachedItem<T> = {
 		html,
 		blocks,
 		markdown,
@@ -117,7 +108,7 @@ export async function buildCachedItem<T extends BaseContentItem>(
 	};
 
 	if (ctx.hooks.beforeCache) {
-		result = (await ctx.hooks.beforeCache(result)) as CachedItemWithBlocks<T>;
+		result = (await ctx.hooks.beforeCache(result)) as CachedItem<T>;
 	}
 
 	const durationMs = Date.now() - start;

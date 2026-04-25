@@ -80,42 +80,13 @@ function scopeDocumentCache<T extends BaseContentItem>(
 	collection: string,
 ): DocumentCacheAdapter<T> {
 	const itemKey = (slug: string): string => `${collection}:${slug}`;
-	const listKey = collection;
 
 	return {
 		name: `${base.name}@${collection}`,
-		async getList() {
-			// biome-ignore lint/suspicious/noExplicitAny: キー別 namespace
-			const anyBase = base as any;
-			if (typeof anyBase.getListByKey === "function") {
-				return anyBase.getListByKey(listKey);
-			}
-			return base.getList();
-		},
-		async setList(data) {
-			// biome-ignore lint/suspicious/noExplicitAny: キー別 namespace
-			const anyBase = base as any;
-			if (typeof anyBase.setListByKey === "function") {
-				return anyBase.setListByKey(listKey, data);
-			}
-			return base.setList(data);
-		},
-		async getItem(slug) {
-			// biome-ignore lint/suspicious/noExplicitAny: キー別 namespace
-			const anyBase = base as any;
-			if (typeof anyBase.getItemByKey === "function") {
-				return anyBase.getItemByKey(itemKey(slug));
-			}
-			return base.getItem(slug);
-		},
-		async setItem(slug, data) {
-			// biome-ignore lint/suspicious/noExplicitAny: キー別 namespace
-			const anyBase = base as any;
-			if (typeof anyBase.setItemByKey === "function") {
-				return anyBase.setItemByKey(itemKey(slug), data);
-			}
-			return base.setItem(slug, data);
-		},
+		getList: () => base.getList(),
+		setList: (data) => base.setList(data),
+		getItem: (slug) => base.getItem(itemKey(slug)),
+		setItem: (slug, data) => base.setItem(itemKey(slug), data),
 		async invalidate(scope) {
 			if (!base.invalidate) return;
 			if (scope === "all") {
@@ -129,7 +100,7 @@ function scopeDocumentCache<T extends BaseContentItem>(
 /**
  * `preset` オプションを解決して `cache` / `renderer` のデフォルトを補完する内部関数。
  * 明示的な `cache` / `renderer` がある場合はそちらが優先される。
- * `preset` 未指定時は opts をそのまま返す（後方互換）。
+ * `preset` 未指定時は opts をそのまま返す。
  */
 function resolvePreset<D extends DataSourceMap>(
 	opts: CreateCMSOptions<D>,
