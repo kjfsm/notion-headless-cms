@@ -8,6 +8,7 @@ import type {
 	AdjacencyOptions,
 	BaseContentItem,
 	CachedItem,
+	CachedItemList,
 	CMSHooks,
 	CollectionClient,
 	DataSource,
@@ -60,12 +61,19 @@ export class CollectionClientImpl<T extends BaseContentItem>
 	async getItem(slug: string): Promise<ItemWithContent<T> | null> {
 		const cached = await this.ctx.docCache.getItem(slug);
 		if (cached) {
-			if (isStale(cached.cachedAt, this.ctx.ttlMs)) {
-				// SWR: stale データを即時返却し、バックグラウンドで再検証する
-				const revalidation = this.revalidateItemBg(slug);
-				if (this.ctx.waitUntil) {
-					this.ctx.waitUntil(revalidation);
-				}
+			if (this.ctx.ttlMs !== undefined && isStale(cached.cachedAt, this.ctx.ttlMs)) {
+				// TTL 設定あり + 期限切れ: ブロッキングフェッチ（stale を返さない）
+				this.ctx.hooks.onCacheMiss?.(slug);
+				const item = await this.findRaw(slug);
+				if (!item) return null;
+				const entry = await buildCachedItem(item, this.ctx.render);
+				await this.ctx.docCache.setItem(slug, entry);
+				return this.attachContent(entry.item, entry);
+			}
+			// TTL 未設定 or 期限内: キャッシュを即時返却し、バックグラウンドで差分チェック
+			const bg = this.checkAndUpdateItemBg(slug, cached);
+			if (this.ctx.waitUntil) {
+				this.ctx.waitUntil(bg);
 			}
 			this.ctx.hooks.onCacheHit?.(slug, cached);
 			return this.attachContent(cached.item, cached);
@@ -210,12 +218,17 @@ export class CollectionClientImpl<T extends BaseContentItem>
 	private async fetchList(): Promise<T[]> {
 		const cached = await this.ctx.docCache.getList();
 		if (cached) {
-			if (isStale(cached.cachedAt, this.ctx.ttlMs)) {
-				// SWR: stale リストを即時返却し、バックグラウンドで再検証する
-				const revalidation = this.revalidateListBg();
-				if (this.ctx.waitUntil) {
-					this.ctx.waitUntil(revalidation);
-				}
+			if (this.ctx.ttlMs !== undefined && isStale(cached.cachedAt, this.ctx.ttlMs)) {
+				// TTL 設定あり + 期限切れ: ブロッキングフェッチ（stale を返さない）
+				this.ctx.hooks.onListCacheMiss?.();
+				const items = await this.fetchListRaw();
+				await this.ctx.docCache.setList({ items, cachedAt: Date.now() });
+				return items;
+			}
+			// TTL 未設定 or 期限内: キャッシュを即時返却し、バックグラウンドで差分チェック
+			const bg = this.checkAndUpdateListBg(cached);
+			if (this.ctx.waitUntil) {
+				this.ctx.waitUntil(bg);
 			}
 			this.ctx.hooks.onListCacheHit?.(cached.items, cached.cachedAt);
 			return cached.items;
@@ -234,27 +247,52 @@ export class CollectionClientImpl<T extends BaseContentItem>
 		return items;
 	}
 
-	private async revalidateItemBg(slug: string): Promise<void> {
+	private async checkAndUpdateItemBg(
+		slug: string,
+		cached: CachedItem<T>,
+	): Promise<void> {
 		try {
 			const item = await this.findRaw(slug);
-			if (item) {
+			if (!item) return;
+			if (this.ctx.source.getLastModified(item) !== cached.notionUpdatedAt) {
+				// 更新あり: 再レンダリングしてキャッシュを差し替える
 				const entry = await buildCachedItem(item, this.ctx.render);
 				await this.ctx.docCache.setItem(slug, entry);
+			} else if (this.ctx.ttlMs !== undefined) {
+				// 変更なし + TTL あり: cachedAt をリセットして次回の期限切れを先送りする
+				await this.ctx.docCache.setItem(slug, {
+					...cached,
+					cachedAt: Date.now(),
+				});
 			}
 		} catch (err) {
-			this.ctx.logger?.warn?.("SWR: アイテムのバックグラウンド再検証に失敗", {
+			this.ctx.logger?.warn?.("SWR: アイテムのバックグラウンド差分チェックに失敗", {
 				slug,
 				error: err instanceof Error ? err.message : String(err),
 			});
 		}
 	}
 
-	private async revalidateListBg(): Promise<void> {
+	private async checkAndUpdateListBg(
+		cached: CachedItemList<T>,
+	): Promise<void> {
 		try {
 			const items = await this.fetchListRaw();
-			await this.ctx.docCache.setList({ items, cachedAt: Date.now() });
+			if (
+				this.ctx.source.getListVersion(items) !==
+				this.ctx.source.getListVersion(cached.items)
+			) {
+				// 更新あり: リストを差し替える
+				await this.ctx.docCache.setList({ items, cachedAt: Date.now() });
+			} else if (this.ctx.ttlMs !== undefined) {
+				// 変更なし + TTL あり: cachedAt をリセットする
+				await this.ctx.docCache.setList({
+					...cached,
+					cachedAt: Date.now(),
+				});
+			}
 		} catch (err) {
-			this.ctx.logger?.warn?.("SWR: リストのバックグラウンド再検証に失敗", {
+			this.ctx.logger?.warn?.("SWR: リストのバックグラウンド差分チェックに失敗", {
 				error: err instanceof Error ? err.message : String(err),
 			});
 		}

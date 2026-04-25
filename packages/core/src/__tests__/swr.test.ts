@@ -23,22 +23,27 @@ function makeMockSource(
 		getLastModified(item) {
 			return item.updatedAt;
 		},
-		getListVersion() {
-			return "";
+		getListVersion(items) {
+			return items.map((i) => i.updatedAt).join(",");
 		},
 		...overrides,
 	};
 }
 
 describe("SWR（Stale-While-Revalidate）", () => {
-	it("stale な getItem は即時 stale データを返す", async () => {
+	it("TTL 設定あり・期限切れの getItem はブロッキングで最新データを返す", async () => {
 		const staleItem: BaseContentItem = {
 			id: "page-1",
 			slug: "my-post",
 			updatedAt: "2024-01-01T00:00:00Z",
 		};
+		const freshItem: BaseContentItem = {
+			id: "page-1",
+			slug: "my-post",
+			updatedAt: "2024-01-02T00:00:00Z",
+		};
 
-		// キャッシュに stale アイテムを事前セット（cachedAt: 0 → 必ず stale）
+		// キャッシュに stale アイテムを事前セット（cachedAt: 0 → 必ず TTL 期限切れ）
 		const cache = new MemoryDocumentCache();
 		await cache.setItem("posts:my-post", {
 			item: staleItem,
@@ -47,19 +52,14 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			cachedAt: 0,
 		});
 
-		const capturedPromises: Promise<unknown>[] = [];
-		const waitUntil = (p: Promise<unknown>) => {
-			capturedPromises.push(p);
-		};
+		const waitUntil = vi.fn();
 
 		const source = makeMockSource({
 			async list() {
-				return [staleItem];
+				return [freshItem];
 			},
 		});
 
-		// preset なし + renderer 明示注入で cache オプションが正しく機能する
-		// （preset: "disabled" は cache を undefined に上書きするため使わない）
 		const cms = createCMS({
 			dataSources: { posts: source },
 			renderer: mockRenderer,
@@ -69,16 +69,16 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
 		const result = await cms.posts.getItem("my-post");
 
-		// stale データが即時返される
+		// TTL 期限切れ → ブロッキングで最新データが返される
 		expect(result).not.toBeNull();
-		expect(result?.updatedAt).toBe("2024-01-01T00:00:00Z");
+		expect(result?.updatedAt).toBe("2024-01-02T00:00:00Z");
 
-		// バックグラウンド再検証の Promise が waitUntil に渡されている
-		expect(capturedPromises.length).toBeGreaterThan(0);
+		// ブロッキングフェッチなのでバックグラウンド Promise は渡されない
+		expect(waitUntil).not.toHaveBeenCalled();
 	});
 
-	it("stale な getItem のバックグラウンド再検証でキャッシュが更新される", async () => {
-		const staleItem: BaseContentItem = {
+	it("TTL 設定なしの getItem はキャッシュを即時返却してバックグラウンドで差分チェックする", async () => {
+		const cachedItem: BaseContentItem = {
 			id: "page-1",
 			slug: "my-post",
 			updatedAt: "2024-01-01T00:00:00Z",
@@ -91,10 +91,10 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
 		const cache = new MemoryDocumentCache();
 		await cache.setItem("posts:my-post", {
-			item: staleItem,
-			html: "<p>stale</p>",
-			notionUpdatedAt: staleItem.updatedAt,
-			cachedAt: 0,
+			item: cachedItem,
+			html: "<p>cached</p>",
+			notionUpdatedAt: cachedItem.updatedAt,
+			cachedAt: 0, // 古くてもTTLなしなので期限切れにならない
 		});
 
 		const capturedPromises: Promise<unknown>[] = [];
@@ -108,37 +108,40 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			},
 		});
 
+		// TTL 未設定（永続キャッシュ）
 		const cms = createCMS({
 			dataSources: { posts: source },
 			renderer: mockRenderer,
-			cache: { document: cache, ttlMs: 1000 },
+			cache: { document: cache },
 			waitUntil,
 		});
 
-		// stale データを即時返す
-		await cms.posts.getItem("my-post");
+		const result = await cms.posts.getItem("my-post");
 
-		// バックグラウンド Promise をすべて待つ
+		// キャッシュが即時返される
+		expect(result).not.toBeNull();
+		expect(result?.updatedAt).toBe("2024-01-01T00:00:00Z");
+
+		// バックグラウンド差分チェックの Promise が waitUntil に渡されている
+		expect(capturedPromises.length).toBeGreaterThan(0);
+
+		// バックグラウンド処理を待つ → 更新あり → キャッシュが新しいアイテムで更新される
 		await Promise.all(capturedPromises);
-
-		// キャッシュが新しいアイテムで更新されていることを確認
 		const updated = await cache.getItem("posts:my-post");
-		expect(updated).not.toBeNull();
 		expect(updated?.item.updatedAt).toBe("2024-01-02T00:00:00Z");
 	});
 
-	it("stale な getList は即時 stale データを返す", async () => {
-		const staleItem: BaseContentItem = {
+	it("TTL 設定なしの getList はキャッシュを即時返却してバックグラウンドで差分チェックする", async () => {
+		const cachedItem: BaseContentItem = {
 			id: "page-1",
 			slug: "my-post",
 			updatedAt: "2024-01-01T00:00:00Z",
 		};
 
 		const cache = new MemoryDocumentCache();
-		// リストキャッシュに stale データを事前セット（cachedAt: 0 → 必ず stale）
 		await cache.setList({
-			items: [staleItem],
-			cachedAt: 0,
+			items: [cachedItem],
+			cachedAt: 0, // 古くてもTTLなしなので期限切れにならない
 		});
 
 		const capturedPromises: Promise<unknown>[] = [];
@@ -155,6 +158,50 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		const source = makeMockSource({
 			async list() {
 				return [freshItem];
+			},
+		});
+
+		// TTL 未設定（永続キャッシュ）
+		const cms = createCMS({
+			dataSources: { posts: source },
+			renderer: mockRenderer,
+			cache: { document: cache },
+			waitUntil,
+		});
+
+		const result = await cms.posts.getList();
+
+		// キャッシュが即時返される
+		expect(result).toHaveLength(1);
+		expect(result[0].updatedAt).toBe("2024-01-01T00:00:00Z");
+
+		// バックグラウンド差分チェックの Promise が waitUntil に渡されている
+		expect(capturedPromises.length).toBeGreaterThan(0);
+	});
+
+	it("TTL 設定あり・期限切れの getList はブロッキングで最新リストを返す", async () => {
+		const staleItem: BaseContentItem = {
+			id: "page-1",
+			slug: "my-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const freshItem: BaseContentItem = {
+			id: "page-2",
+			slug: "new-post",
+			updatedAt: "2024-01-02T00:00:00Z",
+		};
+
+		const cache = new MemoryDocumentCache();
+		await cache.setList({
+			items: [staleItem],
+			cachedAt: 0, // 必ず TTL 期限切れ
+		});
+
+		const waitUntil = vi.fn();
+
+		const source = makeMockSource({
+			async list() {
+				return [staleItem, freshItem];
 			},
 		});
 
@@ -167,15 +214,14 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
 		const result = await cms.posts.getList();
 
-		// stale リスト（1件）が即時返される
-		expect(result).toHaveLength(1);
-		expect(result[0].updatedAt).toBe("2024-01-01T00:00:00Z");
+		// TTL 期限切れ → ブロッキングで最新リストが返される
+		expect(result).toHaveLength(2);
 
-		// バックグラウンド再検証の Promise が waitUntil に渡されている
-		expect(capturedPromises.length).toBeGreaterThan(0);
+		// ブロッキングフェッチなのでバックグラウンド Promise は渡されない
+		expect(waitUntil).not.toHaveBeenCalled();
 	});
 
-	it("fresh なキャッシュはバックグラウンド再検証をしない", async () => {
+	it("TTL 設定あり・期限内の getItem はキャッシュを即時返却してバックグラウンド差分チェックする", async () => {
 		const freshItem: BaseContentItem = {
 			id: "page-1",
 			slug: "my-post",
@@ -183,7 +229,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		};
 
 		const cache = new MemoryDocumentCache();
-		// cachedAt: Date.now()、ttlMs: 60_000 → fresh
+		// cachedAt: Date.now()、ttlMs: 60_000 → 期限内
 		await cache.setItem("posts:my-post", {
 			item: freshItem,
 			html: "<p>fresh</p>",
@@ -191,7 +237,10 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			cachedAt: Date.now(),
 		});
 
-		const waitUntil = vi.fn();
+		const capturedPromises: Promise<unknown>[] = [];
+		const waitUntil = (p: Promise<unknown>) => {
+			capturedPromises.push(p);
+		};
 
 		const source = makeMockSource({
 			async list() {
@@ -208,7 +257,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
 		await cms.posts.getItem("my-post");
 
-		// fresh なので waitUntil は呼ばれない（バックグラウンド再検証なし）
-		expect(waitUntil).not.toHaveBeenCalled();
+		// 期限内でもバックグラウンド差分チェックは行われる
+		expect(capturedPromises.length).toBeGreaterThan(0);
 	});
 });
