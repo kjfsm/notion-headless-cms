@@ -72,11 +72,19 @@ export class MemoryDocumentCache<T extends BaseContentItem = BaseContentItem>
 			this.items.clear();
 			return;
 		}
-		// { collection } または { collection, slug }。単一コレクション想定のため
-		// list を必ず破棄し、slug 指定があれば該当 item も削除する
+		// list は常に破棄する
 		this.list = null;
 		if ("slug" in scope) {
 			this.items.delete(scope.slug);
+		} else {
+			// { collection }: プレフィックスに一致するアイテムをすべて削除する
+			// scopeDocumentCache 経由の場合、キーは `{collection}:{slug}` 形式になる
+			const prefix = `${scope.collection}:`;
+			for (const key of [...this.items.keys()]) {
+				if (key.startsWith(prefix)) {
+					this.items.delete(key);
+				}
+			}
 		}
 	}
 
