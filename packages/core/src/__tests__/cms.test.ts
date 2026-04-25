@@ -1,8 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { createCMS } from "../cms";
 import { isCMSError } from "../errors";
+import type { RendererFn } from "../types/config";
 import type { BaseContentItem } from "../types/content";
 import type { DataSource } from "../types/data-source";
+
+// buildCachedItem が renderer を動的 import するため、明示的に注入する用のモック
+// （preset: "disabled" では renderer が未解決になり getItem が失敗するため）
+const mockRenderer: RendererFn = vi.fn().mockResolvedValue("<p>test</p>");
 
 function makeMockSource(
 	overrides: Partial<DataSource<BaseContentItem>> = {},
@@ -156,6 +161,7 @@ describe("createCMS - Feature 2: collections.publishedStatuses オーバーラ�
 		const cms = createCMS({
 			dataSources: { posts: source },
 			preset: "disabled",
+			renderer: mockRenderer,
 			collections: {
 				posts: {
 					slug: "slug",
@@ -192,6 +198,7 @@ describe("createCMS - findByProp の利用", () => {
 		const cms = createCMS({
 			dataSources: { posts: source },
 			preset: "disabled",
+			renderer: mockRenderer,
 			collections: {
 				posts: { slug: "slug" },
 			},
@@ -223,6 +230,7 @@ describe("createCMS - findByProp の利用", () => {
 		const cms = createCMS({
 			dataSources: { posts: source },
 			preset: "disabled",
+			renderer: mockRenderer,
 			collections: {
 				posts: { slug: "slug" },
 			},
@@ -255,6 +263,7 @@ describe("createCMS - beforeCache フック", () => {
 		const cms = createCMS({
 			dataSources: { posts: source },
 			preset: "disabled",
+			renderer: mockRenderer,
 			collections: {
 				posts: { slug: "slug" },
 			},

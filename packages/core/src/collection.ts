@@ -59,11 +59,19 @@ export class CollectionClientImpl<T extends BaseContentItem>
 
 	async getItem(slug: string): Promise<ItemWithContent<T> | null> {
 		const cached = await this.ctx.docCache.getItem(slug);
-		if (cached && !isStale(cached.cachedAt, this.ctx.ttlMs)) {
+		if (cached) {
+			if (isStale(cached.cachedAt, this.ctx.ttlMs)) {
+				// SWR: stale データを即時返却し、バックグラウンドで再検証する
+				const revalidation = this.revalidateItemBg(slug);
+				if (this.ctx.waitUntil) {
+					this.ctx.waitUntil(revalidation);
+				}
+			}
 			this.ctx.hooks.onCacheHit?.(slug, cached);
 			return this.attachContent(cached.item, cached);
 		}
 
+		// キャッシュなし: 同期フェッチ
 		this.ctx.hooks.onCacheMiss?.(slug);
 		const item = await this.findRaw(slug);
 		if (!item) return null;
@@ -201,11 +209,19 @@ export class CollectionClientImpl<T extends BaseContentItem>
 
 	private async fetchList(): Promise<T[]> {
 		const cached = await this.ctx.docCache.getList();
-		if (cached && !isStale(cached.cachedAt, this.ctx.ttlMs)) {
+		if (cached) {
+			if (isStale(cached.cachedAt, this.ctx.ttlMs)) {
+				// SWR: stale リストを即時返却し、バックグラウンドで再検証する
+				const revalidation = this.revalidateListBg();
+				if (this.ctx.waitUntil) {
+					this.ctx.waitUntil(revalidation);
+				}
+			}
 			this.ctx.hooks.onListCacheHit?.(cached.items, cached.cachedAt);
 			return cached.items;
 		}
 
+		// キャッシュなし: 同期フェッチ
 		this.ctx.hooks.onListCacheMiss?.();
 		const items = await this.fetchListRaw();
 		const cachedAt = Date.now();
@@ -216,6 +232,32 @@ export class CollectionClientImpl<T extends BaseContentItem>
 			await save;
 		}
 		return items;
+	}
+
+	private async revalidateItemBg(slug: string): Promise<void> {
+		try {
+			const item = await this.findRaw(slug);
+			if (item) {
+				const entry = await buildCachedItem(item, this.ctx.render);
+				await this.ctx.docCache.setItem(slug, entry);
+			}
+		} catch (err) {
+			this.ctx.logger?.warn?.("SWR: アイテムのバックグラウンド再検証に失敗", {
+				slug,
+				error: err instanceof Error ? err.message : String(err),
+			});
+		}
+	}
+
+	private async revalidateListBg(): Promise<void> {
+		try {
+			const items = await this.fetchListRaw();
+			await this.ctx.docCache.setList({ items, cachedAt: Date.now() });
+		} catch (err) {
+			this.ctx.logger?.warn?.("SWR: リストのバックグラウンド再検証に失敗", {
+				error: err instanceof Error ? err.message : String(err),
+			});
+		}
 	}
 
 	private fetchListRaw(): Promise<T[]> {

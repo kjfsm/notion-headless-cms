@@ -92,6 +92,13 @@ function scopeDocumentCache<T extends BaseContentItem>(
 			if (scope === "all") {
 				return base.invalidate({ collection });
 			}
+			if ("slug" in scope) {
+				// アイテムは `{collection}:{slug}` で保存されるため正しいキーに変換する
+				return base.invalidate({
+					collection: scope.collection,
+					slug: itemKey(scope.slug),
+				});
+			}
 			return base.invalidate(scope);
 		},
 	};
