@@ -1,6 +1,9 @@
-import type { PropertyMap } from "@notion-headless-cms/core";
+import type {
+	CMSSchemaProperties,
+	PropertyMap,
+} from "@notion-headless-cms/core";
 import { describe, expect, it } from "vitest";
-import { mapItemFromPropertyMap } from "../mapper";
+import { mapItem, mapItemFromPropertyMap } from "../mapper";
 
 const makePage = (properties: Record<string, unknown>) => ({
 	id: "page-id",
@@ -111,6 +114,21 @@ describe("mapItemFromPropertyMap", () => {
 		expect(result.tags).toEqual(["A", "B"]);
 	});
 
+	it("multiSelect 型マッピングで実際のプロパティ型が異なる場合は空配列を返す", () => {
+		const page = makePage({
+			Name: { type: "title", title: [] },
+			Tags: { type: "rich_text", rich_text: [{ plain_text: "tag" }] },
+		});
+		const properties: PropertyMap = {
+			tags: { type: "multiSelect", notion: "Tags" },
+		};
+		const result = mapItemFromPropertyMap(
+			page as never,
+			properties,
+		) as unknown as Record<string, unknown>;
+		expect(result.tags).toEqual([]);
+	});
+
 	it("date プロパティが start 日付文字列として取得される", () => {
 		const page = makePage({
 			Name: { type: "title", title: [] },
@@ -175,6 +193,32 @@ describe("mapItemFromPropertyMap", () => {
 		expect(result.link).toBe("https://example.com");
 	});
 
+	it("title プロパティが空の場合は title が null になる（|| null フォールバック）", () => {
+		const page = makePage({
+			Name: { type: "title", title: [] },
+		});
+		const properties: PropertyMap = {
+			name: { type: "title", notion: "Name" },
+		};
+		const item = mapItemFromPropertyMap(page as never, properties);
+		expect(item.title).toBeNull();
+	});
+
+	it("richText プロパティが空の場合は null になる（|| null フォールバック）", () => {
+		const page = makePage({
+			Name: { type: "title", title: [] },
+			Slug: { type: "rich_text", rich_text: [] },
+		});
+		const properties: PropertyMap = {
+			slug: { type: "richText", notion: "Slug" },
+		};
+		const result = mapItemFromPropertyMap(
+			page as never,
+			properties,
+		) as unknown as Record<string, unknown>;
+		expect(result.slug).toBeNull();
+	});
+
 	it("プロパティが存在しない場合のデフォルト値（null/false/[]）", () => {
 		const page = makePage({
 			Name: { type: "title", title: [] },
@@ -192,5 +236,161 @@ describe("mapItemFromPropertyMap", () => {
 		expect(result.text).toBeNull();
 		expect(result.tags).toEqual([]);
 		expect(result.featured).toBe(false);
+	});
+
+	it("date プロパティが null の場合は null を返す（?? null フォールバック）", () => {
+		const page = makePage({
+			Name: { type: "title", title: [] },
+			PublishedAt: { type: "date", date: null },
+		});
+		const properties: PropertyMap = {
+			publishedAt: { type: "date", notion: "PublishedAt" },
+		};
+		const result = mapItemFromPropertyMap(
+			page as never,
+			properties,
+		) as unknown as Record<string, unknown>;
+		expect(result.publishedAt).toBeNull();
+	});
+
+	it("select プロパティが null の場合は null を返す（?? null フォールバック）", () => {
+		const page = makePage({
+			Name: { type: "title", title: [] },
+			Status: { type: "select", select: null },
+		});
+		const properties: PropertyMap = {
+			status: { type: "select", notion: "Status" },
+		};
+		const result = mapItemFromPropertyMap(
+			page as never,
+			properties,
+		) as unknown as Record<string, unknown>;
+		expect(result.status).toBeNull();
+	});
+
+	it("status プロパティが null の場合は null を返す（?? null フォールバック）", () => {
+		const page = makePage({
+			Name: { type: "title", title: [] },
+			Status: { type: "status", status: null },
+		});
+		const properties: PropertyMap = {
+			status: { type: "select", notion: "Status" },
+		};
+		const result = mapItemFromPropertyMap(
+			page as never,
+			properties,
+		) as unknown as Record<string, unknown>;
+		expect(result.status).toBeNull();
+	});
+});
+
+describe("mapItem", () => {
+	const defaultProps: Required<CMSSchemaProperties> = {
+		slug: "Slug",
+		status: "Status",
+		date: "CreatedAt",
+	};
+
+	it("有効なページを BaseContentItem に変換する", () => {
+		const page = {
+			...makePage({
+				Name: { type: "title", title: [{ plain_text: "My Post" }] },
+				Slug: { rich_text: [{ plain_text: "my-post" }] },
+				Status: { status: { name: "公開" } },
+				CreatedAt: { date: { start: "2024-01-01" } },
+			}),
+			last_edited_time: "2024-01-01T00:00:00.000Z",
+			created_time: "2024-01-01T00:00:00.000Z",
+		};
+		const item = mapItem(page as never, defaultProps);
+		expect(item.slug).toBe("my-post");
+		expect(item.status).toBe("公開");
+	});
+
+	it("status が select タイプの場合は select.name を使う", () => {
+		const page = {
+			...makePage({
+				Name: { type: "title", title: [{ plain_text: "Post" }] },
+				Slug: { rich_text: [{ plain_text: "my-post" }] },
+				// status が未定義で select が設定されたケース
+				Status: { select: { name: "Published" } },
+				CreatedAt: { date: { start: "2024-01-01" } },
+			}),
+			last_edited_time: "2024-01-01T00:00:00.000Z",
+			created_time: "2024-01-01T00:00:00.000Z",
+		};
+		const item = mapItem(page as never, defaultProps);
+		expect(item.status).toBe("Published");
+	});
+
+	it("date が null の場合は created_time にフォールバックする", () => {
+		const page = {
+			...makePage({
+				Name: { type: "title", title: [{ plain_text: "Post" }] },
+				Slug: { rich_text: [{ plain_text: "my-post" }] },
+				Status: { status: { name: "公開" } },
+				CreatedAt: { date: null },
+			}),
+			last_edited_time: "2024-01-01T00:00:00.000Z",
+			created_time: "2024-01-01T00:00:00.000Z",
+		};
+		const item = mapItem(page as never, defaultProps);
+		expect(item.publishedAt).toBe("2024-01-01T00:00:00.000Z");
+	});
+
+	it("タイトルプロパティが空の場合は title が null になる", () => {
+		const page = {
+			...makePage({
+				Name: { type: "title", title: [] },
+				Slug: { rich_text: [{ plain_text: "my-post" }] },
+				Status: { status: { name: "公開" } },
+				CreatedAt: { date: { start: "2024-01-01" } },
+			}),
+			last_edited_time: "2024-01-01T00:00:00.000Z",
+			created_time: "2024-01-01T00:00:00.000Z",
+		};
+		const item = mapItem(page as never, defaultProps);
+		expect(item.title).toBeNull();
+	});
+
+	it("date プロパティが存在しない場合は created_time にフォールバックする", () => {
+		const page = {
+			...makePage({
+				Name: { type: "title", title: [] },
+				Slug: { rich_text: [{ plain_text: "my-post" }] },
+				Status: { status: { name: "公開" } },
+				// CreatedAt プロパティなし → dateProperty が undefined
+			}),
+			last_edited_time: "2024-01-01T00:00:00.000Z",
+			created_time: "2024-01-01T00:00:00.000Z",
+		};
+		const item = mapItem(page as never, defaultProps);
+		expect(item.publishedAt).toBe("2024-01-01T00:00:00.000Z");
+	});
+
+	it("status プロパティが存在しない場合は status が undefined になる", () => {
+		const page = {
+			...makePage({
+				Name: { type: "title", title: [] },
+				Slug: { rich_text: [{ plain_text: "my-post" }] },
+				// Status プロパティなし → statusProperty が undefined
+				CreatedAt: { date: { start: "2024-01-01" } },
+			}),
+			last_edited_time: "2024-01-01T00:00:00.000Z",
+			created_time: "2024-01-01T00:00:00.000Z",
+		};
+		const item = mapItem(page as never, defaultProps);
+		expect(item.status).toBeUndefined();
+	});
+
+	it("slug が空の場合は CMSError をスローする", () => {
+		const page = {
+			...makePage({
+				// Slug プロパティなし → getPlainText が "" を返す
+			}),
+			last_edited_time: "2024-01-01T00:00:00.000Z",
+			created_time: "2024-01-01T00:00:00.000Z",
+		};
+		expect(() => mapItem(page as never, defaultProps)).toThrow();
 	});
 });

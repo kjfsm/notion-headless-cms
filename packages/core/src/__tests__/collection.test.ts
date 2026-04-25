@@ -580,3 +580,205 @@ describe("CollectionClient — concurrent getItem", () => {
 		}
 	});
 });
+
+describe("CollectionClient — accessibleStatuses フィルタ", () => {
+	it("accessibleStatuses にないステータスのアイテムは getItem で null を返す", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "draft-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+			status: "下書き",
+		};
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						return [item];
+					},
+				}),
+			},
+			preset: "disabled",
+			renderer: mockRenderer,
+			collections: {
+				posts: {
+					slug: "slug",
+					accessibleStatuses: ["公開"],
+				},
+			},
+		});
+		const result = await cms.posts.getItem("draft-post");
+		expect(result).toBeNull();
+	});
+
+	it("accessibleStatuses にステータスが含まれるアイテムは getItem で取得できる", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "public-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+			status: "公開",
+		};
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						return [item];
+					},
+				}),
+			},
+			preset: "disabled",
+			renderer: mockRenderer,
+			collections: {
+				posts: {
+					slug: "slug",
+					accessibleStatuses: ["公開"],
+				},
+			},
+		});
+		const result = await cms.posts.getItem("public-post");
+		expect(result).not.toBeNull();
+	});
+
+	it("アイテムの status が undefined の場合は accessibleStatuses でフィルタして null を返す", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "no-status",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						return [item];
+					},
+				}),
+			},
+			preset: "disabled",
+			renderer: mockRenderer,
+			collections: {
+				posts: {
+					slug: "slug",
+					accessibleStatuses: ["公開"],
+				},
+			},
+		});
+		const result = await cms.posts.getItem("no-status");
+		expect(result).toBeNull();
+	});
+});
+
+describe("CollectionClient — content アクセサ", () => {
+	it("content.blocks は ContentBlock 配列を返し、2回目はキャッシュから返す", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "post-blocks",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						return [item];
+					},
+				}),
+			},
+			preset: "disabled",
+			renderer: mockRenderer,
+		});
+		const result = await cms.posts.getItem("post-blocks");
+		expect(result).not.toBeNull();
+		// 1回目: raw html ブロックとして返る
+		const blocks1 = result!.content.blocks;
+		expect(Array.isArray(blocks1)).toBe(true);
+		// 2回目: blocksCache からキャッシュされた値が返る
+		const blocks2 = result!.content.blocks;
+		expect(blocks2).toBe(blocks1);
+	});
+
+	it("content.html() は cached.html を返す", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "post-html",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						return [item];
+					},
+				}),
+			},
+			preset: "disabled",
+			renderer: mockRenderer,
+		});
+		const result = await cms.posts.getItem("post-html");
+		expect(result).not.toBeNull();
+		const html = await result!.content.html();
+		expect(typeof html).toBe("string");
+	});
+});
+
+describe("CollectionClient — content.markdown()", () => {
+	it("content.markdown() でマークダウンを取得でき、2回目はキャッシュから返す", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "post-with-md",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const loadMarkdown = vi.fn().mockResolvedValue("# Hello World");
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						return [item];
+					},
+					loadMarkdown,
+				}),
+			},
+			preset: "disabled",
+			renderer: mockRenderer,
+		});
+		const result = await cms.posts.getItem("post-with-md");
+		expect(result).not.toBeNull();
+		// 1回目: loadMarkdown が呼ばれる (buildCachedItem + content.markdown())
+		const callsBefore = loadMarkdown.mock.calls.length;
+		const md = await result!.content.markdown();
+		expect(md).toBe("# Hello World");
+		// 2回目: markdownCache からキャッシュされた値が返り、追加呼び出しなし
+		const mdCached = await result!.content.markdown();
+		expect(mdCached).toBe("# Hello World");
+		expect(loadMarkdown.mock.calls.length).toBe(callsBefore + 1);
+	});
+});
+
+describe("CollectionClient — slugField + findByProp", () => {
+	it("slugField と findByProp が設定されていると効率的なプロパティ検索を使う", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "my-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+			status: "公開",
+		};
+		const findByProp = vi.fn().mockResolvedValue(item);
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					findByProp,
+					properties: {
+						slug: { type: "richText", notion: "Slug" },
+					},
+				}),
+			},
+			preset: "disabled",
+			renderer: mockRenderer,
+			collections: {
+				posts: {
+					slug: "slug",
+				},
+			},
+		});
+		const result = await cms.posts.getItem("my-post");
+		expect(result).not.toBeNull();
+		expect(findByProp).toHaveBeenCalledWith("Slug", "my-post");
+	});
+});

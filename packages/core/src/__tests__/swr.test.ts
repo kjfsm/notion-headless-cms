@@ -512,4 +512,98 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		// 期限内でもバックグラウンド差分チェックは行われる
 		expect(capturedPromises.length).toBeGreaterThan(0);
 	});
+
+	it("リスト SWR が差分なし + TTL あり のとき cachedAt をリセットする", async () => {
+		const item: BaseContentItem = {
+			id: "p1",
+			slug: "post-1",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+
+		const cache = new MemoryDocumentCache();
+		await cache.setList({ items: [item], cachedAt: Date.now() });
+
+		const capturedPromises: Promise<unknown>[] = [];
+		const source = makeMockSource({
+			async list() {
+				return [item];
+			},
+		});
+
+		const cms = createCMS({
+			dataSources: { posts: source },
+			renderer: mockRenderer,
+			// ttlMs を設定するとリスト差分なし時に cachedAt がリセットされる
+			cache: { document: cache, ttlMs: 60_000 },
+			waitUntil: (p) => capturedPromises.push(p),
+		});
+
+		await cms.posts.getList();
+		await Promise.all(capturedPromises);
+		// エラーなく完了することを確認
+		expect(capturedPromises.length).toBeGreaterThan(0);
+	});
+});
+
+describe("リトライ中のロガー", () => {
+	it("getList() がリトライ中に logger.warn を呼ぶ", async () => {
+		const warnFn = vi.fn();
+		const retryableErr = Object.assign(new Error("rate limit"), {
+			status: 503,
+		});
+		let callCount = 0;
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						callCount++;
+						if (callCount === 1) throw retryableErr;
+						return [];
+					},
+				}),
+			},
+			preset: "disabled",
+			renderer: mockRenderer,
+			logger: { warn: warnFn },
+			rateLimiter: { maxRetries: 1, baseDelayMs: 0, retryOn: [503] },
+		});
+		await cms.posts.getList();
+		expect(warnFn).toHaveBeenCalledWith(
+			"getList() リトライ中",
+			expect.objectContaining({ attempt: 1, status: 503 }),
+		);
+	});
+
+	it("getItem() がリトライ中に logger.warn を呼ぶ", async () => {
+		const warnFn = vi.fn();
+		const retryableErr = Object.assign(new Error("service unavailable"), {
+			status: 503,
+		});
+		const targetItem: BaseContentItem = {
+			id: "1",
+			slug: "retry-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		let callCount = 0;
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						callCount++;
+						if (callCount === 1) throw retryableErr;
+						return [targetItem];
+					},
+				}),
+			},
+			preset: "disabled",
+			renderer: mockRenderer,
+			logger: { warn: warnFn },
+			rateLimiter: { maxRetries: 1, baseDelayMs: 0, retryOn: [503] },
+		});
+		await cms.posts.getItem("retry-post");
+		expect(warnFn).toHaveBeenCalledWith(
+			"getItem() リトライ中",
+			expect.objectContaining({ attempt: 1, status: 503 }),
+		);
+	});
 });

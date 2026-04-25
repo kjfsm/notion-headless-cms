@@ -62,6 +62,19 @@ describe("MemoryDocumentCache", () => {
 		expect(await cache.getItem("b")).not.toBeNull();
 	});
 
+	it("invalidate({ collection }) でコレクションプレフィックスのアイテムをクリアする", async () => {
+		const cache = memoryDocumentCache();
+		// scopeDocumentCache が "{collection}:{slug}" 形式でキーを設定する
+		await cache.setItem("posts:a", makeCachedItem("a"));
+		await cache.setItem("posts:b", makeCachedItem("b"));
+		await cache.setItem("pages:c", makeCachedItem("c"));
+		await cache.invalidate?.({ collection: "posts" });
+		expect(await cache.getItem("posts:a")).toBeNull();
+		expect(await cache.getItem("posts:b")).toBeNull();
+		// 別コレクションはクリアされない
+		expect(await cache.getItem("pages:c")).not.toBeNull();
+	});
+
 	it("maxItems 指定時に LRU で古いエントリが退避される", async () => {
 		const cache = memoryDocumentCache({ maxItems: 2 });
 		await cache.setItem("a", makeCachedItem("a"));
@@ -117,5 +130,16 @@ describe("MemoryImageCache", () => {
 		expect(await cache.get("a")).toBeNull();
 		expect(await cache.get("b")).not.toBeNull();
 		expect(await cache.get("c")).not.toBeNull();
+	});
+
+	it("同じハッシュで上書きセットすると古いデータが置き換わる", async () => {
+		const cache = memoryImageCache();
+		const data1 = new ArrayBuffer(8);
+		const data2 = new ArrayBuffer(16);
+		await cache.set("hash-abc", data1, "image/png");
+		await cache.set("hash-abc", data2, "image/jpeg");
+		const result = await cache.get("hash-abc");
+		expect(result?.contentType).toBe("image/jpeg");
+		expect(result?.data).toBe(data2);
 	});
 });

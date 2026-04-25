@@ -154,6 +154,71 @@ describe("mergeHooks", () => {
 	});
 });
 
+describe("mergeHooks - エラー処理・エッジケース", () => {
+	it("フックが例外を throw しても logger.error に流して握りつぶす", () => {
+		const errorLogger = vi.fn();
+		const badHook = vi.fn().mockImplementation(() => {
+			throw new Error("hook error");
+		});
+		const merged = mergeHooks(
+			[{ name: "bad-plugin", hooks: { onCacheMiss: badHook } }],
+			undefined,
+			{ error: errorLogger },
+		);
+		// 例外が外に伝播しない
+		expect(() => merged.onCacheMiss?.("slug")).not.toThrow();
+		expect(errorLogger).toHaveBeenCalledWith(
+			"観測フックで例外が発生",
+			expect.objectContaining({ hook: "onCacheMiss" }),
+		);
+	});
+
+	it("フックが例外を throw して logger が未定義でも握りつぶす", () => {
+		const badHook = vi.fn().mockImplementation(() => {
+			throw new Error("hook error");
+		});
+		const merged = mergeHooks(
+			[{ name: "bad-plugin", hooks: { onCacheMiss: badHook } }],
+			undefined,
+			undefined,
+		);
+		expect(() => merged.onCacheMiss?.("slug")).not.toThrow();
+	});
+
+	it("フックが Error 以外 (文字列) を throw した場合も String() で変換してログ出力する", () => {
+		const errorLogger = vi.fn();
+		// biome-ignore lint/complexity/noUselessCatch: テスト用に文字列を throw
+		const badHook = vi.fn().mockImplementation(() => {
+			// eslint-disable-next-line @typescript-eslint/no-throw-literal
+			throw "string-error"; // not an Error instance
+		});
+		const merged = mergeHooks(
+			[{ name: "bad-plugin", hooks: { onCacheMiss: badHook } }],
+			undefined,
+			{ error: errorLogger },
+		);
+		expect(() => merged.onCacheMiss?.("slug")).not.toThrow();
+		expect(errorLogger).toHaveBeenCalledWith(
+			"観測フックで例外が発生",
+			expect.objectContaining({ error: "string-error" }),
+		);
+	});
+
+	it("hooks を持たないプラグインは空オブジェクトとして扱われる", () => {
+		const fn = vi.fn();
+		const merged = mergeHooks(
+			[
+				// biome-ignore lint/suspicious/noExplicitAny: テスト用にフックなしプラグイン
+				{ name: "no-hooks" } as any,
+				{ name: "with-hooks", hooks: { onCacheMiss: fn } },
+			],
+			undefined,
+		);
+		merged.onCacheMiss?.("slug");
+		expect(fn).toHaveBeenCalledWith("slug");
+	});
+});
+
 describe("mergeLoggers", () => {
 	it("ロガーがない場合は undefined を返す", () => {
 		expect(mergeLoggers([], undefined)).toBeUndefined();
@@ -173,5 +238,16 @@ describe("mergeLoggers", () => {
 		const merged = mergeLoggers([{ logger: { warn: vi.fn() } }]);
 		expect(merged?.info).toBeUndefined();
 		expect(merged?.warn).toBeDefined();
+	});
+
+	it("logger を持たないプラグインは空オブジェクトとして扱われる", () => {
+		const fn = vi.fn();
+		const merged = mergeLoggers(
+			// biome-ignore lint/suspicious/noExplicitAny: テスト用にloggerなしプラグイン
+			[{} as any],
+			{ info: fn },
+		);
+		merged?.info?.("hello");
+		expect(fn).toHaveBeenCalledWith("hello", undefined);
 	});
 });
