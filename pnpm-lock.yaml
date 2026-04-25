@@ -6,9 +6,6 @@ settings:
 
 catalogs:
   default:
-    '@cloudflare/workers-types':
-      specifier: ^4.20260423.1
-      version: 4.20260423.1
     '@notionhq/client':
       specifier: ^5.20.0
       version: 5.20.0
@@ -402,10 +399,6 @@ importers:
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core
-    devDependencies:
-      '@cloudflare/workers-types':
-        specifier: 'catalog:'
-        version: 4.20260423.1
 
   packages/cache-next:
     dependencies:
@@ -424,10 +417,6 @@ importers:
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core
-    devDependencies:
-      '@cloudflare/workers-types':
-        specifier: 'catalog:'
-        version: 4.20260423.1
 
   packages/cli:
     dependencies:
