@@ -22,6 +22,7 @@ import type {
 	InferDataSourceItem,
 	InvalidateScope,
 	Logger,
+	LogLevel,
 	RendererFn,
 } from "./types/index";
 
@@ -124,6 +125,29 @@ function scopeDocumentCache<T extends BaseContentItem>(
 	};
 }
 
+const LOG_LEVEL_ORDER: Record<LogLevel, number> = {
+	debug: 0,
+	info: 1,
+	warn: 2,
+	error: 3,
+};
+
+/** `logger` から `minLevel` 未満のレベルを除いた新しい Logger を返す。 */
+function applyLogLevel(
+	logger: Logger | undefined,
+	minLevel: LogLevel,
+): Logger | undefined {
+	if (!logger) return undefined;
+	const minOrder = LOG_LEVEL_ORDER[minLevel];
+	const filtered: Logger = {};
+	for (const level of ["debug", "info", "warn", "error"] as const) {
+		if (LOG_LEVEL_ORDER[level] >= minOrder) {
+			filtered[level] = logger[level];
+		}
+	}
+	return filtered;
+}
+
 /**
  * `preset` オプションを解決して `cache` / `renderer` のデフォルトを補完する内部関数。
  * 明示的な `cache` / `renderer` がある場合はそちらが優先される。
@@ -199,10 +223,13 @@ export function createCMS<D extends DataSourceMap>(
 	const contentConfig = opts.content;
 	const rendererFn: RendererFn | undefined = resolved.renderer;
 	const waitUntil = opts.waitUntil;
-	const logger: Logger | undefined = mergeLoggers(
+	const baseLogger: Logger | undefined = mergeLoggers(
 		opts.plugins ?? [],
 		opts.logger,
 	);
+	const logger = opts.logLevel
+		? applyLogLevel(baseLogger, opts.logLevel)
+		: baseLogger;
 	const hooks: CMSHooks<BaseContentItem> = mergeHooks(
 		opts.plugins ?? [],
 		opts.hooks,
@@ -224,6 +251,11 @@ export function createCMS<D extends DataSourceMap>(
 		const source = opts.dataSources[name] as DataSource<BaseContentItem>;
 		const scopedCache = scopeDocumentCache<BaseContentItem>(baseDocCache, name);
 		scopedCaches.push(scopedCache);
+		const col = opts.collections?.[name] as CollectionSemantics | undefined;
+		const colHooks = col?.hooks as CMSHooks<BaseContentItem> | undefined;
+		const collectionHooks: CMSHooks<BaseContentItem> = colHooks
+			? mergeHooks([{ name: `${name}:global`, hooks }], colHooks, logger)
+			: hooks;
 		const renderCtx: RenderContext<BaseContentItem> = {
 			source,
 			rendererFn,
@@ -231,16 +263,15 @@ export function createCMS<D extends DataSourceMap>(
 			hasImageCache,
 			imageProxyBase,
 			contentConfig,
-			hooks,
+			hooks: collectionHooks,
 			logger,
 		};
-		const col = opts.collections?.[name] as CollectionSemantics | undefined;
 		const ctx: CollectionContext<BaseContentItem> = {
 			collection: name,
 			source,
 			docCache: scopedCache,
 			render: renderCtx,
-			hooks,
+			hooks: collectionHooks,
 			logger,
 			ttlMs,
 			// 公開条件は CollectionSemantics（createCMS の collections オプション）が権威

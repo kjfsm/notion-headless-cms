@@ -278,7 +278,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
 				collection: this.ctx.collection,
 				cacheAdapter: this.ctx.docCache.name,
 			});
-			this.ctx.hooks.onListCacheHit?.(cached.items, cached.cachedAt);
+			this.ctx.hooks.onListCacheHit?.(cached);
 			return cached.items;
 		}
 
@@ -317,7 +317,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
 					collection: this.ctx.collection,
 					notionUpdatedAt: cached.notionUpdatedAt,
 				});
-				this.ctx.hooks.onCacheUpdate?.(slug, entry);
+				this.ctx.hooks.onCacheRevalidated?.(slug, entry);
 			} else if (this.ctx.ttlMs !== undefined) {
 				// 変更なし + TTL あり: cachedAt をリセットして次回の期限切れを先送りする
 				await this.ctx.docCache.setItem(slug, {
@@ -350,7 +350,8 @@ export class CollectionClientImpl<T extends BaseContentItem>
 				this.ctx.source.getListVersion(cached.items)
 			) {
 				// 更新あり: リストを差し替える
-				await this.ctx.docCache.setList({ items, cachedAt: Date.now() });
+				const listEntry = { items, cachedAt: Date.now() };
+				await this.ctx.docCache.setList(listEntry);
 				this.ctx.logger?.debug?.(
 					"SWR: リスト差分を検出、キャッシュを差し替え",
 					{
@@ -358,7 +359,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
 						collection: this.ctx.collection,
 					},
 				);
-				this.ctx.hooks.onListCacheUpdate?.(items);
+				this.ctx.hooks.onListCacheRevalidated?.(listEntry);
 			} else if (this.ctx.ttlMs !== undefined) {
 				// 変更なし + TTL あり: cachedAt をリセットする
 				await this.ctx.docCache.setList({
