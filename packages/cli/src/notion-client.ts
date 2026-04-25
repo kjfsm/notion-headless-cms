@@ -5,7 +5,7 @@ import type { DataSourceObjectResponse } from "@notionhq/client/build/src/api-en
 export type { DataSourceObjectResponse };
 
 export interface NotionCLIClient {
-	/** dbName で data_source を検索して ID を返す。完全一致優先、見つからない場合は null。 */
+	/** dbName と完全一致する data_source の ID を返す。一致するものが無い場合は null。 */
 	resolveId(dbName: string): Promise<string | null>;
 	/** data_source_id で DataSourceObjectResponse を取得する。 */
 	retrieveDataSource(id: string): Promise<DataSourceObjectResponse>;
@@ -81,17 +81,14 @@ export function createNotionCLIClient(token: string): NotionCLIClient {
 			}),
 		);
 
-		// 完全一致を優先
+		// 完全一致のみ採用する。Notion search は部分一致を含むため、ここでフィルタする
 		for (const result of response.results) {
 			if (result.object !== "data_source") continue;
 			const ds = result as DataSourceObjectResponse;
 			const title = ds.title.map((t) => t.plain_text).join("");
 			if (title === dbName) return ds.id;
 		}
-
-		// フォールバック: 検索結果の先頭（部分一致）
-		const first = response.results.find((r) => r.object === "data_source");
-		return first?.id ?? null;
+		return null;
 	}
 
 	async function retrieveDataSource(

@@ -45,7 +45,7 @@ export default defineConfig({
   dataSources: [
     {
       name: "posts",
-      // dbName で Notion DB を検索して ID を自動解決します
+      // dbName で Notion DB を検索して ID を自動解決します（完全一致のみ）
       dbName: "ブログ記事DB",
       // id を直接指定することもできます（id が優先されます）
       // id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
@@ -92,7 +92,7 @@ Notion インテグレーショントークンの取得: [Notion Developers](htt
 ```ts
 {
   name: "posts",           // コード上の識別子
-  dbName: "ブログ記事DB",  // Notion の DB 名（検索に使用）
+  dbName: "ブログ記事DB",  // Notion の DB 名（完全一致のみ。一致しないと generate が失敗）
 }
 ```
 

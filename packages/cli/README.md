@@ -58,7 +58,7 @@ export default defineConfig({
 |---|---|---|
 | `name` | `string` | コード上で使う識別子 (`cms.posts` など) |
 | `id` | `string` (任意) | Notion DB ID。指定時は `dbName` より優先 |
-| `dbName` | `string` (`id` 未指定時は必須) | Notion DB 名 (前方一致で検索) |
+| `dbName` | `string` (`id` 未指定時は必須) | Notion DB 名 (完全一致で検索。一致しない場合は generate に失敗) |
 | `fields.slug` | `string` (任意) | slug に使う Notion プロパティ名 |
 | `fields.status` | `string` (任意) | status に使う Notion プロパティ名 |
 | `fields.publishedAt` | `string` (任意) | publishedAt に使う Notion プロパティ名 |

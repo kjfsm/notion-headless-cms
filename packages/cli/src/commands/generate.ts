@@ -77,9 +77,9 @@ async function resolveDataSource(
 			throw new CMSError({
 				code: "cli/notion_api_failed",
 				message:
-					`データベース "${dbName}" が見つかりませんでした。\n` +
+					`データベース "${dbName}" と完全一致する DB が見つかりませんでした。\n` +
 					"・Notion トークンにそのデータベースへのアクセス権限があるか確認してください。\n" +
-					"・DB 名が正確に一致しているか確認してください。",
+					"・DB 名が完全に一致しているか確認してください（前後の空白や全角/半角違いも不一致になります）。",
 				context: { operation: "resolveDataSource", dbName },
 			});
 		}
