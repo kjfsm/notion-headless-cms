@@ -192,10 +192,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
 			},
 		};
 
-		// blocks が CachedItem に乗っていれば優先的に採用する
-		const maybeBlocks = (cached as CachedItem<T> & { blocks?: ContentBlock[] })
-			.blocks;
-		if (maybeBlocks) blocksCache = maybeBlocks;
+		if (cached.blocks) blocksCache = cached.blocks;
 
 		return Object.assign(Object.create(null) as object, item, {
 			content,
@@ -260,12 +257,10 @@ export class CollectionClientImpl<T extends BaseContentItem>
 
 		let item: T | null;
 		const findByProp = this.ctx.source.findByProp?.bind(this.ctx.source);
-		const findBySlug = this.ctx.source.findBySlug?.bind(this.ctx.source);
 		if (notionPropName && findByProp) {
 			item = await withRetry(() => findByProp(notionPropName, slug), retryOpts);
-		} else if (findBySlug) {
-			item = await withRetry(() => findBySlug(slug), retryOpts);
 		} else {
+			// フォールバック: list して線形探索
 			const all = await withRetry(() => this.ctx.source.list(), retryOpts);
 			item = all.find((i) => i.slug === slug) ?? null;
 		}

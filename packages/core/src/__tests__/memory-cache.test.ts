@@ -1,9 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-	memoryCache,
-	memoryDocumentCache,
-	memoryImageCache,
-} from "../cache/memory";
+import { memoryDocumentCache, memoryImageCache } from "../cache/memory";
 
 const makeItem = (slug: string) => ({
 	id: `id-${slug}`,
@@ -41,7 +37,7 @@ describe("MemoryDocumentCache", () => {
 	});
 
 	it("setItem → getItem でデータを保持する", async () => {
-		const cache = memoryCache();
+		const cache = memoryDocumentCache();
 		const data = makeCachedItem("my-post");
 		await cache.setItem("my-post", data);
 		const result = await cache.getItem("my-post");

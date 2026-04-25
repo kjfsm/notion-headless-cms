@@ -19,23 +19,6 @@ export async function queryAllPages(
 	});
 }
 
-/** スラッグプロパティで絞り込んでページを取得する。存在しない場合はnullを返す。 */
-export async function queryPageBySlug(
-	client: Client,
-	dataSourceId: string,
-	slug: string,
-	slugPropName: string,
-): Promise<PageObjectResponse | null> {
-	const filter = { property: slugPropName, rich_text: { equals: slug } };
-
-	const res = await client.dataSources.query({
-		data_source_id: dataSourceId,
-		filter,
-	});
-
-	return (res.results[0] as PageObjectResponse | undefined) ?? null;
-}
-
 /**
  * 任意の rich_text プロパティで絞り込んでページを取得する。
  * Core が `findByProp` を通じて slug ルックアップに使用する。

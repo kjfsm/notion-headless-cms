@@ -12,7 +12,6 @@ import {
 	createClient,
 	queryAllPages,
 	queryPageByProp,
-	queryPageBySlug,
 } from "./internal/fetcher/index";
 import { markdownToBlocks } from "./internal/md-to-blocks";
 import { mapItem, mapItemFromPropertyMap } from "./mapper";
@@ -91,7 +90,6 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
 	private resolvedDataSourceId: string | undefined;
 	private resolvingDataSourceId: Promise<string> | undefined;
 	private readonly itemMapper: (page: NotionPage) => T;
-	private readonly slugPropName: string;
 	private readonly blocksConfig: Record<string, BlockHandler> | undefined;
 
 	constructor(opts: NotionCollectionOptions<T>) {
@@ -110,16 +108,7 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
 
 		if ("schema" in opts && opts.schema) {
 			this.itemMapper = opts.schema.mapItem;
-			const slugField = (
-				opts.schema.mapping as Record<string, { notion: string; type: string }>
-			).slug;
-			this.slugPropName = slugField?.notion ?? DEFAULT_PROPERTIES.slug;
 		} else if ("mapItem" in opts && opts.mapItem) {
-			const props: Required<CMSSchemaProperties> = {
-				...DEFAULT_PROPERTIES,
-				...opts.properties,
-			};
-			this.slugPropName = props.slug;
 			this.itemMapper = opts.mapItem;
 		} else if ("properties" in opts && opts.properties && !("fields" in opts)) {
 			// CLI 生成の PropertyMap を使う新形式。
@@ -127,7 +116,6 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
 			// createCMS({ collections }) で指定する。
 			const propMap = opts.properties as PropertyMap;
 			this.properties = propMap;
-			this.slugPropName = DEFAULT_PROPERTIES.slug; // findByProp で上書きされるため実質未使用
 			this.itemMapper = ((page: NotionPage) =>
 				mapItemFromPropertyMap(page, propMap)) as (page: NotionPage) => T;
 		} else {
@@ -137,7 +125,6 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
 					? (opts.properties as CMSSchemaProperties)
 					: undefined),
 			};
-			this.slugPropName = props.slug;
 			this.itemMapper = ((page: NotionPage) => mapItem(page, props)) as (
 				page: NotionPage,
 			) => T;
@@ -218,33 +205,6 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
 					operation: "NotionCollection.list",
 					dataSourceId: this.resolvedDataSourceId,
 					dbName: this.dbName,
-				},
-			});
-		}
-	}
-
-	async findBySlug(slug: string): Promise<T | null> {
-		try {
-			const dataSourceId = await this.getDataSourceId();
-			const page = await queryPageBySlug(
-				this.client,
-				dataSourceId,
-				slug,
-				this.slugPropName,
-			);
-			if (!page) return null;
-			return this.itemMapper(page);
-		} catch (err) {
-			if (isCMSError(err)) throw err;
-			throw new CMSError({
-				code: "source/fetch_item_failed",
-				message: "Failed to fetch item by slug from Notion data source.",
-				cause: err,
-				context: {
-					operation: "NotionCollection.findBySlug",
-					dataSourceId: this.resolvedDataSourceId,
-					dbName: this.dbName,
-					slug,
 				},
 			});
 		}
@@ -338,12 +298,3 @@ export function createNotionCollection<
 >(opts: NotionCollectionOptions<T>): DataSource<T> {
 	return new NotionCollection<T>(opts);
 }
-
-/**
- * @deprecated `createNotionCollection` に改名。互換性のためエイリアスとして残す。
- */
-export const notionAdapter = createNotionCollection;
-
-/** @deprecated 旧名。互換性のため残す。 */
-export type NotionAdapterOptions<T extends BaseContentItem = BaseContentItem> =
-	NotionCollectionOptions<T>;

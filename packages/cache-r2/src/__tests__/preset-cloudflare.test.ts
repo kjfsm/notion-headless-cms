@@ -12,9 +12,6 @@ function fakeDataSource(): DataSource<BaseContentItem> {
 		async list() {
 			return [];
 		},
-		async findBySlug() {
-			return null;
-		},
 		async loadBlocks() {
 			return [];
 		},
@@ -87,17 +84,6 @@ describe("cloudflarePreset", () => {
 			env: { NOTION_TOKEN: "secret" },
 		});
 		expect(preset.cache).toBeUndefined();
-	});
-
-	it("旧 CACHE_KV / CACHE_BUCKET もフォールバックとして受け付ける", () => {
-		const preset = cloudflarePreset({
-			env: {
-				NOTION_TOKEN: "secret",
-				CACHE_KV: fakeKV() as never,
-				CACHE_BUCKET: fakeR2() as never,
-			},
-		});
-		expect(preset.cache).toBeDefined();
 	});
 
 	it("bindings オプションで binding 名をカスタムできる", () => {

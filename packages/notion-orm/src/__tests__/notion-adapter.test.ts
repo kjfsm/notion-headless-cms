@@ -1,12 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { z } from "zod";
-import { createNotionCollection, notionAdapter } from "../notion-adapter";
-import { defineMapping, defineSchema } from "../schema";
+import { createNotionCollection } from "../notion-adapter";
 
 vi.mock("../internal/fetcher/index", () => ({
 	createClient: vi.fn().mockReturnValue({}),
 	queryAllPages: vi.fn(),
-	queryPageBySlug: vi.fn(),
 	queryPageByProp: vi.fn(),
 }));
 
@@ -21,11 +18,7 @@ vi.mock("@notion-headless-cms/renderer", () => {
 	};
 });
 
-import {
-	queryAllPages,
-	queryPageByProp,
-	queryPageBySlug,
-} from "../internal/fetcher/index";
+import { queryAllPages, queryPageByProp } from "../internal/fetcher/index";
 
 const makePage = (slug: string, status: string) => ({
 	id: `id-${slug}`,
@@ -39,8 +32,8 @@ const makePage = (slug: string, status: string) => ({
 	},
 });
 
-describe("notionAdapter", () => {
-	const adapter = notionAdapter({
+describe("createNotionCollection", () => {
+	const adapter = createNotionCollection({
 		token: "test-token",
 		dataSourceId: "test-db-id",
 	});
@@ -122,59 +115,6 @@ describe("notionAdapter", () => {
 
 			const items = await adapter.list();
 			expect(items[0].slug).toBe("new");
-		});
-	});
-
-	describe("findBySlug()", () => {
-		it("スラッグに一致するアイテムを返す", async () => {
-			vi.mocked(queryPageBySlug).mockResolvedValue(
-				makePage("my-post", "公開") as never,
-			);
-
-			const item = await adapter.findBySlug?.("my-post");
-			expect(item?.slug).toBe("my-post");
-			expect(queryPageBySlug).toHaveBeenCalledWith(
-				expect.anything(),
-				"test-db-id",
-				"my-post",
-				"Slug",
-			);
-		});
-
-		it("見つからない場合は null を返す", async () => {
-			vi.mocked(queryPageBySlug).mockResolvedValue(null);
-
-			const item = await adapter.findBySlug?.("nonexistent");
-			expect(item).toBeNull();
-		});
-
-		it("schema で slug プロパティ名を指定した場合、そのプロパティ名で rich_text 検索する", async () => {
-			const SlugSchema = z.object({
-				id: z.string(),
-				updatedAt: z.string(),
-				slug: z.string(),
-				title: z.string().nullable().optional(),
-			});
-			const slugMapping = defineMapping<z.infer<typeof SlugSchema>>({
-				slug: { type: "richText", notion: "Slug" },
-			});
-			const schemaAdapter = notionAdapter({
-				token: "test-token",
-				dataSourceId: "test-db-id",
-				schema: defineSchema(SlugSchema, slugMapping),
-			});
-
-			vi.mocked(queryPageBySlug).mockResolvedValue(
-				makePage("my-post", "公開") as never,
-			);
-
-			await schemaAdapter.findBySlug?.("my-post");
-			expect(queryPageBySlug).toHaveBeenCalledWith(
-				expect.anything(),
-				"test-db-id",
-				"my-post",
-				"Slug",
-			);
 		});
 	});
 

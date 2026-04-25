@@ -6,11 +6,7 @@ export type {
 	MemoryDocumentCacheOptions,
 	MemoryImageCacheOptions,
 } from "./cache/memory";
-export {
-	memoryCache,
-	memoryDocumentCache,
-	memoryImageCache,
-} from "./cache/memory";
+export { memoryDocumentCache, memoryImageCache } from "./cache/memory";
 export { noopDocumentCache, noopImageCache } from "./cache/noop";
 export type { CMSClient, CMSGlobalOps } from "./cms";
 export { createCMS } from "./cms";

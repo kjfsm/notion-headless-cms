@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { memoryCache } from "../cache/memory";
+import { memoryDocumentCache } from "../cache/memory";
 import { createCMS } from "../cms";
 import { nodePreset } from "../preset-node";
 import type { BaseContentItem } from "../types/content";
@@ -10,9 +10,6 @@ function fakeDataSource(): DataSource<BaseContentItem> {
 		name: "fake",
 		async list() {
 			return [];
-		},
-		async findBySlug() {
-			return null;
 		},
 		async loadBlocks() {
 			return [];
@@ -45,7 +42,7 @@ describe("nodePreset", () => {
 	});
 
 	it("cache にユーザー指定のオブジェクトを渡すとそのまま使う", () => {
-		const custom = memoryCache();
+		const custom = memoryDocumentCache();
 		const preset = nodePreset({ cache: { document: custom, ttlMs: 5_000 } });
 		expect(preset.cache).toBeDefined();
 		if (preset.cache && preset.cache !== "disabled") {
@@ -82,13 +79,13 @@ describe("createCMS の preset オプション", () => {
 		expect(viaPreset.$collections).toEqual(viaSpread.$collections);
 	});
 
-	it("preset 未指定でも既存の spread パターンが動作する（後方互換）", () => {
+	it("preset 未指定でも既存の spread パターンが動作する", () => {
 		const cms = createCMS({ ...nodePreset({ ttlMs: 5_000 }), dataSources });
 		expect(cms.$collections).toContain("posts");
 	});
 
 	it('preset: "node" + 明示的な cache は cache が優先される', () => {
-		const customCache = memoryCache();
+		const customCache = memoryDocumentCache();
 		const cms = createCMS({
 			dataSources,
 			preset: "node",
