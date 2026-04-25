@@ -1,6 +1,6 @@
 {
 	"name": "@notion-headless-cms/cache-kv",
-	"version": "0.1.7",
+	"version": "0.1.8",
 	"description": "Cloudflare KV StorageAdapter implementation for notion-headless-cms document cache layer",
 	"keywords": [
 		"notion",
