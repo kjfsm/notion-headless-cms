@@ -1,5 +1,12 @@
 # @notion-headless-cms/cache-kv
 
+## 0.1.6
+
+### Patch Changes
+
+- Updated dependencies [7b06514]
+  - @notion-headless-cms/core@0.3.2
+
 ## 0.1.5
 
 ### Patch Changes

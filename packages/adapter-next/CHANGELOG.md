@@ -1,5 +1,12 @@
 # @notion-headless-cms/adapter-next
 
+## 0.2.8
+
+### Patch Changes
+
+- Updated dependencies [7b06514]
+  - @notion-headless-cms/core@0.3.2
+
 ## 0.2.7
 
 ### Patch Changes
