@@ -16,6 +16,7 @@ export type {
 	CreateCMSOptions,
 	DataSourceMap,
 	InferDataSourceItem,
+	LogLevel,
 	RateLimiterConfig,
 	RendererFn,
 	RendererPluginList,

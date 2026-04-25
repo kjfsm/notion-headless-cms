@@ -5,6 +5,9 @@ import type { CMSHooks } from "./hooks";
 import type { Logger } from "./logger";
 import type { CMSPlugin } from "./plugin";
 
+/** `Logger` の出力を絞り込むログレベル。指定したレベル未満のログを抑制する。 */
+export type LogLevel = "debug" | "info" | "warn" | "error";
+
 /**
  * renderer プラグインの不透明型。
  * core は unified / remark / rehype に依存せず、このリストをそのまま renderer に渡すだけ。
@@ -58,8 +61,14 @@ export type DataSourceMap = Record<string, DataSource<any>>;
 /**
  * コレクション別のページ構成セマンティクス。
  * `createCMS({ collections: { posts: { ... } } })` に渡す。
+ *
+ * `T` を指定するとコレクション固有の型付きフックを定義できる。
+ * `createCMS` の `dataSources` から `T` が自動推論されるため、アプリ側が
+ * `CMSHooks<Post>` などを直接記述する必要がなくなる。
  */
-export interface CollectionSemantics {
+export interface CollectionSemantics<
+	T extends BaseContentItem = BaseContentItem,
+> {
 	/**
 	 * slug として使うフィールド名（必須）。
 	 * DataSource の `properties` マップのキーと一致させる。
@@ -76,6 +85,12 @@ export interface CollectionSemantics {
 	 * アクセス許可するステータス値。DataSource 側の `accessibleStatuses` より優先される。
 	 */
 	accessibleStatuses?: readonly string[];
+	/**
+	 * コレクション固有のライフサイクルフック。
+	 * トップレベルの `hooks` と合成して実行される（グローバルフック → コレクションフックの順）。
+	 * `T` が確定しているため `item.item.myField` など独自フィールドに型安全にアクセスできる。
+	 */
+	hooks?: CMSHooks<T>;
 }
 
 /** `DataSourceMap` から各 T を抽出するユーティリティ型。 */
@@ -132,26 +147,43 @@ export interface CreateCMSOptions<D extends DataSourceMap = DataSourceMap> {
 	plugins?: CMSPlugin<any>[];
 	/** ロガー。 */
 	logger?: Logger;
+	/**
+	 * ログレベルの下限。指定したレベル未満のログを内部で抑制する。
+	 * Cloudflare Workers の Observability のように debug ログが課金対象になる環境では
+	 * `"info"` を指定すると debug ログを出力しなくなる。
+	 *
+	 * @example
+	 * createCMS({ ..., logLevel: "info" }) // debug ログを抑制
+	 */
+	logLevel?: LogLevel;
 	/** レートリミット・リトライ設定。 */
 	rateLimiter?: RateLimiterConfig;
 	/**
 	 * コレクション別のページ構成セマンティクス。
-	 * slug・status・公開条件を指定する。
+	 * slug・status・公開条件・コレクション固有フックを指定する。
 	 * 指定したコレクションでは `slug` が必須（未指定時はエラー）。
 	 * 指定したコレクションの `publishedStatuses`/`accessibleStatuses` は
 	 * DataSource 側の設定より優先される。
 	 *
+	 * `hooks` にコレクション固有フックを定義すると、`dataSources` の型から `T` が
+	 * 自動推論されるため `CMSHooks<Post>` などを直接書かずに済む。
+	 *
 	 * @example
 	 * createCMS({
-	 *   dataSources: { posts: createNotionCollection({ ... }) },
+	 *   dataSources: { posts: createNotionCollection<Post>({ ... }) },
 	 *   collections: {
 	 *     posts: {
 	 *       slug: "slug",
 	 *       status: "status",
 	 *       publishedStatuses: ["公開済み"],
+	 *       hooks: {
+	 *         onCacheHit: (slug, item) => console.log(item.item.title),
+	 *       },
 	 *     }
 	 *   }
 	 * })
 	 */
-	collections?: Partial<Record<keyof D & string, CollectionSemantics>>;
+	collections?: {
+		[K in keyof D]?: CollectionSemantics<InferDataSourceItem<D[K]>>;
+	};
 }

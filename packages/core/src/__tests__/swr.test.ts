@@ -329,9 +329,9 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		);
 	});
 
-	it("SWR が差分を検出したとき logger.debug と onCacheUpdate が呼ばれる", async () => {
+	it("SWR が差分を検出したとき logger.debug と onCacheRevalidated が呼ばれる", async () => {
 		const debugFn = vi.fn();
-		const onCacheUpdate = vi.fn();
+		const onCacheRevalidated = vi.fn();
 
 		const cachedItem: BaseContentItem = {
 			id: "p1",
@@ -364,7 +364,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			renderer: mockRenderer,
 			cache: { document: cache },
 			logger: { debug: debugFn },
-			hooks: { onCacheUpdate },
+			hooks: { onCacheRevalidated },
 			waitUntil: (p) => capturedPromises.push(p),
 		});
 
@@ -379,13 +379,16 @@ describe("SWR（Stale-While-Revalidate）", () => {
 				collection: "posts",
 			}),
 		);
-		expect(onCacheUpdate).toHaveBeenCalledOnce();
-		expect(onCacheUpdate).toHaveBeenCalledWith("post-1", expect.any(Object));
+		expect(onCacheRevalidated).toHaveBeenCalledOnce();
+		expect(onCacheRevalidated).toHaveBeenCalledWith(
+			"post-1",
+			expect.any(Object),
+		);
 	});
 
-	it("SWR が差分なしのとき logger.debug が呼ばれ onCacheUpdate は呼ばれない", async () => {
+	it("SWR が差分なしのとき logger.debug が呼ばれ onCacheRevalidated は呼ばれない", async () => {
 		const debugFn = vi.fn();
-		const onCacheUpdate = vi.fn();
+		const onCacheRevalidated = vi.fn();
 
 		const item: BaseContentItem = {
 			id: "p1",
@@ -412,7 +415,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			renderer: mockRenderer,
 			cache: { document: cache, ttlMs: 60_000 },
 			logger: { debug: debugFn },
-			hooks: { onCacheUpdate },
+			hooks: { onCacheRevalidated },
 			waitUntil: (p) => capturedPromises.push(p),
 		});
 
@@ -423,11 +426,11 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			"SWR: 差分なし、TTL をリセット",
 			expect.objectContaining({ operation: "getItem:bg", slug: "post-1" }),
 		);
-		expect(onCacheUpdate).not.toHaveBeenCalled();
+		expect(onCacheRevalidated).not.toHaveBeenCalled();
 	});
 
-	it("SWR がリスト差分を検出したとき onListCacheUpdate が呼ばれる", async () => {
-		const onListCacheUpdate = vi.fn();
+	it("SWR がリスト差分を検出したとき onListCacheRevalidated が呼ばれる", async () => {
+		const onListCacheRevalidated = vi.fn();
 
 		const oldItem: BaseContentItem = {
 			id: "p1",
@@ -454,16 +457,19 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			dataSources: { posts: source },
 			renderer: mockRenderer,
 			cache: { document: cache },
-			hooks: { onListCacheUpdate },
+			hooks: { onListCacheRevalidated },
 			waitUntil: (p) => capturedPromises.push(p),
 		});
 
 		await cms.posts.getList();
 		await Promise.all(capturedPromises);
 
-		expect(onListCacheUpdate).toHaveBeenCalledOnce();
-		expect(onListCacheUpdate).toHaveBeenCalledWith(
-			expect.arrayContaining([oldItem, newItem]),
+		expect(onListCacheRevalidated).toHaveBeenCalledOnce();
+		expect(onListCacheRevalidated).toHaveBeenCalledWith(
+			expect.objectContaining({
+				items: expect.arrayContaining([oldItem, newItem]),
+				cachedAt: expect.any(Number),
+			}),
 		);
 	});
 
