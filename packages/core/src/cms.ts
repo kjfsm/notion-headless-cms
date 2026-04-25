@@ -10,6 +10,7 @@ import { DEFAULT_RETRY_CONFIG } from "./retry";
 import type {
 	BaseContentItem,
 	CacheConfig,
+	CachedItemList,
 	CMSHooks,
 	CollectionClient,
 	CollectionSemantics,
@@ -80,14 +81,33 @@ function scopeDocumentCache<T extends BaseContentItem>(
 	collection: string,
 ): DocumentCacheAdapter<T> {
 	const itemKey = (slug: string): string => `${collection}:${slug}`;
+	// リストはコレクション別にクロージャ変数で管理する。
+	// base.getList/setList はコレクション名前空間を持たないため、
+	// 複数コレクションが同じ base を共有すると上書きし合うバグが起きる。
+	// 初回アクセスのみ base から読み込むことで pre-populate されたキャッシュを活かしつつ、
+	// 以降の読み書きはコレクション固有のスロットに限定する。
+	let listSlot: CachedItemList<T> | null = null;
+	let listInitialized = false;
 
 	return {
 		name: `${base.name}@${collection}`,
-		getList: () => base.getList(),
-		setList: (data) => base.setList(data),
+		getList: async () => {
+			if (!listInitialized) {
+				listInitialized = true;
+				listSlot = (await base.getList()) as CachedItemList<T> | null;
+			}
+			return listSlot;
+		},
+		setList: (data) => {
+			listSlot = data as CachedItemList<T>;
+			listInitialized = true;
+			return Promise.resolve();
+		},
 		getItem: (slug) => base.getItem(itemKey(slug)),
 		setItem: (slug, data) => base.setItem(itemKey(slug), data),
 		async invalidate(scope) {
+			listSlot = null;
+			listInitialized = true; // 無効化後は base を再読みしない
 			if (!base.invalidate) return;
 			if (scope === "all") {
 				return base.invalidate({ collection });
@@ -238,6 +258,10 @@ export function createCMS<D extends DataSourceMap>(
 	const globalOps: CMSGlobalOps<D> = {
 		$collections: collectionNames,
 		async $revalidate(scope?: InvalidateScope): Promise<void> {
+			logger?.debug?.("グローバルキャッシュを無効化", {
+				operation: "$revalidate",
+				cacheAdapter: baseDocCache.name,
+			});
 			if (!baseDocCache.invalidate) return;
 			await baseDocCache.invalidate(scope ?? "all");
 		},

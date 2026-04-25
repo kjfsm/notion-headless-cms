@@ -244,6 +244,47 @@ describe("createCMS - findByProp の利用", () => {
 	});
 });
 
+describe("createCMS - scopeDocumentCache リストスコープ分離", () => {
+	it("posts と pages のリストキャッシュは互いに独立している", async () => {
+		const postItem: BaseContentItem = {
+			id: "p1",
+			slug: "post-one",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const pageItem: BaseContentItem = {
+			id: "pg1",
+			slug: "page-one",
+			updatedAt: "2024-01-02T00:00:00Z",
+		};
+
+		const postListMock = vi.fn().mockResolvedValue([postItem]);
+		const pageListMock = vi.fn().mockResolvedValue([pageItem]);
+
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({ list: postListMock }),
+				pages: makeMockSource({ list: pageListMock }),
+			},
+			preset: "disabled",
+		});
+
+		const posts = await cms.posts.getList();
+		const pages = await cms.pages.getList();
+
+		// 2 回目はキャッシュから返る（list は 1 度しか呼ばれない）
+		const postsCached = await cms.posts.getList();
+		const pagesCached = await cms.pages.getList();
+
+		expect(posts).toHaveLength(1);
+		expect(posts[0].slug).toBe("post-one");
+		expect(pages).toHaveLength(1);
+		expect(pages[0].slug).toBe("page-one");
+		// キャッシュがスコープ別に独立しているので posts のリストが pages で上書きされない
+		expect(postsCached[0].slug).toBe("post-one");
+		expect(pagesCached[0].slug).toBe("page-one");
+	});
+});
+
 describe("createCMS - beforeCache フック", () => {
 	it("getItem でレンダリング後に beforeCache フックが呼ばれる", async () => {
 		const item: BaseContentItem = {

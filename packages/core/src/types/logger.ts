@@ -12,6 +12,10 @@ export interface LogContext {
 	error?: string;
 	collection?: string;
 	cacheAdapter?: string;
+	/** キャッシュが保存された時刻(ms)。ヒット時の鮮度確認用 */
+	cachedAt?: number;
+	/** 画像キャッシュの SHA256 ハッシュキー。ストレージと対応付け用 */
+	imageHash?: string;
 	[key: string]: unknown;
 }
 

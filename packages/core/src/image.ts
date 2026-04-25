@@ -34,6 +34,7 @@ async function fetchAndCacheImage(
 		logger?.debug?.("画像キャッシュヒット", {
 			operation: "fetchAndCacheImage",
 			cacheAdapter: cache.name,
+			imageHash: hash,
 		});
 		return proxyUrl;
 	}
@@ -41,6 +42,7 @@ async function fetchAndCacheImage(
 	logger?.debug?.("画像キャッシュミス、Notion からフェッチ", {
 		operation: "fetchAndCacheImage",
 		cacheAdapter: cache.name,
+		imageHash: hash,
 	});
 
 	try {
@@ -68,6 +70,7 @@ async function fetchAndCacheImage(
 		logger?.debug?.("画像をキャッシュに保存", {
 			operation: "fetchAndCacheImage",
 			cacheAdapter: cache.name,
+			imageHash: hash,
 		});
 	} catch (err) {
 		if (isCMSError(err)) throw err;

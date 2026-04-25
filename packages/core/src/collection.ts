@@ -89,6 +89,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
 				slug,
 				collection: this.ctx.collection,
 				cacheAdapter: this.ctx.docCache.name,
+				cachedAt: cached.cachedAt,
 			});
 			this.ctx.hooks.onCacheHit?.(slug, cached);
 			return this.attachContent(cached.item, cached);
@@ -103,7 +104,14 @@ export class CollectionClientImpl<T extends BaseContentItem>
 		});
 		this.ctx.hooks.onCacheMiss?.(slug);
 		const item = await this.findRaw(slug);
-		if (!item) return null;
+		if (!item) {
+			this.ctx.logger?.debug?.("アイテムが見つかりません", {
+				operation: "getItem",
+				slug,
+				collection: this.ctx.collection,
+			});
+			return null;
+		}
 
 		const entry = await buildCachedItem(item, this.ctx.render);
 		const save = this.ctx.docCache.setItem(slug, entry);
@@ -151,6 +159,12 @@ export class CollectionClientImpl<T extends BaseContentItem>
 	// ── キャッシュ ────────────────────────────────────────────────────────
 
 	async revalidate(scope?: "all" | { slug: string }): Promise<void> {
+		this.ctx.logger?.debug?.("キャッシュを無効化", {
+			operation: "revalidate",
+			collection: this.ctx.collection,
+			cacheAdapter: this.ctx.docCache.name,
+			slug: typeof scope === "object" ? scope.slug : undefined,
+		});
 		if (!this.ctx.docCache.invalidate) return;
 		if (scope === undefined || scope === "all") {
 			await this.ctx.docCache.invalidate({ collection: this.ctx.collection });
@@ -301,6 +315,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
 					operation: "getItem:bg",
 					slug,
 					collection: this.ctx.collection,
+					notionUpdatedAt: cached.notionUpdatedAt,
 				});
 				this.ctx.hooks.onCacheUpdate?.(slug, entry);
 			} else if (this.ctx.ttlMs !== undefined) {
