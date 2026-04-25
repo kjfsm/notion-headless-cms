@@ -49,14 +49,16 @@
 	},
 	"dependencies": {
 		"@notion-headless-cms/core": "workspace:*",
-		"notion-to-md": "^3.1.0"
+		"@notion-headless-cms/renderer": "workspace:*"
 	},
 	"peerDependencies": {
 		"@notionhq/client": "^5.20.0",
+		"notion-to-md": "^3.1.0",
 		"zod": "^4.0.0"
 	},
 	"devDependencies": {
 		"@notionhq/client": "catalog:",
+		"notion-to-md": "catalog:",
 		"zod": "catalog:"
 	}
 }

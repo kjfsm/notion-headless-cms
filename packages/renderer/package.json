@@ -53,13 +53,25 @@
 		"unist-util-visit": "^5.0.0"
 	},
 	"peerDependencies": {
+		"@notionhq/client": "^5.20.0",
+		"notion-to-md": "^3.1.0",
 		"rehype-stringify": "^10.0.0",
 		"remark-gfm": "^4.0.0",
 		"remark-parse": "^11.0.0",
 		"remark-rehype": "^11.0.0",
 		"unified": "^11.0.0"
 	},
+	"peerDependenciesMeta": {
+		"@notionhq/client": {
+			"optional": true
+		},
+		"notion-to-md": {
+			"optional": true
+		}
+	},
 	"devDependencies": {
+		"@notionhq/client": "catalog:",
+		"notion-to-md": "catalog:",
 		"rehype-stringify": "catalog:",
 		"remark-gfm": "catalog:",
 		"remark-parse": "catalog:",

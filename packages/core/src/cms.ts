@@ -242,17 +242,13 @@ export function createCMS<D extends DataSourceMap>(
 			hooks,
 			logger,
 			ttlMs,
-			// collections で指定した値を優先し、未指定時は DataSource 側のデフォルトを使う
+			// 公開条件は CollectionSemantics（createCMS の collections オプション）が権威
 			publishedStatuses: col?.publishedStatuses
 				? [...col.publishedStatuses]
-				: source.publishedStatuses
-					? [...source.publishedStatuses]
-					: [],
+				: [],
 			accessibleStatuses: col?.accessibleStatuses
 				? [...col.accessibleStatuses]
-				: source.accessibleStatuses
-					? [...source.accessibleStatuses]
-					: [],
+				: [],
 			retryConfig,
 			maxConcurrent,
 			waitUntil,

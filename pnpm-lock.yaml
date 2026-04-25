@@ -15,6 +15,9 @@ catalogs:
     '@types/node':
       specifier: ^25.6.0
       version: 25.6.0
+    notion-to-md:
+      specifier: ^3.1.0
+      version: 3.1.9
     rehype-stringify:
       specifier: ^10.0.1
       version: 10.0.1
@@ -459,13 +462,16 @@ importers:
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core
-      notion-to-md:
-        specifier: ^3.1.0
-        version: 3.1.9
+      '@notion-headless-cms/renderer':
+        specifier: workspace:*
+        version: link:../renderer
     devDependencies:
       '@notionhq/client':
         specifier: 'catalog:'
         version: 5.20.0
+      notion-to-md:
+        specifier: 'catalog:'
+        version: 3.1.9
       zod:
         specifier: 'catalog:'
         version: 4.3.6
@@ -479,6 +485,12 @@ importers:
         specifier: ^5.0.0
         version: 5.1.0
     devDependencies:
+      '@notionhq/client':
+        specifier: 'catalog:'
+        version: 5.20.0
+      notion-to-md:
+        specifier: 'catalog:'
+        version: 3.1.9
       rehype-stringify:
         specifier: 'catalog:'
         version: 10.0.1

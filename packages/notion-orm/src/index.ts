@@ -2,7 +2,7 @@ export type {
 	BlockHandler,
 	TransformContext,
 	TransformerConfig,
-} from "./internal/transformer/types";
+} from "@notion-headless-cms/renderer";
 export { getPlainText, mapItem } from "./mapper";
 export type {
 	NotionAdapterOptions,
