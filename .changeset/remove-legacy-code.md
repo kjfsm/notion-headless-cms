@@ -1,7 +1,7 @@
 ---
-"@notion-headless-cms/core": major
-"@notion-headless-cms/notion-orm": major
-"@notion-headless-cms/cache-r2": major
+"@notion-headless-cms/core": patch
+"@notion-headless-cms/notion-orm": patch
+"@notion-headless-cms/cache-r2": patch
 ---
 
 後方互換コード・フォールバック・デッドコードを削除（破壊的変更）
