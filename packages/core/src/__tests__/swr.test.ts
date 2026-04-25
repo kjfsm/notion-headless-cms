@@ -221,6 +221,252 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		expect(waitUntil).not.toHaveBeenCalled();
 	});
 
+	it("キャッシュミス時に logger.debug が呼ばれる", async () => {
+		const debugFn = vi.fn();
+		const source = makeMockSource({
+			async list() {
+				return [
+					{ id: "p1", slug: "post-1", updatedAt: "2024-01-01T00:00:00Z" },
+				];
+			},
+		});
+
+		const cms = createCMS({
+			dataSources: { posts: source },
+			renderer: mockRenderer,
+			cache: { document: new MemoryDocumentCache() },
+			logger: { debug: debugFn },
+		});
+
+		await cms.posts.getItem("post-1");
+
+		expect(debugFn).toHaveBeenCalledWith(
+			"キャッシュミス、フェッチ",
+			expect.objectContaining({
+				operation: "getItem",
+				slug: "post-1",
+				collection: "posts",
+			}),
+		);
+	});
+
+	it("キャッシュヒット時に logger.debug が呼ばれる", async () => {
+		const debugFn = vi.fn();
+		const item: BaseContentItem = {
+			id: "p1",
+			slug: "post-1",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const cache = new MemoryDocumentCache();
+		await cache.setItem("posts:post-1", {
+			item,
+			html: "<p>cached</p>",
+			notionUpdatedAt: item.updatedAt,
+			cachedAt: Date.now(),
+		});
+
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						return [item];
+					},
+				}),
+			},
+			renderer: mockRenderer,
+			cache: { document: cache },
+			logger: { debug: debugFn },
+		});
+
+		await cms.posts.getItem("post-1");
+
+		expect(debugFn).toHaveBeenCalledWith(
+			"キャッシュヒット",
+			expect.objectContaining({
+				operation: "getItem",
+				slug: "post-1",
+				collection: "posts",
+			}),
+		);
+	});
+
+	it("TTL 期限切れ時に logger.debug が呼ばれる", async () => {
+		const debugFn = vi.fn();
+		const item: BaseContentItem = {
+			id: "p1",
+			slug: "post-1",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const cache = new MemoryDocumentCache();
+		await cache.setItem("posts:post-1", {
+			item,
+			html: "<p>stale</p>",
+			notionUpdatedAt: item.updatedAt,
+			cachedAt: 0, // 必ず TTL 期限切れ
+		});
+
+		const source = makeMockSource({
+			async list() {
+				return [item];
+			},
+		});
+		const cms = createCMS({
+			dataSources: { posts: source },
+			renderer: mockRenderer,
+			cache: { document: cache, ttlMs: 1000 },
+			logger: { debug: debugFn },
+		});
+
+		await cms.posts.getItem("post-1");
+
+		expect(debugFn).toHaveBeenCalledWith(
+			"キャッシュ期限切れ（TTL）、フェッチ",
+			expect.objectContaining({
+				operation: "getItem",
+				slug: "post-1",
+				collection: "posts",
+			}),
+		);
+	});
+
+	it("SWR が差分を検出したとき logger.debug と onCacheUpdate が呼ばれる", async () => {
+		const debugFn = vi.fn();
+		const onCacheUpdate = vi.fn();
+
+		const cachedItem: BaseContentItem = {
+			id: "p1",
+			slug: "post-1",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const freshItem: BaseContentItem = {
+			id: "p1",
+			slug: "post-1",
+			updatedAt: "2024-01-02T00:00:00Z",
+		};
+
+		const cache = new MemoryDocumentCache();
+		await cache.setItem("posts:post-1", {
+			item: cachedItem,
+			html: "<p>old</p>",
+			notionUpdatedAt: cachedItem.updatedAt,
+			cachedAt: Date.now(),
+		});
+
+		const capturedPromises: Promise<unknown>[] = [];
+		const source = makeMockSource({
+			async list() {
+				return [freshItem];
+			},
+		});
+
+		const cms = createCMS({
+			dataSources: { posts: source },
+			renderer: mockRenderer,
+			cache: { document: cache },
+			logger: { debug: debugFn },
+			hooks: { onCacheUpdate },
+			waitUntil: (p) => capturedPromises.push(p),
+		});
+
+		await cms.posts.getItem("post-1");
+		await Promise.all(capturedPromises);
+
+		expect(debugFn).toHaveBeenCalledWith(
+			"SWR: 差分を検出、キャッシュを差し替え",
+			expect.objectContaining({
+				operation: "getItem:bg",
+				slug: "post-1",
+				collection: "posts",
+			}),
+		);
+		expect(onCacheUpdate).toHaveBeenCalledOnce();
+		expect(onCacheUpdate).toHaveBeenCalledWith("post-1", expect.any(Object));
+	});
+
+	it("SWR が差分なしのとき logger.debug が呼ばれ onCacheUpdate は呼ばれない", async () => {
+		const debugFn = vi.fn();
+		const onCacheUpdate = vi.fn();
+
+		const item: BaseContentItem = {
+			id: "p1",
+			slug: "post-1",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const cache = new MemoryDocumentCache();
+		await cache.setItem("posts:post-1", {
+			item,
+			html: "<p>fresh</p>",
+			notionUpdatedAt: item.updatedAt,
+			cachedAt: Date.now(),
+		});
+
+		const capturedPromises: Promise<unknown>[] = [];
+		const source = makeMockSource({
+			async list() {
+				return [item];
+			},
+		});
+
+		const cms = createCMS({
+			dataSources: { posts: source },
+			renderer: mockRenderer,
+			cache: { document: cache, ttlMs: 60_000 },
+			logger: { debug: debugFn },
+			hooks: { onCacheUpdate },
+			waitUntil: (p) => capturedPromises.push(p),
+		});
+
+		await cms.posts.getItem("post-1");
+		await Promise.all(capturedPromises);
+
+		expect(debugFn).toHaveBeenCalledWith(
+			"SWR: 差分なし、TTL をリセット",
+			expect.objectContaining({ operation: "getItem:bg", slug: "post-1" }),
+		);
+		expect(onCacheUpdate).not.toHaveBeenCalled();
+	});
+
+	it("SWR がリスト差分を検出したとき onListCacheUpdate が呼ばれる", async () => {
+		const onListCacheUpdate = vi.fn();
+
+		const oldItem: BaseContentItem = {
+			id: "p1",
+			slug: "post-1",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const newItem: BaseContentItem = {
+			id: "p2",
+			slug: "post-2",
+			updatedAt: "2024-01-02T00:00:00Z",
+		};
+
+		const cache = new MemoryDocumentCache();
+		await cache.setList({ items: [oldItem], cachedAt: Date.now() });
+
+		const capturedPromises: Promise<unknown>[] = [];
+		const source = makeMockSource({
+			async list() {
+				return [oldItem, newItem];
+			},
+		});
+
+		const cms = createCMS({
+			dataSources: { posts: source },
+			renderer: mockRenderer,
+			cache: { document: cache },
+			hooks: { onListCacheUpdate },
+			waitUntil: (p) => capturedPromises.push(p),
+		});
+
+		await cms.posts.getList();
+		await Promise.all(capturedPromises);
+
+		expect(onListCacheUpdate).toHaveBeenCalledOnce();
+		expect(onListCacheUpdate).toHaveBeenCalledWith(
+			expect.arrayContaining([oldItem, newItem]),
+		);
+	});
+
 	it("TTL 設定あり・期限内の getItem はキャッシュを即時返却してバックグラウンド差分チェックする", async () => {
 		const freshItem: BaseContentItem = {
 			id: "page-1",

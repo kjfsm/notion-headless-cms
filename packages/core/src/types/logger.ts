@@ -10,6 +10,8 @@ export interface LogContext {
 	attempt?: number;
 	status?: number;
 	error?: string;
+	collection?: string;
+	cacheAdapter?: string;
 	[key: string]: unknown;
 }
 

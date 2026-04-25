@@ -1,6 +1,6 @@
 import { sha256Hex } from "./cache";
 import { CMSError, isCMSError } from "./errors";
-import type { ImageCacheAdapter, StorageBinary } from "./types/index";
+import type { ImageCacheAdapter, Logger, StorageBinary } from "./types/index";
 
 /** レスポンスヘッダまたはURLの拡張子からContent-Typeを推測する。 */
 function inferContentType(
@@ -24,12 +24,24 @@ async function fetchAndCacheImage(
 	cache: ImageCacheAdapter,
 	notionUrl: string,
 	imageProxyBase: string,
+	logger?: Logger,
 ): Promise<string> {
 	const hash = await sha256Hex(notionUrl);
 	const proxyUrl = `${imageProxyBase}/${hash}`;
 
 	const existing = await cache.get(hash);
-	if (existing) return proxyUrl;
+	if (existing) {
+		logger?.debug?.("画像キャッシュヒット", {
+			operation: "fetchAndCacheImage",
+			cacheAdapter: cache.name,
+		});
+		return proxyUrl;
+	}
+
+	logger?.debug?.("画像キャッシュミス、Notion からフェッチ", {
+		operation: "fetchAndCacheImage",
+		cacheAdapter: cache.name,
+	});
 
 	try {
 		const response = await fetch(notionUrl, {
@@ -53,6 +65,10 @@ async function fetchAndCacheImage(
 			response.headers.get("content-type"),
 		);
 		await cache.set(hash, data, contentType);
+		logger?.debug?.("画像をキャッシュに保存", {
+			operation: "fetchAndCacheImage",
+			cacheAdapter: cache.name,
+		});
 	} catch (err) {
 		if (isCMSError(err)) throw err;
 		throw new CMSError({
@@ -70,8 +86,10 @@ async function fetchAndCacheImage(
 export function buildCacheImageFn(
 	cache: ImageCacheAdapter,
 	imageProxyBase: string,
+	logger?: Logger,
 ): (notionUrl: string) => Promise<string> {
-	return (notionUrl) => fetchAndCacheImage(cache, notionUrl, imageProxyBase);
+	return (notionUrl) =>
+		fetchAndCacheImage(cache, notionUrl, imageProxyBase, logger);
 }
 
 export type { StorageBinary };
