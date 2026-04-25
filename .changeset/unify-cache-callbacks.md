@@ -1,5 +1,5 @@
 ---
-"@notion-headless-cms/core": minor
+"@notion-headless-cms/core": patch
 ---
 
 キャッシュフック API の統一と型安全性の向上
