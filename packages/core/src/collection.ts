@@ -61,7 +61,10 @@ export class CollectionClientImpl<T extends BaseContentItem>
 	async getItem(slug: string): Promise<ItemWithContent<T> | null> {
 		const cached = await this.ctx.docCache.getItem(slug);
 		if (cached) {
-			if (this.ctx.ttlMs !== undefined && isStale(cached.cachedAt, this.ctx.ttlMs)) {
+			if (
+				this.ctx.ttlMs !== undefined &&
+				isStale(cached.cachedAt, this.ctx.ttlMs)
+			) {
 				// TTL 設定あり + 期限切れ: ブロッキングフェッチ（stale を返さない）
 				this.ctx.hooks.onCacheMiss?.(slug);
 				const item = await this.findRaw(slug);
@@ -218,7 +221,10 @@ export class CollectionClientImpl<T extends BaseContentItem>
 	private async fetchList(): Promise<T[]> {
 		const cached = await this.ctx.docCache.getList();
 		if (cached) {
-			if (this.ctx.ttlMs !== undefined && isStale(cached.cachedAt, this.ctx.ttlMs)) {
+			if (
+				this.ctx.ttlMs !== undefined &&
+				isStale(cached.cachedAt, this.ctx.ttlMs)
+			) {
 				// TTL 設定あり + 期限切れ: ブロッキングフェッチ（stale を返さない）
 				this.ctx.hooks.onListCacheMiss?.();
 				const items = await this.fetchListRaw();
@@ -266,16 +272,17 @@ export class CollectionClientImpl<T extends BaseContentItem>
 				});
 			}
 		} catch (err) {
-			this.ctx.logger?.warn?.("SWR: アイテムのバックグラウンド差分チェックに失敗", {
-				slug,
-				error: err instanceof Error ? err.message : String(err),
-			});
+			this.ctx.logger?.warn?.(
+				"SWR: アイテムのバックグラウンド差分チェックに失敗",
+				{
+					slug,
+					error: err instanceof Error ? err.message : String(err),
+				},
+			);
 		}
 	}
 
-	private async checkAndUpdateListBg(
-		cached: CachedItemList<T>,
-	): Promise<void> {
+	private async checkAndUpdateListBg(cached: CachedItemList<T>): Promise<void> {
 		try {
 			const items = await this.fetchListRaw();
 			if (
@@ -292,9 +299,12 @@ export class CollectionClientImpl<T extends BaseContentItem>
 				});
 			}
 		} catch (err) {
-			this.ctx.logger?.warn?.("SWR: リストのバックグラウンド差分チェックに失敗", {
-				error: err instanceof Error ? err.message : String(err),
-			});
+			this.ctx.logger?.warn?.(
+				"SWR: リストのバックグラウンド差分チェックに失敗",
+				{
+					error: err instanceof Error ? err.message : String(err),
+				},
+			);
 		}
 	}
 

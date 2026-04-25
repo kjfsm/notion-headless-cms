@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import { createCMS } from "../cms";
 import { MemoryDocumentCache } from "../cache/memory";
+import { createCMS } from "../cms";
 import type { RendererFn } from "../types/config";
 import type { BaseContentItem } from "../types/content";
 import type { DataSource } from "../types/data-source";
