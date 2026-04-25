@@ -202,4 +202,67 @@ describe("createCMS - findByProp の利用", () => {
 		// findByProp が Notion プロパティ名 "Slug" と値 "hello" で呼ばれることを確認
 		expect(findByPropMock).toHaveBeenCalledWith("Slug", "hello");
 	});
+
+	it("slugField が設定されていても findByProp 未実装の場合は list() フォールバックを使う", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "hello",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+
+		const listMock = vi.fn().mockResolvedValue([item]);
+
+		// findByProp を持たないが properties は定義されている DataSource
+		const source = makeMockSource({
+			list: listMock,
+			properties: {
+				slug: { type: "richText", notion: "Slug" },
+			},
+		});
+
+		const cms = createCMS({
+			dataSources: { posts: source },
+			preset: "disabled",
+			collections: {
+				posts: { slug: "slug" },
+			},
+		});
+
+		const result = await cms.posts.getItem("hello");
+
+		// findByProp がないので list() で全件取得して線形探索する
+		expect(listMock).toHaveBeenCalled();
+		expect(result?.slug).toBe("hello");
+	});
+});
+
+describe("createCMS - beforeCache フック", () => {
+	it("getItem でレンダリング後に beforeCache フックが呼ばれる", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "test-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+
+		const beforeCacheMock = vi.fn().mockImplementation((cached) => cached);
+
+		const source = makeMockSource({
+			async list() {
+				return [item];
+			},
+		});
+
+		const cms = createCMS({
+			dataSources: { posts: source },
+			preset: "disabled",
+			collections: {
+				posts: { slug: "slug" },
+			},
+			hooks: { beforeCache: beforeCacheMock },
+		});
+
+		await cms.posts.getItem("test-post");
+
+		expect(beforeCacheMock).toHaveBeenCalledOnce();
+	});
 });
