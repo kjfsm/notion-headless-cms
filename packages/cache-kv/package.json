@@ -50,8 +50,5 @@
 	},
 	"dependencies": {
 		"@notion-headless-cms/core": "workspace:*"
-	},
-	"devDependencies": {
-		"@cloudflare/workers-types": "catalog:"
 	}
 }

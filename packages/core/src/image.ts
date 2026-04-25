@@ -85,7 +85,14 @@ async function fetchAndCacheImage(
 	return proxyUrl;
 }
 
-/** ImageCacheAdapter と imageProxyBase から cacheImage 関数を構築するファクトリ。 */
+/**
+ * ImageCacheAdapter と imageProxyBase から cacheImage 関数を構築するファクトリ。
+ *
+ * 返り値の関数は Notion 画像 URL を受け取り、SHA-256 ハッシュをキャッシュキーとして
+ * {@link ImageCacheAdapter} に保存後、フロントエンドへの配信用プロキシ URL を返す。
+ * Content-Type はレスポンスヘッダまたは URL の拡張子から推測する。
+ * タイムアウトは 10 秒固定。
+ */
 export function buildCacheImageFn(
 	cache: ImageCacheAdapter,
 	imageProxyBase: string,

@@ -126,7 +126,7 @@ export async function buildCachedItem<T extends BaseContentItem>(
  * @notion-headless-cms/renderer を動的 import する。
  * createCMS({ renderer }) で明示注入された場合はこのパスを通らない。
  */
-export async function loadDefaultRenderer(): Promise<RendererFn> {
+async function loadDefaultRenderer(): Promise<RendererFn> {
 	try {
 		const mod = await import("@notion-headless-cms/renderer");
 		return mod.renderMarkdown as RendererFn;
