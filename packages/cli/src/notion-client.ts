@@ -71,7 +71,11 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
 }
 
 export function createNotionCLIClient(token: string): NotionCLIClient {
-	const client = new Client({ auth: token });
+	const client = new Client({
+		auth: token,
+		// generate 時は常に最新データを取得するためキャッシュを無効化する
+		fetch: (url, init) => fetch(url, { ...init, cache: "no-store" }),
+	});
 
 	async function resolveId(dbName: string): Promise<string | null> {
 		const response = await withRetry(() =>

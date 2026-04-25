@@ -42,10 +42,7 @@ function capitalize(s: string): string {
 }
 
 /** DB ソース1件分の TypeScript コードブロックを生成する。 */
-function generateSourceBlock(
-	source: ResolvedSource,
-	warn?: (msg: string) => void,
-): string {
+function generateSourceBlock(source: ResolvedSource): string {
 	const { config, id, dbName, properties } = source;
 	const varPrefix = config.name;
 	const columnMappings = config.columnMappings ?? {};
@@ -70,7 +67,6 @@ function generateSourceBlock(
 	const propertyLines: string[] = [];
 	const skippedComments: string[] = [];
 	const usedTsNames = new Set<string>();
-	let autoCounter = 1;
 
 	for (const [notionPropName, prop] of Object.entries(properties)) {
 		const defType = NOTION_TYPE_TO_PROPERTY_DEF_TYPE[prop.type];
@@ -87,17 +83,18 @@ function generateSourceBlock(
 			columnMappings[notionPropName] ?? toTsCamelCase(notionPropName);
 
 		if (tsName === null) {
-			// 非ASCII名で自動変換不可 → property_N を割り当てて warn
-			let autoName: string;
-			do {
-				autoName = `property_${autoCounter++}`;
-			} while (usedTsNames.has(autoName));
-			tsName = autoName;
-			warn?.(
-				`[${config.name}] プロパティ "${notionPropName}" は TypeScript 識別子に自動変換できないため "${tsName}" として生成しました。` +
-					`\n  nhc.config.ts の columnMappings で明示マッピングを推奨します:` +
-					`\n    columnMappings: { "${notionPropName}": "フィールド名" }`,
-			);
+			throw new CMSError({
+				code: "cli/schema_invalid",
+				message:
+					`[${config.name}] プロパティ "${notionPropName}" は TypeScript 識別子に自動変換できません。` +
+					`nhc.config.ts の columnMappings で明示マッピングを指定してください:\n` +
+					`  columnMappings: { "${notionPropName}": "フィールド名" }`,
+				context: {
+					operation: "generateSourceBlock",
+					collection: config.name,
+					notionPropName,
+				},
+			});
 		}
 
 		// 重複チェック（同名の tsName が既に登録済みの場合は連番を付与）
@@ -146,10 +143,7 @@ function generateSourceBlock(
 }
 
 /** nhc-schema.ts 全体のコードを生成する。 */
-export function generateSchemaFile(
-	sources: ResolvedSource[],
-	opts?: { warn?: (msg: string) => void },
-): string {
+export function generateSchemaFile(sources: ResolvedSource[]): string {
 	const header = [
 		"// このファイルは nhc generate により自動生成されました。手動編集は nhc generate で上書きされます。",
 		`// Generated: ${new Date().toISOString()}`,
@@ -158,7 +152,7 @@ export function generateSchemaFile(
 		"",
 	].join("\n");
 
-	const blocks = sources.map((s) => generateSourceBlock(s, opts?.warn));
+	const blocks = sources.map((s) => generateSourceBlock(s));
 
 	return [header, ...blocks, ""].join("\n\n");
 }

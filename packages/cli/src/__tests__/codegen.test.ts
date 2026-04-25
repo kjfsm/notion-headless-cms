@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest";
+import { isCMSError } from "@notion-headless-cms/core";
+import { describe, expect, it } from "vitest";
 import type { ResolvedSource } from "../codegen.js";
 import { generateSchemaFile } from "../codegen.js";
 
@@ -137,8 +138,7 @@ describe("generateSchemaFile", () => {
 		expect(code).toContain("myField:");
 	});
 
-	it("日本語プロパティ名は property_N に自動変換して warn を呼ぶ（エラーにしない）", () => {
-		const warn = vi.fn();
+	it("columnMappings 未指定の日本語プロパティ名は CMSError を throw する", () => {
 		const source = makeSource({
 			config: { name: "posts", dbName: "DB" },
 			properties: {
@@ -147,17 +147,20 @@ describe("generateSchemaFile", () => {
 				あいうえお: makeProp("number"),
 			},
 		});
-		const code = generateSchemaFile([source], { warn });
-		expect(() => generateSchemaFile([source], { warn })).not.toThrow();
-		expect(warn).toHaveBeenCalled();
-		expect(warn.mock.calls[0][0]).toContain("あいうえお");
-		expect(warn.mock.calls[0][0]).toContain("property_1");
-		expect(code).toContain("property_1");
-		expect(code).toContain('notion: "あいうえお"');
+		expect(() => generateSchemaFile([source])).toThrow();
+		try {
+			generateSchemaFile([source]);
+		} catch (err) {
+			expect(isCMSError(err)).toBe(true);
+			if (isCMSError(err)) {
+				expect(err.code).toBe("cli/schema_invalid");
+				expect(err.message).toContain("あいうえお");
+				expect(err.message).toContain("columnMappings");
+			}
+		}
 	});
 
-	it("複数の非ASCII名がある場合は property_1, property_2 が生成される", () => {
-		const warn = vi.fn();
+	it("複数の非ASCII名がある場合は最初のプロパティで CMSError を throw する", () => {
 		const source = makeSource({
 			config: { name: "posts", dbName: "DB" },
 			properties: {
@@ -167,26 +170,18 @@ describe("generateSchemaFile", () => {
 				かきくけこ: makeProp("select"),
 			},
 		});
-		const code = generateSchemaFile([source], { warn });
-		expect(code).toContain("property_1");
-		expect(code).toContain("property_2");
-		expect(warn).toHaveBeenCalledTimes(2);
-	});
-
-	it("warn なしで generateSchemaFile を呼んでも動作する（後方互換）", () => {
-		const source = makeSource({
-			config: { name: "posts", dbName: "DB" },
-			properties: {
-				Name: makeProp("title"),
-				Slug: makeProp("rich_text"),
-				あいうえお: makeProp("number"),
-			},
-		});
-		expect(() => generateSchemaFile([source])).not.toThrow();
+		expect(() => generateSchemaFile([source])).toThrow();
+		try {
+			generateSchemaFile([source]);
+		} catch (err) {
+			expect(isCMSError(err)).toBe(true);
+			if (isCMSError(err)) {
+				expect(err.code).toBe("cli/schema_invalid");
+			}
+		}
 	});
 
 	it("columnMappings で日本語プロパティ名を明示マッピングできる", () => {
-		const warn = vi.fn();
 		const source = makeSource({
 			config: {
 				name: "posts",
@@ -199,10 +194,9 @@ describe("generateSchemaFile", () => {
 				あいうえお: makeProp("number"),
 			},
 		});
-		const code = generateSchemaFile([source], { warn });
+		const code = generateSchemaFile([source]);
 		expect(code).toContain("japaneseField");
 		expect(code).toContain('notion: "あいうえお"');
-		expect(warn).not.toHaveBeenCalled();
 	});
 
 	it("columnMappings に存在しないプロパティを指定するとエラーになる", () => {
