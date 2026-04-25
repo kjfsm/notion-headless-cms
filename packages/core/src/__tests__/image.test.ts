@@ -159,4 +159,52 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 		const [, , savedType] = vi.mocked(cache.set).mock.calls[0];
 		expect(savedType).toBe("image/webp");
 	});
+
+	it("キャッシュミス時に logger.debug が「キャッシュミス」と「保存」で呼ばれる", async () => {
+		const debugFn = vi.fn();
+		const cache = makeImageCache();
+		const cacheImage = buildCacheImageFn(cache, "/api/images", {
+			debug: debugFn,
+		});
+		vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+			makeResponse(200, new ArrayBuffer(4), "image/png"),
+		);
+
+		await cacheImage("https://example.com/new-image.png");
+
+		expect(debugFn).toHaveBeenCalledWith(
+			"画像キャッシュミス、Notion からフェッチ",
+			expect.objectContaining({ operation: "fetchAndCacheImage" }),
+		);
+		expect(debugFn).toHaveBeenCalledWith(
+			"画像をキャッシュに保存",
+			expect.objectContaining({ operation: "fetchAndCacheImage" }),
+		);
+	});
+
+	it("キャッシュヒット時に logger.debug が「キャッシュヒット」で呼ばれ fetch しない", async () => {
+		const debugFn = vi.fn();
+		const cache = makeImageCache();
+
+		// 先に1回フェッチしてキャッシュに保存する
+		vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+			makeResponse(200, new ArrayBuffer(4), "image/jpeg"),
+		);
+		const url = "https://example.com/cached-image.jpg";
+		const cacheImage = buildCacheImageFn(cache, "/api/images", {
+			debug: debugFn,
+		});
+		await cacheImage(url);
+
+		// 2回目: キャッシュヒット
+		vi.clearAllMocks();
+		debugFn.mockClear();
+		await cacheImage(url);
+
+		expect(debugFn).toHaveBeenCalledWith(
+			"画像キャッシュヒット",
+			expect.objectContaining({ operation: "fetchAndCacheImage" }),
+		);
+		expect(globalThis.fetch).not.toHaveBeenCalled();
+	});
 });

@@ -123,6 +123,31 @@ describe("mergeHooks", () => {
 		expect(start).toHaveBeenCalledWith("slug-a");
 		expect(end).toHaveBeenCalledWith("slug-a", 42);
 	});
+
+	it("onCacheUpdate が mergeHooks で全プラグインに同じ値を渡す", () => {
+		const fn1 = vi.fn();
+		const fn2 = vi.fn();
+		const merged = mergeHooks([{ name: "p1", hooks: { onCacheUpdate: fn1 } }], {
+			onCacheUpdate: fn2,
+		});
+		const item = makeCachedItem("updated-slug");
+		merged.onCacheUpdate?.("updated-slug", item);
+		expect(fn1).toHaveBeenCalledWith("updated-slug", item);
+		expect(fn2).toHaveBeenCalledWith("updated-slug", item);
+	});
+
+	it("onListCacheUpdate が mergeHooks で全プラグインに同じ値を渡す", () => {
+		const fn1 = vi.fn();
+		const fn2 = vi.fn();
+		const merged = mergeHooks(
+			[{ name: "p1", hooks: { onListCacheUpdate: fn1 } }],
+			{ onListCacheUpdate: fn2 },
+		);
+		const items = [makeItem("a"), makeItem("b")];
+		merged.onListCacheUpdate?.(items);
+		expect(fn1).toHaveBeenCalledWith(items);
+		expect(fn2).toHaveBeenCalledWith(items);
+	});
 });
 
 describe("mergeLoggers", () => {

@@ -68,7 +68,7 @@ export async function buildCachedItem<T extends BaseContentItem>(
 	}
 
 	const cacheImage = ctx.hasImageCache
-		? buildCacheImageFn(ctx.imgCache, ctx.imageProxyBase)
+		? buildCacheImageFn(ctx.imgCache, ctx.imageProxyBase, ctx.logger)
 		: undefined;
 
 	let html: string;

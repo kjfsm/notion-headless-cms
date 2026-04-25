@@ -66,6 +66,12 @@ export class CollectionClientImpl<T extends BaseContentItem>
 				isStale(cached.cachedAt, this.ctx.ttlMs)
 			) {
 				// TTL 設定あり + 期限切れ: ブロッキングフェッチ（stale を返さない）
+				this.ctx.logger?.debug?.("キャッシュ期限切れ（TTL）、フェッチ", {
+					operation: "getItem",
+					slug,
+					collection: this.ctx.collection,
+					cacheAdapter: this.ctx.docCache.name,
+				});
 				this.ctx.hooks.onCacheMiss?.(slug);
 				const item = await this.findRaw(slug);
 				if (!item) return null;
@@ -78,14 +84,34 @@ export class CollectionClientImpl<T extends BaseContentItem>
 			if (this.ctx.waitUntil) {
 				this.ctx.waitUntil(bg);
 			}
+			this.ctx.logger?.debug?.("キャッシュヒット", {
+				operation: "getItem",
+				slug,
+				collection: this.ctx.collection,
+				cacheAdapter: this.ctx.docCache.name,
+				cachedAt: cached.cachedAt,
+			});
 			this.ctx.hooks.onCacheHit?.(slug, cached);
 			return this.attachContent(cached.item, cached);
 		}
 
 		// キャッシュなし: 同期フェッチ
+		this.ctx.logger?.debug?.("キャッシュミス、フェッチ", {
+			operation: "getItem",
+			slug,
+			collection: this.ctx.collection,
+			cacheAdapter: this.ctx.docCache.name,
+		});
 		this.ctx.hooks.onCacheMiss?.(slug);
 		const item = await this.findRaw(slug);
-		if (!item) return null;
+		if (!item) {
+			this.ctx.logger?.debug?.("アイテムが見つかりません", {
+				operation: "getItem",
+				slug,
+				collection: this.ctx.collection,
+			});
+			return null;
+		}
 
 		const entry = await buildCachedItem(item, this.ctx.render);
 		const save = this.ctx.docCache.setItem(slug, entry);
@@ -133,6 +159,12 @@ export class CollectionClientImpl<T extends BaseContentItem>
 	// ── キャッシュ ────────────────────────────────────────────────────────
 
 	async revalidate(scope?: "all" | { slug: string }): Promise<void> {
+		this.ctx.logger?.debug?.("キャッシュを無効化", {
+			operation: "revalidate",
+			collection: this.ctx.collection,
+			cacheAdapter: this.ctx.docCache.name,
+			slug: typeof scope === "object" ? scope.slug : undefined,
+		});
 		if (!this.ctx.docCache.invalidate) return;
 		if (scope === undefined || scope === "all") {
 			await this.ctx.docCache.invalidate({ collection: this.ctx.collection });
@@ -226,6 +258,11 @@ export class CollectionClientImpl<T extends BaseContentItem>
 				isStale(cached.cachedAt, this.ctx.ttlMs)
 			) {
 				// TTL 設定あり + 期限切れ: ブロッキングフェッチ（stale を返さない）
+				this.ctx.logger?.debug?.("リストキャッシュ期限切れ（TTL）、フェッチ", {
+					operation: "getList",
+					collection: this.ctx.collection,
+					cacheAdapter: this.ctx.docCache.name,
+				});
 				this.ctx.hooks.onListCacheMiss?.();
 				const items = await this.fetchListRaw();
 				await this.ctx.docCache.setList({ items, cachedAt: Date.now() });
@@ -236,11 +273,21 @@ export class CollectionClientImpl<T extends BaseContentItem>
 			if (this.ctx.waitUntil) {
 				this.ctx.waitUntil(bg);
 			}
+			this.ctx.logger?.debug?.("リストキャッシュヒット", {
+				operation: "getList",
+				collection: this.ctx.collection,
+				cacheAdapter: this.ctx.docCache.name,
+			});
 			this.ctx.hooks.onListCacheHit?.(cached.items, cached.cachedAt);
 			return cached.items;
 		}
 
 		// キャッシュなし: 同期フェッチ
+		this.ctx.logger?.debug?.("リストキャッシュミス、フェッチ", {
+			operation: "getList",
+			collection: this.ctx.collection,
+			cacheAdapter: this.ctx.docCache.name,
+		});
 		this.ctx.hooks.onListCacheMiss?.();
 		const items = await this.fetchListRaw();
 		const cachedAt = Date.now();
@@ -264,11 +311,23 @@ export class CollectionClientImpl<T extends BaseContentItem>
 				// 更新あり: 再レンダリングしてキャッシュを差し替える
 				const entry = await buildCachedItem(item, this.ctx.render);
 				await this.ctx.docCache.setItem(slug, entry);
+				this.ctx.logger?.debug?.("SWR: 差分を検出、キャッシュを差し替え", {
+					operation: "getItem:bg",
+					slug,
+					collection: this.ctx.collection,
+					notionUpdatedAt: cached.notionUpdatedAt,
+				});
+				this.ctx.hooks.onCacheUpdate?.(slug, entry);
 			} else if (this.ctx.ttlMs !== undefined) {
 				// 変更なし + TTL あり: cachedAt をリセットして次回の期限切れを先送りする
 				await this.ctx.docCache.setItem(slug, {
 					...cached,
 					cachedAt: Date.now(),
+				});
+				this.ctx.logger?.debug?.("SWR: 差分なし、TTL をリセット", {
+					operation: "getItem:bg",
+					slug,
+					collection: this.ctx.collection,
 				});
 			}
 		} catch (err) {
@@ -276,6 +335,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
 				"SWR: アイテムのバックグラウンド差分チェックに失敗",
 				{
 					slug,
+					collection: this.ctx.collection,
 					error: err instanceof Error ? err.message : String(err),
 				},
 			);
@@ -291,17 +351,30 @@ export class CollectionClientImpl<T extends BaseContentItem>
 			) {
 				// 更新あり: リストを差し替える
 				await this.ctx.docCache.setList({ items, cachedAt: Date.now() });
+				this.ctx.logger?.debug?.(
+					"SWR: リスト差分を検出、キャッシュを差し替え",
+					{
+						operation: "getList:bg",
+						collection: this.ctx.collection,
+					},
+				);
+				this.ctx.hooks.onListCacheUpdate?.(items);
 			} else if (this.ctx.ttlMs !== undefined) {
 				// 変更なし + TTL あり: cachedAt をリセットする
 				await this.ctx.docCache.setList({
 					...cached,
 					cachedAt: Date.now(),
 				});
+				this.ctx.logger?.debug?.("SWR: リスト差分なし、TTL をリセット", {
+					operation: "getList:bg",
+					collection: this.ctx.collection,
+				});
 			}
 		} catch (err) {
 			this.ctx.logger?.warn?.(
 				"SWR: リストのバックグラウンド差分チェックに失敗",
 				{
+					collection: this.ctx.collection,
 					error: err instanceof Error ? err.message : String(err),
 				},
 			);
