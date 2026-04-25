@@ -8,8 +8,6 @@ import type {
 } from "@notion-headless-cms/core";
 import type { R2BucketLike, R2ObjectLike } from "./types";
 
-export type { R2BucketLike } from "./types";
-
 export interface R2CacheOptions {
 	bucket: R2BucketLike;
 	/** キャッシュキーのプレフィックス。デフォルト: '' */

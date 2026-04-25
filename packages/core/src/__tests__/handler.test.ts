@@ -151,6 +151,34 @@ describe("createHandler", () => {
 			);
 			expect(res.status).toBe(404);
 		});
+
+		it("PUT /api/cms/revalidate は 404 を返す", async () => {
+			const handler = createHandler(makeAdapter());
+			const res = await handler(
+				new Request("http://localhost/api/cms/revalidate", { method: "PUT" }),
+			);
+			expect(res.status).toBe(404);
+		});
+
+		it("DELETE /api/cms/revalidate は 404 を返す", async () => {
+			const handler = createHandler(makeAdapter());
+			const res = await handler(
+				new Request("http://localhost/api/cms/revalidate", {
+					method: "DELETE",
+				}),
+			);
+			expect(res.status).toBe(404);
+		});
+
+		it("POST /api/cms/images/:hash は 404 を返す（GET のみ有効）", async () => {
+			const handler = createHandler(makeAdapter());
+			const res = await handler(
+				new Request("http://localhost/api/cms/images/abc123", {
+					method: "POST",
+				}),
+			);
+			expect(res.status).toBe(404);
+		});
 	});
 
 	describe("カスタムパス設定", () => {

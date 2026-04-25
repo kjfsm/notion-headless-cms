@@ -46,4 +46,44 @@ describe("withRetry", () => {
 		await withRetry(fn, { ...config, onRetry });
 		expect(onRetry).toHaveBeenCalledWith(1, 429);
 	});
+
+	it("jitter が有効のときランダム係数が delay に加わる", async () => {
+		vi.spyOn(globalThis.Math, "random").mockReturnValue(0.5);
+		const delays: number[] = [];
+		const originalSetTimeout = globalThis.setTimeout;
+		vi.spyOn(globalThis, "setTimeout").mockImplementation((fn, delay) => {
+			delays.push(delay as number);
+			return originalSetTimeout(fn as () => void, 0);
+		});
+
+		const err = Object.assign(new Error("rate limit"), { status: 429 });
+		const fn = vi.fn().mockRejectedValueOnce(err).mockResolvedValue("ok");
+		await withRetry(fn, { ...config, baseDelayMs: 100, jitter: true });
+
+		// Math.random() = 0.5 → jitterFactor = 0.5 + 0.5 * 0.5 = 0.75 → delay = 100 * 1 * 0.75 = 75
+		expect(delays[0]).toBeCloseTo(75, 0);
+
+		vi.restoreAllMocks();
+	});
+
+	it("jitter が未指定のときデフォルトで jitter=true として動作する", async () => {
+		vi.spyOn(globalThis.Math, "random").mockReturnValue(0);
+		const delays: number[] = [];
+		const originalSetTimeout = globalThis.setTimeout;
+		vi.spyOn(globalThis, "setTimeout").mockImplementation((fn, delay) => {
+			delays.push(delay as number);
+			return originalSetTimeout(fn as () => void, 0);
+		});
+
+		const err = Object.assign(new Error("rate limit"), { status: 429 });
+		const fn = vi.fn().mockRejectedValueOnce(err).mockResolvedValue("ok");
+		// jitter を省略（undefined = true と同等）
+		const { jitter: _jitter, ...configWithoutJitter } = config;
+		await withRetry(fn, { ...configWithoutJitter, baseDelayMs: 100 });
+
+		// Math.random() = 0 → jitterFactor = 0.5 → delay = 100 * 1 * 0.5 = 50
+		expect(delays[0]).toBeCloseTo(50, 0);
+
+		vi.restoreAllMocks();
+	});
 });

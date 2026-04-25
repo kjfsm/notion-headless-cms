@@ -1,4 +1,28 @@
-type BuiltInCMSErrorCode =
+/**
+ * ライブラリ組み込みの CMS エラーコード。
+ *
+ * | コード | 発生条件 |
+ * |---|---|
+ * | `core/config_invalid` | 設定不備（token 未設定など） |
+ * | `core/schema_invalid` | schema/mapping の型不整合 |
+ * | `core/notion_orm_missing` | `@notion-headless-cms/notion-orm` の動的ロード失敗 |
+ * | `source/fetch_items_failed` | `DataSource.list()` 失敗 |
+ * | `source/fetch_item_failed` | `DataSource.findByProp()` 失敗 |
+ * | `source/load_markdown_failed` | `DataSource.loadMarkdown()` 失敗 |
+ * | `cache/io_failed` | document / image キャッシュの I/O 失敗 |
+ * | `cache/image_fetch_failed` | Notion 画像の HTTP 取得失敗 |
+ * | `renderer/failed` | Markdown → HTML 変換失敗 |
+ * | `cli/config_invalid` | `nhc.config.ts` の内容不整合 |
+ * | `cli/config_load_failed` | 設定ファイルの読み込み / 評価失敗 |
+ * | `cli/schema_invalid` | CLI が受け取ったスキーマ / マッピング不整合 |
+ * | `cli/generate_failed` | `nhc generate` の処理失敗 |
+ * | `cli/init_failed` | `nhc init` の処理失敗 |
+ * | `cli/notion_api_failed` | CLI が Notion API を呼び出す際の失敗 |
+ * | `cli/env_file_not_found` | `--env-file` で指定したファイルが存在しない |
+ *
+ * サードパーティアダプタが独自コードを追加したい場合は `CMSErrorCode` を参照。
+ */
+export type BuiltInCMSErrorCode =
 	| "core/config_invalid"
 	| "core/schema_invalid"
 	| "core/notion_orm_missing"

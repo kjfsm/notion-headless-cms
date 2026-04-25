@@ -52,7 +52,5 @@
 		"@notion-headless-cms/cache-kv": "workspace:*",
 		"@notion-headless-cms/core": "workspace:*"
 	},
-	"devDependencies": {
-		"@cloudflare/workers-types": "catalog:"
-	}
+	"devDependencies": {}
 }

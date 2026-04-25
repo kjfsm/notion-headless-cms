@@ -25,6 +25,7 @@ jobs:
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile --prefer-offline
       - run: pnpm lint
+      - run: pnpm knip
 
   verify:
     # build / typecheck / test:coverage / publint / attw を turbo 1 コマンドで並列実行。

@@ -21,7 +21,11 @@ export type {
 	InlineNode,
 } from "./content/blocks";
 // ── エラー ──────────────────────────────────────────────────────────────
-export type { CMSErrorCode, CMSErrorContext } from "./errors";
+export type {
+	BuiltInCMSErrorCode,
+	CMSErrorCode,
+	CMSErrorContext,
+} from "./errors";
 export { CMSError, isCMSError, isCMSErrorInNamespace } from "./errors";
 export type { HandlerAdapter, HandlerOptions } from "./handler";
 // ── $handler ───────────────────────────────────────────────────────────

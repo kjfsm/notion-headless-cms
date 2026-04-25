@@ -14,7 +14,14 @@ export const DEFAULT_RETRY_CONFIG: RetryConfig = {
 	jitter: true,
 };
 
-/** 指数バックオフ（オプションでジッター付き）でリトライする。retryOn に含まれる HTTP エラーのみ対象。 */
+/**
+ * 指数バックオフ（オプションでジッター付き）でリトライする。
+ *
+ * `config.retryOn` に含まれるステータスコードを持つエラーのみリトライ対象。
+ * 遅延は `baseDelayMs * 2^attempt` の指数バックオフ。
+ * `jitter` が `true`（デフォルト）の場合、0.5〜1.0 の乱数係数を乗算して
+ * Thundering Herd を防ぐ。`false` にすると確定的な遅延になる。
+ */
 export async function withRetry<T>(
 	fn: () => Promise<T>,
 	config: RetryConfig,
