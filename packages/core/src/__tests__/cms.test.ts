@@ -320,6 +320,154 @@ describe("createCMS - $revalidate", () => {
 	});
 });
 
+describe("createCMS - logLevel オプション", () => {
+	it("logLevel: 'info' を設定すると debug ログが抑制される", async () => {
+		const debugFn = vi.fn();
+		const infoFn = vi.fn();
+
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "my-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const source = makeMockSource({
+			async list() {
+				return [item];
+			},
+		});
+
+		const cms = createCMS({
+			dataSources: { posts: source },
+			preset: "disabled",
+			renderer: mockRenderer,
+			logger: { debug: debugFn, info: infoFn },
+			logLevel: "info",
+		});
+
+		// getItem でキャッシュミスの debug ログが出るはずだが抑制される
+		await cms.posts.getItem("my-post");
+
+		expect(debugFn).not.toHaveBeenCalled();
+	});
+
+	it("logLevel 未設定では debug ログが通常通り流れる", async () => {
+		const debugFn = vi.fn();
+
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "my-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const source = makeMockSource({
+			async list() {
+				return [item];
+			},
+		});
+
+		const cms = createCMS({
+			dataSources: { posts: source },
+			preset: "disabled",
+			renderer: mockRenderer,
+			logger: { debug: debugFn },
+		});
+
+		await cms.posts.getItem("my-post");
+
+		expect(debugFn).toHaveBeenCalled();
+	});
+
+	it("logger 未設定かつ logLevel を指定しても問題なく動作する", () => {
+		expect(() =>
+			createCMS({
+				dataSources: { posts: makeMockSource() },
+				preset: "disabled",
+				logLevel: "warn",
+			}),
+		).not.toThrow();
+	});
+});
+
+describe("createCMS - collections.hooks コレクション固有フック", () => {
+	it("collections.hooks.onCacheHit がコレクション固有フックとして呼ばれる", async () => {
+		const globalHook = vi.fn();
+		const collectionHook = vi.fn();
+
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "my-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const { MemoryDocumentCache } = await import("../cache/memory");
+		const cache = new MemoryDocumentCache();
+		await cache.setItem("posts:my-post", {
+			item,
+			html: "<p>test</p>",
+			notionUpdatedAt: item.updatedAt,
+			cachedAt: Date.now(),
+		});
+
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						return [item];
+					},
+				}),
+			},
+			renderer: mockRenderer,
+			cache: { document: cache },
+			hooks: { onCacheHit: globalHook },
+			collections: {
+				posts: {
+					slug: "slug",
+					hooks: { onCacheHit: collectionHook },
+				},
+			},
+		});
+
+		await cms.posts.getItem("my-post");
+
+		// グローバルフックとコレクション固有フックの両方が呼ばれる
+		expect(globalHook).toHaveBeenCalledOnce();
+		expect(collectionHook).toHaveBeenCalledOnce();
+	});
+
+	it("collections.hooks がないコレクションはグローバルフックのみ実行される", async () => {
+		const globalHook = vi.fn();
+
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "my-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const { MemoryDocumentCache } = await import("../cache/memory");
+		const cache = new MemoryDocumentCache();
+		await cache.setItem("posts:my-post", {
+			item,
+			html: "<p>test</p>",
+			notionUpdatedAt: item.updatedAt,
+			cachedAt: Date.now(),
+		});
+
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						return [item];
+					},
+				}),
+			},
+			renderer: mockRenderer,
+			cache: { document: cache },
+			hooks: { onCacheHit: globalHook },
+		});
+
+		await cms.posts.getItem("my-post");
+
+		expect(globalHook).toHaveBeenCalledOnce();
+	});
+});
+
 describe("createCMS - beforeCache フック", () => {
 	it("getItem でレンダリング後に beforeCache フックが呼ばれる", async () => {
 		const item: BaseContentItem = {
