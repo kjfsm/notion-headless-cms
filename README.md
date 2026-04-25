@@ -1,5 +1,7 @@
 # notion-headless-cms
 
+[![codecov](https://codecov.io/gh/kjfsm/notion-headless-cms/graph/badge.svg?token=H5R9JTFXU1)](https://codecov.io/gh/kjfsm/notion-headless-cms)
+
 Notion をヘッドレス CMS として利用するための TypeScript ライブラリ群。
 Cloudflare Workers + R2 / KV を中心としつつ、Node.js / Next.js / Astro / Hono / SvelteKit など幅広いランタイムで動作する。pnpm モノレポで管理されている。
 
