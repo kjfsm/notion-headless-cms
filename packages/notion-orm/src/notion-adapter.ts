@@ -298,4 +298,3 @@ export function createNotionCollection<
 >(opts: NotionCollectionOptions<T>): DataSource<T> {
 	return new NotionCollection<T>(opts);
 }
-

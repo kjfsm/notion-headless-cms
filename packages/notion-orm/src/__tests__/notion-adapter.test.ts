@@ -18,10 +18,7 @@ vi.mock("@notion-headless-cms/renderer", () => {
 	};
 });
 
-import {
-	queryAllPages,
-	queryPageByProp,
-} from "../internal/fetcher/index";
+import { queryAllPages, queryPageByProp } from "../internal/fetcher/index";
 
 const makePage = (slug: string, status: string) => ({
 	id: `id-${slug}`,

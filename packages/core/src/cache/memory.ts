@@ -148,4 +148,3 @@ export function memoryImageCache(
 ): ImageCacheAdapter {
 	return new MemoryImageCache(options);
 }
-

@@ -1,6 +1,6 @@
+import type { ContentBlock } from "./content/blocks";
 import { CMSError, isCMSError } from "./errors";
 import { buildCacheImageFn } from "./image";
-import type { ContentBlock } from "./content/blocks";
 import type {
 	BaseContentItem,
 	CachedItem,
