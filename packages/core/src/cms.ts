@@ -218,9 +218,12 @@ export function createCMS<D extends DataSourceMap>(
 
 	// biome-ignore lint/suspicious/noExplicitAny: 各 T を保持
 	const collections: Record<string, CollectionClient<any>> = {};
+	// biome-ignore lint/suspicious/noExplicitAny: 横断的に利用
+	const scopedCaches: DocumentCacheAdapter<any>[] = [];
 	for (const name of collectionNames) {
 		const source = opts.dataSources[name] as DataSource<BaseContentItem>;
 		const scopedCache = scopeDocumentCache<BaseContentItem>(baseDocCache, name);
+		scopedCaches.push(scopedCache);
 		const renderCtx: RenderContext<BaseContentItem> = {
 			source,
 			rendererFn,
@@ -262,8 +265,12 @@ export function createCMS<D extends DataSourceMap>(
 				operation: "$revalidate",
 				cacheAdapter: baseDocCache.name,
 			});
-			if (!baseDocCache.invalidate) return;
-			await baseDocCache.invalidate(scope ?? "all");
+			// baseDocCache を直接呼ばず各スコープキャッシュ経由で呼ぶ。
+			// 直接呼ぶと scopeDocumentCache の listSlot がクリアされず stale になる。
+			for (const cache of scopedCaches) {
+				if (!cache.invalidate) continue;
+				await cache.invalidate(scope ?? "all");
+			}
 		},
 		$handler(handlerOpts?: HandlerOptions) {
 			return createHandler(

@@ -285,6 +285,41 @@ describe("createCMS - scopeDocumentCache リストスコープ分離", () => {
 	});
 });
 
+describe("createCMS - $revalidate", () => {
+	it("$revalidate 後に getList がキャッシュではなく新データを返す", async () => {
+		const staleItem: BaseContentItem = {
+			id: "1",
+			slug: "post-stale",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const freshItem: BaseContentItem = {
+			id: "2",
+			slug: "post-fresh",
+			updatedAt: "2024-01-02T00:00:00Z",
+		};
+
+		const listMock = vi
+			.fn()
+			.mockResolvedValueOnce([staleItem])
+			.mockResolvedValueOnce([freshItem]);
+
+		const cms = createCMS({
+			dataSources: { posts: makeMockSource({ list: listMock }) },
+			preset: "disabled",
+		});
+
+		const first = await cms.posts.getList();
+		expect(first[0].slug).toBe("post-stale");
+
+		await cms.$revalidate();
+
+		const second = await cms.posts.getList();
+		// $revalidate 後はキャッシュがクリアされ、新しいデータが返される
+		expect(second[0].slug).toBe("post-fresh");
+		expect(listMock).toHaveBeenCalledTimes(2);
+	});
+});
+
 describe("createCMS - beforeCache フック", () => {
 	it("getItem でレンダリング後に beforeCache フックが呼ばれる", async () => {
 		const item: BaseContentItem = {
