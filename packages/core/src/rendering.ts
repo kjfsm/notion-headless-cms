@@ -124,7 +124,7 @@ export async function buildCachedItem<T extends BaseContentItem>(
 /**
  * renderer オプション未指定時のフォールバック。
  * @notion-headless-cms/renderer を動的 import する。
- * adapter-cloudflare / adapter-node は renderer を明示注入するためこのパスは通らない。
+ * createCMS({ renderer }) で明示注入された場合はこのパスを通らない。
  */
 export async function loadDefaultRenderer(): Promise<RendererFn> {
 	try {

@@ -36,7 +36,7 @@ export default {
 - `IMG_BUCKET` — R2 バケット (画像キャッシュ)
 - `NOTION_TOKEN` — Notion API トークン (`wrangler secret put NOTION_TOKEN`)
 
-旧名 `CACHE_KV` / `CACHE_BUCKET` もフォールバックとして認識する。カスタマイズ:
+カスタマイズ:
 
 ```ts
 cloudflarePreset({

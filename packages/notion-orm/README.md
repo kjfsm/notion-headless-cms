@@ -24,7 +24,6 @@ Notion API を叩いて `@notion-headless-cms/core` の `DataSource<T>` を
 ## 公開 API (CLI 生成物のみから呼ばれる)
 
 - `createNotionCollection(opts)` — `DataSource<T>` を返す
-- `notionAdapter(opts)` — `createNotionCollection` の旧名エイリアス (非推奨)
 - `defineSchema(zodSchema, mapping)` — 宣言的スキーマを構築
 - `defineMapping(mapping)` — プロパティ名マッピング
 
