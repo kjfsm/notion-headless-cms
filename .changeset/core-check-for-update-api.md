@@ -1,5 +1,5 @@
 ---
-"@notion-headless-cms/core": minor
+"@notion-headless-cms/core": patch
 ---
 
 `CollectionClient` に更新検知プリミティブ `checkForUpdate` / `checkListForUpdate` を追加する
