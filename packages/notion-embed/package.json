@@ -1,6 +1,6 @@
 {
 	"name": "@notion-headless-cms/notion-embed",
-	"version": "0.0.0",
+	"version": "0.1.0",
 	"description": "Notion ブロック (bookmark / embed / mention / toggle / callout / table など) を Notion 風 HTML にレンダリングする拡張パッケージ",
 	"keywords": [
 		"notion",
