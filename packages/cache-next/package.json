@@ -1,6 +1,6 @@
 {
 	"name": "@notion-headless-cms/cache-next",
-	"version": "0.2.12",
+	"version": "0.2.13",
 	"description": "Next.js App Router DocumentCacheAdapter using unstable_cache and revalidateTag",
 	"keywords": [
 		"notion",
