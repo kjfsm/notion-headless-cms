@@ -33,6 +33,40 @@ function makeMockSource(
 	};
 }
 
+describe("createCMS - dataSources バリデーション", () => {
+	it("dataSources が空の場合は CMSError をスローする", () => {
+		let caught: unknown;
+		try {
+			createCMS({
+				// biome-ignore lint/suspicious/noExplicitAny: テスト用に空オブジェクトを渡す
+				dataSources: {} as any,
+				preset: "disabled",
+			});
+		} catch (e) {
+			caught = e;
+		}
+		expect(caught).toSatisfy(
+			(err: unknown) => isCMSError(err) && err.code === "core/config_invalid",
+		);
+	});
+
+	it("dataSources が undefined の場合は CMSError をスローする", () => {
+		let caught: unknown;
+		try {
+			createCMS({
+				// biome-ignore lint/suspicious/noExplicitAny: テスト用に undefined を渡す
+				dataSources: undefined as any,
+				preset: "disabled",
+			});
+		} catch (e) {
+			caught = e;
+		}
+		expect(caught).toSatisfy(
+			(err: unknown) => isCMSError(err) && err.code === "core/config_invalid",
+		);
+	});
+});
+
 describe("createCMS - Feature 1: collections.slug 検証", () => {
 	it("collections を指定しない場合はバリデーションをスキップする", () => {
 		expect(() =>
@@ -497,5 +531,172 @@ describe("createCMS - beforeCache フック", () => {
 		await cms.posts.getItem("test-post");
 
 		expect(beforeCacheMock).toHaveBeenCalledOnce();
+	});
+});
+
+describe("createCMS - $getCachedImage", () => {
+	it("$getCachedImage が imageCache.get を呼ぶ", async () => {
+		const getCachedImage = vi.fn().mockResolvedValue(null);
+		// preset: "disabled" は cache を undefined に上書きするため、preset を指定しない
+		const cms = createCMS({
+			dataSources: { posts: makeMockSource() },
+			cache: {
+				image: {
+					name: "test-image-cache",
+					get: getCachedImage,
+					set: vi.fn(),
+				},
+			},
+		});
+		const result = await cms.$getCachedImage("test-hash");
+		expect(getCachedImage).toHaveBeenCalledWith("test-hash");
+		expect(result).toBeNull();
+	});
+});
+
+describe("createCMS - $revalidate", () => {
+	it("$revalidate を呼んでもエラーが発生しない（noopCache の場合）", async () => {
+		const cms = createCMS({
+			dataSources: { posts: makeMockSource() },
+			preset: "disabled",
+		});
+		await expect(cms.$revalidate()).resolves.toBeUndefined();
+	});
+
+	it("$collections にコレクション名が含まれる", () => {
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource(),
+				pages: makeMockSource(),
+			},
+			preset: "disabled",
+		});
+		expect(cms.$collections).toContain("posts");
+		expect(cms.$collections).toContain("pages");
+	});
+
+	it("invalidate を持たない DocumentCacheAdapter でも $revalidate が成功する", async () => {
+		const cache = {
+			name: "no-invalidate",
+			getList: vi.fn().mockResolvedValue(null),
+			setList: vi.fn().mockResolvedValue(undefined),
+			getItem: vi.fn().mockResolvedValue(null),
+			setItem: vi.fn().mockResolvedValue(undefined),
+			// invalidate は意図的に未定義
+		};
+		const cms = createCMS({
+			dataSources: { posts: makeMockSource() },
+			cache: { document: cache },
+		});
+		await expect(cms.$revalidate()).resolves.toBeUndefined();
+	});
+});
+
+describe("createCMS - $handler", () => {
+	it("$handler() がハンドラ関数を返す", () => {
+		const cms = createCMS({
+			dataSources: { posts: makeMockSource() },
+			preset: "disabled",
+		});
+		const handler = cms.$handler();
+		expect(typeof handler).toBe("function");
+	});
+
+	it("slug と collection を含む JSON body で $revalidate が呼ばれる", async () => {
+		const cms = createCMS({
+			dataSources: { posts: makeMockSource() },
+			preset: "disabled",
+		});
+		const handler = cms.$handler();
+		const req = new Request("http://localhost/api/cms/revalidate", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ slug: "my-post", collection: "posts" }),
+		});
+		const res = await handler(req);
+		expect(res.status).toBe(200);
+		const body = (await res.json()) as { ok: boolean };
+		expect(body.ok).toBe(true);
+	});
+
+	it("collection のみの JSON body で $revalidate が呼ばれる", async () => {
+		const cms = createCMS({
+			dataSources: { posts: makeMockSource() },
+			preset: "disabled",
+		});
+		const handler = cms.$handler();
+		const req = new Request("http://localhost/api/cms/revalidate", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ collection: "posts" }),
+		});
+		const res = await handler(req);
+		expect(res.status).toBe(200);
+	});
+
+	it("不正な JSON body の場合は 400 を返す", async () => {
+		const cms = createCMS({
+			dataSources: { posts: makeMockSource() },
+			preset: "disabled",
+		});
+		const handler = cms.$handler();
+		const req = new Request("http://localhost/api/cms/revalidate", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: "not-json",
+		});
+		const res = await handler(req);
+		expect(res.status).toBe(400);
+	});
+
+	it("DataSource に parseWebhook がある場合はそちらを優先する", async () => {
+		const parseWebhook = vi.fn().mockResolvedValue({ collection: "posts" });
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({ parseWebhook }),
+			},
+			preset: "disabled",
+		});
+		const handler = cms.$handler();
+		const req = new Request("http://localhost/api/cms/revalidate", {
+			method: "POST",
+			body: "{}",
+		});
+		await handler(req);
+		expect(parseWebhook).toHaveBeenCalled();
+	});
+
+	it("DataSource の parseWebhook が失敗した場合は JSON フォールバックを使う", async () => {
+		const parseWebhook = vi.fn().mockRejectedValue(new Error("webhook error"));
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({ parseWebhook }),
+			},
+			preset: "disabled",
+		});
+		const handler = cms.$handler();
+		const req = new Request("http://localhost/api/cms/revalidate", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ slug: "test", collection: "posts" }),
+		});
+		const res = await handler(req);
+		// パースウェブフック失敗後にJSONフォールバックが動く
+		expect(res.status).toBe(200);
+	});
+
+	it("slug も collection もない JSON body では 400 を返す", async () => {
+		const cms = createCMS({
+			dataSources: { posts: makeMockSource() },
+			preset: "disabled",
+		});
+		const handler = cms.$handler();
+		const req = new Request("http://localhost/api/cms/revalidate", {
+			method: "POST",
+			headers: { "content-type": "application/json" },
+			body: JSON.stringify({ other: "data" }),
+		});
+		const res = await handler(req);
+		expect(res.status).toBe(400);
 	});
 });

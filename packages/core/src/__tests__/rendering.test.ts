@@ -296,4 +296,13 @@ describe("buildCachedItem", () => {
 			);
 		});
 	});
+
+	describe("デフォルトレンダラー（rendererFn 未指定）", () => {
+		it("rendererFn が undefined の場合、@notion-headless-cms/renderer をロードして使う", async () => {
+			const item = makeItem({ slug: "default-renderer-test" });
+			const ctx = makeContext({ rendererFn: undefined });
+			const result = await buildCachedItem(item, ctx);
+			expect(typeof result.html).toBe("string");
+		});
+	});
 });

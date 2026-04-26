@@ -227,6 +227,36 @@ describe("generateSchemaFile", () => {
 		expect(code).toContain("newsProperties");
 	});
 
+	it("同名に変換される2つのプロパティに連番サフィックスを付与する", () => {
+		const source = makeSource({
+			config: { name: "posts", dbName: "DB" },
+			properties: {
+				Name: makeProp("title"),
+				myField: makeProp("rich_text"),
+				"my-field": makeProp("number"),
+			},
+		});
+		const code = generateSchemaFile([source]);
+		expect(code).toContain("myField:");
+		expect(code).toContain("myField_2:");
+	});
+
+	it("同名に変換される3つのプロパティに連番サフィックスを付与する（while ループ継続ブランチ）", () => {
+		const source = makeSource({
+			config: { name: "posts", dbName: "DB" },
+			properties: {
+				Name: makeProp("title"),
+				myField: makeProp("rich_text"),
+				"my-field": makeProp("number"),
+				"My Field": makeProp("date"),
+			},
+		});
+		const code = generateSchemaFile([source]);
+		expect(code).toContain("myField:");
+		expect(code).toContain("myField_2:");
+		expect(code).toContain("myField_3:");
+	});
+
 	it("Zod や defineSchema は含まれない（新アーキテクチャ）", () => {
 		const code = generateSchemaFile([makeSource()]);
 		expect(code).not.toContain("defineSchema");

@@ -144,6 +144,12 @@ describe("createHandler", () => {
 			expect(res.status).toBe(404);
 		});
 
+		it("basePath そのもの（trailing path なし）は 404 を返す", async () => {
+			const handler = createHandler(makeAdapter());
+			const res = await handler(new Request("http://localhost/api/cms"));
+			expect(res.status).toBe(404);
+		});
+
 		it("GET /api/cms/revalidate は 404 を返す（POST のみ有効）", async () => {
 			const handler = createHandler(makeAdapter());
 			const res = await handler(

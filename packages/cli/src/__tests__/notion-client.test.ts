@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const searchMock = vi.fn();
+const retrieveMock = vi.fn();
 // biome-ignore lint/suspicious/noExplicitAny: コンストラクタ引数を捕捉するための型アサーション
 let capturedClientOptions:
 	| { auth?: string; fetch?: (...args: any[]) => any }
@@ -13,7 +14,7 @@ vi.mock("@notionhq/client", () => ({
 			capturedClientOptions = opts;
 		}
 		search = searchMock;
-		dataSources = { retrieve: vi.fn() };
+		dataSources = { retrieve: retrieveMock };
 	},
 }));
 
@@ -80,6 +81,143 @@ describe("createNotionCLIClient.resolveId", () => {
 		const client = createNotionCLIClient("test-token");
 		const id = await client.resolveId("DB 名");
 		expect(id).toBe("ds-1");
+	});
+});
+
+describe("createNotionCLIClient.retrieveDataSource", () => {
+	beforeEach(() => {
+		retrieveMock.mockReset();
+	});
+
+	it("data_source オブジェクトを取得して返す", async () => {
+		const { createNotionCLIClient } = await import("../notion-client.js");
+		retrieveMock.mockResolvedValue(makeDataSource("ds-1", "My DB"));
+
+		const client = createNotionCLIClient("test-token");
+		const result = await client.retrieveDataSource("ds-1");
+		expect(result.id).toBe("ds-1");
+	});
+
+	it("object が data_source でない場合は CMSError をスローする", async () => {
+		const { createNotionCLIClient } = await import("../notion-client.js");
+		retrieveMock.mockResolvedValue({ object: "page", id: "p1" });
+
+		const client = createNotionCLIClient("test-token");
+		await expect(client.retrieveDataSource("p1")).rejects.toThrow();
+	});
+});
+
+describe("createNotionCLIClient: リトライロジック", () => {
+	beforeEach(() => {
+		searchMock.mockReset();
+		retrieveMock.mockReset();
+		vi.useFakeTimers();
+	});
+
+	afterEach(() => {
+		vi.useRealTimers();
+	});
+
+	it("429 でリトライし MAX_RETRIES 回後にエラーをスローする", async () => {
+		const { createNotionCLIClient } = await import("../notion-client.js");
+		searchMock.mockRejectedValue(
+			Object.assign(new Error("rate limited"), { status: 429 }),
+		);
+
+		const client = createNotionCLIClient("test-token");
+		// rejects ハンドラを先にアタッチしてから timers を進める（unhandled rejection 防止）
+		const promise = client.resolveId("DB");
+		const rejectCheck = expect(promise).rejects.toThrow();
+		await vi.runAllTimersAsync();
+		await rejectCheck;
+		// 1回 + 4回リトライ = 5回
+		expect(searchMock).toHaveBeenCalledTimes(5);
+	});
+
+	it("502 でリトライして成功する", async () => {
+		const { createNotionCLIClient } = await import("../notion-client.js");
+		searchMock
+			.mockRejectedValueOnce(
+				Object.assign(new Error("bad gateway"), { status: 502 }),
+			)
+			.mockResolvedValue({ results: [] });
+
+		const client = createNotionCLIClient("test-token");
+		const promise = client.resolveId("DB");
+		await vi.runAllTimersAsync();
+		expect(await promise).toBeNull();
+		expect(searchMock).toHaveBeenCalledTimes(2);
+	});
+
+	it("fetch failed ネットワークエラーでリトライする", async () => {
+		const { createNotionCLIClient } = await import("../notion-client.js");
+		searchMock
+			.mockRejectedValueOnce(new Error("fetch failed"))
+			.mockResolvedValue({ results: [makeDataSource("id-x", "DB")] });
+
+		const client = createNotionCLIClient("test-token");
+		const promise = client.resolveId("DB");
+		await vi.runAllTimersAsync();
+		expect(await promise).toBe("id-x");
+		expect(searchMock).toHaveBeenCalledTimes(2);
+	});
+
+	it("ECONNRESET コードでリトライする", async () => {
+		const { createNotionCLIClient } = await import("../notion-client.js");
+		searchMock
+			.mockRejectedValueOnce(
+				Object.assign(new Error("connection reset"), { code: "ECONNRESET" }),
+			)
+			.mockResolvedValue({ results: [] });
+
+		const client = createNotionCLIClient("test-token");
+		const promise = client.resolveId("DB");
+		await vi.runAllTimersAsync();
+		expect(await promise).toBeNull();
+		expect(searchMock).toHaveBeenCalledTimes(2);
+	});
+
+	it("cause.code を持つネストエラー（ETIMEDOUT）でリトライする", async () => {
+		const { createNotionCLIClient } = await import("../notion-client.js");
+		searchMock
+			.mockRejectedValueOnce(
+				Object.assign(new Error("outer"), { cause: { code: "ETIMEDOUT" } }),
+			)
+			.mockResolvedValue({ results: [] });
+
+		const client = createNotionCLIClient("test-token");
+		const promise = client.resolveId("DB");
+		await vi.runAllTimersAsync();
+		expect(await promise).toBeNull();
+		expect(searchMock).toHaveBeenCalledTimes(2);
+	});
+
+	it("リトライ不可能なエラー（404）はすぐにスローする", async () => {
+		const { createNotionCLIClient } = await import("../notion-client.js");
+		searchMock.mockRejectedValue(
+			Object.assign(new Error("not found"), { status: 404 }),
+		);
+
+		const client = createNotionCLIClient("test-token");
+		await expect(client.resolveId("DB")).rejects.toThrow();
+		expect(searchMock).toHaveBeenCalledTimes(1);
+	});
+
+	it("retrieveDataSource が 503 でリトライして成功する", async () => {
+		const { createNotionCLIClient } = await import("../notion-client.js");
+		const ds = makeDataSource("ds-2", "Retried DB");
+		retrieveMock
+			.mockRejectedValueOnce(
+				Object.assign(new Error("service unavailable"), { status: 503 }),
+			)
+			.mockResolvedValue(ds);
+
+		const client = createNotionCLIClient("test-token");
+		const promise = client.retrieveDataSource("ds-2");
+		await vi.runAllTimersAsync();
+		const result = await promise;
+		expect(result.id).toBe("ds-2");
+		expect(retrieveMock).toHaveBeenCalledTimes(2);
 	});
 });
 

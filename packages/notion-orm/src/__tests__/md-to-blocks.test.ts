@@ -153,6 +153,12 @@ describe("markdownToBlocks", () => {
 			const code = blocks[0] as { type: "code"; value: string };
 			expect(code.value).toBe("line1\nline2\nline3");
 		});
+
+		it("閉じのないコードブロックでもクラッシュしない", () => {
+			const blocks = markdownToBlocks("```ts\nconst x = 1;");
+			expect(blocks).toHaveLength(1);
+			expect(blocks[0]).toMatchObject({ type: "code" });
+		});
 	});
 
 	describe("インラインパース", () => {
@@ -204,6 +210,35 @@ describe("markdownToBlocks", () => {
 			const blocks = markdownToBlocks("plain text");
 			const para = blocks[0] as { children: { type: string; value: string }[] };
 			expect(para.children.some((n) => n.type === "text")).toBe(true);
+		});
+	});
+
+	describe("インラインパース - エッジケース", () => {
+		it("閉じのない [ は plain text として扱われる", () => {
+			const blocks = markdownToBlocks("text [no close");
+			expect(blocks).toHaveLength(1);
+			const para = blocks[0] as { children: { type: string; value: string }[] };
+			expect(para.children.some((n) => n.type === "text")).toBe(true);
+		});
+
+		it("[ と ] はあるが ( がない場合は plain text として扱われる", () => {
+			const blocks = markdownToBlocks("[text] not link");
+			expect(blocks).toHaveLength(1);
+		});
+
+		it("[ ] ( はあるが ) がない場合は plain text として扱われる", () => {
+			const blocks = markdownToBlocks("[text](no-close");
+			expect(blocks).toHaveLength(1);
+		});
+
+		it("閉じのない ` は plain text として扱われる", () => {
+			const blocks = markdownToBlocks("text ` no close");
+			expect(blocks).toHaveLength(1);
+		});
+
+		it("閉じのない * は plain text として扱われる", () => {
+			const blocks = markdownToBlocks("text * lone star");
+			expect(blocks).toHaveLength(1);
 		});
 	});
 

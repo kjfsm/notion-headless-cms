@@ -160,6 +160,19 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 		expect(savedType).toBe("image/webp");
 	});
 
+	it("Content-Type ヘッダなし・URL 拡張子なしの場合は image/jpeg にフォールバックする", async () => {
+		const cache = makeImageCache();
+		const cacheImage = buildCacheImageFn(cache, "/api/images");
+		vi.mocked(globalThis.fetch).mockResolvedValueOnce(
+			new Response(new ArrayBuffer(4), { status: 200, headers: {} }),
+		);
+
+		await cacheImage("https://notion.so/signed/secure-image-without-extension");
+
+		const [, , savedType] = vi.mocked(cache.set).mock.calls[0];
+		expect(savedType).toBe("image/jpeg");
+	});
+
 	it("キャッシュミス時に logger.debug が「キャッシュミス」と「保存」で呼ばれる", async () => {
 		const debugFn = vi.fn();
 		const cache = makeImageCache();
