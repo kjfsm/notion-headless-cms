@@ -433,9 +433,8 @@ describe("createCMS - collections.hooks コレクション固有フック", () =
 		};
 		const { MemoryDocumentCache } = await import("../cache/memory");
 		const cache = new MemoryDocumentCache();
-		await cache.setItem("posts:my-post", {
+		await cache.setItemMeta("posts:my-post", {
 			item,
-			html: "<p>test</p>",
 			notionUpdatedAt: item.updatedAt,
 			cachedAt: Date.now(),
 		});
@@ -476,9 +475,8 @@ describe("createCMS - collections.hooks コレクション固有フック", () =
 		};
 		const { MemoryDocumentCache } = await import("../cache/memory");
 		const cache = new MemoryDocumentCache();
-		await cache.setItem("posts:my-post", {
+		await cache.setItemMeta("posts:my-post", {
 			item,
-			html: "<p>test</p>",
 			notionUpdatedAt: item.updatedAt,
 			cachedAt: Date.now(),
 		});
@@ -502,15 +500,15 @@ describe("createCMS - collections.hooks コレクション固有フック", () =
 	});
 });
 
-describe("createCMS - beforeCache フック", () => {
-	it("getItem でレンダリング後に beforeCache フックが呼ばれる", async () => {
+describe("createCMS - beforeCacheMeta / beforeCacheContent フック", () => {
+	it("getItem でメタ保存時に beforeCacheMeta が呼ばれる", async () => {
 		const item: BaseContentItem = {
 			id: "1",
 			slug: "test-post",
 			updatedAt: "2024-01-01T00:00:00Z",
 		};
 
-		const beforeCacheMock = vi.fn().mockImplementation((cached) => cached);
+		const beforeCacheMeta = vi.fn().mockImplementation((meta) => meta);
 
 		const source = makeMockSource({
 			async list() {
@@ -522,15 +520,43 @@ describe("createCMS - beforeCache フック", () => {
 			dataSources: { posts: source },
 			preset: "disabled",
 			renderer: mockRenderer,
-			collections: {
-				posts: { slug: "slug" },
-			},
-			hooks: { beforeCache: beforeCacheMock },
+			collections: { posts: { slug: "slug" } },
+			hooks: { beforeCacheMeta },
 		});
 
 		await cms.posts.getItem("test-post");
 
-		expect(beforeCacheMock).toHaveBeenCalledOnce();
+		expect(beforeCacheMeta).toHaveBeenCalledOnce();
+	});
+
+	it("content アクセス時に beforeCacheContent が呼ばれる", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "test-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+
+		const beforeCacheContent = vi.fn().mockImplementation((content) => content);
+
+		const source = makeMockSource({
+			async list() {
+				return [item];
+			},
+		});
+
+		const cms = createCMS({
+			dataSources: { posts: source },
+			preset: "disabled",
+			renderer: mockRenderer,
+			collections: { posts: { slug: "slug" } },
+			hooks: { beforeCacheContent },
+		});
+
+		const result = await cms.posts.getItem("test-post");
+		// 本文をアクセスして初めて呼ばれる
+		expect(beforeCacheContent).not.toHaveBeenCalled();
+		await result?.content.html();
+		expect(beforeCacheContent).toHaveBeenCalledOnce();
 	});
 });
 
@@ -580,8 +606,10 @@ describe("createCMS - $revalidate", () => {
 			name: "no-invalidate",
 			getList: vi.fn().mockResolvedValue(null),
 			setList: vi.fn().mockResolvedValue(undefined),
-			getItem: vi.fn().mockResolvedValue(null),
-			setItem: vi.fn().mockResolvedValue(undefined),
+			getItemMeta: vi.fn().mockResolvedValue(null),
+			setItemMeta: vi.fn().mockResolvedValue(undefined),
+			getItemContent: vi.fn().mockResolvedValue(null),
+			setItemContent: vi.fn().mockResolvedValue(undefined),
 			// invalidate は意図的に未定義
 		};
 		const cms = createCMS({

@@ -90,6 +90,18 @@ function scopeDocumentCache<T extends BaseContentItem>(
 	let listSlot: CachedItemList<T> | null = null;
 	let listInitialized = false;
 
+	const mapInvalidateScope = (scope: InvalidateScope): InvalidateScope => {
+		if (scope === "all") return { collection };
+		if ("slug" in scope) {
+			return {
+				collection: scope.collection,
+				slug: itemKey(scope.slug),
+				kind: scope.kind,
+			};
+		}
+		return scope;
+	};
+
 	return {
 		name: `${base.name}@${collection}`,
 		getList: async () => {
@@ -104,23 +116,19 @@ function scopeDocumentCache<T extends BaseContentItem>(
 			listInitialized = true;
 			return Promise.resolve();
 		},
-		getItem: (slug) => base.getItem(itemKey(slug)),
-		setItem: (slug, data) => base.setItem(itemKey(slug), data),
+		getItemMeta: (slug) => base.getItemMeta(itemKey(slug)),
+		setItemMeta: (slug, data) => base.setItemMeta(itemKey(slug), data),
+		getItemContent: (slug) => base.getItemContent(itemKey(slug)),
+		setItemContent: (slug, data) => base.setItemContent(itemKey(slug), data),
 		async invalidate(scope) {
-			listSlot = null;
-			listInitialized = true; // 無効化後は base を再読みしない
+			const kind = scope === "all" ? "all" : (scope.kind ?? "all");
+			// list はメタ操作の一種として扱う。kind === "content" のときは触らない
+			if (kind === "all" || kind === "meta") {
+				listSlot = null;
+				listInitialized = true; // 無効化後は base を再読みしない
+			}
 			if (!base.invalidate) return;
-			if (scope === "all") {
-				return base.invalidate({ collection });
-			}
-			if ("slug" in scope) {
-				// アイテムは `{collection}:{slug}` で保存されるため正しいキーに変換する
-				return base.invalidate({
-					collection: scope.collection,
-					slug: itemKey(scope.slug),
-				});
-			}
-			return base.invalidate(scope);
+			return base.invalidate(mapInvalidateScope(scope));
 		},
 	};
 }

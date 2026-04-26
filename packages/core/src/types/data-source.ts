@@ -23,12 +23,21 @@ export interface PropertyDef {
 export type PropertyMap = Record<string, PropertyDef>;
 
 /**
+ * 無効化対象の粒度。
+ * - "meta" — メタデータキャッシュのみ失効
+ * - "content" — 本文キャッシュのみ失効（リスト次回読み出しで lazy 再生成）
+ * - "all" — 両方（既定）
+ */
+export type InvalidateKind = "meta" | "content" | "all";
+
+/**
  * キャッシュ無効化のスコープ (DataSource 層で参照する形)。
+ * `kind` を省略した場合は `"all"` 相当として扱う。
  */
 export type InvalidateScope =
 	| "all"
-	| { collection: string }
-	| { collection: string; slug: string };
+	| { collection: string; kind?: InvalidateKind }
+	| { collection: string; slug: string; kind?: InvalidateKind };
 
 /**
  * Webhook 受信時の検証設定。

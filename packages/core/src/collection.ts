@@ -1,14 +1,15 @@
 import { isStale } from "./cache";
-import type { ContentBlock, ContentResult } from "./content/blocks";
+import type { ContentResult } from "./content/blocks";
 import type { RenderContext } from "./rendering";
-import { buildCachedItem } from "./rendering";
+import { buildCachedItemContent, buildCachedItemMeta } from "./rendering";
 import type { RetryConfig } from "./retry";
 import { withRetry } from "./retry";
 import type {
 	AdjacencyOptions,
 	BaseContentItem,
-	CachedItem,
+	CachedItemContent,
 	CachedItemList,
+	CachedItemMeta,
 	CheckForUpdateResult,
 	CheckListForUpdateResult,
 	CMSHooks,
@@ -17,6 +18,7 @@ import type {
 	DocumentCacheAdapter,
 	GetListOptions,
 	GetListResult,
+	ItemContentPayload,
 	ItemWithContent,
 	Logger,
 	SortOption,
@@ -62,13 +64,13 @@ export class CollectionClientImpl<T extends BaseContentItem>
 	// ── 基本取得 ──────────────────────────────────────────────────────────
 
 	async getItem(slug: string): Promise<ItemWithContent<T> | null> {
-		const cached = await this.ctx.docCache.getItem(slug);
-		if (cached) {
+		const cachedMeta = await this.ctx.docCache.getItemMeta(slug);
+		if (cachedMeta) {
 			if (
 				this.ctx.ttlMs !== undefined &&
-				isStale(cached.cachedAt, this.ctx.ttlMs)
+				isStale(cachedMeta.cachedAt, this.ctx.ttlMs)
 			) {
-				// TTL 設定あり + 期限切れ: ブロッキングフェッチ（stale を返さない）
+				// TTL 設定あり + 期限切れ: ブロッキングでメタを最新化
 				this.ctx.logger?.debug?.("キャッシュ期限切れ（TTL）、フェッチ", {
 					operation: "getItem",
 					slug,
@@ -78,12 +80,13 @@ export class CollectionClientImpl<T extends BaseContentItem>
 				this.ctx.hooks.onCacheMiss?.(slug);
 				const item = await this.findRaw(slug);
 				if (!item) return null;
-				const entry = await buildCachedItem(item, this.ctx.render);
-				await this.ctx.docCache.setItem(slug, entry);
-				return this.attachContent(entry.item, entry);
+				const meta = await this.persistMeta(slug, item);
+				// 本文 cache は失効させ、次回 content.* アクセスで lazy 再生成
+				await this.invalidateContent(slug);
+				return this.attachLazyContent(meta);
 			}
-			// TTL 未設定 or 期限内: キャッシュを即時返却し、バックグラウンドで差分チェック
-			const bg = this.checkAndUpdateItemBg(slug, cached);
+			// TTL 未設定 or 期限内: キャッシュを即時返却 + バックグラウンド差分チェック
+			const bg = this.checkAndUpdateItemBg(slug, cachedMeta);
 			if (this.ctx.waitUntil) {
 				this.ctx.waitUntil(bg);
 			}
@@ -92,13 +95,13 @@ export class CollectionClientImpl<T extends BaseContentItem>
 				slug,
 				collection: this.ctx.collection,
 				cacheAdapter: this.ctx.docCache.name,
-				cachedAt: cached.cachedAt,
+				cachedAt: cachedMeta.cachedAt,
 			});
-			this.ctx.hooks.onCacheHit?.(slug, cached);
-			return this.attachContent(cached.item, cached);
+			this.ctx.hooks.onCacheHit?.(slug, cachedMeta);
+			return this.attachLazyContent(cachedMeta);
 		}
 
-		// キャッシュなし: 同期フェッチ
+		// メタ未キャッシュ: 同期フェッチ（保存はバックグラウンド可）
 		this.ctx.logger?.debug?.("キャッシュミス、フェッチ", {
 			operation: "getItem",
 			slug,
@@ -115,16 +118,49 @@ export class CollectionClientImpl<T extends BaseContentItem>
 			});
 			return null;
 		}
+		const meta = await this.persistMeta(slug, item, { background: true });
+		return this.attachLazyContent(meta);
+	}
 
-		const entry = await buildCachedItem(item, this.ctx.render);
-		const save = this.ctx.docCache.setItem(slug, entry);
-		if (this.ctx.waitUntil) {
-			this.ctx.waitUntil(save);
-		} else {
-			await save;
+	async getItemMeta(slug: string): Promise<T | null> {
+		const cachedMeta = await this.ctx.docCache.getItemMeta(slug);
+		if (cachedMeta) {
+			if (
+				this.ctx.ttlMs !== undefined &&
+				isStale(cachedMeta.cachedAt, this.ctx.ttlMs)
+			) {
+				const item = await this.findRaw(slug);
+				if (!item) return null;
+				const meta = await this.persistMeta(slug, item);
+				await this.invalidateContent(slug);
+				return meta.item;
+			}
+			// SWR: キャッシュ即時返却 + バックグラウンド差分チェック
+			const bg = this.checkAndUpdateItemBg(slug, cachedMeta);
+			if (this.ctx.waitUntil) this.ctx.waitUntil(bg);
+			this.ctx.hooks.onCacheHit?.(slug, cachedMeta);
+			return cachedMeta.item;
+		}
+		// キャッシュなし: 同期フェッチして保存
+		this.ctx.hooks.onCacheMiss?.(slug);
+		const item = await this.findRaw(slug);
+		if (!item) return null;
+		const meta = await this.persistMeta(slug, item, { background: true });
+		return meta.item;
+	}
+
+	async getItemContent(slug: string): Promise<ItemContentPayload | null> {
+		const meta = await this.ctx.docCache.getItemMeta(slug);
+		const item = meta?.item ?? (await this.findRaw(slug));
+		if (!item) return null;
+
+		// メタが未保存なら今フェッチした item で永続化（content と整合させる）
+		if (!meta) {
+			await this.persistMeta(slug, item);
 		}
 
-		return this.attachContent(entry.item, entry);
+		const content = await this.loadOrBuildContent(slug, item);
+		return toContentPayload(content);
 	}
 
 	async getList(opts?: GetListOptions<T>): Promise<GetListResult<T>> {
@@ -194,12 +230,40 @@ export class CollectionClientImpl<T extends BaseContentItem>
 		slug: string;
 		since: string;
 	}): Promise<CheckForUpdateResult<T>> {
-		await this.revalidate(slug);
-		const item = await this.getItem(slug);
-		if (!item) return { changed: false };
-		return item.updatedAt !== since
-			? { changed: true, item }
-			: { changed: false };
+		// 軽量パス: メタのみフェッチして比較する。本文 cache は破棄しない。
+		const fresh = await this.findRaw(slug);
+		if (!fresh) return { changed: false };
+
+		const lm = this.ctx.source.getLastModified(fresh);
+		if (lm === since) {
+			this.ctx.logger?.debug?.("checkForUpdate: 差分なし", {
+				operation: "checkForUpdate",
+				slug,
+				collection: this.ctx.collection,
+				since,
+			});
+			return { changed: false };
+		}
+
+		// 差分あり: メタ更新 + 本文 cache 失効 + バックグラウンド再生成
+		const meta = await this.persistMeta(slug, fresh);
+		await this.invalidateContent(slug);
+		this.ctx.hooks.onCacheRevalidated?.(slug, meta);
+		this.ctx.logger?.debug?.("checkForUpdate: 差分を検出", {
+			operation: "checkForUpdate",
+			slug,
+			collection: this.ctx.collection,
+			since,
+			notionUpdatedAt: lm,
+		});
+
+		const bg = this.rebuildContentBg(slug, fresh);
+		if (this.ctx.waitUntil) {
+			this.ctx.waitUntil(bg);
+		}
+		// クライアント側で `mutate(contentKey)` を呼ぶ前提のため、
+		// content の完了を待たずに即時返す
+		return { changed: true, meta: fresh };
 	}
 
 	async checkListForUpdate({
@@ -209,11 +273,16 @@ export class CollectionClientImpl<T extends BaseContentItem>
 		since: string;
 		filter?: GetListOptions<T>;
 	}): Promise<CheckListForUpdateResult<T>> {
-		await this.revalidateAll();
-		const { items, version } = await this.getList(filter);
-		return version !== since
-			? { changed: true, items, version }
-			: { changed: false };
+		const allItems = await this.fetchListRaw();
+		const items = applyGetListOptions(allItems, filter);
+		const version = this.ctx.source.getListVersion(items);
+		if (version === since) return { changed: false };
+		// 差分あり: リストのみ書き換え（個別アイテムの本文 cache は触らない）
+		await this.ctx.docCache.setList({
+			items: allItems,
+			cachedAt: Date.now(),
+		});
+		return { changed: true, items, version };
 	}
 
 	async prefetch(opts?: {
@@ -230,8 +299,9 @@ export class CollectionClientImpl<T extends BaseContentItem>
 			await Promise.all(
 				chunk.map(async (item) => {
 					try {
-						const rendered = await buildCachedItem(item, this.ctx.render);
-						await this.ctx.docCache.setItem(item.slug, rendered);
+						await this.persistMeta(item.slug, item);
+						const content = await buildCachedItemContent(item, this.ctx.render);
+						await this.ctx.docCache.setItemContent(item.slug, content);
 						ok++;
 					} catch (err) {
 						failed++;
@@ -255,35 +325,92 @@ export class CollectionClientImpl<T extends BaseContentItem>
 
 	// ── 内部 ──────────────────────────────────────────────────────────────
 
-	private attachContent(item: T, cached: CachedItem<T>): ItemWithContent<T> {
-		const ctx = this.ctx;
-		let blocksCache: ContentBlock[] | undefined;
-		let htmlCache: string | undefined = cached.html;
-		let markdownCache: string | undefined;
+	private async persistMeta(
+		slug: string,
+		item: T,
+		opts: { background?: boolean } = {},
+	): Promise<CachedItemMeta<T>> {
+		let meta = buildCachedItemMeta(item, this.ctx.source);
+		if (this.ctx.hooks.beforeCacheMeta) {
+			meta = await this.ctx.hooks.beforeCacheMeta(meta);
+		}
+		const save = this.ctx.docCache.setItemMeta(slug, meta);
+		if (opts.background && this.ctx.waitUntil) {
+			this.ctx.waitUntil(save);
+		} else {
+			await save;
+		}
+		return meta;
+	}
 
-		const content: ContentResult = {
-			get blocks(): ContentBlock[] {
-				if (!blocksCache) {
-					// lazy: キャッシュに blocks が保存されていない場合、簡易な single-raw に落とす
-					blocksCache = [
-						{ type: "raw", html: cached.html } satisfies ContentBlock,
-					];
-				}
-				return blocksCache;
-			},
-			async html(): Promise<string> {
-				if (htmlCache !== undefined) return htmlCache;
-				htmlCache = cached.html;
-				return htmlCache;
-			},
-			async markdown(): Promise<string> {
-				if (markdownCache !== undefined) return markdownCache;
-				markdownCache = await ctx.source.loadMarkdown(item);
-				return markdownCache;
-			},
+	private async invalidateContent(slug: string): Promise<void> {
+		if (!this.ctx.docCache.invalidate) return;
+		await this.ctx.docCache.invalidate({
+			collection: this.ctx.collection,
+			slug,
+			kind: "content",
+		});
+	}
+
+	/**
+	 * 本文キャッシュをロードする。キャッシュが無いか、メタとの整合性が取れない場合は
+	 * 再生成して書き戻す。
+	 */
+	private async loadOrBuildContent(
+		slug: string,
+		item: T,
+	): Promise<CachedItemContent> {
+		const expected = this.ctx.source.getLastModified(item);
+		const cached = await this.ctx.docCache.getItemContent(slug);
+		if (cached && cached.notionUpdatedAt === expected) return cached;
+
+		const fresh = await buildCachedItemContent(item, this.ctx.render);
+		await this.ctx.docCache.setItemContent(slug, fresh);
+		this.ctx.hooks.onContentRevalidated?.(slug, fresh);
+		return fresh;
+	}
+
+	/**
+	 * メタは既知（差分検出済み or 直前にフェッチ済み）の状態で本文だけ
+	 * バックグラウンド再生成する。エラーは握りつぶしてログのみ。
+	 */
+	private async rebuildContentBg(slug: string, item: T): Promise<void> {
+		try {
+			const fresh = await buildCachedItemContent(item, this.ctx.render);
+			await this.ctx.docCache.setItemContent(slug, fresh);
+			this.ctx.hooks.onContentRevalidated?.(slug, fresh);
+		} catch (err) {
+			this.ctx.logger?.warn?.("本文のバックグラウンド再生成に失敗", {
+				slug,
+				collection: this.ctx.collection,
+				error: err instanceof Error ? err.message : String(err),
+			});
+		}
+	}
+
+	private attachLazyContent(meta: CachedItemMeta<T>): ItemWithContent<T> {
+		const slug = meta.item.slug;
+		const item = meta.item;
+		// 同一インスタンス内で本文ロードを一度に集約する（複数アクセスでも 1 回の I/O）
+		let payloadPromise: Promise<CachedItemContent> | undefined;
+		const loadPayload = (): Promise<CachedItemContent> => {
+			if (!payloadPromise) {
+				payloadPromise = this.loadOrBuildContent(slug, item);
+			}
+			return payloadPromise;
 		};
 
-		if (cached.blocks) blocksCache = cached.blocks;
+		const content: ContentResult = {
+			async blocks() {
+				return (await loadPayload()).blocks;
+			},
+			async html() {
+				return (await loadPayload()).html;
+			},
+			async markdown() {
+				return (await loadPayload()).markdown;
+			},
+		};
 
 		return Object.assign(Object.create(null) as object, item, {
 			content,
@@ -297,7 +424,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
 				this.ctx.ttlMs !== undefined &&
 				isStale(cached.cachedAt, this.ctx.ttlMs)
 			) {
-				// TTL 設定あり + 期限切れ: ブロッキングフェッチ（stale を返さない）
+				// TTL 設定あり + 期限切れ: ブロッキングフェッチ
 				this.ctx.logger?.debug?.("リストキャッシュ期限切れ（TTL）、フェッチ", {
 					operation: "getList",
 					collection: this.ctx.collection,
@@ -308,7 +435,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
 				await this.ctx.docCache.setList({ items, cachedAt: Date.now() });
 				return items;
 			}
-			// TTL 未設定 or 期限内: キャッシュを即時返却し、バックグラウンドで差分チェック
+			// TTL 未設定 or 期限内: キャッシュを即時返却 + バックグラウンド差分チェック
 			const bg = this.checkAndUpdateListBg(cached);
 			if (this.ctx.waitUntil) {
 				this.ctx.waitUntil(bg);
@@ -342,25 +469,27 @@ export class CollectionClientImpl<T extends BaseContentItem>
 
 	private async checkAndUpdateItemBg(
 		slug: string,
-		cached: CachedItem<T>,
+		cached: CachedItemMeta<T>,
 	): Promise<void> {
 		try {
 			const item = await this.findRaw(slug);
 			if (!item) return;
-			if (this.ctx.source.getLastModified(item) !== cached.notionUpdatedAt) {
-				// 更新あり: 再レンダリングしてキャッシュを差し替える
-				const entry = await buildCachedItem(item, this.ctx.render);
-				await this.ctx.docCache.setItem(slug, entry);
-				this.ctx.logger?.debug?.("SWR: 差分を検出、キャッシュを差し替え", {
+			const lm = this.ctx.source.getLastModified(item);
+			if (lm !== cached.notionUpdatedAt) {
+				const meta = await this.persistMeta(slug, item);
+				await this.invalidateContent(slug);
+				this.ctx.logger?.debug?.("SWR: 差分を検出、メタを差し替え", {
 					operation: "getItem:bg",
 					slug,
 					collection: this.ctx.collection,
 					notionUpdatedAt: cached.notionUpdatedAt,
 				});
-				this.ctx.hooks.onCacheRevalidated?.(slug, entry);
+				this.ctx.hooks.onCacheRevalidated?.(slug, meta);
+				// 本文も即時再生成（クライアントは `mutate(contentKey)` で取得可能になる）
+				await this.rebuildContentBg(slug, item);
 			} else if (this.ctx.ttlMs !== undefined) {
 				// 変更なし + TTL あり: cachedAt をリセットして次回の期限切れを先送りする
-				await this.ctx.docCache.setItem(slug, {
+				await this.ctx.docCache.setItemMeta(slug, {
 					...cached,
 					cachedAt: Date.now(),
 				});
@@ -389,7 +518,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
 				this.ctx.source.getListVersion(items) !==
 				this.ctx.source.getListVersion(cached.items)
 			) {
-				// 更新あり: リストを差し替える
+				// 更新あり: リストを差し替える（個別アイテムの本文 cache は触らない）
 				const listEntry = { items, cachedAt: Date.now() };
 				await this.ctx.docCache.setList(listEntry);
 				this.ctx.logger?.debug?.(
@@ -478,6 +607,15 @@ export class CollectionClientImpl<T extends BaseContentItem>
 		}
 		return item;
 	}
+}
+
+function toContentPayload(c: CachedItemContent): ItemContentPayload {
+	return {
+		html: c.html,
+		markdown: c.markdown,
+		blocks: c.blocks,
+		notionUpdatedAt: c.notionUpdatedAt,
+	};
 }
 
 function applyGetListOptions<T extends BaseContentItem>(

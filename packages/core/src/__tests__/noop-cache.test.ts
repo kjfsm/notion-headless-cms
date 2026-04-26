@@ -1,19 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { noopDocumentCache, noopImageCache } from "../cache/noop";
 
-const makeCachedItem = (slug: string) => ({
-	html: `<p>${slug}</p>`,
-	item: {
-		id: `id-${slug}`,
-		slug,
-		status: "公開",
-		publishedAt: "2024-01-01",
-		updatedAt: "2024-01-01",
-	},
-	notionUpdatedAt: "2024-01-01T00:00:00.000Z",
-	cachedAt: Date.now(),
-});
-
 describe("noopDocumentCache", () => {
 	const cache = noopDocumentCache();
 
@@ -27,9 +14,24 @@ describe("noopDocumentCache", () => {
 		).resolves.toBeUndefined();
 	});
 
-	it("getItem は常に null を返す（setItem 後も）", async () => {
-		await cache.setItem("slug", makeCachedItem("slug"));
-		expect(await cache.getItem("slug")).toBeNull();
+	it("getItemMeta は常に null を返す（setItemMeta 後も）", async () => {
+		await cache.setItemMeta("slug", {
+			item: { id: "id", slug: "slug", updatedAt: "2024-01-01" },
+			notionUpdatedAt: "2024-01-01",
+			cachedAt: 0,
+		});
+		expect(await cache.getItemMeta("slug")).toBeNull();
+	});
+
+	it("getItemContent は常に null を返す（setItemContent 後も）", async () => {
+		await cache.setItemContent("slug", {
+			html: "<p>x</p>",
+			markdown: "x",
+			blocks: [],
+			notionUpdatedAt: "2024-01-01",
+			cachedAt: 0,
+		});
+		expect(await cache.getItemContent("slug")).toBeNull();
 	});
 
 	it("invalidate は何もせず解決する", async () => {

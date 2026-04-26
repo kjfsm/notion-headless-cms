@@ -266,11 +266,11 @@ describe("CollectionClient — revalidate / revalidateAll", () => {
 		});
 
 		await cms.posts.getItem("my-post");
-		const before = await cache.getItem("posts:my-post");
+		const before = await cache.getItemMeta("posts:my-post");
 		expect(before).not.toBeNull();
 
 		await cms.posts.revalidate("my-post");
-		const after = await cache.getItem("posts:my-post");
+		const after = await cache.getItemMeta("posts:my-post");
 		expect(after).toBeNull();
 	});
 });
@@ -323,8 +323,8 @@ describe("CollectionClient — checkForUpdate", () => {
 		});
 		expect(result.changed).toBe(true);
 		if (result.changed) {
-			expect(result.item.slug).toBe("my-post");
-			expect(result.item.updatedAt).toBe("2024-01-02T00:00:00Z");
+			expect(result.meta.slug).toBe("my-post");
+			expect(result.meta.updatedAt).toBe("2024-01-02T00:00:00Z");
 		}
 	});
 
@@ -806,18 +806,22 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
 });
 
 describe("CollectionClient — content アクセサ", () => {
-	it("content.blocks は ContentBlock 配列を返し、2回目はキャッシュから返す", async () => {
+	it("content.blocks() は ContentBlock 配列を返し、2回目は同インスタンスからキャッシュ返却", async () => {
 		const item: BaseContentItem = {
 			id: "1",
 			slug: "post-blocks",
 			updatedAt: "2024-01-01T00:00:00Z",
 		};
+		const loadBlocks = vi
+			.fn()
+			.mockResolvedValue([{ type: "raw" as const, html: "<p>x</p>" }]);
 		const cms = createCMS({
 			dataSources: {
 				posts: makeMockSource({
 					async list() {
 						return [item];
 					},
+					loadBlocks,
 				}),
 			},
 			preset: "disabled",
@@ -825,15 +829,14 @@ describe("CollectionClient — content アクセサ", () => {
 		});
 		const result = await cms.posts.getItem("post-blocks");
 		expect(result).not.toBeNull();
-		// 1回目: raw html ブロックとして返る
-		const blocks1 = result!.content.blocks;
-		expect(Array.isArray(blocks1)).toBe(true);
-		// 2回目: blocksCache からキャッシュされた値が返る
-		const blocks2 = result!.content.blocks;
-		expect(blocks2).toBe(blocks1);
+		const blocks1 = await result!.content.blocks();
+		const blocks2 = await result!.content.blocks();
+		// 同一インスタンス内では payload がメモ化されるため呼び出しは 1 回
+		expect(loadBlocks).toHaveBeenCalledTimes(1);
+		expect(blocks1).toBe(blocks2);
 	});
 
-	it("content.html() は cached.html を返す", async () => {
+	it("content.html() は HTML を返し、再呼び出しでも追加 I/O は発生しない", async () => {
 		const item: BaseContentItem = {
 			id: "1",
 			slug: "post-html",

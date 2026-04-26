@@ -1,7 +1,8 @@
 import type {
 	BaseContentItem,
-	CachedItem,
+	CachedItemContent,
 	CachedItemList,
+	CachedItemMeta,
 	DocumentCacheAdapter,
 	InvalidateScope,
 } from "@notion-headless-cms/core";
@@ -21,16 +22,21 @@ function collectionTag(collection: string): string {
 	return `nhc:col:${collection}`;
 }
 
-/** スラッグ単位の規約タグ。 */
-function slugTag(collection: string, slug: string): string {
-	return `nhc:col:${collection}:slug:${slug}`;
+/** スラッグ単位（メタ）の規約タグ。 */
+function slugMetaTag(collection: string, slug: string): string {
+	return `nhc:col:${collection}:slug:${slug}:meta`;
+}
+
+/** スラッグ単位（本文）の規約タグ。 */
+function slugContentTag(collection: string, slug: string): string {
+	return `nhc:col:${collection}:slug:${slug}:content`;
 }
 
 /**
  * Next.js App Router の unstable_cache / revalidateTag を利用した DocumentCacheAdapter。
- * setList / setItem は no-op（Next.js がキャッシュを管理するため）。
- * invalidate は規約タグ (`nhc:col:<name>` / `nhc:col:<name>:slug:<slug>`) と
- * ユーザー指定タグを revalidateTag で失効させる。
+ *
+ * setList / setItemMeta / setItemContent は no-op（Next.js がキャッシュ層を管理する）。
+ * invalidate は規約タグを kind 別 (`:meta` / `:content`) に revalidateTag する。
  */
 class NextDocumentCache<T extends BaseContentItem = BaseContentItem>
 	implements DocumentCacheAdapter<T>
@@ -49,17 +55,22 @@ class NextDocumentCache<T extends BaseContentItem = BaseContentItem>
 		return null;
 	}
 
-	async setList(_data: CachedItemList<T>): Promise<void> {
-		// Next.js のキャッシュ層が管理するため no-op
-	}
+	async setList(_data: CachedItemList<T>): Promise<void> {}
 
-	async getItem(_slug: string): Promise<CachedItem<T> | null> {
+	async getItemMeta(_slug: string): Promise<CachedItemMeta<T> | null> {
 		return null;
 	}
 
-	async setItem(_slug: string, _data: CachedItem<T>): Promise<void> {
-		// Next.js のキャッシュ層が管理するため no-op
+	async setItemMeta(_slug: string, _data: CachedItemMeta<T>): Promise<void> {}
+
+	async getItemContent(_slug: string): Promise<CachedItemContent | null> {
+		return null;
 	}
+
+	async setItemContent(
+		_slug: string,
+		_data: CachedItemContent,
+	): Promise<void> {}
 
 	async invalidate(scope: InvalidateScope): Promise<void> {
 		// next/cache は動的インポートで参照（ビルド時の型エラー回避）
@@ -74,10 +85,20 @@ class NextDocumentCache<T extends BaseContentItem = BaseContentItem>
 			return;
 		}
 
-		nc.revalidateTag(collectionTag(scope.collection));
+		const kind = scope.kind ?? "all";
+
 		if ("slug" in scope) {
-			nc.revalidateTag(slugTag(scope.collection, scope.slug));
+			if (kind === "all" || kind === "meta") {
+				nc.revalidateTag(slugMetaTag(scope.collection, scope.slug));
+			}
+			if (kind === "all" || kind === "content") {
+				nc.revalidateTag(slugContentTag(scope.collection, scope.slug));
+			}
+			return;
 		}
+
+		// collection スコープは粒度を分けても tag を持たないので、kind に関わらず collection tag を一発で revalidate する
+		nc.revalidateTag(collectionTag(scope.collection));
 	}
 }
 
