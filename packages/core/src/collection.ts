@@ -9,11 +9,14 @@ import type {
 	BaseContentItem,
 	CachedItem,
 	CachedItemList,
+	CheckForUpdateResult,
+	CheckListForUpdateResult,
 	CMSHooks,
 	CollectionClient,
 	DataSource,
 	DocumentCacheAdapter,
 	GetListOptions,
+	GetListResult,
 	ItemWithContent,
 	Logger,
 	SortOption,
@@ -124,9 +127,11 @@ export class CollectionClientImpl<T extends BaseContentItem>
 		return this.attachContent(entry.item, entry);
 	}
 
-	async getList(opts?: GetListOptions<T>): Promise<T[]> {
-		const items = await this.fetchList();
-		return applyGetListOptions(items, opts);
+	async getList(opts?: GetListOptions<T>): Promise<GetListResult<T>> {
+		const allItems = await this.fetchList();
+		const items = applyGetListOptions(allItems, opts);
+		const version = this.ctx.source.getListVersion(items);
+		return { items, version };
 	}
 
 	// ── SSG / ナビゲーション ─────────────────────────────────────────────
@@ -158,22 +163,57 @@ export class CollectionClientImpl<T extends BaseContentItem>
 
 	// ── キャッシュ ────────────────────────────────────────────────────────
 
-	async revalidate(scope?: "all" | { slug: string }): Promise<void> {
-		this.ctx.logger?.debug?.("キャッシュを無効化", {
+	async revalidate(slug: string): Promise<void> {
+		this.ctx.logger?.debug?.("アイテムキャッシュを無効化", {
 			operation: "revalidate",
 			collection: this.ctx.collection,
 			cacheAdapter: this.ctx.docCache.name,
-			slug: typeof scope === "object" ? scope.slug : undefined,
+			slug,
 		});
 		if (!this.ctx.docCache.invalidate) return;
-		if (scope === undefined || scope === "all") {
-			await this.ctx.docCache.invalidate({ collection: this.ctx.collection });
-		} else {
-			await this.ctx.docCache.invalidate({
-				collection: this.ctx.collection,
-				slug: scope.slug,
-			});
-		}
+		await this.ctx.docCache.invalidate({
+			collection: this.ctx.collection,
+			slug,
+		});
+	}
+
+	async revalidateAll(): Promise<void> {
+		this.ctx.logger?.debug?.("コレクション全体のキャッシュを無効化", {
+			operation: "revalidateAll",
+			collection: this.ctx.collection,
+			cacheAdapter: this.ctx.docCache.name,
+		});
+		if (!this.ctx.docCache.invalidate) return;
+		await this.ctx.docCache.invalidate({ collection: this.ctx.collection });
+	}
+
+	async checkForUpdate({
+		slug,
+		since,
+	}: {
+		slug: string;
+		since: string;
+	}): Promise<CheckForUpdateResult<T>> {
+		await this.revalidate(slug);
+		const item = await this.getItem(slug);
+		if (!item) return { changed: false };
+		return item.updatedAt !== since
+			? { changed: true, item }
+			: { changed: false };
+	}
+
+	async checkListForUpdate({
+		since,
+		filter,
+	}: {
+		since: string;
+		filter?: GetListOptions<T>;
+	}): Promise<CheckListForUpdateResult<T>> {
+		await this.revalidateAll();
+		const { items, version } = await this.getList(filter);
+		return version !== since
+			? { changed: true, items, version }
+			: { changed: false };
 	}
 
 	async prefetch(opts?: {

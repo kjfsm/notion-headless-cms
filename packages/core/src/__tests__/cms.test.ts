@@ -153,7 +153,7 @@ describe("createCMS - Feature 2: collections.publishedStatuses オーバーラ�
 			},
 		});
 
-		const items = await cms.posts.getList();
+		const { items } = await cms.posts.getList();
 		expect(items).toHaveLength(1);
 		expect(items[0].slug).toBe("published-post");
 		expect(listMock).toHaveBeenCalledWith(
@@ -172,7 +172,7 @@ describe("createCMS - Feature 2: collections.publishedStatuses オーバーラ�
 		});
 
 		await cms.posts.getList();
-		// publishedStatuses なしで list() が呼ばれる
+		// publishedStatuses なし（空配列のため undefined）で list() が呼ばれる
 		expect(listMock).toHaveBeenCalledWith(
 			expect.objectContaining({ publishedStatuses: undefined }),
 		);
@@ -302,12 +302,12 @@ describe("createCMS - scopeDocumentCache リストスコープ分離", () => {
 			preset: "disabled",
 		});
 
-		const posts = await cms.posts.getList();
-		const pages = await cms.pages.getList();
+		const { items: posts } = await cms.posts.getList();
+		const { items: pages } = await cms.pages.getList();
 
 		// 2 回目はキャッシュから返る（list は 1 度しか呼ばれない）
-		const postsCached = await cms.posts.getList();
-		const pagesCached = await cms.pages.getList();
+		const { items: postsCached } = await cms.posts.getList();
+		const { items: pagesCached } = await cms.pages.getList();
 
 		expect(posts).toHaveLength(1);
 		expect(posts[0].slug).toBe("post-one");
@@ -342,12 +342,12 @@ describe("createCMS - $revalidate", () => {
 			preset: "disabled",
 		});
 
-		const first = await cms.posts.getList();
+		const { items: first } = await cms.posts.getList();
 		expect(first[0].slug).toBe("post-stale");
 
 		await cms.$revalidate();
 
-		const second = await cms.posts.getList();
+		const { items: second } = await cms.posts.getList();
 		// $revalidate 後はキャッシュがクリアされ、新しいデータが返される
 		expect(second[0].slug).toBe("post-fresh");
 		expect(listMock).toHaveBeenCalledTimes(2);

@@ -5,8 +5,11 @@ export type {
 } from "./cache";
 export type {
 	AdjacencyOptions,
+	CheckForUpdateResult,
+	CheckListForUpdateResult,
 	CollectionClient,
 	GetListOptions,
+	GetListResult,
 	ItemWithContent,
 	SortOption,
 } from "./collection";
