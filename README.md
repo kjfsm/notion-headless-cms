@@ -1,6 +1,20 @@
 # notion-headless-cms
 
+[![CI](https://github.com/kjfsm/notion-headless-cms/actions/workflows/ci.yml/badge.svg)](https://github.com/kjfsm/notion-headless-cms/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/kjfsm/notion-headless-cms/actions/workflows/codeql.yml/badge.svg)](https://github.com/kjfsm/notion-headless-cms/security/code-scanning)
 [![codecov](https://codecov.io/gh/kjfsm/notion-headless-cms/graph/badge.svg?token=H5R9JTFXU1)](https://codecov.io/gh/kjfsm/notion-headless-cms)
+[![Socket Badge](https://socket.dev/api/badge/npm/package/@notion-headless-cms/core)](https://socket.dev/npm/package/@notion-headless-cms/core)
+[![Socket Badge](https://socket.dev/api/badge/npm/package/@notion-headless-cms/cli)](https://socket.dev/npm/package/@notion-headless-cms/cli)
+[![Bundle size](https://img.shields.io/bundlephobia/minzip/@notion-headless-cms/core?label=core%20minzip)](https://bundlephobia.com/package/@notion-headless-cms/core)
+
+[![npm:core](https://img.shields.io/npm/v/@notion-headless-cms/core?label=core)](https://www.npmjs.com/package/@notion-headless-cms/core)
+[![npm:cli](https://img.shields.io/npm/v/@notion-headless-cms/cli?label=cli)](https://www.npmjs.com/package/@notion-headless-cms/cli)
+[![npm:notion-orm](https://img.shields.io/npm/v/@notion-headless-cms/notion-orm?label=notion-orm)](https://www.npmjs.com/package/@notion-headless-cms/notion-orm)
+[![npm:renderer](https://img.shields.io/npm/v/@notion-headless-cms/renderer?label=renderer)](https://www.npmjs.com/package/@notion-headless-cms/renderer)
+[![npm:cache-r2](https://img.shields.io/npm/v/@notion-headless-cms/cache-r2?label=cache-r2)](https://www.npmjs.com/package/@notion-headless-cms/cache-r2)
+[![npm:cache-kv](https://img.shields.io/npm/v/@notion-headless-cms/cache-kv?label=cache-kv)](https://www.npmjs.com/package/@notion-headless-cms/cache-kv)
+[![npm:cache-next](https://img.shields.io/npm/v/@notion-headless-cms/cache-next?label=cache-next)](https://www.npmjs.com/package/@notion-headless-cms/cache-next)
+[![npm:adapter-next](https://img.shields.io/npm/v/@notion-headless-cms/adapter-next?label=adapter-next)](https://www.npmjs.com/package/@notion-headless-cms/adapter-next)
 
 Notion をヘッドレス CMS として利用するための TypeScript ライブラリ群。
 Cloudflare Workers + R2 / KV を中心としつつ、Node.js / Next.js / Astro / Hono / SvelteKit など幅広いランタイムで動作する。pnpm モノレポで管理されている。
