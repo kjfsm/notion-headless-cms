@@ -114,6 +114,20 @@ describe("mapItemFromPropertyMap", () => {
 		expect(result.tags).toEqual(["A", "B"]);
 	});
 
+	it("title 型マッピングで実際のプロパティ型が異なる場合は null を返す", () => {
+		const page = makePage({
+			Name: { type: "rich_text", rich_text: [{ plain_text: "not title" }] },
+		});
+		const properties: PropertyMap = {
+			name: { type: "title", notion: "Name" },
+		};
+		const result = mapItemFromPropertyMap(
+			page as never,
+			properties,
+		) as unknown as Record<string, unknown>;
+		expect(result.name).toBeNull();
+	});
+
 	it("multiSelect 型マッピングで実際のプロパティ型が異なる場合は空配列を返す", () => {
 		const page = makePage({
 			Name: { type: "title", title: [] },
