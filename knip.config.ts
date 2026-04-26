@@ -14,6 +14,11 @@ export default {
 			entry: ["src/index.ts", "src/cli.ts"],
 			project: ["src/**/*.ts"],
 		},
+		"packages/notion-embed": {
+			// package.json の exports サブパスに対応する 3 エントリーポイント
+			entry: ["src/index.ts", "src/providers/index.ts", "src/rehype/index.ts"],
+			project: ["src/**/*.ts"],
+		},
 		"packages/*": {
 			entry: ["src/index.ts"],
 			project: ["src/**/*.ts"],

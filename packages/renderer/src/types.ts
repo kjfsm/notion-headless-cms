@@ -30,4 +30,11 @@ export interface RendererOptions {
 	rehypePlugins?: PluggableList;
 	/** デフォルトのパイプラインを置き換えるカスタムレンダラー。 */
 	render?: RendererFn;
+	/**
+	 * Markdown 内の生 HTML をそのまま rehype ツリーに通す。
+	 * true のとき remark-rehype を allowDangerousHtml: true で呼ぶ。
+	 * notionEmbed が返す HTML を通したい場合に使う。
+	 * デフォルト: false (セキュアな既定動作を維持)
+	 */
+	allowDangerousHtml?: boolean;
 }
