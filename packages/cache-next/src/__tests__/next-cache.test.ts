@@ -29,9 +29,14 @@ describe("nextCache", () => {
 		expect(await cache.getList()).toBeNull();
 	});
 
-	it("getItem は null を返す", async () => {
+	it("getItemMeta は null を返す", async () => {
 		const cache = nextCache();
-		expect(await cache.getItem("any")).toBeNull();
+		expect(await cache.getItemMeta("any")).toBeNull();
+	});
+
+	it("getItemContent は null を返す", async () => {
+		const cache = nextCache();
+		expect(await cache.getItemContent("any")).toBeNull();
 	});
 
 	it("setList は何もしない", async () => {
@@ -41,12 +46,24 @@ describe("nextCache", () => {
 		).resolves.toBeUndefined();
 	});
 
-	it("setItem は何もしない", async () => {
+	it("setItemMeta は何もしない", async () => {
 		const cache = nextCache();
 		await expect(
-			cache.setItem("slug", {
-				html: "",
+			cache.setItemMeta("slug", {
 				item: makeItem("slug"),
+				notionUpdatedAt: "",
+				cachedAt: 0,
+			}),
+		).resolves.toBeUndefined();
+	});
+
+	it("setItemContent は何もしない", async () => {
+		const cache = nextCache();
+		await expect(
+			cache.setItemContent("slug", {
+				html: "",
+				markdown: "",
+				blocks: [],
 				notionUpdatedAt: "",
 				cachedAt: 0,
 			}),
@@ -67,11 +84,45 @@ describe("nextCache", () => {
 			expect(revalidateTag).toHaveBeenCalledWith("nhc:col:posts");
 		});
 
-		it("{ collection, slug } でコレクションと slug の規約タグを両方 revalidateTag する", async () => {
+		it("{ collection, slug } でメタ・本文タグを両方 revalidateTag する", async () => {
 			const cache = nextCache();
 			await cache.invalidate?.({ collection: "posts", slug: "my-post" });
-			expect(revalidateTag).toHaveBeenCalledWith("nhc:col:posts");
-			expect(revalidateTag).toHaveBeenCalledWith("nhc:col:posts:slug:my-post");
+			expect(revalidateTag).toHaveBeenCalledWith(
+				"nhc:col:posts:slug:my-post:meta",
+			);
+			expect(revalidateTag).toHaveBeenCalledWith(
+				"nhc:col:posts:slug:my-post:content",
+			);
+		});
+
+		it("{ collection, slug, kind: 'content' } で本文タグのみ revalidateTag する", async () => {
+			const cache = nextCache();
+			await cache.invalidate?.({
+				collection: "posts",
+				slug: "my-post",
+				kind: "content",
+			});
+			expect(revalidateTag).toHaveBeenCalledWith(
+				"nhc:col:posts:slug:my-post:content",
+			);
+			expect(revalidateTag).not.toHaveBeenCalledWith(
+				"nhc:col:posts:slug:my-post:meta",
+			);
+		});
+
+		it("{ collection, slug, kind: 'meta' } でメタタグのみ revalidateTag する", async () => {
+			const cache = nextCache();
+			await cache.invalidate?.({
+				collection: "posts",
+				slug: "my-post",
+				kind: "meta",
+			});
+			expect(revalidateTag).toHaveBeenCalledWith(
+				"nhc:col:posts:slug:my-post:meta",
+			);
+			expect(revalidateTag).not.toHaveBeenCalledWith(
+				"nhc:col:posts:slug:my-post:content",
+			);
 		});
 	});
 });

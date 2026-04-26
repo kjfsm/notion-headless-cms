@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { mergeHooks, mergeLoggers } from "../hooks";
-import type { BaseContentItem, CachedItem } from "../types/content";
+import type {
+	BaseContentItem,
+	CachedItemContent,
+	CachedItemMeta,
+} from "../types/index";
 import type { CMSPlugin } from "../types/plugin";
 
 const makeItem = (slug: string): BaseContentItem => ({
@@ -11,9 +15,16 @@ const makeItem = (slug: string): BaseContentItem => ({
 	updatedAt: "2024-01-01T00:00:00.000Z",
 });
 
-const makeCachedItem = (slug: string): CachedItem => ({
-	html: "<p>test</p>",
+const makeMeta = (slug: string): CachedItemMeta => ({
 	item: makeItem(slug),
+	notionUpdatedAt: "2024-01-01T00:00:00.000Z",
+	cachedAt: Date.now(),
+});
+
+const makeContent = (): CachedItemContent => ({
+	html: "<p>test</p>",
+	markdown: "# test",
+	blocks: [],
 	notionUpdatedAt: "2024-01-01T00:00:00.000Z",
 	cachedAt: Date.now(),
 });
@@ -24,27 +35,60 @@ describe("mergeHooks", () => {
 		expect(merged).toEqual({});
 	});
 
-	it("beforeCache はパイプラインとして連鎖する", async () => {
+	it("beforeCacheMeta はパイプラインとして連鎖する", async () => {
 		const order: number[] = [];
 		const p1: CMSPlugin = {
 			name: "p1",
 			hooks: {
-				beforeCache: async (item) => {
+				beforeCacheMeta: async (meta) => {
 					order.push(1);
-					return { ...item, html: `${item.html}-p1` };
+					return {
+						...meta,
+						notionUpdatedAt: `${meta.notionUpdatedAt}-p1`,
+					};
 				},
 			},
 		};
 		const merged = mergeHooks([p1], {
-			beforeCache: async (item) => {
+			beforeCacheMeta: async (meta) => {
 				order.push(2);
-				return { ...item, html: `${item.html}-direct` };
+				return {
+					...meta,
+					notionUpdatedAt: `${meta.notionUpdatedAt}-direct`,
+				};
 			},
 		});
 
-		const result = await merged.beforeCache?.(makeCachedItem("test"));
-		expect(result?.html).toBe("<p>test</p>-p1-direct");
+		const result = await merged.beforeCacheMeta?.(makeMeta("test"));
+		expect(result?.notionUpdatedAt).toBe("2024-01-01T00:00:00.000Z-p1-direct");
 		expect(order).toEqual([1, 2]);
+	});
+
+	it("beforeCacheContent はパイプラインとして連鎖する", async () => {
+		const merged = mergeHooks(
+			[
+				{
+					name: "p1",
+					hooks: {
+						beforeCacheContent: async (content) => ({
+							...content,
+							html: `${content.html}-p1`,
+						}),
+					},
+				},
+			],
+			{
+				beforeCacheContent: async (content) => ({
+					...content,
+					html: `${content.html}-direct`,
+				}),
+			},
+		);
+		const result = await merged.beforeCacheContent?.(
+			makeContent(),
+			makeItem("slug"),
+		);
+		expect(result?.html).toBe("<p>test</p>-p1-direct");
 	});
 
 	it("afterRender はパイプラインとして連鎖する", async () => {
@@ -73,7 +117,7 @@ describe("mergeHooks", () => {
 				hooks: { onCacheHit: (slug) => calls.push(`p2:${slug}`) },
 			},
 		]);
-		merged.onCacheHit?.("my-slug", makeCachedItem("my-slug"));
+		merged.onCacheHit?.("my-slug", makeMeta("my-slug"));
 		expect(calls).toEqual(["p1:my-slug", "p2:my-slug"]);
 	});
 
@@ -106,7 +150,7 @@ describe("mergeHooks", () => {
 			logger,
 		);
 		expect(() =>
-			merged.onCacheHit?.("my-slug", makeCachedItem("my-slug")),
+			merged.onCacheHit?.("my-slug", makeMeta("my-slug")),
 		).not.toThrow();
 		expect(calls).toEqual(["my-slug"]);
 		expect(logger.error).toHaveBeenCalled();
@@ -131,10 +175,23 @@ describe("mergeHooks", () => {
 			[{ name: "p1", hooks: { onCacheRevalidated: fn1 } }],
 			{ onCacheRevalidated: fn2 },
 		);
-		const item = makeCachedItem("updated-slug");
-		merged.onCacheRevalidated?.("updated-slug", item);
-		expect(fn1).toHaveBeenCalledWith("updated-slug", item);
-		expect(fn2).toHaveBeenCalledWith("updated-slug", item);
+		const meta = makeMeta("updated-slug");
+		merged.onCacheRevalidated?.("updated-slug", meta);
+		expect(fn1).toHaveBeenCalledWith("updated-slug", meta);
+		expect(fn2).toHaveBeenCalledWith("updated-slug", meta);
+	});
+
+	it("onContentRevalidated が全プラグインに同じ値を渡す", () => {
+		const fn1 = vi.fn();
+		const fn2 = vi.fn();
+		const merged = mergeHooks(
+			[{ name: "p1", hooks: { onContentRevalidated: fn1 } }],
+			{ onContentRevalidated: fn2 },
+		);
+		const content = makeContent();
+		merged.onContentRevalidated?.("updated-slug", content);
+		expect(fn1).toHaveBeenCalledWith("updated-slug", content);
+		expect(fn2).toHaveBeenCalledWith("updated-slug", content);
 	});
 
 	it("onListCacheRevalidated が mergeHooks で全プラグインに同じ値を渡す", () => {
@@ -165,7 +222,6 @@ describe("mergeHooks - エラー処理・エッジケース", () => {
 			undefined,
 			{ error: errorLogger },
 		);
-		// 例外が外に伝播しない
 		expect(() => merged.onCacheMiss?.("slug")).not.toThrow();
 		expect(errorLogger).toHaveBeenCalledWith(
 			"観測フックで例外が発生",
@@ -187,10 +243,8 @@ describe("mergeHooks - エラー処理・エッジケース", () => {
 
 	it("フックが Error 以外 (文字列) を throw した場合も String() で変換してログ出力する", () => {
 		const errorLogger = vi.fn();
-		// biome-ignore lint/complexity/noUselessCatch: テスト用に文字列を throw
 		const badHook = vi.fn().mockImplementation(() => {
-			// eslint-disable-next-line @typescript-eslint/no-throw-literal
-			throw "string-error"; // not an Error instance
+			throw "string-error";
 		});
 		const merged = mergeHooks(
 			[{ name: "bad-plugin", hooks: { onCacheMiss: badHook } }],

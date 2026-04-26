@@ -1,7 +1,8 @@
 import type {
 	BaseContentItem,
-	CachedItem,
+	CachedItemContent,
 	CachedItemList,
+	CachedItemMeta,
 	DocumentCacheAdapter,
 	ImageCacheAdapter,
 	InvalidateScope,
@@ -22,11 +23,19 @@ class NoopDocumentCache<T extends BaseContentItem = BaseContentItem>
 		return Promise.resolve();
 	}
 
-	getItem(_slug: string): Promise<CachedItem<T> | null> {
+	getItemMeta(_slug: string): Promise<CachedItemMeta<T> | null> {
 		return Promise.resolve(null);
 	}
 
-	setItem(_slug: string, _data: CachedItem<T>): Promise<void> {
+	setItemMeta(_slug: string, _data: CachedItemMeta<T>): Promise<void> {
+		return Promise.resolve();
+	}
+
+	getItemContent(_slug: string): Promise<CachedItemContent | null> {
+		return Promise.resolve(null);
+	}
+
+	setItemContent(_slug: string, _data: CachedItemContent): Promise<void> {
 		return Promise.resolve();
 	}
 

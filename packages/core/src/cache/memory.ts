@@ -1,7 +1,8 @@
 import type {
 	BaseContentItem,
-	CachedItem,
+	CachedItemContent,
 	CachedItemList,
+	CachedItemMeta,
 	DocumentCacheAdapter,
 	ImageCacheAdapter,
 	InvalidateScope,
@@ -37,7 +38,8 @@ export class MemoryDocumentCache<T extends BaseContentItem = BaseContentItem>
 {
 	readonly name = "memory-document";
 	private list: CachedItemList<T> | null = null;
-	private items = new Map<string, CachedItem<T>>();
+	private metas = new Map<string, CachedItemMeta<T>>();
+	private contents = new Map<string, CachedItemContent>();
 	private readonly maxItems: number | undefined;
 
 	constructor(options?: MemoryDocumentCacheOptions) {
@@ -53,15 +55,28 @@ export class MemoryDocumentCache<T extends BaseContentItem = BaseContentItem>
 		return Promise.resolve();
 	}
 
-	getItem(slug: string): Promise<CachedItem<T> | null> {
-		const entry = this.items.get(slug);
-		if (entry) touch(this.items, slug);
+	getItemMeta(slug: string): Promise<CachedItemMeta<T> | null> {
+		const entry = this.metas.get(slug);
+		if (entry) touch(this.metas, slug);
 		return Promise.resolve(entry ?? null);
 	}
 
-	setItem(slug: string, data: CachedItem<T>): Promise<void> {
-		if (this.items.has(slug)) this.items.delete(slug);
-		this.items.set(slug, data);
+	setItemMeta(slug: string, data: CachedItemMeta<T>): Promise<void> {
+		if (this.metas.has(slug)) this.metas.delete(slug);
+		this.metas.set(slug, data);
+		this.enforceLimit();
+		return Promise.resolve();
+	}
+
+	getItemContent(slug: string): Promise<CachedItemContent | null> {
+		const entry = this.contents.get(slug);
+		if (entry) touch(this.contents, slug);
+		return Promise.resolve(entry ?? null);
+	}
+
+	setItemContent(slug: string, data: CachedItemContent): Promise<void> {
+		if (this.contents.has(slug)) this.contents.delete(slug);
+		this.contents.set(slug, data);
 		this.enforceLimit();
 		return Promise.resolve();
 	}
@@ -69,20 +84,29 @@ export class MemoryDocumentCache<T extends BaseContentItem = BaseContentItem>
 	async invalidate(scope: InvalidateScope): Promise<void> {
 		if (scope === "all") {
 			this.list = null;
-			this.items.clear();
+			this.metas.clear();
+			this.contents.clear();
 			return;
 		}
-		// list は常に破棄する
-		this.list = null;
+		const kind = scope.kind ?? "all";
+		if (kind === "all" || kind === "meta") {
+			this.list = null;
+		}
 		if ("slug" in scope) {
-			this.items.delete(scope.slug);
+			if (kind === "all" || kind === "meta") this.metas.delete(scope.slug);
+			if (kind === "all" || kind === "content")
+				this.contents.delete(scope.slug);
 		} else {
-			// { collection }: プレフィックスに一致するアイテムをすべて削除する
-			// scopeDocumentCache 経由の場合、キーは `{collection}:{slug}` 形式になる
+			// scopeDocumentCache 経由でキーは `{collection}:{slug}` 形式になる
 			const prefix = `${scope.collection}:`;
-			for (const key of [...this.items.keys()]) {
-				if (key.startsWith(prefix)) {
-					this.items.delete(key);
+			if (kind === "all" || kind === "meta") {
+				for (const key of [...this.metas.keys()]) {
+					if (key.startsWith(prefix)) this.metas.delete(key);
+				}
+			}
+			if (kind === "all" || kind === "content") {
+				for (const key of [...this.contents.keys()]) {
+					if (key.startsWith(prefix)) this.contents.delete(key);
 				}
 			}
 		}
@@ -90,10 +114,15 @@ export class MemoryDocumentCache<T extends BaseContentItem = BaseContentItem>
 
 	private enforceLimit(): void {
 		if (this.maxItems === undefined) return;
-		while (this.items.size > this.maxItems) {
-			const firstKey = this.items.keys().next().value;
+		while (this.metas.size > this.maxItems) {
+			const firstKey = this.metas.keys().next().value;
 			if (firstKey === undefined) break;
-			this.items.delete(firstKey);
+			this.metas.delete(firstKey);
+		}
+		while (this.contents.size > this.maxItems) {
+			const firstKey = this.contents.keys().next().value;
+			if (firstKey === undefined) break;
+			this.contents.delete(firstKey);
 		}
 	}
 }

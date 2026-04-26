@@ -3,7 +3,8 @@ import { CMSError, isCMSError } from "./errors";
 import { buildCacheImageFn } from "./image";
 import type {
 	BaseContentItem,
-	CachedItem,
+	CachedItemContent,
+	CachedItemMeta,
 	CMSHooks,
 	ContentConfig,
 	DataSource,
@@ -12,7 +13,7 @@ import type {
 	RendererFn,
 } from "./types/index";
 
-/** `buildCachedItem` に必要な CMS の依存を束ねたコンテキスト。 */
+/** 本文レンダリングに必要な依存を束ねたコンテキスト。 */
 export interface RenderContext<T extends BaseContentItem> {
 	source: DataSource<T>;
 	rendererFn: RendererFn | undefined;
@@ -25,13 +26,27 @@ export interface RenderContext<T extends BaseContentItem> {
 }
 
 /**
- * コンテンツアイテムをソースから Markdown ロード → blocks 生成 → HTML レンダリング
- * → フック適用まで実行し、キャッシュ保存用の `CachedItem` を返す。
+ * メタデータキャッシュエントリを生成する。Notion API も renderer も呼ばない軽量関数。
  */
-export async function buildCachedItem<T extends BaseContentItem>(
+export function buildCachedItemMeta<T extends BaseContentItem>(
+	item: T,
+	source: DataSource<T>,
+): CachedItemMeta<T> {
+	return {
+		item,
+		notionUpdatedAt: source.getLastModified(item),
+		cachedAt: Date.now(),
+	};
+}
+
+/**
+ * アイテム本文を Markdown ロード → blocks 生成 → HTML レンダリング → フック適用まで
+ * 実行し、本文キャッシュ用の `CachedItemContent` を返す。
+ */
+export async function buildCachedItemContent<T extends BaseContentItem>(
 	item: T,
 	ctx: RenderContext<T>,
-): Promise<CachedItem<T>> {
+): Promise<CachedItemContent> {
 	const start = Date.now();
 	ctx.logger?.info?.("コンテンツのレンダリング開始", {
 		slug: item.slug,
@@ -49,7 +64,7 @@ export async function buildCachedItem<T extends BaseContentItem>(
 			message: "Failed to load markdown from source.",
 			cause: err,
 			context: {
-				operation: "buildCachedItem:loadMarkdown",
+				operation: "buildCachedItemContent:loadMarkdown",
 				pageId: item.id,
 				slug: item.slug,
 			},
@@ -87,7 +102,7 @@ export async function buildCachedItem<T extends BaseContentItem>(
 			message: "Failed to render markdown.",
 			cause: err,
 			context: {
-				operation: "buildCachedItem:renderMarkdown",
+				operation: "buildCachedItemContent:renderMarkdown",
 				pageId: item.id,
 				slug: item.slug,
 			},
@@ -98,17 +113,16 @@ export async function buildCachedItem<T extends BaseContentItem>(
 		html = await ctx.hooks.afterRender(html, item);
 	}
 
-	let result: CachedItem<T> = {
+	let result: CachedItemContent = {
 		html,
 		blocks,
 		markdown,
-		item,
 		notionUpdatedAt: ctx.source.getLastModified(item),
 		cachedAt: Date.now(),
 	};
 
-	if (ctx.hooks.beforeCache) {
-		result = (await ctx.hooks.beforeCache(result)) as CachedItem<T>;
+	if (ctx.hooks.beforeCacheContent) {
+		result = await ctx.hooks.beforeCacheContent(result, item);
 	}
 
 	const durationMs = Date.now() - start;

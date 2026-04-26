@@ -31,15 +31,16 @@ export type InlineNode =
 	| { type: "break" };
 
 /**
- * `getItem({ include: { content: true } })` で返される本文。
- * blocks は常に同梱。html / markdown は遅延生成。
+ * `getItem()` で返される本文アクセサ。すべて遅延ロード（async）。
+ * メタデータと別キーから本文をフェッチするため、最初の呼び出しで I/O が発生し、
+ * 同一インスタンス内ではメモ化される。
  */
 export interface ContentResult {
-	/** 本文の AST (第一級)。 */
-	blocks: ContentBlock[];
-	/** 遅延 HTML。renderer が必要な場合のみ呼ぶ。 */
+	/** 本文 AST。 */
+	blocks(): Promise<ContentBlock[]>;
+	/** HTML。 */
 	html(): Promise<string>;
-	/** 遅延 Markdown。 */
+	/** Markdown。 */
 	markdown(): Promise<string>;
 }
 

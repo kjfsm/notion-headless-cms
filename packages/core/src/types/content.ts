@@ -26,14 +26,40 @@ export interface BaseContentItem {
 	publishedAt?: string;
 }
 
-/** ストレージにキャッシュされたレンダリング済みコンテンツ。 */
-export interface CachedItem<T extends BaseContentItem = BaseContentItem> {
-	html: string;
+/**
+ * メタデータのみの軽量キャッシュエントリ。
+ * `checkForUpdate` の差分判定や一覧表示など、本文を必要としないパスで使う。
+ */
+export interface CachedItemMeta<T extends BaseContentItem = BaseContentItem> {
 	item: T;
+	/** Notion 側の最終更新時刻（差分検知用）。 */
+	notionUpdatedAt: string;
+	/** キャッシュ書き込み時刻（TTL 判定用、ms）。 */
+	cachedAt: number;
+}
+
+/**
+ * 本文（HTML / Markdown / blocks）のキャッシュエントリ。
+ * メタデータと別ストレージキーで保存し、必要時のみロードする。
+ */
+export interface CachedItemContent {
+	html: string;
+	markdown: string;
+	blocks: ContentBlock[];
+	/** メタデータ整合性検証用に同じ値を保持する。 */
 	notionUpdatedAt: string;
 	cachedAt: number;
-	blocks?: ContentBlock[];
-	markdown?: string;
+}
+
+/**
+ * 本文クライアント送信用 DTO（cachedAt を除いた `CachedItemContent`）。
+ * `useSWR` の cache に格納できるよう関数を含まない pure JSON。
+ */
+export interface ItemContentPayload {
+	html: string;
+	markdown: string;
+	blocks: ContentBlock[];
+	notionUpdatedAt: string;
 }
 
 /** ストレージにキャッシュされたコンテンツ一覧。 */

@@ -20,16 +20,51 @@ app.get("/posts", async (c) => {
 app.get("/posts/:slug", async (c) => {
 	const post = await cms.posts.getItem(c.req.param("slug"));
 	if (!post) return c.json({ error: "Not Found" }, 404);
-	const [html, markdown] = await Promise.all([
+	const [html, markdown, blocks] = await Promise.all([
 		post.content.html(),
 		post.content.markdown(),
+		post.content.blocks(),
 	]);
 	return c.json({
 		item: { id: post.id, slug: post.slug, status: post.status },
-		blocks: post.content.blocks,
+		blocks,
 		html,
 		markdown,
 	});
+});
+
+/**
+ * useSWR fetcher 向け: メタデータのみ
+ * GET /posts/:slug/meta
+ */
+app.get("/posts/:slug/meta", async (c) => {
+	const meta = await cms.posts.getItemMeta(c.req.param("slug"));
+	if (!meta) return c.json({ error: "Not Found" }, 404);
+	return c.json(meta);
+});
+
+/**
+ * useSWR fetcher 向け: 本文ペイロード
+ * GET /posts/:slug/content
+ */
+app.get("/posts/:slug/content", async (c) => {
+	const content = await cms.posts.getItemContent(c.req.param("slug"));
+	if (!content) return c.json({ error: "Not Found" }, 404);
+	return c.json(content);
+});
+
+/**
+ * useSWR の再検証トリガ向け: 差分判定（メタのみ）
+ * GET /posts/:slug/check?since=...
+ */
+app.get("/posts/:slug/check", async (c) => {
+	const since = c.req.query("since");
+	if (!since) return c.json({ error: "since required" }, 400);
+	const result = await cms.posts.checkForUpdate({
+		slug: c.req.param("slug"),
+		since,
+	});
+	return c.json(result);
 });
 
 /**

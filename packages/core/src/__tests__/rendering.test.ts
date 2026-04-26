@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { isCMSError } from "../errors";
 import type { RenderContext } from "../rendering";
-import { buildCachedItem } from "../rendering";
+import { buildCachedItemContent, buildCachedItemMeta } from "../rendering";
 import type { BaseContentItem } from "../types/index";
 
 function makeItem(overrides: Partial<BaseContentItem> = {}): BaseContentItem {
@@ -50,14 +50,24 @@ function makeContext(
 	};
 }
 
-describe("buildCachedItem", () => {
+describe("buildCachedItemMeta", () => {
+	it("item / notionUpdatedAt / cachedAt を含むメタを返す", () => {
+		const item = makeItem();
+		const meta = buildCachedItemMeta(item, makeContext().source);
+		expect(meta.item).toBe(item);
+		expect(meta.notionUpdatedAt).toBe("2024-01-01T00:00:00Z");
+		expect(typeof meta.cachedAt).toBe("number");
+	});
+});
+
+describe("buildCachedItemContent", () => {
 	describe("正常系", () => {
-		it("markdown / html / item / notionUpdatedAt / cachedAt を含む CachedItem を返す", async () => {
+		it("html / markdown / blocks / notionUpdatedAt / cachedAt を含む CachedItemContent を返す", async () => {
 			const item = makeItem();
-			const result = await buildCachedItem(item, makeContext());
+			const result = await buildCachedItemContent(item, makeContext());
 			expect(result.html).toBe("<p>rendered</p>");
 			expect(result.markdown).toBe("# Hello");
-			expect(result.item).toBe(item);
+			expect(result.blocks).toEqual([]);
 			expect(result.notionUpdatedAt).toBe("2024-01-01T00:00:00Z");
 			expect(typeof result.cachedAt).toBe("number");
 		});
@@ -65,7 +75,7 @@ describe("buildCachedItem", () => {
 		it("rendererFn に markdown と imageProxyBase が渡される", async () => {
 			const item = makeItem();
 			const rendererFn = vi.fn().mockResolvedValue("<p>ok</p>");
-			await buildCachedItem(
+			await buildCachedItemContent(
 				item,
 				makeContext({ rendererFn, imageProxyBase: "/custom/images" }),
 			);
@@ -77,7 +87,7 @@ describe("buildCachedItem", () => {
 		it("hasImageCache が true の場合 cacheImage 関数が rendererFn に渡される", async () => {
 			const item = makeItem();
 			const rendererFn = vi.fn().mockResolvedValue("<p>ok</p>");
-			await buildCachedItem(
+			await buildCachedItemContent(
 				item,
 				makeContext({ rendererFn, hasImageCache: true }),
 			);
@@ -88,7 +98,7 @@ describe("buildCachedItem", () => {
 		it("hasImageCache が false の場合 cacheImage は undefined で渡される", async () => {
 			const item = makeItem();
 			const rendererFn = vi.fn().mockResolvedValue("<p>ok</p>");
-			await buildCachedItem(
+			await buildCachedItemContent(
 				item,
 				makeContext({ rendererFn, hasImageCache: false }),
 			);
@@ -120,7 +130,7 @@ describe("buildCachedItem", () => {
 					},
 				},
 			});
-			const result = await buildCachedItem(item, ctx);
+			const result = await buildCachedItemContent(item, ctx);
 			expect(result.blocks).toEqual([]);
 		});
 
@@ -146,7 +156,7 @@ describe("buildCachedItem", () => {
 					},
 				},
 			});
-			await expect(buildCachedItem(item, ctx)).rejects.toSatisfy(
+			await expect(buildCachedItemContent(item, ctx)).rejects.toSatisfy(
 				(err: unknown) =>
 					isCMSError(err) && err.code === "source/load_markdown_failed",
 			);
@@ -180,7 +190,9 @@ describe("buildCachedItem", () => {
 					},
 				},
 			});
-			await expect(buildCachedItem(item, ctx)).rejects.toBe(originalError);
+			await expect(buildCachedItemContent(item, ctx)).rejects.toBe(
+				originalError,
+			);
 		});
 
 		it("renderer が失敗すると renderer/failed CMSError をスローする", async () => {
@@ -188,7 +200,7 @@ describe("buildCachedItem", () => {
 			const ctx = makeContext({
 				rendererFn: vi.fn().mockRejectedValue(new Error("render failed")),
 			});
-			await expect(buildCachedItem(item, ctx)).rejects.toSatisfy(
+			await expect(buildCachedItemContent(item, ctx)).rejects.toSatisfy(
 				(err: unknown) => isCMSError(err) && err.code === "renderer/failed",
 			);
 		});
@@ -204,7 +216,9 @@ describe("buildCachedItem", () => {
 			const ctx = makeContext({
 				rendererFn: vi.fn().mockRejectedValue(originalError),
 			});
-			await expect(buildCachedItem(item, ctx)).rejects.toBe(originalError);
+			await expect(buildCachedItemContent(item, ctx)).rejects.toBe(
+				originalError,
+			);
 		});
 	});
 
@@ -213,7 +227,7 @@ describe("buildCachedItem", () => {
 			const item = makeItem({ slug: "my-post" });
 			const onRenderStart = vi.fn();
 			const onRenderEnd = vi.fn();
-			await buildCachedItem(
+			await buildCachedItemContent(
 				item,
 				makeContext({ hooks: { onRenderStart, onRenderEnd } }),
 			);
@@ -228,21 +242,21 @@ describe("buildCachedItem", () => {
 					afterRender: async (html) => `<div>${html}</div>`,
 				},
 			});
-			const result = await buildCachedItem(item, ctx);
+			const result = await buildCachedItemContent(item, ctx);
 			expect(result.html).toBe("<div><p>rendered</p></div>");
 		});
 
-		it("beforeCache フックが CachedItem を書き換える", async () => {
+		it("beforeCacheContent フックが CachedItemContent を書き換える", async () => {
 			const item = makeItem();
 			const ctx = makeContext({
 				hooks: {
-					beforeCache: async (cached) => ({
-						...cached,
+					beforeCacheContent: async (content) => ({
+						...content,
 						html: "<p>modified</p>",
 					}),
 				},
 			});
-			const result = await buildCachedItem(item, ctx);
+			const result = await buildCachedItemContent(item, ctx);
 			expect(result.html).toBe("<p>modified</p>");
 		});
 	});
@@ -251,7 +265,10 @@ describe("buildCachedItem", () => {
 		it("logger.info がレンダリング開始・終了で呼ばれる", async () => {
 			const item = makeItem({ slug: "my-post" });
 			const infoFn = vi.fn();
-			await buildCachedItem(item, makeContext({ logger: { info: infoFn } }));
+			await buildCachedItemContent(
+				item,
+				makeContext({ logger: { info: infoFn } }),
+			);
 			expect(infoFn).toHaveBeenCalledWith(
 				"コンテンツのレンダリング開始",
 				expect.objectContaining({ slug: "my-post" }),
@@ -289,7 +306,7 @@ describe("buildCachedItem", () => {
 					},
 				},
 			});
-			await buildCachedItem(item, ctx);
+			await buildCachedItemContent(item, ctx);
 			expect(warnFn).toHaveBeenCalledWith(
 				"loadBlocks に失敗したため raw フォールバック",
 				expect.objectContaining({ slug: "warn-test" }),
@@ -301,7 +318,7 @@ describe("buildCachedItem", () => {
 		it("rendererFn が undefined の場合、@notion-headless-cms/renderer をロードして使う", async () => {
 			const item = makeItem({ slug: "default-renderer-test" });
 			const ctx = makeContext({ rendererFn: undefined });
-			const result = await buildCachedItem(item, ctx);
+			const result = await buildCachedItemContent(item, ctx);
 			expect(typeof result.html).toBe("string");
 		});
 	});

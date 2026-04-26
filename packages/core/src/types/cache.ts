@@ -1,22 +1,42 @@
 import type {
 	BaseContentItem,
-	CachedItem,
+	CachedItemContent,
 	CachedItemList,
+	CachedItemMeta,
 	StorageBinary,
 } from "./content";
 import type { InvalidateScope } from "./data-source";
 
-export type { InvalidateScope } from "./data-source";
+export type { InvalidateKind, InvalidateScope } from "./data-source";
 
-/** ドキュメントキャッシュを抽象化するインターフェース。 */
+/**
+ * ドキュメントキャッシュを抽象化するインターフェース。
+ *
+ * v0.4.0 で `getItem`/`setItem` を `getItemMeta`/`setItemMeta` +
+ * `getItemContent`/`setItemContent` に分割した。
+ * メタデータのみ取り出す軽量パスと、本文を遅延ロードするパスを分離するため。
+ */
 export interface DocumentCacheAdapter<
 	T extends BaseContentItem = BaseContentItem,
 > {
 	readonly name: string;
+
+	// --- リスト ---
 	getList(): Promise<CachedItemList<T> | null>;
 	setList(data: CachedItemList<T>): Promise<void>;
-	getItem(slug: string): Promise<CachedItem<T> | null>;
-	setItem(slug: string, data: CachedItem<T>): Promise<void>;
+
+	// --- メタデータ（軽量、差分判定・一覧表示・SWR 用） ---
+	getItemMeta(slug: string): Promise<CachedItemMeta<T> | null>;
+	setItemMeta(slug: string, data: CachedItemMeta<T>): Promise<void>;
+
+	// --- 本文（HTML/Markdown/blocks、必要時のみロード） ---
+	getItemContent(slug: string): Promise<CachedItemContent | null>;
+	setItemContent(slug: string, data: CachedItemContent): Promise<void>;
+
+	/**
+	 * 無効化。`scope.kind` で meta/content の粒度を指定できる。
+	 * 省略時は両方失効させる。
+	 */
 	invalidate?(scope: InvalidateScope): Promise<void>;
 }
 

@@ -5,6 +5,13 @@ export interface R2ObjectLike {
 	httpMetadata?: { contentType?: string };
 }
 
+/** R2 list() の戻り値の最小インターフェース。 */
+export interface R2ListResult {
+	objects: { key: string }[];
+	truncated: boolean;
+	cursor?: string;
+}
+
 /**
  * R2Bucket の最小インターフェース。
  * Cloudflare Workers の R2Bucket は structural に互換なのでそのまま渡せる。
@@ -17,4 +24,6 @@ export interface R2BucketLike {
 		value: ArrayBuffer | string,
 		opts?: { httpMetadata?: { contentType?: string } },
 	): Promise<unknown>;
+	delete(key: string): Promise<unknown>;
+	list(opts?: { prefix?: string; cursor?: string }): Promise<R2ListResult>;
 }

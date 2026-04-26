@@ -5,8 +5,8 @@ import type { CMSPlugin } from "./types/plugin";
 
 /**
  * プラグイン配列とダイレクトフックを合成して単一の CMSHooks を返す。
- * beforeCache / afterRender はパイプライン（前の出力が次の入力）。
- * onCacheHit などオブザーバー系は全員に同じ値を渡し、例外は logger に流して握りつぶす。
+ * beforeCacheMeta / beforeCacheContent / afterRender はパイプライン（前の出力が次の入力）。
+ * オブザーバー系は全員に同じ値を渡し、例外は logger に流して握りつぶす。
  */
 export function mergeHooks<T extends BaseContentItem>(
 	plugins: CMSPlugin<T>[],
@@ -21,11 +21,17 @@ export function mergeHooks<T extends BaseContentItem>(
 	if (allHooks.length === 0) return {};
 
 	return {
-		beforeCache: buildPipeline(allHooks, "beforeCache"),
+		beforeCacheMeta: buildMetaPipeline(allHooks),
+		beforeCacheContent: buildContentPipeline(allHooks),
 		afterRender: buildRenderPipeline(allHooks),
 		onCacheHit: buildObserver(allHooks, "onCacheHit", logger),
 		onCacheMiss: buildObserver(allHooks, "onCacheMiss", logger),
 		onCacheRevalidated: buildObserver(allHooks, "onCacheRevalidated", logger),
+		onContentRevalidated: buildObserver(
+			allHooks,
+			"onContentRevalidated",
+			logger,
+		),
 		onListCacheHit: buildObserver(allHooks, "onListCacheHit", logger),
 		onListCacheMiss: buildObserver(allHooks, "onListCacheMiss", logger),
 		onListCacheRevalidated: buildObserver(
@@ -39,18 +45,33 @@ export function mergeHooks<T extends BaseContentItem>(
 	};
 }
 
-function buildPipeline<T extends BaseContentItem>(
+function buildMetaPipeline<T extends BaseContentItem>(
 	hooks: CMSHooks<T>[],
-	key: "beforeCache",
-): CMSHooks<T>["beforeCache"] {
-	const fns = hooks.map((h) => h[key]).filter(Boolean) as NonNullable<
-		CMSHooks<T>["beforeCache"]
-	>[];
+): CMSHooks<T>["beforeCacheMeta"] {
+	const fns = hooks
+		.map((h) => h.beforeCacheMeta)
+		.filter(Boolean) as NonNullable<CMSHooks<T>["beforeCacheMeta"]>[];
 	if (fns.length === 0) return undefined;
-	return async (item) => {
-		let current = item;
+	return async (meta) => {
+		let current = meta;
 		for (const fn of fns) {
-			current = await (fn(current) as MaybePromise<typeof item>);
+			current = await (fn(current) as MaybePromise<typeof meta>);
+		}
+		return current;
+	};
+}
+
+function buildContentPipeline<T extends BaseContentItem>(
+	hooks: CMSHooks<T>[],
+): CMSHooks<T>["beforeCacheContent"] {
+	const fns = hooks
+		.map((h) => h.beforeCacheContent)
+		.filter(Boolean) as NonNullable<CMSHooks<T>["beforeCacheContent"]>[];
+	if (fns.length === 0) return undefined;
+	return async (content, item) => {
+		let current = content;
+		for (const fn of fns) {
+			current = await (fn(current, item) as MaybePromise<typeof content>);
 		}
 		return current;
 	};

@@ -10,6 +10,7 @@ export type {
 	CollectionClient,
 	GetListOptions,
 	GetListResult,
+	ItemContentPayload,
 	ItemWithContent,
 	SortOption,
 } from "./collection";
@@ -27,8 +28,9 @@ export type {
 } from "./config";
 export type {
 	BaseContentItem,
-	CachedItem,
+	CachedItemContent,
 	CachedItemList,
+	CachedItemMeta,
 	CMSSchemaProperties,
 	StorageBinary,
 } from "./content";
@@ -38,6 +40,7 @@ export type {
 	DataSource,
 	DataSourceFactory,
 	InferCollectionItem,
+	InvalidateKind,
 	InvalidateScope,
 	PropertyDef,
 	PropertyMap,

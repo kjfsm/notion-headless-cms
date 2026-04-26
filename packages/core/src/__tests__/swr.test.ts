@@ -45,9 +45,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
 		// キャッシュに stale アイテムを事前セット（cachedAt: 0 → 必ず TTL 期限切れ）
 		const cache = new MemoryDocumentCache();
-		await cache.setItem("posts:my-post", {
+		await cache.setItemMeta("posts:my-post", {
 			item: staleItem,
-			html: "<p>stale</p>",
 			notionUpdatedAt: staleItem.updatedAt,
 			cachedAt: 0,
 		});
@@ -90,9 +89,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		};
 
 		const cache = new MemoryDocumentCache();
-		await cache.setItem("posts:my-post", {
+		await cache.setItemMeta("posts:my-post", {
 			item: cachedItem,
-			html: "<p>cached</p>",
 			notionUpdatedAt: cachedItem.updatedAt,
 			cachedAt: 0, // 古くてもTTLなしなので期限切れにならない
 		});
@@ -127,7 +125,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
 		// バックグラウンド処理を待つ → 更新あり → キャッシュが新しいアイテムで更新される
 		await Promise.all(capturedPromises);
-		const updated = await cache.getItem("posts:my-post");
+		const updated = await cache.getItemMeta("posts:my-post");
 		expect(updated?.item.updatedAt).toBe("2024-01-02T00:00:00Z");
 	});
 
@@ -258,9 +256,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			updatedAt: "2024-01-01T00:00:00Z",
 		};
 		const cache = new MemoryDocumentCache();
-		await cache.setItem("posts:post-1", {
+		await cache.setItemMeta("posts:post-1", {
 			item,
-			html: "<p>cached</p>",
 			notionUpdatedAt: item.updatedAt,
 			cachedAt: Date.now(),
 		});
@@ -298,9 +295,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			updatedAt: "2024-01-01T00:00:00Z",
 		};
 		const cache = new MemoryDocumentCache();
-		await cache.setItem("posts:post-1", {
+		await cache.setItemMeta("posts:post-1", {
 			item,
-			html: "<p>stale</p>",
 			notionUpdatedAt: item.updatedAt,
 			cachedAt: 0, // 必ず TTL 期限切れ
 		});
@@ -345,9 +341,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		};
 
 		const cache = new MemoryDocumentCache();
-		await cache.setItem("posts:post-1", {
+		await cache.setItemMeta("posts:post-1", {
 			item: cachedItem,
-			html: "<p>old</p>",
 			notionUpdatedAt: cachedItem.updatedAt,
 			cachedAt: Date.now(),
 		});
@@ -372,7 +367,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		await Promise.all(capturedPromises);
 
 		expect(debugFn).toHaveBeenCalledWith(
-			"SWR: 差分を検出、キャッシュを差し替え",
+			"SWR: 差分を検出、メタを差し替え",
 			expect.objectContaining({
 				operation: "getItem:bg",
 				slug: "post-1",
@@ -396,9 +391,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			updatedAt: "2024-01-01T00:00:00Z",
 		};
 		const cache = new MemoryDocumentCache();
-		await cache.setItem("posts:post-1", {
+		await cache.setItemMeta("posts:post-1", {
 			item,
-			html: "<p>fresh</p>",
 			notionUpdatedAt: item.updatedAt,
 			cachedAt: Date.now(),
 		});
@@ -482,9 +476,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
 		const cache = new MemoryDocumentCache();
 		// cachedAt: Date.now()、ttlMs: 60_000 → 期限内
-		await cache.setItem("posts:my-post", {
+		await cache.setItemMeta("posts:my-post", {
 			item: freshItem,
-			html: "<p>fresh</p>",
 			notionUpdatedAt: freshItem.updatedAt,
 			cachedAt: Date.now(),
 		});
@@ -542,6 +535,157 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		await Promise.all(capturedPromises);
 		// エラーなく完了することを確認
 		expect(capturedPromises.length).toBeGreaterThan(0);
+	});
+});
+
+describe("metadata と content の分離", () => {
+	it("getItem は content を読まない（content アクセス時に初めて読む）", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "lazy-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const loadMarkdown = vi.fn().mockResolvedValue("# hi");
+		const cache = new MemoryDocumentCache();
+		const getItemContentSpy = vi.spyOn(cache, "getItemContent");
+
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						return [item];
+					},
+					loadMarkdown,
+				}),
+			},
+			renderer: mockRenderer,
+			cache: { document: cache },
+		});
+
+		const result = await cms.posts.getItem("lazy-post");
+		expect(getItemContentSpy).not.toHaveBeenCalled();
+		expect(loadMarkdown).not.toHaveBeenCalled();
+
+		await result?.content.html();
+		expect(getItemContentSpy).toHaveBeenCalledWith("posts:lazy-post");
+		expect(loadMarkdown).toHaveBeenCalled();
+	});
+
+	it("checkForUpdate 差分なし: content cache を破棄しない", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "stable-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const cache = new MemoryDocumentCache();
+		await cache.setItemContent("posts:stable-post", {
+			html: "<p>existing</p>",
+			markdown: "# existing",
+			blocks: [],
+			notionUpdatedAt: item.updatedAt,
+			cachedAt: Date.now(),
+		});
+
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						return [item];
+					},
+				}),
+			},
+			renderer: mockRenderer,
+			cache: { document: cache },
+		});
+
+		const result = await cms.posts.checkForUpdate({
+			slug: "stable-post",
+			since: item.updatedAt,
+		});
+		expect(result.changed).toBe(false);
+		const content = await cache.getItemContent("posts:stable-post");
+		expect(content?.html).toBe("<p>existing</p>");
+	});
+
+	it("checkForUpdate 差分あり: content cache を失効 + waitUntil で再生成", async () => {
+		const oldItem: BaseContentItem = {
+			id: "1",
+			slug: "updated-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const freshItem: BaseContentItem = {
+			id: "1",
+			slug: "updated-post",
+			updatedAt: "2024-01-02T00:00:00Z",
+		};
+		const cache = new MemoryDocumentCache();
+		await cache.setItemContent("posts:updated-post", {
+			html: "<p>old</p>",
+			markdown: "old",
+			blocks: [],
+			notionUpdatedAt: oldItem.updatedAt,
+			cachedAt: Date.now(),
+		});
+
+		const captured: Promise<unknown>[] = [];
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						return [freshItem];
+					},
+				}),
+			},
+			renderer: mockRenderer,
+			cache: { document: cache },
+			waitUntil: (p) => captured.push(p),
+		});
+
+		const result = await cms.posts.checkForUpdate({
+			slug: "updated-post",
+			since: oldItem.updatedAt,
+		});
+		expect(result.changed).toBe(true);
+		if (result.changed) {
+			expect(result.meta.updatedAt).toBe(freshItem.updatedAt);
+		}
+
+		await Promise.all(captured);
+		const content = await cache.getItemContent("posts:updated-post");
+		expect(content?.notionUpdatedAt).toBe(freshItem.updatedAt);
+	});
+
+	it("getItemMeta / getItemContent / checkForUpdate の戻り値が JSON ラウンドトリップ可能", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "json-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						return [item];
+					},
+					loadMarkdown: vi.fn().mockResolvedValue("# hello"),
+				}),
+			},
+			renderer: mockRenderer,
+			preset: "disabled",
+		});
+
+		const meta = await cms.posts.getItemMeta("json-post");
+		expect(JSON.parse(JSON.stringify(meta))).toEqual(meta);
+
+		const content = await cms.posts.getItemContent("json-post");
+		expect(content).not.toBeNull();
+		expect(JSON.parse(JSON.stringify(content))).toEqual(content);
+
+		const checkResult = await cms.posts.checkForUpdate({
+			slug: "json-post",
+			since: "2023-01-01T00:00:00Z",
+		});
+		expect(JSON.parse(JSON.stringify(checkResult))).toEqual(checkResult);
 	});
 });
 
