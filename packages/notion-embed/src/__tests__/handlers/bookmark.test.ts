@@ -101,6 +101,42 @@ describe("renderBookmark", () => {
 		expect(html).toContain('rel="noopener noreferrer"');
 	});
 
+	it("caption があれば nhc-bookmark__caption を出す", async () => {
+		vi.spyOn(globalThis, "fetch").mockResolvedValue(
+			new Response("<html></html>", { status: 200 }),
+		);
+		const caption: BookmarkBlockObjectResponse["bookmark"]["caption"] = [
+			{
+				type: "text",
+				text: { content: "メモ", link: null },
+				annotations: {
+					bold: false,
+					italic: false,
+					strikethrough: false,
+					underline: false,
+					code: false,
+					color: "default",
+				},
+				plain_text: "メモ",
+				href: null,
+			},
+		];
+		const block = makeBlock("https://example.com", caption);
+		const html = await renderBookmark(block);
+		expect(html).toContain("nhc-bookmark__caption");
+		expect(html).toContain("メモ");
+	});
+
+	it("ogpOptions にカスタム設定を渡せる", async () => {
+		vi.spyOn(globalThis, "fetch").mockResolvedValue(
+			new Response("<html></html>", { status: 200 }),
+		);
+		const html = await renderBookmark(makeBlock("https://example.com/custom"), {
+			ttlMs: 1000,
+		});
+		expect(html).toContain("nhc-bookmark");
+	});
+
 	it("XSS インジェクションをエスケープする", async () => {
 		vi.spyOn(globalThis, "fetch").mockResolvedValue(
 			new Response(

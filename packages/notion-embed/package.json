@@ -57,9 +57,6 @@
 		"access": "public",
 		"provenance": true
 	},
-	"dependencies": {
-		"@types/hast": "^3.0.4"
-	},
 	"peerDependencies": {
 		"@notion-headless-cms/renderer": "workspace:*",
 		"@notionhq/client": "^5.20.0",

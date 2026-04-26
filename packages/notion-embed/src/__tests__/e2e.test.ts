@@ -3,11 +3,10 @@
  * allowDangerousHtml + embedRehypePlugins を通して正しく出力されることを検証する。
  */
 
-import type { Root } from "hast";
 import rehypeStringify from "rehype-stringify";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
-import { type Processor, unified } from "unified";
+import { unified } from "unified";
 import { describe, expect, it } from "vitest";
 import { dlsiteProvider } from "../providers/dlsite";
 import { steamProvider } from "../providers/steam";
@@ -17,20 +16,16 @@ async function renderWithPlugins(markdown: string): Promise<string> {
 	const providers = [dlsiteProvider(), steamProvider()];
 	const rehypePlugins = await embedRehypePlugins({ providers });
 
-	// eslint-disable-next-line @typescript-eslint/no-explicit-any
-	let processor: Processor<any, any, any, any, any> = unified()
+	const processor = unified()
 		.use(remarkParse)
-		.use(remarkRehype, { allowDangerousHtml: true });
-
-	for (const plugin of rehypePlugins) {
-		if (Array.isArray(plugin)) {
-			processor = processor.use(plugin[0] as never, plugin[1] as never);
-		} else {
-			processor = processor.use(plugin as never);
-		}
-	}
-
-	processor = processor.use(rehypeStringify);
+		.use(remarkRehype, { allowDangerousHtml: true })
+		// rehypePlugins は [plugin, options] 配列なので個別 use ではなくまとめて適用する
+		.use(
+			rehypePlugins as unknown as Parameters<
+				ReturnType<typeof unified>["use"]
+			>[0],
+		)
+		.use(rehypeStringify);
 
 	const result = await processor.process(markdown);
 	return String(result);

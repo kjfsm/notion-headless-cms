@@ -47,12 +47,81 @@ describe("embedRehypePlugins", () => {
 		const schema = (sanitize as [unknown, unknown])[1] as {
 			attributes?: Record<string, unknown>;
 		};
-		expect(schema.attributes?.["a"]).toContain("itemprop");
+		expect(schema.attributes?.a).toContain("itemprop");
 	});
 
 	it("providers が空でも正常に動作する", async () => {
 		const plugins = await embedRehypePlugins({ providers: [] });
 		expect(plugins).toHaveLength(2);
+	});
+});
+
+describe("schema 深いマージ", () => {
+	it("provider の protocols がマージされる", async () => {
+		const provider = defineEmbedProvider({
+			id: "p",
+			match: () => true,
+			render: () => ({ kind: "html", html: "" }),
+			sanitizeSchema: {
+				protocols: { src: ["data"] },
+			},
+		});
+		const plugins = await embedRehypePlugins({ providers: [provider] });
+		const [, sanitize] = plugins;
+		const schema = (sanitize as [unknown, unknown])[1] as {
+			protocols?: Record<string, string[]>;
+		};
+		expect(schema.protocols?.src).toContain("data");
+		// base にあった https/http も残っている
+		expect(schema.protocols?.src).toContain("https");
+	});
+
+	it("base に存在しない protocols 属性も追加できる", async () => {
+		const provider = defineEmbedProvider({
+			id: "p",
+			match: () => true,
+			render: () => ({ kind: "html", html: "" }),
+			sanitizeSchema: {
+				protocols: { poster: ["https"] },
+			},
+		});
+		const plugins = await embedRehypePlugins({ providers: [provider] });
+		const [, sanitize] = plugins;
+		const schema = (sanitize as [unknown, unknown])[1] as {
+			protocols?: Record<string, string[]>;
+		};
+		expect(schema.protocols?.poster).toContain("https");
+	});
+
+	it("provider の strip がマージされる", async () => {
+		const provider = defineEmbedProvider({
+			id: "p",
+			match: () => true,
+			render: () => ({ kind: "html", html: "" }),
+			sanitizeSchema: { strip: ["custom-tag"] },
+		});
+		const plugins = await embedRehypePlugins({ providers: [provider] });
+		const [, sanitize] = plugins;
+		const schema = (sanitize as [unknown, unknown])[1] as { strip?: string[] };
+		expect(schema.strip).toContain("custom-tag");
+		expect(schema.strip).toContain("script");
+	});
+
+	it("base に存在しない attributes タグも追加できる", async () => {
+		const provider = defineEmbedProvider({
+			id: "p",
+			match: () => true,
+			render: () => ({ kind: "html", html: "" }),
+			sanitizeSchema: {
+				attributes: { article: ["data-id"] },
+			},
+		});
+		const plugins = await embedRehypePlugins({ providers: [provider] });
+		const [, sanitize] = plugins;
+		const schema = (sanitize as [unknown, unknown])[1] as {
+			attributes?: Record<string, unknown>;
+		};
+		expect(schema.attributes?.article).toContain("data-id");
 	});
 });
 
