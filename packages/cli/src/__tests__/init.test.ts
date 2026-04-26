@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { runInit } from "../commands/init.js";
 
 let tmpDir: string;
@@ -70,6 +70,14 @@ describe("runInit", () => {
 
 		const content = await fs.readFile(outputPath, "utf-8");
 		expect(content).toContain("defineConfig");
+	});
+
+	it("silent: true のときはコンソール出力をしない", async () => {
+		const outputPath = path.join(tmpDir, "nhc.config.ts");
+		const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+		await runInit({ output: outputPath, silent: true });
+		expect(logSpy).not.toHaveBeenCalled();
+		logSpy.mockRestore();
 	});
 
 	it("生成されたテンプレートに dbName と fields の例が含まれる", async () => {
