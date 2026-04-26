@@ -1,8 +1,8 @@
 ---
-"@notion-headless-cms/core": major
-"@notion-headless-cms/cache-r2": major
-"@notion-headless-cms/cache-kv": major
-"@notion-headless-cms/cache-next": major
+"@notion-headless-cms/core": patch
+"@notion-headless-cms/cache-r2": patch
+"@notion-headless-cms/cache-kv": patch
+"@notion-headless-cms/cache-next": patch
 ---
 
 メタデータと本文を独立キーに分離。`getItem()` を非同期遅延ロード化、`checkForUpdate` を軽量化、useSWR 連携 API を追加（破壊的変更）。
