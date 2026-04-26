@@ -1,0 +1,86 @@
+{
+	"name": "@notion-headless-cms/notion-embed",
+	"version": "0.0.0",
+	"description": "Notion ブロック (bookmark / embed / mention / toggle / callout / table など) を Notion 風 HTML にレンダリングする拡張パッケージ",
+	"keywords": [
+		"notion",
+		"headless-cms",
+		"embed",
+		"bookmark",
+		"mention",
+		"iframe",
+		"rehype",
+		"sanitize",
+		"typescript"
+	],
+	"license": "MIT",
+	"homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
+	"bugs": {
+		"url": "https://github.com/kjfsm/notion-headless-cms/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/kjfsm/notion-headless-cms.git",
+		"directory": "packages/notion-embed"
+	},
+	"type": "module",
+	"sideEffects": false,
+	"exports": {
+		".": {
+			"types": "./dist/index.d.mts",
+			"import": "./dist/index.mjs"
+		},
+		"./providers": {
+			"types": "./dist/providers/index.d.mts",
+			"import": "./dist/providers/index.mjs"
+		},
+		"./rehype": {
+			"types": "./dist/rehype/index.d.mts",
+			"import": "./dist/rehype/index.mjs"
+		}
+	},
+	"files": [
+		"dist"
+	],
+	"engines": {
+		"node": ">=24"
+	},
+	"scripts": {
+		"build": "tsdown src/index.ts src/providers/index.ts src/rehype/index.ts --format esm --dts --sourcemap --out-dir dist",
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run",
+		"test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
+		"publint": "publint --strict",
+		"attw": "attw --pack . --profile esm-only"
+	},
+	"publishConfig": {
+		"access": "public",
+		"provenance": true
+	},
+	"dependencies": {
+		"@types/hast": "^3.0.4"
+	},
+	"peerDependencies": {
+		"@notion-headless-cms/renderer": "workspace:*",
+		"@notionhq/client": "^5.20.0",
+		"hast-util-sanitize": "^5.0.0",
+		"rehype-raw": "^7.0.0",
+		"rehype-sanitize": "^6.0.0"
+	},
+	"peerDependenciesMeta": {
+		"@notionhq/client": {
+			"optional": true
+		}
+	},
+	"devDependencies": {
+		"@notion-headless-cms/renderer": "workspace:*",
+		"@notionhq/client": "catalog:",
+		"hast-util-sanitize": "^5.0.2",
+		"rehype-raw": "^7.0.0",
+		"rehype-sanitize": "^6.0.0",
+		"rehype-stringify": "catalog:",
+		"remark-parse": "catalog:",
+		"remark-rehype": "catalog:",
+		"unified": "catalog:"
+	}
+}

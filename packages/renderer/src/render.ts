@@ -23,6 +23,7 @@ export async function renderMarkdown(
 		remarkPlugins = [],
 		rehypePlugins = [],
 		render,
+		allowDangerousHtml = false,
 	} = options;
 
 	if (render) {
@@ -38,7 +39,10 @@ export async function renderMarkdown(
 		.use(remarkParse)
 		.use(remarkGfm)
 		.use(remarkPlugins as PluggableList)
-		.use(remarkRehype)
+		.use(
+			remarkRehype,
+			allowDangerousHtml ? { allowDangerousHtml: true } : undefined,
+		)
 		.use(rehypeImageCache, { imageProxyBase, cacheImage })
 		.use(rehypePlugins as PluggableList)
 		.use(rehypeStringify);

@@ -7,4 +7,5 @@ export default defineWorkspace([
 	"packages/cache-next",
 	"packages/cache-r2",
 	"packages/adapter-next",
+	"packages/notion-embed",
 ]);
