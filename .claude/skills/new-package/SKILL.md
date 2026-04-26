@@ -71,6 +71,19 @@ pnpm changeset
 - ルート `README.md` のパッケージ一覧に追加
 - 該当レシピ（`docs/recipes/`）に言及
 
+### 9. NPM_TOKEN の権限確認（初回 publish 前に必須）
+
+新パッケージは `release.yml` で初めて npm に publish される。`NPM_TOKEN` の権限が
+**scope-level** (`@notion-headless-cms`) または **Automation Token** でない場合、
+**404 Not Found** で publish が失敗する。詳細とチェックリストは
+`docs/development.md` の「3-2. npm 側の設定 / 新パッケージ追加時のチェックリスト」を参照。
+
+**症状**: `release.yml` の "バージョン更新PRの作成 または npm 公開" ステップで
+新パッケージのみ 404 で落ち、既存パッケージは正常に publish される。
+
+**修正**: npmjs.com で scope-level の Granular Token か Automation Token を発行し、
+`gh secret set NPM_TOKEN --body "<new token>"` で差し替える。
+
 ## テンプレート変数
 
 テンプレート内の `<name>` を置換してから保存する。

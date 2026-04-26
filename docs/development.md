@@ -109,9 +109,29 @@ gh secret set NOTION_TOKEN --body "<notion integration token>"
 
 ### 3-2. npm 側の設定
 
-- npm で **2FA automation token** を使う（通常の publish token では provenance が付けられない）
+- npm で **Automation Token** または **Granular Access Token (scope-level)** を使う
+  - **Automation Token (推奨・一番簡単)**: 所有する全パッケージ・スコープに対して publish 可。新パッケージ追加時もそのまま使える
+  - **Granular Access Token**: 権限を `Packages and scopes` → `@notion-headless-cms` (scope-level) で付与する。**個別パッケージ単位で許可した場合、新パッケージ追加のたびにトークンの allowlist 更新が必要になり、`release.yml` で 404 が出る**ため非推奨
+  - 通常の publish token (Classic Read/Publish token) では provenance が付けられないので使えない
 - `packages/*/package.json` の `publishConfig.access: "public"` が設定されていること（新パッケージ追加時に特に注意）
 - `release.yml` の `id-token: write` と `NPM_CONFIG_PROVENANCE=true` で provenance 有効化済み
+
+#### 新パッケージ追加時のチェックリスト
+
+新しい `packages/<name>/` を作って初回 publish させる前に必ず確認:
+
+1. `publishConfig.access: "public"` が `package.json` にあること
+2. `NPM_TOKEN` が以下のいずれかを満たしていること
+   - Automation Token である、または
+   - Granular Access Token で `@notion-headless-cms` の **scope-level** 権限が付いている、または
+   - Granular Access Token で `@notion-headless-cms/<new-package>` が allowlist に明示追加されている
+3. `release.yml` の **publish 前診断** ステップ (`npm whoami` + `pnpm changeset status`) のログで以下を確認
+   - whoami がリポジトリ所有者を返していること（404 = トークン無効・権限不足のサイン）
+   - 公開予定のパッケージ一覧に `@notion-headless-cms/<new-package>` が含まれていること
+
+> **404 Not Found / scope not found** で publish が失敗した場合、ほぼ確実にトークンの権限不足。
+> npmjs.com → Access Tokens で scope-level の Automation/Granular Token を発行し直し、
+> `gh secret set NPM_TOKEN --body "<new token>"` で更新する。
 
 ### 3-3. Branch Protection（main）
 

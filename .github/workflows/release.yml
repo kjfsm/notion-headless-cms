@@ -47,6 +47,25 @@ jobs:
       # publish 時に dist が必要なので build のみ実施。typecheck / test は CI で通過済み前提
       - run: pnpm turbo build --filter="./packages/*"
 
+      # publish 失敗時の原因切り分け用: NPM_TOKEN の有効性 (whoami) と
+      # changeset が公開予定のパッケージ一覧を事前に出力する。
+      # 401/403/404 で失敗した場合、ここで whoami が成功しているかを見れば
+      # トークン権限不足 (新規パッケージで頻発) なのか、無効トークンなのかを
+      # 即座に判別できる。
+      - name: publish 前診断 (npm 認証 / 公開対象)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          # changesets/action と同様に ~/.npmrc を整備してから whoami を試す
+          echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc
+          echo "::group::npm whoami"
+          npm whoami --registry=https://registry.npmjs.org/ || echo "WARN: whoami 失敗。NPM_TOKEN が無効か未設定の可能性があります。"
+          echo "::endgroup::"
+          echo "::group::公開予定パッケージ"
+          pnpm changeset status || true
+          echo "::endgroup::"
+
       - name: バージョン更新PRの作成 または npm 公開
         uses: changesets/action@v1
         with:
