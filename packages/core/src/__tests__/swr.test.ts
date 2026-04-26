@@ -169,11 +169,11 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			waitUntil,
 		});
 
-		const result = await cms.posts.getList();
+		const { items } = await cms.posts.getList();
 
 		// キャッシュが即時返される
-		expect(result).toHaveLength(1);
-		expect(result[0].updatedAt).toBe("2024-01-01T00:00:00Z");
+		expect(items).toHaveLength(1);
+		expect(items[0].updatedAt).toBe("2024-01-01T00:00:00Z");
 
 		// バックグラウンド差分チェックの Promise が waitUntil に渡されている
 		expect(capturedPromises.length).toBeGreaterThan(0);
@@ -212,10 +212,10 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			waitUntil,
 		});
 
-		const result = await cms.posts.getList();
+		const { items } = await cms.posts.getList();
 
 		// TTL 期限切れ → ブロッキングで最新リストが返される
-		expect(result).toHaveLength(2);
+		expect(items).toHaveLength(2);
 
 		// ブロッキングフェッチなのでバックグラウンド Promise は渡されない
 		expect(waitUntil).not.toHaveBeenCalled();
