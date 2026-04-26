@@ -55,6 +55,12 @@ function buildSchema(
 /**
  * notionEmbed が共通で出力する HTML 要素を許可するための基本スキーマ。
  * (bookmark / link_preview / mention / callout / toggle など共通部分)
+ *
+ * 重要: HAST は HTML の `class` 属性を `className` プロパティとして持つため、
+ * sanitize 用のキーは `className` を使う。
+ * また defaultSchema は `a` などに `["className", "data-footnote-backref"]` のような
+ * 値制限付きエントリを入れているため、無制限な `"className"` をエントリ先頭に置いて
+ * 我々のクラス名を通せるよう deepMergeSchema 側で「先頭に prepend」する。
  */
 function notionEmbedBaseSchema(): Schema {
 	return {
@@ -98,15 +104,23 @@ function notionEmbedBaseSchema(): Schema {
 			"hr",
 		],
 		attributes: {
-			a: ["class", "href", "target", "rel"],
-			img: ["class", "src", "alt", "loading", "width", "height", "itemprop"],
-			video: ["class", "src", "controls", "width", "height"],
-			audio: ["class", "src", "controls"],
+			a: ["className", "href", "target", "rel"],
+			img: [
+				"className",
+				"src",
+				"alt",
+				"loading",
+				"width",
+				"height",
+				"itemProp",
+			],
+			video: ["className", "src", "controls", "width", "height"],
+			audio: ["className", "src", "controls"],
 			source: ["src", "type"],
 			input: ["type", "disabled", "checked"],
-			"*": ["class", "aria-hidden"],
-			th: ["scope", "colspan", "rowspan"],
-			td: ["colspan", "rowspan"],
+			"*": ["className", "ariaHidden"],
+			th: ["scope", "colSpan", "rowSpan"],
+			td: ["colSpan", "rowSpan"],
 		},
 		protocols: {
 			href: ["https", "http", "mailto"],
@@ -129,7 +143,10 @@ function deepMergeSchema(base: Schema, override: Schema): Schema {
 		for (const [tag, attrs] of Object.entries(override.attributes)) {
 			const existing = merged.attributes[tag];
 			if (Array.isArray(existing)) {
-				merged.attributes[tag] = unique([...existing, ...(attrs as string[])]);
+				// override を先頭に置く: hast-util-sanitize は findDefinition で
+				// 最初に key 一致したエントリを採用するため、無制限な "className" を
+				// defaultSchema の値制限付きエントリより先に評価させる必要がある。
+				merged.attributes[tag] = unique([...(attrs as string[]), ...existing]);
 			} else {
 				merged.attributes[tag] = attrs;
 			}

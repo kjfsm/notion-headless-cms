@@ -138,6 +138,66 @@ describe("renderRichText", () => {
 			expect(result).toContain("Example");
 		});
 
+		it("link_mention の icon_url / link_provider / title を Notion 風に出力する", async () => {
+			const item: RichTextItemResponse = {
+				type: "mention",
+				mention: {
+					type: "link_mention",
+					link_mention: {
+						href: "https://www.youtube.com/@Euphoric-Band",
+						title: "Euphoric Band",
+						icon_url:
+							"https://www.youtube.com/s/desktop/40cd5ddc/img/favicon_144x144.png",
+						link_provider: "YouTube",
+						description: "We are a small string band that plays game music!",
+						thumbnail_url:
+							"https://yt3.googleusercontent.com/foo=s900-c-k-c0x00ffffff-no-rj",
+					},
+				},
+				annotations: defaultAnnotations,
+				plain_text: "https://www.youtube.com/@Euphoric-Band",
+				href: "https://www.youtube.com/@Euphoric-Band",
+			};
+			const result = await renderRichText([item]);
+			expect(result).toContain('class="nhc-mention nhc-mention--link"');
+			expect(result).toContain('href="https://www.youtube.com/@Euphoric-Band"');
+			// アイコンは <img src="<icon_url>"> として描画される
+			expect(result).toContain(
+				'<img class="nhc-mention__icon nhc-mention__icon--image"',
+			);
+			expect(result).toContain(
+				'src="https://www.youtube.com/s/desktop/40cd5ddc/img/favicon_144x144.png"',
+			);
+			// プロバイダ名 (YouTube) と太字タイトルが両方含まれる
+			expect(result).toContain(
+				'<span class="nhc-mention__provider">YouTube</span>',
+			);
+			expect(result).toContain(
+				'<strong class="nhc-mention__title">Euphoric Band</strong>',
+			);
+		});
+
+		it("link_mention に icon_url が無い場合は 🔗 にフォールバックする", async () => {
+			const item: RichTextItemResponse = {
+				type: "mention",
+				mention: {
+					type: "link_mention",
+					link_mention: {
+						href: "https://example.com",
+						title: "Example",
+					},
+				},
+				annotations: defaultAnnotations,
+				plain_text: "Example",
+				href: "https://example.com",
+			};
+			const result = await renderRichText([item]);
+			expect(result).toContain(
+				'<span class="nhc-mention__icon" aria-hidden="true">🔗</span>',
+			);
+			expect(result).not.toContain("nhc-mention__provider");
+		});
+
 		it("page mention を nhc-mention--page で出力する", async () => {
 			const item: RichTextItemResponse = {
 				type: "mention",

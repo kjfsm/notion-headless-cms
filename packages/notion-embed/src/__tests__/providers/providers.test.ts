@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { clearOgpCache } from "../../ogp";
 import {
 	escapeAttr,
 	escapeHtml,
@@ -139,6 +140,9 @@ describe("steamProvider", () => {
 describe("youtubeProvider", () => {
 	const provider = youtubeProvider();
 
+	beforeEach(() => clearOgpCache());
+	afterEach(() => clearOgpCache());
+
 	it("youtube.com/watch?v=... にマッチ", async () => {
 		expect(provider.match("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).toBe(
 			true,
@@ -164,13 +168,86 @@ describe("youtubeProvider", () => {
 		}
 	});
 
-	it("ID が抽出できなければ skip", async () => {
-		const out = await provider.render({
-			block: dummyBlock,
-			// 正規表現にマッチさせるが ID として無効
-			url: "https://www.youtube.com/watch?other=1",
+	it("動画 ID が抽出できないチャンネル URL は card にフォールバックする", async () => {
+		const fetchSpy = vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValue(new Response("<html></html>"));
+		try {
+			const out = await provider.render({
+				block: dummyBlock,
+				url: "https://www.youtube.com/@some-channel",
+			});
+			expect(out.kind).toBe("html");
+			if (out.kind === "html") {
+				expect(out.html).toContain("nhc-bookmark--youtube");
+			}
+		} finally {
+			fetchSpy.mockRestore();
+		}
+	});
+
+	describe("display: card", () => {
+		const cardProvider = youtubeProvider({ display: "card" });
+
+		it("YouTube ホストにマッチする (チャンネル URL も含む)", () => {
+			expect(cardProvider.match("https://www.youtube.com/@Euphoric-Band")).toBe(
+				true,
+			);
+			expect(
+				cardProvider.match("https://www.youtube.com/watch?v=dQw4w9WgXcQ"),
+			).toBe(true);
+			expect(cardProvider.match("https://example.com")).toBe(false);
 		});
-		expect(out.kind).toBe("skip");
+
+		it("OGP を取得して bookmark 風カード HTML を返す", async () => {
+			const ogpHtml = `
+				<html><head>
+					<meta property="og:title" content="Euphoric Band" />
+					<meta property="og:description" content="String band that plays game music" />
+					<meta property="og:image" content="https://example.com/cover.jpg" />
+					<meta property="og:site_name" content="YouTube" />
+				</head></html>
+			`;
+			const fetchSpy = vi
+				.spyOn(globalThis, "fetch")
+				.mockResolvedValue(new Response(ogpHtml));
+			try {
+				const out = await cardProvider.render({
+					block: dummyBlock,
+					url: "https://www.youtube.com/@Euphoric-Band",
+				});
+				expect(out.kind).toBe("html");
+				if (out.kind === "html") {
+					expect(out.html).toContain("nhc-bookmark nhc-bookmark--youtube");
+					expect(out.html).toContain(
+						'href="https://www.youtube.com/@Euphoric-Band"',
+					);
+					expect(out.html).toContain("Euphoric Band");
+					expect(out.html).toContain("String band that plays game music");
+					expect(out.html).toContain("https://example.com/cover.jpg");
+					expect(out.html).toContain(">YouTube</p>");
+				}
+			} finally {
+				fetchSpy.mockRestore();
+			}
+		});
+
+		it("ogp: false で OGP fetch を抑止する", async () => {
+			const fetchSpy = vi
+				.spyOn(globalThis, "fetch")
+				.mockResolvedValue(new Response(""));
+			const noOgp = youtubeProvider({ display: "card", ogp: false });
+			const out = await noOgp.render({
+				block: dummyBlock,
+				url: "https://www.youtube.com/@some-channel",
+			});
+			expect(fetchSpy).not.toHaveBeenCalled();
+			expect(out.kind).toBe("html");
+			if (out.kind === "html") {
+				expect(out.html).toContain("nhc-bookmark--youtube");
+			}
+			fetchSpy.mockRestore();
+		});
 	});
 });
 
