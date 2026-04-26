@@ -1,5 +1,13 @@
 # example-node-hono
 
+## 0.0.14
+
+### Patch Changes
+
+- Updated dependencies [5703a6c]
+  - @notion-headless-cms/core@0.3.7
+  - @notion-headless-cms/notion-orm@0.1.7
+
 ## 0.0.13
 
 ### Patch Changes
