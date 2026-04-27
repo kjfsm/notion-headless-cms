@@ -517,7 +517,7 @@ function applyListOptions<T extends BaseContentItem>(
 			Array.isArray(opts.status) ? opts.status : [opts.status],
 		);
 		result = result.filter(
-			(it) => it.status !== undefined && allow.has(it.status),
+			(it) => it.status != null && allow.has(it.status),
 		);
 	}
 

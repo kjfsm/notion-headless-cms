@@ -191,9 +191,11 @@ function generateCollectionBlock(
 		if (f.tsName === statusField) hasStatus = true;
 		if (f.tsName === "title") hasTitle = true;
 		if (f.tsName === "publishedAt") hasPublishedAt = true;
+		// slugField は null 非許容。slug なしのアイテムは CMS からアクセスされないため string で十分。
+		const fieldType = f.tsName === slugField ? "string" : f.tsType;
 		itemFieldLines.push(
 			`\t/** Notion property: "${f.notionName.replace(/\*\//g, "*\\/")}" */`,
-			`\t${f.tsName}: ${f.tsType};`,
+			`\t${f.tsName}: ${fieldType};`,
 		);
 	}
 	// BaseContentItem に必須なフィールドを補完
