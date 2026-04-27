@@ -11,7 +11,8 @@
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"deploy": "pnpm run build && wrangler deploy",
-		"cf-typegen": "wrangler types"
+		"cf-typegen": "wrangler types",
+		"test": "vitest run"
 	},
 	"dependencies": {
 		"@notion-headless-cms/cache": "workspace:*",
@@ -30,6 +31,7 @@
 		"svelte": "^5.55.5",
 		"typescript": "^6.0.3",
 		"vite": "^8.0.10",
+		"vitest": "^3.2.0",
 		"wrangler": "^4.85.0"
 	}
 }

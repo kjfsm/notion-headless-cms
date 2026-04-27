@@ -11,7 +11,8 @@
 		"generate": "nhc generate",
 		"lint": "next lint",
 		"preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-		"start": "next start"
+		"start": "next start",
+		"test": "vitest run"
 	},
 	"dependencies": {
 		"@notion-headless-cms/adapter-next": "workspace:*",
@@ -30,6 +31,7 @@
 		"@types/react": "^19.0.0",
 		"@types/react-dom": "^19.0.0",
 		"dotenv": "^17.4.2",
-		"typescript": "^6.0.3"
+		"typescript": "^6.0.3",
+		"vitest": "^3.2.0"
 	}
 }

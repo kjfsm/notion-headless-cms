@@ -9,7 +9,8 @@
 		"build": "tsc",
 		"generate": "nhc generate",
 		"seed": "tsx scripts/seed-test-page.ts",
-		"typecheck": "tsc --noEmit"
+		"typecheck": "tsc --noEmit",
+		"test": "vitest run"
 	},
 	"dependencies": {
 		"@notion-headless-cms/cache": "workspace:*",
@@ -26,7 +27,9 @@
 		"@types/express": "^5.0.6",
 		"@types/node": "^25.6.0",
 		"dotenv": "^17.4.2",
+		"supertest": "^7.1.0",
 		"tsx": "^4.19.0",
-		"typescript": "^6.0.3"
+		"typescript": "^6.0.3",
+		"vitest": "^3.2.0"
 	}
 }

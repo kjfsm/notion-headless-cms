@@ -8,6 +8,7 @@
 		"deploy": "wrangler deploy",
 		"dev": "wrangler dev",
 		"generate": "nhc generate",
+		"test": "vitest run",
 		"typecheck": "npm run cf-typegen && tsc -b"
 	},
 	"dependencies": {
@@ -22,6 +23,7 @@
 		"@notion-headless-cms/cli": "workspace:*",
 		"dotenv": "^17.4.2",
 		"typescript": "^6.0.3",
+		"vitest": "^3.2.0",
 		"wrangler": "^4.85.0"
 	}
 }
