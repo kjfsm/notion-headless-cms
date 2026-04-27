@@ -1,5 +1,9 @@
 import { cloudflareCache } from "@notion-headless-cms/cache/cloudflare";
-import { createCMS as _createCMS, type CMSGlobalOps, type CollectionClient } from "@notion-headless-cms/core";
+import {
+	createCMS as _createCMS,
+	type CMSGlobalOps,
+	type CollectionClient,
+} from "@notion-headless-cms/core";
 import {
 	notionEmbed,
 	youtubeProvider,
