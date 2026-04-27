@@ -167,5 +167,186 @@ describe("kvCache", () => {
 			expect(await cache.getItemMeta("a")).not.toBeNull();
 			expect(await cache.getItemContent("a")).toBeNull();
 		});
+
+		it("invalidate({ slug, kind: 'meta' }) でメタだけ消す", async () => {
+			await cache.setItemMeta("b", {
+				item: makeItem("b"),
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.setItemContent("b", {
+				html: "<p>x</p>",
+				markdown: "x",
+				blocks: [],
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.invalidate?.({
+				collection: "posts",
+				slug: "b",
+				kind: "meta",
+			});
+			expect(await cache.getItemMeta("b")).toBeNull();
+			expect(await cache.getItemContent("b")).not.toBeNull();
+		});
+
+		it("invalidate({ slug }) (kind 省略) でメタと本文の両方を消す", async () => {
+			await cache.setItemMeta("c", {
+				item: makeItem("c"),
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.setItemContent("c", {
+				html: "<p>x</p>",
+				markdown: "x",
+				blocks: [],
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.invalidate?.({ collection: "posts", slug: "c" });
+			expect(await cache.getItemMeta("c")).toBeNull();
+			expect(await cache.getItemContent("c")).toBeNull();
+		});
+
+		it("invalidate('all') ですべてのキーを消す", async () => {
+			await cache.setList({ items: [makeItem("p1")], cachedAt: 0 });
+			await cache.setItemMeta("p1", {
+				item: makeItem("p1"),
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.setItemContent("p1", {
+				html: "<p>x</p>",
+				markdown: "x",
+				blocks: [],
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.invalidate?.("all");
+			expect(await cache.getList()).toBeNull();
+			expect(await cache.getItemMeta("p1")).toBeNull();
+			expect(await cache.getItemContent("p1")).toBeNull();
+		});
+
+		it("invalidate({ collection, kind: 'meta' }) でリストと全メタを消す", async () => {
+			await cache.setList({ items: [makeItem("p1")], cachedAt: 0 });
+			await cache.setItemMeta("p1", {
+				item: makeItem("p1"),
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.setItemMeta("p2", {
+				item: makeItem("p2"),
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.setItemContent("p1", {
+				html: "<p>x</p>",
+				markdown: "x",
+				blocks: [],
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.invalidate?.({ collection: "posts", kind: "meta" });
+			expect(await cache.getList()).toBeNull();
+			expect(await cache.getItemMeta("p1")).toBeNull();
+			expect(await cache.getItemMeta("p2")).toBeNull();
+			expect(await cache.getItemContent("p1")).not.toBeNull();
+		});
+
+		it("invalidate({ collection, kind: 'content' }) で全本文だけ消す", async () => {
+			await cache.setList({ items: [makeItem("p1")], cachedAt: 0 });
+			await cache.setItemMeta("p1", {
+				item: makeItem("p1"),
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.setItemContent("p1", {
+				html: "<p>x</p>",
+				markdown: "x",
+				blocks: [],
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.setItemContent("p2", {
+				html: "<p>y</p>",
+				markdown: "y",
+				blocks: [],
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.invalidate?.({ collection: "posts", kind: "content" });
+			expect(await cache.getList()).not.toBeNull();
+			expect(await cache.getItemMeta("p1")).not.toBeNull();
+			expect(await cache.getItemContent("p1")).toBeNull();
+			expect(await cache.getItemContent("p2")).toBeNull();
+		});
+
+		it("invalidate({ collection }) (kind 省略) でリスト/全メタ/全本文を消す", async () => {
+			await cache.setList({ items: [makeItem("p1")], cachedAt: 0 });
+			await cache.setItemMeta("p1", {
+				item: makeItem("p1"),
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.setItemContent("p1", {
+				html: "<p>x</p>",
+				markdown: "x",
+				blocks: [],
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.invalidate?.({ collection: "posts" });
+			expect(await cache.getList()).toBeNull();
+			expect(await cache.getItemMeta("p1")).toBeNull();
+			expect(await cache.getItemContent("p1")).toBeNull();
+		});
+
+		it("deletePrefix がカーソルでページングしながら全件削除する", async () => {
+			// list_complete=false を返す KV を作って multi-page を再現
+			const store = new Map<string, string>();
+			store.set("meta:a", "{}");
+			store.set("meta:b", "{}");
+			store.set("meta:c", "{}");
+			let listCalls = 0;
+			const pagedKv: KVNamespaceLike = {
+				get: vi
+					.fn()
+					.mockImplementation(async (key: string) => store.get(key) ?? null),
+				put: vi.fn().mockImplementation(async (key: string, value: string) => {
+					store.set(key, value);
+				}),
+				delete: vi.fn().mockImplementation(async (key: string) => {
+					store.delete(key);
+				}),
+				list: vi
+					.fn()
+					.mockImplementation(
+						async (opts?: { prefix?: string; cursor?: string }) => {
+							listCalls += 1;
+							const prefix = opts?.prefix ?? "";
+							const all = [...store.keys()].filter((k) => k.startsWith(prefix));
+							// 1 ページ目は最初の 1 件だけ返し、未完了とする
+							if (listCalls === 1 && all.length > 1) {
+								return {
+									keys: [{ name: all[0] }],
+									list_complete: false,
+									cursor: "next-cursor",
+								};
+							}
+							return {
+								keys: all.map((name) => ({ name })),
+								list_complete: true,
+								cursor: undefined,
+							};
+						},
+					),
+			};
+			const pagedCache = kvCache({ kv: pagedKv });
+			if (!pagedCache) throw new Error("unexpected undefined");
+			await pagedCache.invalidate?.({ collection: "posts", kind: "meta" });
+			expect(store.size).toBe(0);
+			expect(listCalls).toBeGreaterThanOrEqual(2);
+		});
 	});
 });
