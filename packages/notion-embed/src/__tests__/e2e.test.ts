@@ -66,6 +66,27 @@ describe("Steam ウィジェット <iframe> の通過", () => {
 		expect(result).toContain('width="646"');
 		expect(result).toContain('height="190"');
 	});
+
+	it("frameborder 属性が保持される", async () => {
+		const result = await renderWithPlugins(steamHtml);
+		expect(result).toContain('frameborder="0"');
+	});
+});
+
+describe("<iframe> の frameborder / allowfullscreen 属性保持", () => {
+	// rehype-sanitize のスキーマに HAST プロパティ名 (frameBorder/allowFullScreen) を
+	// 使わないと、これらの属性が sanitize で削除されてしまう。
+	const youtubeHtml = `<iframe src="https://www.youtube.com/embed/dQw4w9WgXcQ" width="560" height="315" frameborder="0" allowfullscreen></iframe>`;
+
+	it("allowfullscreen 属性が保持される", async () => {
+		const result = await renderWithPlugins(youtubeHtml);
+		expect(result).toContain("allowfullscreen");
+	});
+
+	it("frameborder 属性が保持される", async () => {
+		const result = await renderWithPlugins(youtubeHtml);
+		expect(result).toContain('frameborder="0"');
+	});
 });
 
 describe("XSS の排除", () => {

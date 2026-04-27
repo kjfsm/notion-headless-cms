@@ -16,7 +16,7 @@ describe("embedRehypePlugins", () => {
 			sanitizeSchema: {
 				tagNames: ["iframe"],
 				attributes: {
-					iframe: ["src", "width", "height", "frameborder", "loading"],
+					iframe: ["src", "width", "height", "frameBorder", "loading"],
 				},
 			},
 		});
@@ -157,6 +157,6 @@ describe("notionEmbed 基本スキーマ", () => {
 		};
 		expect(schema.tagNames).toContain("iframe");
 		expect(schema.attributes?.iframe).toContain("src");
-		expect(schema.attributes?.iframe).toContain("allowfullscreen");
+		expect(schema.attributes?.iframe).toContain("allowFullScreen");
 	});
 });

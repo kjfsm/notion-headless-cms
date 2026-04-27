@@ -36,7 +36,7 @@ export function genericIframeProvider(opts: {
 		sanitizeSchema: {
 			tagNames: ["iframe"],
 			attributes: {
-				iframe: ["src", "width", "height", "frameborder", "loading"],
+				iframe: ["src", "width", "height", "frameBorder", "loading"],
 			},
 			protocols: { src: ["https", "http"] },
 		},
