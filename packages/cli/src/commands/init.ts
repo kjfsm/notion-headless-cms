@@ -13,47 +13,45 @@ const CONFIG_TEMPLATE = `import "dotenv/config";
 import { defineConfig, env } from "@notion-headless-cms/cli";
 
 export default defineConfig({
-	// Notion インテグレーションのシークレット（環境変数 NOTION_TOKEN から読み込む）
+	// Notion インテグレーションのシークレット (環境変数 NOTION_TOKEN から読み込む)
 	notionToken: env("NOTION_TOKEN"),
-	dataSources: [
-		{
-			name: "posts",
+	// 生成ファイルの出力先
+	output: "src/generated/nhc.ts",
+	// コレクション定義 (cms.posts → "posts")
+	collections: {
+		posts: {
 			// dbName で Notion DB を検索して ID を自動解決します
 			dbName: "ブログ記事DB",
-			// id を直接指定することもできます（id が優先されます）
-			// id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-			// fields: {
-			// 	// 自動検出が当たらない場合のみ指定してください
-			// 	// slug: "Slug",        // slug に使う Notion プロパティ名
-			// 	// status: "Status",    // status に使う Notion プロパティ名
-			// 	// publishedAt: "公開日", // publishedAt に使う Notion プロパティ名
-			// 	// 日本語など ASCII 変換できないプロパティ名は必須指定
-			// 	// properties: { "タイトル": "title", "カテゴリ": "category" },
-			// },
+			// databaseId を直接指定することもできます (databaseId が優先されます)
+			// databaseId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+
+			// slug / status として使う TS フィールド名 (デフォルト: "slug" / "status")
+			// slugField: "slug",
+			// statusField: "status",
+
+			// list() のデフォルト絞り込みに使う公開ステータス値
+			publishedStatuses: ["公開済み"],
+
+			// 日本語など ASCII 変換できないプロパティ名は明示マッピング必須
+			// columnMappings: { "タイトル": "title", "カテゴリ": "category" },
 		},
-	],
-	// 生成ファイルの出力先
-	output: "./app/generated/nhc-schema.ts",
+	},
 });
 
-// ── createCMS でのページ構成設定 ────────────────────────────────────────────
+// ── 使い方 ──────────────────────────────────────────────────────────────
+// 生成ファイルから createCMS をインポートし、ランタイム設定だけ渡します。
 //
-// 公開条件・slug・ステータスは createCMS({ collections }) で指定します。
-// nhc generate で生成したスキーマを使う場合の例:
-//
-// import { createCMS } from "@notion-headless-cms/core";
-// import { cmsDataSources } from "./app/generated/nhc-schema";
+// import { createCMS } from "./generated/nhc";
+// import { memoryCache } from "@notion-headless-cms/cache";
 //
 // export const cms = createCMS({
-//   dataSources: cmsDataSources,
-//   collections: {
-//     posts: {
-//       slug: "slug",               // PropertyMap のキー名（生成スキーマに合わせる）
-//       status: "status",           // PropertyMap のキー名
-//       publishedStatuses: ["公開済み"],  // 公開扱いするステータス値
-//     },
-//   },
+//   notionToken: process.env.NOTION_TOKEN!,
+//   cache: memoryCache({ ttlMs: 5 * 60_000 }),
 // });
+//
+// const posts = await cms.posts.list({ limit: 10 });
+// const post = await cms.posts.get("hello-world");
+// const html = await post?.render();
 `;
 
 export async function runInit(opts: InitOptions): Promise<void> {
@@ -76,9 +74,9 @@ export async function runInit(opts: InitOptions): Promise<void> {
 		console.log(`✓ ${outputPath} を作成しました。`);
 		console.log("");
 		console.log("次のステップ:");
-		console.log("  1. nhc.config.ts を編集して dataSources を設定する");
+		console.log("  1. nhc.config.ts を編集して collections を設定する");
 		console.log(
-			"  2. NOTION_TOKEN 環境変数を設定する（Notion インテグレーションのシークレット）",
+			"  2. NOTION_TOKEN 環境変数を設定する (Notion インテグレーションのシークレット)",
 		);
 		console.log("  3. pnpm nhc generate でスキーマを生成する");
 	}

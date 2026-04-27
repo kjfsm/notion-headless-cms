@@ -26,7 +26,7 @@ describe("runInit", () => {
 		);
 		expect(content).toContain('notionToken: env("NOTION_TOKEN")');
 		expect(content).toContain("defineConfig(");
-		expect(content).toContain("dataSources:");
+		expect(content).toContain("collections:");
 	});
 
 	it("デフォルトのファイル名は nhc.config.ts", async () => {
@@ -80,12 +80,12 @@ describe("runInit", () => {
 		logSpy.mockRestore();
 	});
 
-	it("生成されたテンプレートに dbName と fields の例が含まれる", async () => {
+	it("生成されたテンプレートに dbName と publishedStatuses の例が含まれる", async () => {
 		const outputPath = path.join(tmpDir, "nhc.config.ts");
 		await runInit({ output: outputPath });
 
 		const content = await fs.readFile(outputPath, "utf-8");
 		expect(content).toContain("dbName");
-		expect(content).toContain("fields");
+		expect(content).toContain("publishedStatuses");
 	});
 });

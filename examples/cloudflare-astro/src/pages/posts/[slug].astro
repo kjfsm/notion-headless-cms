@@ -1,15 +1,15 @@
 ---
 import { env } from "cloudflare:workers";
-import { createCMS } from "../../lib/cms";
+import { makeCms } from "../../lib/cms";
 
-const cms = createCMS(env as unknown as Parameters<typeof createCMS>[0]);
+const cms = makeCms(env as unknown as Parameters<typeof makeCms>[0]);
 const { slug } = Astro.params;
 if (!slug) return Astro.redirect("/404");
-const post = await cms.posts.getItem(slug);
+const post = await cms.posts.get(slug);
 
 if (!post) return Astro.redirect("/404");
 
-const html = await post.content.html();
+const html = await post.render();
 ---
 
 <html lang="ja">
@@ -21,7 +21,6 @@ const html = await post.content.html();
     <article>
       <h1>{post.slug}</h1>
       {post.publishedAt && <time>{post.publishedAt}</time>}
-      {post.author && <p>Author: {post.author}</p>}
       <div set:html={html} />
     </article>
   </body>

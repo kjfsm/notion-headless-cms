@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { MemoryDocumentCache } from "../cache/memory";
+import { memoryCache } from "../cache/memory";
 import { createCMS } from "../cms";
 import type { RendererFn } from "../types/config";
 import type { BaseContentItem } from "../types/content";
@@ -31,7 +31,7 @@ function makeMockSource(
 }
 
 describe("SWR（Stale-While-Revalidate）", () => {
-	it("TTL 設定あり・期限切れの getItem はブロッキングで最新データを返す", async () => {
+	it("TTL 設定あり・期限切れの get はブロッキングで最新データを返す", async () => {
 		const staleItem: BaseContentItem = {
 			id: "page-1",
 			slug: "my-post",
@@ -44,8 +44,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		};
 
 		// キャッシュに stale アイテムを事前セット（cachedAt: 0 → 必ず TTL 期限切れ）
-		const cache = new MemoryDocumentCache();
-		await cache.setItemMeta("posts:my-post", {
+		const cache = memoryCache();
+		await cache.doc?.setMeta("posts", "my-post", {
 			item: staleItem,
 			notionUpdatedAt: staleItem.updatedAt,
 			cachedAt: 0,
@@ -60,13 +60,14 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		});
 
 		const cms = createCMS({
-			dataSources: { posts: source },
+			collections: { posts: { source, slugField: "slug" } },
 			renderer: mockRenderer,
-			cache: { document: cache, ttlMs: 1000 },
+			cache,
+			ttlMs: 1000,
 			waitUntil,
 		});
 
-		const result = await cms.posts.getItem("my-post");
+		const result = await cms.posts.get("my-post");
 
 		// TTL 期限切れ → ブロッキングで最新データが返される
 		expect(result).not.toBeNull();
@@ -76,7 +77,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		expect(waitUntil).not.toHaveBeenCalled();
 	});
 
-	it("TTL 設定なしの getItem はキャッシュを即時返却してバックグラウンドで差分チェックする", async () => {
+	it("TTL 設定なしの get はキャッシュを即時返却してバックグラウンドで差分チェックする", async () => {
 		const cachedItem: BaseContentItem = {
 			id: "page-1",
 			slug: "my-post",
@@ -88,8 +89,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			updatedAt: "2024-01-02T00:00:00Z",
 		};
 
-		const cache = new MemoryDocumentCache();
-		await cache.setItemMeta("posts:my-post", {
+		const cache = memoryCache();
+		await cache.doc?.setMeta("posts", "my-post", {
 			item: cachedItem,
 			notionUpdatedAt: cachedItem.updatedAt,
 			cachedAt: 0, // 古くてもTTLなしなので期限切れにならない
@@ -108,13 +109,13 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
 		// TTL 未設定（永続キャッシュ）
 		const cms = createCMS({
-			dataSources: { posts: source },
+			collections: { posts: { source, slugField: "slug" } },
 			renderer: mockRenderer,
-			cache: { document: cache },
+			cache,
 			waitUntil,
 		});
 
-		const result = await cms.posts.getItem("my-post");
+		const result = await cms.posts.get("my-post");
 
 		// キャッシュが即時返される
 		expect(result).not.toBeNull();
@@ -125,19 +126,22 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
 		// バックグラウンド処理を待つ → 更新あり → キャッシュが新しいアイテムで更新される
 		await Promise.all(capturedPromises);
-		const updated = await cache.getItemMeta("posts:my-post");
+		const updated = await cache.doc?.getMeta<BaseContentItem>(
+			"posts",
+			"my-post",
+		);
 		expect(updated?.item.updatedAt).toBe("2024-01-02T00:00:00Z");
 	});
 
-	it("TTL 設定なしの getList はキャッシュを即時返却してバックグラウンドで差分チェックする", async () => {
+	it("TTL 設定なしの list はキャッシュを即時返却してバックグラウンドで差分チェックする", async () => {
 		const cachedItem: BaseContentItem = {
 			id: "page-1",
 			slug: "my-post",
 			updatedAt: "2024-01-01T00:00:00Z",
 		};
 
-		const cache = new MemoryDocumentCache();
-		await cache.setList({
+		const cache = memoryCache();
+		await cache.doc?.setList("posts", {
 			items: [cachedItem],
 			cachedAt: 0, // 古くてもTTLなしなので期限切れにならない
 		});
@@ -161,13 +165,13 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
 		// TTL 未設定（永続キャッシュ）
 		const cms = createCMS({
-			dataSources: { posts: source },
+			collections: { posts: { source, slugField: "slug" } },
 			renderer: mockRenderer,
-			cache: { document: cache },
+			cache,
 			waitUntil,
 		});
 
-		const { items } = await cms.posts.getList();
+		const items = await cms.posts.list();
 
 		// キャッシュが即時返される
 		expect(items).toHaveLength(1);
@@ -177,7 +181,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		expect(capturedPromises.length).toBeGreaterThan(0);
 	});
 
-	it("TTL 設定あり・期限切れの getList はブロッキングで最新リストを返す", async () => {
+	it("TTL 設定あり・期限切れの list はブロッキングで最新リストを返す", async () => {
 		const staleItem: BaseContentItem = {
 			id: "page-1",
 			slug: "my-post",
@@ -189,8 +193,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			updatedAt: "2024-01-02T00:00:00Z",
 		};
 
-		const cache = new MemoryDocumentCache();
-		await cache.setList({
+		const cache = memoryCache();
+		await cache.doc?.setList("posts", {
 			items: [staleItem],
 			cachedAt: 0, // 必ず TTL 期限切れ
 		});
@@ -204,13 +208,14 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		});
 
 		const cms = createCMS({
-			dataSources: { posts: source },
+			collections: { posts: { source, slugField: "slug" } },
 			renderer: mockRenderer,
-			cache: { document: cache, ttlMs: 1000 },
+			cache,
+			ttlMs: 1000,
 			waitUntil,
 		});
 
-		const { items } = await cms.posts.getList();
+		const items = await cms.posts.list();
 
 		// TTL 期限切れ → ブロッキングで最新リストが返される
 		expect(items).toHaveLength(2);
@@ -230,18 +235,18 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		});
 
 		const cms = createCMS({
-			dataSources: { posts: source },
+			collections: { posts: { source, slugField: "slug" } },
 			renderer: mockRenderer,
-			cache: { document: new MemoryDocumentCache() },
+			cache: memoryCache(),
 			logger: { debug: debugFn },
 		});
 
-		await cms.posts.getItem("post-1");
+		await cms.posts.get("post-1");
 
 		expect(debugFn).toHaveBeenCalledWith(
 			"キャッシュミス、フェッチ",
 			expect.objectContaining({
-				operation: "getItem",
+				operation: "get",
 				slug: "post-1",
 				collection: "posts",
 			}),
@@ -255,32 +260,35 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			slug: "post-1",
 			updatedAt: "2024-01-01T00:00:00Z",
 		};
-		const cache = new MemoryDocumentCache();
-		await cache.setItemMeta("posts:post-1", {
+		const cache = memoryCache();
+		await cache.doc?.setMeta("posts", "post-1", {
 			item,
 			notionUpdatedAt: item.updatedAt,
 			cachedAt: Date.now(),
 		});
 
 		const cms = createCMS({
-			dataSources: {
-				posts: makeMockSource({
-					async list() {
-						return [item];
-					},
-				}),
+			collections: {
+				posts: {
+					source: makeMockSource({
+						async list() {
+							return [item];
+						},
+					}),
+					slugField: "slug",
+				},
 			},
 			renderer: mockRenderer,
-			cache: { document: cache },
+			cache,
 			logger: { debug: debugFn },
 		});
 
-		await cms.posts.getItem("post-1");
+		await cms.posts.get("post-1");
 
 		expect(debugFn).toHaveBeenCalledWith(
 			"キャッシュヒット",
 			expect.objectContaining({
-				operation: "getItem",
+				operation: "get",
 				slug: "post-1",
 				collection: "posts",
 			}),
@@ -294,8 +302,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			slug: "post-1",
 			updatedAt: "2024-01-01T00:00:00Z",
 		};
-		const cache = new MemoryDocumentCache();
-		await cache.setItemMeta("posts:post-1", {
+		const cache = memoryCache();
+		await cache.doc?.setMeta("posts", "post-1", {
 			item,
 			notionUpdatedAt: item.updatedAt,
 			cachedAt: 0, // 必ず TTL 期限切れ
@@ -307,18 +315,19 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			},
 		});
 		const cms = createCMS({
-			dataSources: { posts: source },
+			collections: { posts: { source, slugField: "slug" } },
 			renderer: mockRenderer,
-			cache: { document: cache, ttlMs: 1000 },
+			cache,
+			ttlMs: 1000,
 			logger: { debug: debugFn },
 		});
 
-		await cms.posts.getItem("post-1");
+		await cms.posts.get("post-1");
 
 		expect(debugFn).toHaveBeenCalledWith(
 			"キャッシュ期限切れ（TTL）、フェッチ",
 			expect.objectContaining({
-				operation: "getItem",
+				operation: "get",
 				slug: "post-1",
 				collection: "posts",
 			}),
@@ -340,8 +349,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			updatedAt: "2024-01-02T00:00:00Z",
 		};
 
-		const cache = new MemoryDocumentCache();
-		await cache.setItemMeta("posts:post-1", {
+		const cache = memoryCache();
+		await cache.doc?.setMeta("posts", "post-1", {
 			item: cachedItem,
 			notionUpdatedAt: cachedItem.updatedAt,
 			cachedAt: Date.now(),
@@ -355,21 +364,21 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		});
 
 		const cms = createCMS({
-			dataSources: { posts: source },
+			collections: { posts: { source, slugField: "slug" } },
 			renderer: mockRenderer,
-			cache: { document: cache },
+			cache,
 			logger: { debug: debugFn },
 			hooks: { onCacheRevalidated },
 			waitUntil: (p) => capturedPromises.push(p),
 		});
 
-		await cms.posts.getItem("post-1");
+		await cms.posts.get("post-1");
 		await Promise.all(capturedPromises);
 
 		expect(debugFn).toHaveBeenCalledWith(
 			"SWR: 差分を検出、メタを差し替え",
 			expect.objectContaining({
-				operation: "getItem:bg",
+				operation: "get:bg",
 				slug: "post-1",
 				collection: "posts",
 			}),
@@ -390,8 +399,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			slug: "post-1",
 			updatedAt: "2024-01-01T00:00:00Z",
 		};
-		const cache = new MemoryDocumentCache();
-		await cache.setItemMeta("posts:post-1", {
+		const cache = memoryCache();
+		await cache.doc?.setMeta("posts", "post-1", {
 			item,
 			notionUpdatedAt: item.updatedAt,
 			cachedAt: Date.now(),
@@ -405,20 +414,21 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		});
 
 		const cms = createCMS({
-			dataSources: { posts: source },
+			collections: { posts: { source, slugField: "slug" } },
 			renderer: mockRenderer,
-			cache: { document: cache, ttlMs: 60_000 },
+			cache,
+			ttlMs: 60_000,
 			logger: { debug: debugFn },
 			hooks: { onCacheRevalidated },
 			waitUntil: (p) => capturedPromises.push(p),
 		});
 
-		await cms.posts.getItem("post-1");
+		await cms.posts.get("post-1");
 		await Promise.all(capturedPromises);
 
 		expect(debugFn).toHaveBeenCalledWith(
 			"SWR: 差分なし、TTL をリセット",
-			expect.objectContaining({ operation: "getItem:bg", slug: "post-1" }),
+			expect.objectContaining({ operation: "get:bg", slug: "post-1" }),
 		);
 		expect(onCacheRevalidated).not.toHaveBeenCalled();
 	});
@@ -437,8 +447,11 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			updatedAt: "2024-01-02T00:00:00Z",
 		};
 
-		const cache = new MemoryDocumentCache();
-		await cache.setList({ items: [oldItem], cachedAt: Date.now() });
+		const cache = memoryCache();
+		await cache.doc?.setList("posts", {
+			items: [oldItem],
+			cachedAt: Date.now(),
+		});
 
 		const capturedPromises: Promise<unknown>[] = [];
 		const source = makeMockSource({
@@ -448,14 +461,14 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		});
 
 		const cms = createCMS({
-			dataSources: { posts: source },
+			collections: { posts: { source, slugField: "slug" } },
 			renderer: mockRenderer,
-			cache: { document: cache },
+			cache,
 			hooks: { onListCacheRevalidated },
 			waitUntil: (p) => capturedPromises.push(p),
 		});
 
-		await cms.posts.getList();
+		await cms.posts.list();
 		await Promise.all(capturedPromises);
 
 		expect(onListCacheRevalidated).toHaveBeenCalledOnce();
@@ -467,16 +480,16 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		);
 	});
 
-	it("TTL 設定あり・期限内の getItem はキャッシュを即時返却してバックグラウンド差分チェックする", async () => {
+	it("TTL 設定あり・期限内の get はキャッシュを即時返却してバックグラウンド差分チェックする", async () => {
 		const freshItem: BaseContentItem = {
 			id: "page-1",
 			slug: "my-post",
 			updatedAt: "2024-01-01T00:00:00Z",
 		};
 
-		const cache = new MemoryDocumentCache();
+		const cache = memoryCache();
 		// cachedAt: Date.now()、ttlMs: 60_000 → 期限内
-		await cache.setItemMeta("posts:my-post", {
+		await cache.doc?.setMeta("posts", "my-post", {
 			item: freshItem,
 			notionUpdatedAt: freshItem.updatedAt,
 			cachedAt: Date.now(),
@@ -494,13 +507,14 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		});
 
 		const cms = createCMS({
-			dataSources: { posts: source },
+			collections: { posts: { source, slugField: "slug" } },
 			renderer: mockRenderer,
-			cache: { document: cache, ttlMs: 60_000 },
+			cache,
+			ttlMs: 60_000,
 			waitUntil,
 		});
 
-		await cms.posts.getItem("my-post");
+		await cms.posts.get("my-post");
 
 		// 期限内でもバックグラウンド差分チェックは行われる
 		expect(capturedPromises.length).toBeGreaterThan(0);
@@ -513,8 +527,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
 			updatedAt: "2024-01-01T00:00:00Z",
 		};
 
-		const cache = new MemoryDocumentCache();
-		await cache.setList({ items: [item], cachedAt: Date.now() });
+		const cache = memoryCache();
+		await cache.doc?.setList("posts", { items: [item], cachedAt: Date.now() });
 
 		const capturedPromises: Promise<unknown>[] = [];
 		const source = makeMockSource({
@@ -524,14 +538,15 @@ describe("SWR（Stale-While-Revalidate）", () => {
 		});
 
 		const cms = createCMS({
-			dataSources: { posts: source },
+			collections: { posts: { source, slugField: "slug" } },
 			renderer: mockRenderer,
 			// ttlMs を設定するとリスト差分なし時に cachedAt がリセットされる
-			cache: { document: cache, ttlMs: 60_000 },
+			cache,
+			ttlMs: 60_000,
 			waitUntil: (p) => capturedPromises.push(p),
 		});
 
-		await cms.posts.getList();
+		await cms.posts.list();
 		await Promise.all(capturedPromises);
 		// エラーなく完了することを確認
 		expect(capturedPromises.length).toBeGreaterThan(0);
@@ -539,252 +554,39 @@ describe("SWR（Stale-While-Revalidate）", () => {
 });
 
 describe("metadata と content の分離", () => {
-	it("getItem は content を読まない（content アクセス時に初めて読む）", async () => {
+	it("get は content を読まない（render() アクセス時に初めて読む）", async () => {
 		const item: BaseContentItem = {
 			id: "1",
 			slug: "lazy-post",
 			updatedAt: "2024-01-01T00:00:00Z",
 		};
 		const loadMarkdown = vi.fn().mockResolvedValue("# hi");
-		const cache = new MemoryDocumentCache();
-		const getItemContentSpy = vi.spyOn(cache, "getItemContent");
+		const cache = memoryCache();
+		const getContentSpy = vi.spyOn(cache.doc!, "getContent");
 
 		const cms = createCMS({
-			dataSources: {
-				posts: makeMockSource({
-					async list() {
-						return [item];
-					},
-					loadMarkdown,
-				}),
+			collections: {
+				posts: {
+					source: makeMockSource({
+						async list() {
+							return [item];
+						},
+						loadMarkdown,
+					}),
+					slugField: "slug",
+				},
 			},
 			renderer: mockRenderer,
-			cache: { document: cache },
+			cache,
 		});
 
-		const result = await cms.posts.getItem("lazy-post");
-		expect(getItemContentSpy).not.toHaveBeenCalled();
+		const result = await cms.posts.get("lazy-post");
+		expect(getContentSpy).not.toHaveBeenCalled();
 		expect(loadMarkdown).not.toHaveBeenCalled();
 
-		await result?.content.html();
-		expect(getItemContentSpy).toHaveBeenCalledWith("posts:lazy-post");
+		await result?.render();
+		expect(getContentSpy).toHaveBeenCalledWith("posts", "lazy-post");
 		expect(loadMarkdown).toHaveBeenCalled();
-	});
-
-	it("checkForUpdate 差分なし: content cache を破棄しない", async () => {
-		const item: BaseContentItem = {
-			id: "1",
-			slug: "stable-post",
-			updatedAt: "2024-01-01T00:00:00Z",
-		};
-		const cache = new MemoryDocumentCache();
-		await cache.setItemContent("posts:stable-post", {
-			html: "<p>existing</p>",
-			markdown: "# existing",
-			blocks: [],
-			notionUpdatedAt: item.updatedAt,
-			cachedAt: Date.now(),
-		});
-
-		const cms = createCMS({
-			dataSources: {
-				posts: makeMockSource({
-					async list() {
-						return [item];
-					},
-				}),
-			},
-			renderer: mockRenderer,
-			cache: { document: cache },
-		});
-
-		const result = await cms.posts.checkForUpdate({
-			slug: "stable-post",
-			since: item.updatedAt,
-		});
-		expect(result.changed).toBe(false);
-		const content = await cache.getItemContent("posts:stable-post");
-		expect(content?.html).toBe("<p>existing</p>");
-	});
-
-	it("checkForUpdate 差分あり: content cache を失効 + waitUntil で再生成", async () => {
-		const oldItem: BaseContentItem = {
-			id: "1",
-			slug: "updated-post",
-			updatedAt: "2024-01-01T00:00:00Z",
-		};
-		const freshItem: BaseContentItem = {
-			id: "1",
-			slug: "updated-post",
-			updatedAt: "2024-01-02T00:00:00Z",
-		};
-		const cache = new MemoryDocumentCache();
-		await cache.setItemContent("posts:updated-post", {
-			html: "<p>old</p>",
-			markdown: "old",
-			blocks: [],
-			notionUpdatedAt: oldItem.updatedAt,
-			cachedAt: Date.now(),
-		});
-
-		const captured: Promise<unknown>[] = [];
-		const cms = createCMS({
-			dataSources: {
-				posts: makeMockSource({
-					async list() {
-						return [freshItem];
-					},
-				}),
-			},
-			renderer: mockRenderer,
-			cache: { document: cache },
-			waitUntil: (p) => captured.push(p),
-		});
-
-		const result = await cms.posts.checkForUpdate({
-			slug: "updated-post",
-			since: oldItem.updatedAt,
-		});
-		expect(result.changed).toBe(true);
-		if (result.changed) {
-			expect(result.meta.updatedAt).toBe(freshItem.updatedAt);
-		}
-
-		await Promise.all(captured);
-		const content = await cache.getItemContent("posts:updated-post");
-		expect(content?.notionUpdatedAt).toBe(freshItem.updatedAt);
-	});
-
-	it("getItemMeta / getItemContent / checkForUpdate の戻り値が JSON ラウンドトリップ可能", async () => {
-		const item: BaseContentItem = {
-			id: "1",
-			slug: "json-post",
-			updatedAt: "2024-01-01T00:00:00Z",
-		};
-		const cms = createCMS({
-			dataSources: {
-				posts: makeMockSource({
-					async list() {
-						return [item];
-					},
-					loadMarkdown: vi.fn().mockResolvedValue("# hello"),
-				}),
-			},
-			renderer: mockRenderer,
-			preset: "disabled",
-		});
-
-		const meta = await cms.posts.getItemMeta("json-post");
-		expect(JSON.parse(JSON.stringify(meta))).toEqual(meta);
-
-		const content = await cms.posts.getItemContent("json-post");
-		expect(content).not.toBeNull();
-		expect(JSON.parse(JSON.stringify(content))).toEqual(content);
-
-		const checkResult = await cms.posts.checkForUpdate({
-			slug: "json-post",
-			since: "2023-01-01T00:00:00Z",
-		});
-		expect(JSON.parse(JSON.stringify(checkResult))).toEqual(checkResult);
-	});
-});
-
-describe("getItemMeta（CollectionClient）", () => {
-	it("キャッシュヒット時に SWR バックグラウンドチェックを起動する", async () => {
-		const cachedItem: BaseContentItem = {
-			id: "p1",
-			slug: "post-1",
-			updatedAt: "2024-01-01T00:00:00Z",
-		};
-		const cache = new MemoryDocumentCache();
-		await cache.setItemMeta("posts:post-1", {
-			item: cachedItem,
-			notionUpdatedAt: cachedItem.updatedAt,
-			cachedAt: Date.now(),
-		});
-
-		const captured: Promise<unknown>[] = [];
-		const onCacheHit = vi.fn();
-		const cms = createCMS({
-			dataSources: {
-				posts: makeMockSource({
-					async list() {
-						return [cachedItem];
-					},
-				}),
-			},
-			renderer: mockRenderer,
-			cache: { document: cache },
-			hooks: { onCacheHit },
-			waitUntil: (p) => captured.push(p),
-		});
-
-		const meta = await cms.posts.getItemMeta("post-1");
-		expect(meta?.slug).toBe("post-1");
-		expect(onCacheHit).toHaveBeenCalled();
-		expect(captured.length).toBeGreaterThan(0);
-	});
-
-	it("TTL 期限切れではブロッキングで再フェッチする", async () => {
-		const stale: BaseContentItem = {
-			id: "p1",
-			slug: "post-1",
-			updatedAt: "2024-01-01T00:00:00Z",
-		};
-		const fresh: BaseContentItem = {
-			id: "p1",
-			slug: "post-1",
-			updatedAt: "2024-01-02T00:00:00Z",
-		};
-		const cache = new MemoryDocumentCache();
-		await cache.setItemMeta("posts:post-1", {
-			item: stale,
-			notionUpdatedAt: stale.updatedAt,
-			cachedAt: 0,
-		});
-
-		const cms = createCMS({
-			dataSources: {
-				posts: makeMockSource({
-					async list() {
-						return [fresh];
-					},
-				}),
-			},
-			renderer: mockRenderer,
-			cache: { document: cache, ttlMs: 1000 },
-		});
-
-		const meta = await cms.posts.getItemMeta("post-1");
-		expect(meta?.updatedAt).toBe("2024-01-02T00:00:00Z");
-	});
-
-	it("TTL 期限切れで item が見つからない場合は null を返す", async () => {
-		const stale: BaseContentItem = {
-			id: "p1",
-			slug: "missing-post",
-			updatedAt: "2024-01-01T00:00:00Z",
-		};
-		const cache = new MemoryDocumentCache();
-		await cache.setItemMeta("posts:missing-post", {
-			item: stale,
-			notionUpdatedAt: stale.updatedAt,
-			cachedAt: 0,
-		});
-
-		const cms = createCMS({
-			dataSources: {
-				posts: makeMockSource({
-					async list() {
-						return [];
-					},
-				}),
-			},
-			renderer: mockRenderer,
-			cache: { document: cache, ttlMs: 1000 },
-		});
-
-		expect(await cms.posts.getItemMeta("missing-post")).toBeNull();
 	});
 });
 
@@ -800,204 +602,38 @@ describe("collectionKey", () => {
 	});
 });
 
-describe("バックグラウンドエラーパス", () => {
-	it("リスト初回フェッチ + waitUntil 指定時に保存 Promise をバックグラウンドに乗せる", async () => {
-		const item: BaseContentItem = {
-			id: "p1",
-			slug: "post-1",
-			updatedAt: "2024-01-01T00:00:00Z",
-		};
-		const cache = new MemoryDocumentCache();
-		const captured: Promise<unknown>[] = [];
-
-		const cms = createCMS({
-			dataSources: {
-				posts: makeMockSource({
-					async list() {
-						return [item];
-					},
-				}),
-			},
-			renderer: mockRenderer,
-			cache: { document: cache },
-			waitUntil: (p) => captured.push(p),
-		});
-
-		// キャッシュ無し + waitUntil あり → fetchList の waitUntil 分岐を通る
-		const { items } = await cms.posts.getList();
-		expect(items).toHaveLength(1);
-		expect(captured.length).toBeGreaterThan(0);
-		await Promise.all(captured);
-	});
-
-	it("rebuildContentBg 失敗時に logger.warn が呼ばれる", async () => {
-		const warnFn = vi.fn();
-		const oldItem: BaseContentItem = {
-			id: "1",
-			slug: "broken-post",
-			updatedAt: "2024-01-01T00:00:00Z",
-		};
-		const freshItem: BaseContentItem = {
-			id: "1",
-			slug: "broken-post",
-			updatedAt: "2024-01-02T00:00:00Z",
-		};
-		const cache = new MemoryDocumentCache();
-
-		// loadMarkdown が失敗 → buildCachedItemContent が throw → rebuildContentBg の catch
-		const failingMarkdown = vi
-			.fn()
-			.mockRejectedValue(new Error("fetch failed"));
-		const captured: Promise<unknown>[] = [];
-
-		const cms = createCMS({
-			dataSources: {
-				posts: makeMockSource({
-					async list() {
-						return [freshItem];
-					},
-					loadMarkdown: failingMarkdown,
-				}),
-			},
-			renderer: mockRenderer,
-			cache: { document: cache },
-			logger: { warn: warnFn },
-			waitUntil: (p) => captured.push(p),
-		});
-
-		const result = await cms.posts.checkForUpdate({
-			slug: "broken-post",
-			since: oldItem.updatedAt,
-		});
-		expect(result.changed).toBe(true);
-		await Promise.all(captured);
-
-		expect(warnFn).toHaveBeenCalledWith(
-			"本文のバックグラウンド再生成に失敗",
-			expect.objectContaining({
-				slug: "broken-post",
-				collection: "posts",
-				error: expect.any(String),
-			}),
-		);
-	});
-
-	it("checkAndUpdateItemBg が例外時に logger.warn を呼ぶ", async () => {
-		const warnFn = vi.fn();
-		const cachedItem: BaseContentItem = {
-			id: "p1",
-			slug: "post-1",
-			updatedAt: "2024-01-01T00:00:00Z",
-		};
-		const cache = new MemoryDocumentCache();
-		await cache.setItemMeta("posts:post-1", {
-			item: cachedItem,
-			notionUpdatedAt: cachedItem.updatedAt,
-			cachedAt: Date.now(),
-		});
-
-		const captured: Promise<unknown>[] = [];
-		const cms = createCMS({
-			dataSources: {
-				posts: makeMockSource({
-					async list() {
-						throw new Error("upstream down");
-					},
-				}),
-			},
-			renderer: mockRenderer,
-			cache: { document: cache },
-			logger: { warn: warnFn },
-			rateLimiter: { maxRetries: 0, baseDelayMs: 0 },
-			waitUntil: (p) => captured.push(p),
-		});
-
-		await cms.posts.getItem("post-1");
-		await Promise.all(captured);
-
-		expect(warnFn).toHaveBeenCalledWith(
-			"SWR: アイテムのバックグラウンド差分チェックに失敗",
-			expect.objectContaining({
-				slug: "post-1",
-				collection: "posts",
-				error: "upstream down",
-			}),
-		);
-	});
-
-	it("checkAndUpdateListBg が例外時に logger.warn を呼ぶ", async () => {
-		const warnFn = vi.fn();
-		const cachedItem: BaseContentItem = {
-			id: "p1",
-			slug: "post-1",
-			updatedAt: "2024-01-01T00:00:00Z",
-		};
-		const cache = new MemoryDocumentCache();
-		await cache.setList({ items: [cachedItem], cachedAt: Date.now() });
-
-		const captured: Promise<unknown>[] = [];
-		let listCallCount = 0;
-		const cms = createCMS({
-			dataSources: {
-				posts: makeMockSource({
-					async list() {
-						listCallCount++;
-						// 1回目（同期パスは cache hit で呼ばれない）→ bg で初回 throw
-						throw new Error("list failed");
-					},
-				}),
-			},
-			renderer: mockRenderer,
-			cache: { document: cache },
-			logger: { warn: warnFn },
-			rateLimiter: { maxRetries: 0, baseDelayMs: 0 },
-			waitUntil: (p) => captured.push(p),
-		});
-
-		await cms.posts.getList();
-		await Promise.all(captured);
-
-		expect(listCallCount).toBeGreaterThan(0);
-		expect(warnFn).toHaveBeenCalledWith(
-			"SWR: リストのバックグラウンド差分チェックに失敗",
-			expect.objectContaining({
-				collection: "posts",
-				error: "list failed",
-			}),
-		);
-	});
-});
-
 describe("リトライ中のロガー", () => {
-	it("getList() がリトライ中に logger.warn を呼ぶ", async () => {
+	it("list() がリトライ中に logger.warn を呼ぶ", async () => {
 		const warnFn = vi.fn();
 		const retryableErr = Object.assign(new Error("rate limit"), {
 			status: 503,
 		});
 		let callCount = 0;
 		const cms = createCMS({
-			dataSources: {
-				posts: makeMockSource({
-					async list() {
-						callCount++;
-						if (callCount === 1) throw retryableErr;
-						return [];
-					},
-				}),
+			collections: {
+				posts: {
+					source: makeMockSource({
+						async list() {
+							callCount++;
+							if (callCount === 1) throw retryableErr;
+							return [];
+						},
+					}),
+					slugField: "slug",
+				},
 			},
-			preset: "disabled",
 			renderer: mockRenderer,
 			logger: { warn: warnFn },
 			rateLimiter: { maxRetries: 1, baseDelayMs: 0, retryOn: [503] },
 		});
-		await cms.posts.getList();
+		await cms.posts.list();
 		expect(warnFn).toHaveBeenCalledWith(
-			"getList() リトライ中",
+			"list() リトライ中",
 			expect.objectContaining({ attempt: 1, status: 503 }),
 		);
 	});
 
-	it("getItem() がリトライ中に logger.warn を呼ぶ", async () => {
+	it("get() がリトライ中に logger.warn を呼ぶ", async () => {
 		const warnFn = vi.fn();
 		const retryableErr = Object.assign(new Error("service unavailable"), {
 			status: 503,
@@ -1009,23 +645,25 @@ describe("リトライ中のロガー", () => {
 		};
 		let callCount = 0;
 		const cms = createCMS({
-			dataSources: {
-				posts: makeMockSource({
-					async list() {
-						callCount++;
-						if (callCount === 1) throw retryableErr;
-						return [targetItem];
-					},
-				}),
+			collections: {
+				posts: {
+					source: makeMockSource({
+						async list() {
+							callCount++;
+							if (callCount === 1) throw retryableErr;
+							return [targetItem];
+						},
+					}),
+					slugField: "slug",
+				},
 			},
-			preset: "disabled",
 			renderer: mockRenderer,
 			logger: { warn: warnFn },
 			rateLimiter: { maxRetries: 1, baseDelayMs: 0, retryOn: [503] },
 		});
-		await cms.posts.getItem("retry-post");
+		await cms.posts.get("retry-post");
 		expect(warnFn).toHaveBeenCalledWith(
-			"getItem() リトライ中",
+			"get() リトライ中",
 			expect.objectContaining({ attempt: 1, status: 503 }),
 		);
 	});

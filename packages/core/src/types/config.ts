@@ -1,4 +1,4 @@
-import type { CacheConfig } from "./cache";
+import type { CacheAdapter } from "./cache";
 import type { BaseContentItem } from "./content";
 import type { DataSource } from "./data-source";
 import type { CMSHooks } from "./hooks";
@@ -54,90 +54,74 @@ export interface RateLimiterConfig {
 	baseDelayMs?: number;
 }
 
-/** `createCMS({ dataSources })` の map 型。 */
-// biome-ignore lint/suspicious/noExplicitAny: 各コレクションの T が異なる
-export type DataSourceMap = Record<string, DataSource<any>>;
-
 /**
- * コレクション別のページ構成セマンティクス。
- * `createCMS({ collections: { posts: { ... } } })` に渡す。
+ * コレクション 1 件の定義。CLI が生成する `nhc.ts` から `createCMS` に渡される。
  *
- * `T` を指定するとコレクション固有の型付きフックを定義できる。
- * `createCMS` の `dataSources` から `T` が自動推論されるため、アプリ側が
- * `CMSHooks<Post>` などを直接記述する必要がなくなる。
+ * `source` は notion-orm 等の DataSource 実装。
+ * `slugField` / `statusField` は TS フィールド名 (DataSource の `properties` キーと一致)。
  */
-export interface CollectionSemantics<
-	T extends BaseContentItem = BaseContentItem,
-> {
-	/**
-	 * slug として使うフィールド名（必須）。
-	 * DataSource の `properties` マップのキーと一致させる。
-	 */
-	slug: string;
-	/** status として使うフィールド名。 */
-	status?: string;
-	/**
-	 * 公開扱いするステータス値。DataSource 側の `publishedStatuses` より優先される。
-	 * 例: ["公開済み", "Published"]
-	 */
+export interface CollectionDef<T extends BaseContentItem = BaseContentItem> {
+	/** Notion etc. のデータソース実装。 */
+	source: DataSource<T>;
+	/** slug として使う TS フィールド名 (必須)。`source.properties[slugField]` で Notion プロパティ名を解決する。 */
+	slugField: string;
+	/** ステータスとして使う TS フィールド名。 */
+	statusField?: string;
+	/** 公開扱いするステータス値。`list()` のデフォルト絞り込みに使う。 */
 	publishedStatuses?: readonly string[];
-	/**
-	 * アクセス許可するステータス値。DataSource 側の `accessibleStatuses` より優先される。
-	 */
+	/** アクセス許可するステータス値。`get()` の閲覧可否判定に使う。 */
 	accessibleStatuses?: readonly string[];
-	/**
-	 * コレクション固有のライフサイクルフック。
-	 * トップレベルの `hooks` と合成して実行される（グローバルフック → コレクションフックの順）。
-	 * `T` が確定しているため `item.item.myField` など独自フィールドに型安全にアクセスできる。
-	 */
+	/** コレクション固有のライフサイクルフック。グローバル hooks の後に実行される。 */
 	hooks?: CMSHooks<T>;
 }
 
-/** `DataSourceMap` から各 T を抽出するユーティリティ型。 */
-export type InferDataSourceItem<D> =
-	D extends DataSource<infer T> ? T : BaseContentItem;
+/**
+ * `createCMS({ collections })` の map 型。
+ * キーがコレクション名、値が `CollectionDef<T>`。
+ */
+// biome-ignore lint/suspicious/noExplicitAny: 各コレクションの T が異なる
+export type CollectionsConfig = Record<string, CollectionDef<any>>;
+
+/** `CollectionsConfig` から各 T を抽出するユーティリティ型。 */
+export type InferCollectionItem<C> =
+	C extends CollectionDef<infer T> ? T : BaseContentItem;
 
 /**
- * `createCMS()` に渡すオプション。v1 の正式な入力シグネチャ。
- * ユーザーは `nhc generate` が生成した `cmsDataSources` を渡すだけ。
+ * `createCMS()` の入力。
+ * 通常は CLI が生成した `nhc.ts` の `createCMS` がこの型をラップする。
+ *
+ * @example
+ * createCMS({
+ *   collections: {
+ *     posts: {
+ *       source: createNotionCollection({ token, dataSourceId, properties }),
+ *       slugField: "slug",
+ *       statusField: "status",
+ *       publishedStatuses: ["公開済み"],
+ *     }
+ *   },
+ *   cache: memoryCache({ ttlMs: 5 * 60_000 }),
+ * });
  */
-export interface CreateCMSOptions<D extends DataSourceMap = DataSourceMap> {
-	/** コレクション名 → DataSource のマップ (CLI 生成の `cmsDataSources`)。 */
-	dataSources: D;
+export interface CreateCMSOptions<
+	C extends CollectionsConfig = CollectionsConfig,
+> {
+	/** コレクション定義のマップ。 */
+	collections: C;
 	/**
-	 * ランタイムプリセット。`cache` / `renderer` のデフォルトを自動設定する。
-	 *
-	 * - `"node"`: Node.js 向け。`memoryDocumentCache` + `memoryImageCache` を有効化。
-	 *   `ttlMs` と組み合わせて SWR の TTL を設定できる。
-	 * - `"disabled"`: キャッシュを完全無効化する。
-	 * - 省略: 従来の動作（`cache` / `renderer` をそのまま使用）。
-	 *   `...nodePreset({ ttlMs })` のスプレッドパターンも引き続き動作する。
-	 *
-	 * `cache` を明示的に指定した場合は `preset` より `cache` が優先される。
-	 *
-	 * @example
-	 * // Before（スプレッドが必要だった）
-	 * const cms = createCMS({ ...nodePreset({ ttlMs: 5 * 60_000 }), dataSources });
-	 *
-	 * // After
-	 * const cms = createCMS({ dataSources, preset: "node", ttlMs: 5 * 60_000 });
+	 * キャッシュアダプタ (単体または配列)。未指定時はキャッシュなし。
+	 * - `memoryCache()` のように doc + image 両方を担当するもの
+	 * - `r2Cache()` (image のみ)、`kvCache()` (doc のみ) のように片側のみ担当するもの
+	 * - 配列で組み合わせると、各 adapter の `handles` で振り分けられる
 	 */
-	preset?: "node" | "disabled";
-	/**
-	 * SWR キャッシュの有効期間（ミリ秒）。`preset` と組み合わせて使用する。
-	 * `cache` オブジェクトを直接渡す場合は `cache.ttlMs` を使用すること。
-	 *
-	 * @example
-	 * const cms = createCMS({ dataSources, preset: "node", ttlMs: 5 * 60_000 });
-	 */
+	cache?: CacheAdapter | readonly CacheAdapter[];
+	/** SWR の有効期間 (ミリ秒)。未設定時は TTL なし (失効まで stale を返す)。 */
 	ttlMs?: number;
-	/** レンダラー関数。未指定時は @notion-headless-cms/renderer の renderMarkdown を使用。 */
+	/** カスタムレンダラー。未指定時は `@notion-headless-cms/renderer` の `renderMarkdown` を動的 import。 */
 	renderer?: RendererFn;
-	/** キャッシュ設定。未設定時はキャッシュなし。 */
-	cache?: CacheConfig;
-	/** レンダリング・コンテンツ処理設定。 */
-	content?: ContentConfig;
-	/** Cloudflare Workers の waitUntil に相当する非同期処理の登録関数。 */
+	/** 画像プロキシのベース URL。デフォルト `/api/images`。 */
+	imageProxyBase?: string;
+	/** Cloudflare Workers の `waitUntil` に相当する非同期処理の登録関数。 */
 	waitUntil?: (p: Promise<unknown>) => void;
 	/** ライフサイクルフック (全コレクション共通)。 */
 	// biome-ignore lint/suspicious/noExplicitAny: 全コレクション共通
@@ -147,43 +131,10 @@ export interface CreateCMSOptions<D extends DataSourceMap = DataSourceMap> {
 	plugins?: CMSPlugin<any>[];
 	/** ロガー。 */
 	logger?: Logger;
-	/**
-	 * ログレベルの下限。指定したレベル未満のログを内部で抑制する。
-	 * Cloudflare Workers の Observability のように debug ログが課金対象になる環境では
-	 * `"info"` を指定すると debug ログを出力しなくなる。
-	 *
-	 * @example
-	 * createCMS({ ..., logLevel: "info" }) // debug ログを抑制
-	 */
+	/** ログレベルの下限。指定したレベル未満のログを内部で抑制する。 */
 	logLevel?: LogLevel;
 	/** レートリミット・リトライ設定。 */
 	rateLimiter?: RateLimiterConfig;
-	/**
-	 * コレクション別のページ構成セマンティクス。
-	 * slug・status・公開条件・コレクション固有フックを指定する。
-	 * 指定したコレクションでは `slug` が必須（未指定時はエラー）。
-	 * 指定したコレクションの `publishedStatuses`/`accessibleStatuses` は
-	 * DataSource 側の設定より優先される。
-	 *
-	 * `hooks` にコレクション固有フックを定義すると、`dataSources` の型から `T` が
-	 * 自動推論されるため `CMSHooks<Post>` などを直接書かずに済む。
-	 *
-	 * @example
-	 * createCMS({
-	 *   dataSources: { posts: createNotionCollection<Post>({ ... }) },
-	 *   collections: {
-	 *     posts: {
-	 *       slug: "slug",
-	 *       status: "status",
-	 *       publishedStatuses: ["公開済み"],
-	 *       hooks: {
-	 *         onCacheHit: (slug, item) => console.log(item.item.title),
-	 *       },
-	 *     }
-	 *   }
-	 * })
-	 */
-	collections?: {
-		[K in keyof D]?: CollectionSemantics<InferDataSourceItem<D[K]>>;
-	};
+	/** レンダリング・コンテンツ処理設定。 */
+	content?: ContentConfig;
 }

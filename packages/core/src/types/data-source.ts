@@ -31,7 +31,7 @@ export type PropertyMap = Record<string, PropertyDef>;
 export type InvalidateKind = "meta" | "content" | "all";
 
 /**
- * キャッシュ無効化のスコープ (DataSource 層で参照する形)。
+ * キャッシュ無効化のスコープ。
  * `kind` を省略した場合は `"all"` 相当として扱う。
  */
 export type InvalidateScope =
@@ -48,10 +48,12 @@ export interface WebhookConfig {
 }
 
 /**
- * コンテンツソースを抽象化する v1 インターフェース。
+ * コンテンツソースを抽象化するインターフェース。
  *
- * ユーザーは直接実装しない。`notion-orm` 等の ORM パッケージが実装する。
- * core は Notion 固有の知識を持たず、このインターフェース経由でのみデータを扱う。
+ * ユーザーは直接実装しない。`@notion-headless-cms/notion-orm` 等の
+ * ORM パッケージが実装する。core は Notion 固有の知識を持たず、
+ * このインターフェース経由でのみデータを扱う。
+ *
  * 将来 `googledocs-orm` 等の別ソースもこの I/F を満たせば差し替え可能。
  */
 export interface DataSource<T extends BaseContentItem = BaseContentItem> {
@@ -60,7 +62,6 @@ export interface DataSource<T extends BaseContentItem = BaseContentItem> {
 
 	/**
 	 * CLI 生成の `*Properties` に対応するプロパティマップ。
-	 * `properties` オプション経由で生成された DataSource のみ設定される。
 	 * Core が `findByProp` の Notion プロパティ名解決に使用する。
 	 */
 	readonly properties?: PropertyMap;
@@ -72,7 +73,6 @@ export interface DataSource<T extends BaseContentItem = BaseContentItem> {
 	/**
 	 * 指定した Notion プロパティ名と値で1件検索する。
 	 * Core が slug フィールドのルックアップに使用する。
-	 * `properties` オプション経由で生成された DataSource が実装する。
 	 */
 	findByProp?(notionPropName: string, value: string): Promise<T | null>;
 
@@ -100,59 +100,3 @@ export interface DataSource<T extends BaseContentItem = BaseContentItem> {
 	 */
 	parseWebhook?(req: Request, config: WebhookConfig): Promise<InvalidateScope>;
 }
-
-/**
- * `nhcSchema` の各コレクション設定エントリ。
- * ユーザーは CLI 生成の `nhcSchema` を渡すだけで、
- * この型は `createCMS` 内部で DataSource のファクトリに渡される。
- */
-export interface CollectionConfig<T extends BaseContentItem = BaseContentItem> {
-	/** Notion データソース (database) ID。 */
-	databaseId: string;
-	/** スキーマ情報 (ORM が解釈する不透明データ)。 */
-	// biome-ignore lint/suspicious/noExplicitAny: ORM ごとにスキーマ形状は異なる
-	schema?: any;
-	/** 公開扱いするステータス値。 */
-	publishedStatuses?: string[];
-	/** アクセス許可するステータス値。 */
-	accessibleStatuses?: string[];
-	/** `T` を型レベルで持ち回るためのマーカー (ランタイム値なし)。 */
-	__itemType?: T;
-}
-
-/**
- * `nhc generate` が生成する `nhcSchema` の型。
- * コレクション名をキーとして、各コレクションの設定を保持する。
- */
-// biome-ignore lint/suspicious/noExplicitAny: 各コレクションの T が異なるため
-export type CMSSchema = Record<string, CollectionConfig<any>>;
-
-/** `CollectionConfig<T>` から `T` を抽出するユーティリティ型。 */
-export type InferCollectionItem<C> =
-	C extends CollectionConfig<infer T> ? T : BaseContentItem;
-
-/**
- * DataSource を生成するファクトリ関数の型。
- * `createCMS` はコレクション名 → この関数 → DataSource の経路で組み立てる。
- *
- * ユーザーコードは直接呼ばない。`@notion-headless-cms/notion-orm` 等の
- * ORM パッケージが provide する。ORM 固有のオプション (Notion なら
- * `{ token }`、Google Docs なら `{ credentials }` 等) は `TOptions` の
- * generic で受け取る。
- *
- * @example
- * // notion-orm が DataSourceFactory<{ token: string }> として実装する
- * const factory: DataSourceFactory<{ token: string }> = ({ collection, config, options }) =>
- *   createNotionCollection({
- *     token: options.token,
- *     dataSourceId: config.databaseId,
- *     schema: config.schema,
- *   });
- */
-export type DataSourceFactory<TOptions = unknown> = <
-	T extends BaseContentItem,
->(args: {
-	collection: string;
-	config: CollectionConfig<T>;
-	options: TOptions;
-}) => DataSource<T>;

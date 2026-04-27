@@ -5,17 +5,17 @@ const app = express();
 const port = process.env.PORT ?? 3000;
 
 app.get("/posts", async (_req, res) => {
-	const items = await cms.posts.getList();
+	const items = await cms.posts.list();
 	res.json({ items });
 });
 
 app.get("/posts/:slug", async (req, res) => {
-	const post = await cms.posts.getItem(req.params.slug);
+	const post = await cms.posts.get(req.params.slug);
 	if (!post) {
 		res.status(404).json({ error: "Not Found" });
 		return;
 	}
-	const html = await post.content.html();
+	const html = await post.render();
 	res.json({ html, item: post });
 });
 

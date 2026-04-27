@@ -1,4 +1,4 @@
-import type { ImageCacheAdapter, InvalidateScope } from "./types/index";
+import type { ImageCacheOps, InvalidateScope } from "./types/index";
 
 /** `$handler()` の挙動設定。 */
 export interface HandlerOptions {
@@ -16,7 +16,7 @@ export interface HandlerOptions {
 
 /** `$handler()` が内部で依存する CMS 機能の最小セット。 */
 export interface HandlerAdapter {
-	imageCache: ImageCacheAdapter;
+	imageCache: ImageCacheOps;
 	/** コレクション名で DataSource を取り出し parseWebhook にフォワードする。 */
 	parseWebhook(
 		req: Request,

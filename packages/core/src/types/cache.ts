@@ -10,52 +10,61 @@ import type { InvalidateScope } from "./data-source";
 export type { InvalidateKind, InvalidateScope } from "./data-source";
 
 /**
- * ドキュメントキャッシュを抽象化するインターフェース。
- *
- * v0.4.0 で `getItem`/`setItem` を `getItemMeta`/`setItemMeta` +
- * `getItemContent`/`setItemContent` に分割した。
- * メタデータのみ取り出す軽量パスと、本文を遅延ロードするパスを分離するため。
+ * ドキュメントキャッシュ用のオペレーション群。
+ * `CacheAdapter.doc` に実装する。collection 名は引数で渡されるので、
+ * アダプタ側で `{collection}:{slug}` のようなキー戦略を組み立てる。
  */
-export interface DocumentCacheAdapter<
-	T extends BaseContentItem = BaseContentItem,
-> {
-	readonly name: string;
-
-	// --- リスト ---
-	getList(): Promise<CachedItemList<T> | null>;
-	setList(data: CachedItemList<T>): Promise<void>;
-
-	// --- メタデータ（軽量、差分判定・一覧表示・SWR 用） ---
-	getItemMeta(slug: string): Promise<CachedItemMeta<T> | null>;
-	setItemMeta(slug: string, data: CachedItemMeta<T>): Promise<void>;
-
-	// --- 本文（HTML/Markdown/blocks、必要時のみロード） ---
-	getItemContent(slug: string): Promise<CachedItemContent | null>;
-	setItemContent(slug: string, data: CachedItemContent): Promise<void>;
-
-	/**
-	 * 無効化。`scope.kind` で meta/content の粒度を指定できる。
-	 * 省略時は両方失効させる。
-	 */
-	invalidate?(scope: InvalidateScope): Promise<void>;
+export interface DocumentCacheOps {
+	getList<T extends BaseContentItem>(
+		collection: string,
+	): Promise<CachedItemList<T> | null>;
+	setList<T extends BaseContentItem>(
+		collection: string,
+		data: CachedItemList<T>,
+	): Promise<void>;
+	getMeta<T extends BaseContentItem>(
+		collection: string,
+		slug: string,
+	): Promise<CachedItemMeta<T> | null>;
+	setMeta<T extends BaseContentItem>(
+		collection: string,
+		slug: string,
+		data: CachedItemMeta<T>,
+	): Promise<void>;
+	getContent(
+		collection: string,
+		slug: string,
+	): Promise<CachedItemContent | null>;
+	setContent(
+		collection: string,
+		slug: string,
+		data: CachedItemContent,
+	): Promise<void>;
+	invalidate(scope: InvalidateScope): Promise<void>;
 }
 
-/** 画像キャッシュを抽象化するインターフェース。 */
-export interface ImageCacheAdapter {
-	readonly name: string;
+/** 画像キャッシュ用のオペレーション群。`CacheAdapter.img` に実装する。 */
+export interface ImageCacheOps {
 	get(hash: string): Promise<StorageBinary | null>;
 	set(hash: string, data: ArrayBuffer, contentType: string): Promise<void>;
 }
 
 /**
- * キャッシュ設定。`"disabled"` を渡すと完全にキャッシュを無効化する。
- * オブジェクトの場合、document / image それぞれ独立したアダプタを差し込める。
+ * 統一キャッシュアダプタ。`handles` で担当領域を申告し、
+ * `doc` / `img` のいずれか（または両方）を実装する。
+ *
+ * `createCMS({ cache })` には `CacheAdapter | CacheAdapter[]` を渡せる。
+ * 配列で渡された場合、core は `handles` を見て document / image をそれぞれ別アダプタに振り分ける。
+ *
+ * @example
+ * cache: memoryCache()                           // doc + image 両方
+ * cache: r2Cache({ bucket })                      // image のみ
+ * cache: kvCache({ namespace })                   // document のみ
+ * cache: [kvCache({ ns }), r2Cache({ bucket })]   // 個別に組み合わせ
  */
-export type CacheConfig<T extends BaseContentItem = BaseContentItem> =
-	| "disabled"
-	| {
-			document?: DocumentCacheAdapter<T>;
-			image?: ImageCacheAdapter;
-			/** キャッシュの有効期間（ミリ秒）。未設定の場合はTTLなし。 */
-			ttlMs?: number;
-	  };
+export interface CacheAdapter {
+	readonly name: string;
+	readonly handles: readonly ("document" | "image")[];
+	doc?: DocumentCacheOps;
+	img?: ImageCacheOps;
+}

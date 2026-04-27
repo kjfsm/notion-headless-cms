@@ -1,13 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { buildCacheImageFn } from "../image";
-import type { ImageCacheAdapter } from "../types/index";
+import type { ImageCacheOps } from "../types/index";
 
-const makeImageCache = (): ImageCacheAdapter & {
+// ImageCacheOps には name フィールドがない（name は CacheAdapter 側）
+const makeImageCache = (): ImageCacheOps & {
 	store: Map<string, { data: ArrayBuffer; contentType?: string }>;
 } => {
 	const store = new Map<string, { data: ArrayBuffer; contentType?: string }>();
 	return {
-		name: "test",
 		store,
 		get: vi.fn(async (hash: string) => store.get(hash) ?? null),
 		set: vi.fn(async (hash: string, data: ArrayBuffer, contentType: string) => {
@@ -40,17 +40,10 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 
 	it("キャッシュヒット時は fetch せずにプロキシ URL を返す", async () => {
 		const cache = makeImageCache();
-		const data = new ArrayBuffer(4);
-		cache.store.set(
-			// SHA-256 of "https://example.com/img.jpg"
-			// ハッシュ値は実際の sha256Hex の結果に依存するため、先に set しておく
-			"dummy-hash",
-			{ data, contentType: "image/jpeg" },
-		);
-		// ハッシュが一致するよう同じURLのエントリを事前登録
-		const cacheImage = buildCacheImageFn(cache, "/api/images");
+		// buildCacheImageFn は (cache, cacheName, imageProxyBase, logger?) の 4 引数
+		const cacheImage = buildCacheImageFn(cache, "memory", "/api/images");
 
-		// キャッシュを事前にセットするために一度 fetch を実行（空の body で）
+		// キャッシュを事前にセットするために一度 fetch を実行
 		vi.mocked(globalThis.fetch).mockResolvedValueOnce(
 			makeResponse(200, new ArrayBuffer(4), "image/png"),
 		);
@@ -67,7 +60,7 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 
 	it("fetch 成功時にキャッシュ保存してプロキシ URL を返す", async () => {
 		const cache = makeImageCache();
-		const cacheImage = buildCacheImageFn(cache, "/api/images");
+		const cacheImage = buildCacheImageFn(cache, "memory", "/api/images");
 		const body = new ArrayBuffer(8);
 		vi.mocked(globalThis.fetch).mockResolvedValueOnce(
 			makeResponse(200, body, "image/webp"),
@@ -85,7 +78,7 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 
 	it("HTTP 4xx で cache/image_fetch_failed CMSError をスローする", async () => {
 		const cache = makeImageCache();
-		const cacheImage = buildCacheImageFn(cache, "/api/images");
+		const cacheImage = buildCacheImageFn(cache, "memory", "/api/images");
 		vi.mocked(globalThis.fetch).mockResolvedValueOnce(makeResponse(404));
 
 		await expect(
@@ -97,7 +90,7 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 
 	it("HTTP 5xx で cache/image_fetch_failed CMSError をスローする", async () => {
 		const cache = makeImageCache();
-		const cacheImage = buildCacheImageFn(cache, "/api/images");
+		const cacheImage = buildCacheImageFn(cache, "memory", "/api/images");
 		vi.mocked(globalThis.fetch).mockResolvedValueOnce(makeResponse(500));
 
 		await expect(
@@ -109,7 +102,7 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 
 	it("fetch がネットワークエラーをスローしたとき cache/io_failed CMSError をスローする", async () => {
 		const cache = makeImageCache();
-		const cacheImage = buildCacheImageFn(cache, "/api/images");
+		const cacheImage = buildCacheImageFn(cache, "memory", "/api/images");
 		vi.mocked(globalThis.fetch).mockRejectedValueOnce(
 			new Error("network error"),
 		);
@@ -123,7 +116,7 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 
 	it("Content-Type ヘッダから MIME タイプを取得する", async () => {
 		const cache = makeImageCache();
-		const cacheImage = buildCacheImageFn(cache, "/api/images");
+		const cacheImage = buildCacheImageFn(cache, "memory", "/api/images");
 		vi.mocked(globalThis.fetch).mockResolvedValueOnce(
 			makeResponse(200, new ArrayBuffer(4), "image/gif; charset=utf-8"),
 		);
@@ -136,7 +129,7 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 
 	it("URL の拡張子から PNG を推測する（Content-Type ヘッダなし）", async () => {
 		const cache = makeImageCache();
-		const cacheImage = buildCacheImageFn(cache, "/api/images");
+		const cacheImage = buildCacheImageFn(cache, "memory", "/api/images");
 		vi.mocked(globalThis.fetch).mockResolvedValueOnce(
 			new Response(new ArrayBuffer(4), { status: 200, headers: {} }),
 		);
@@ -149,7 +142,7 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 
 	it("URL の拡張子から WebP を推測する（Content-Type ヘッダなし）", async () => {
 		const cache = makeImageCache();
-		const cacheImage = buildCacheImageFn(cache, "/api/images");
+		const cacheImage = buildCacheImageFn(cache, "memory", "/api/images");
 		vi.mocked(globalThis.fetch).mockResolvedValueOnce(
 			new Response(new ArrayBuffer(4), { status: 200, headers: {} }),
 		);
@@ -162,7 +155,7 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 
 	it("Content-Type ヘッダなし・URL 拡張子なしの場合は image/jpeg にフォールバックする", async () => {
 		const cache = makeImageCache();
-		const cacheImage = buildCacheImageFn(cache, "/api/images");
+		const cacheImage = buildCacheImageFn(cache, "memory", "/api/images");
 		vi.mocked(globalThis.fetch).mockResolvedValueOnce(
 			new Response(new ArrayBuffer(4), { status: 200, headers: {} }),
 		);
@@ -176,7 +169,8 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 	it("キャッシュミス時に logger.debug が「キャッシュミス」と「保存」で呼ばれる", async () => {
 		const debugFn = vi.fn();
 		const cache = makeImageCache();
-		const cacheImage = buildCacheImageFn(cache, "/api/images", {
+		// 4 番目の引数が logger
+		const cacheImage = buildCacheImageFn(cache, "memory", "/api/images", {
 			debug: debugFn,
 		});
 		vi.mocked(globalThis.fetch).mockResolvedValueOnce(
@@ -204,7 +198,7 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 			makeResponse(200, new ArrayBuffer(4), "image/jpeg"),
 		);
 		const url = "https://example.com/cached-image.jpg";
-		const cacheImage = buildCacheImageFn(cache, "/api/images", {
+		const cacheImage = buildCacheImageFn(cache, "memory", "/api/images", {
 			debug: debugFn,
 		});
 		await cacheImage(url);

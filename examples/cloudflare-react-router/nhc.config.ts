@@ -3,17 +3,14 @@ import { defineConfig, env } from "@notion-headless-cms/cli";
 
 export default defineConfig({
 	notionToken: env("NOTION_TOKEN"),
-	dataSources: [
-		{
-			name: "posts",
+	output: "./app/generated/nhc.ts",
+	collections: {
+		posts: {
 			// DB_NAME 環境変数で上書き可能。未設定時は "ブログ記事DB" にフォールバック。
 			dbName: env("DB_NAME") || "ブログ記事DB",
-			fields: {
-				slug: "Slug", // slug に使う Notion プロパティ名
-				status: "ステータス", // status に使う Notion プロパティ名
-				publishedAt: "公開日", // publishedAt に使う Notion プロパティ名
-			},
+			slugField: "slug",
+			statusField: "status",
+			publishedStatuses: ["公開済み"],
 		},
-	],
-	output: "./app/generated/nhc-schema.ts",
+	},
 });

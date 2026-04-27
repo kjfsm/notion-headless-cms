@@ -1,17 +1,13 @@
-// ── メイン API ──────────────────────────────────────────────────────────
-
-// ── キャッシュユーティリティ ───────────────────────────────────────────
+// ── キャッシュ ─────────────────────────────────────────────────────────
 export { isStale, sha256Hex } from "./cache";
-export type {
-	MemoryDocumentCacheOptions,
-	MemoryImageCacheOptions,
-} from "./cache/memory";
-export { memoryDocumentCache, memoryImageCache } from "./cache/memory";
-export { noopDocumentCache, noopImageCache } from "./cache/noop";
+export type { MemoryCacheOptions } from "./cache/memory";
+export { memoryCache } from "./cache/memory";
+export { noopDocOps, noopImgOps } from "./cache/noop";
+// ── メイン API ──────────────────────────────────────────────────────────
 export type { CMSClient, CMSGlobalOps } from "./cms";
 export { createCMS } from "./cms";
-export type { CollectionContext } from "./collection";
 // ── コレクション ─────────────────────────────────────────────────────────
+export type { CollectionContext } from "./collection";
 export { CollectionClientImpl, collectionKey } from "./collection";
 // ── コンテンツ AST ──────────────────────────────────────────────────────
 export type {
@@ -27,51 +23,42 @@ export type {
 	CMSErrorContext,
 } from "./errors";
 export { CMSError, isCMSError, isCMSErrorInNamespace } from "./errors";
-export type { HandlerAdapter, HandlerOptions } from "./handler";
 // ── $handler ───────────────────────────────────────────────────────────
+export type { HandlerAdapter, HandlerOptions } from "./handler";
 export { createHandler } from "./handler";
 // ── フック・ロガー・プラグイン ────────────────────────────────────────
 export { mergeHooks, mergeLoggers } from "./hooks";
-export type { NodePresetOptions } from "./preset-node";
-export { nodePreset } from "./preset-node";
-
 // ── リトライ ───────────────────────────────────────────────────────────
 export type { RetryConfig } from "./retry";
 export { DEFAULT_RETRY_CONFIG, withRetry } from "./retry";
-
 // ── 公開型 ──────────────────────────────────────────────────────────────
 export type {
 	AdjacencyOptions,
 	BaseContentItem,
-	CacheConfig,
+	CacheAdapter,
 	CachedItemContent,
 	CachedItemList,
 	CachedItemMeta,
-	CheckForUpdateResult,
-	CheckListForUpdateResult,
 	CMSHooks,
 	CMSPlugin,
-	CMSSchema,
 	CMSSchemaProperties,
+	CollectionCacheOps,
 	CollectionClient,
-	CollectionConfig,
-	CollectionSemantics,
+	CollectionDef,
+	CollectionsConfig,
 	ContentConfig,
 	CreateCMSOptions,
 	DataSource,
-	DataSourceFactory,
-	DataSourceMap,
-	DocumentCacheAdapter,
-	GetListOptions,
-	GetListResult,
-	ImageCacheAdapter,
+	DocumentCacheOps,
+	GetOptions,
+	ImageCacheOps,
 	InferCollectionItem,
-	InferDataSourceItem,
 	InvalidateKind,
 	InvalidateScope,
-	ItemContentPayload,
-	ItemWithContent,
+	ItemWithRender,
+	ListOptions,
 	Logger,
+	LogLevel,
 	MaybePromise,
 	PropertyDef,
 	PropertyMap,
@@ -81,6 +68,7 @@ export type {
 	RenderOptions,
 	SortOption,
 	StorageBinary,
+	WarmOptions,
 	WebhookConfig,
 } from "./types/index";
 export { definePlugin } from "./types/plugin";

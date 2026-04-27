@@ -1,11 +1,11 @@
 import { Hono } from "hono";
 import type { Env } from "../lib/cms";
-import { createCMS } from "../lib/cms";
+import { makeCms } from "../lib/cms";
 
 const images = new Hono<{ Bindings: Env }>();
 
 images.get("/:hash", async (c) => {
-	const cms = createCMS(c.env);
+	const cms = makeCms(c.env);
 	const hash = c.req.param("hash");
 	const object = await cms.$getCachedImage(hash);
 	if (!object) return c.notFound();

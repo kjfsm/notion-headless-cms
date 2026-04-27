@@ -15,11 +15,15 @@ export async function loadConfig(configPath: string): Promise<CMSConfig> {
 			: mod
 	) as CMSConfig;
 
-	if (!config || !Array.isArray(config.dataSources)) {
+	if (
+		!config ||
+		typeof config.collections !== "object" ||
+		config.collections === null
+	) {
 		throw new CMSError({
 			code: "cli/config_invalid",
 			message:
-				"設定ファイルが不正です。defineConfig() の戻り値を default export してください。",
+				"設定ファイルが不正です。defineConfig() の戻り値 (collections を含む) を default export してください。",
 			context: { operation: "loadConfig", configPath },
 		});
 	}

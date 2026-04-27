@@ -36,11 +36,12 @@ function makeContext(
 			},
 		},
 		rendererFn: vi.fn().mockResolvedValue("<p>rendered</p>"),
+		// ImageCacheOps には name フィールドがない
 		imgCache: {
-			name: "test",
 			get: vi.fn().mockResolvedValue(null),
 			set: vi.fn().mockResolvedValue(undefined),
 		},
+		imgCacheName: "test",
 		hasImageCache: false,
 		imageProxyBase: "/api/images",
 		contentConfig: undefined,

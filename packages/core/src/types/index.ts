@@ -1,25 +1,24 @@
 export type {
-	CacheConfig,
-	DocumentCacheAdapter,
-	ImageCacheAdapter,
+	CacheAdapter,
+	DocumentCacheOps,
+	ImageCacheOps,
 } from "./cache";
 export type {
 	AdjacencyOptions,
-	CheckForUpdateResult,
-	CheckListForUpdateResult,
+	CollectionCacheOps,
 	CollectionClient,
-	GetListOptions,
-	GetListResult,
-	ItemContentPayload,
-	ItemWithContent,
+	GetOptions,
+	ItemWithRender,
+	ListOptions,
 	SortOption,
+	WarmOptions,
 } from "./collection";
 export type {
-	CollectionSemantics,
+	CollectionDef,
+	CollectionsConfig,
 	ContentConfig,
 	CreateCMSOptions,
-	DataSourceMap,
-	InferDataSourceItem,
+	InferCollectionItem,
 	LogLevel,
 	RateLimiterConfig,
 	RendererFn,
@@ -35,11 +34,7 @@ export type {
 	StorageBinary,
 } from "./content";
 export type {
-	CMSSchema,
-	CollectionConfig,
 	DataSource,
-	DataSourceFactory,
-	InferCollectionItem,
 	InvalidateKind,
 	InvalidateScope,
 	PropertyDef,
