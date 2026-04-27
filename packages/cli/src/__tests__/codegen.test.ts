@@ -1,267 +1,62 @@
-import { isCMSError } from "@notion-headless-cms/core";
 import { describe, expect, it } from "vitest";
-import type { ResolvedSource } from "../codegen.js";
-import { generateSchemaFile } from "../codegen.js";
+import type { ResolvedCollection } from "../codegen";
+import { generateSchemaFile } from "../codegen";
 
-// biome-ignore lint/suspicious/noExplicitAny: テスト用モックのため型アサーションを許容
-function makeProp(type: string): any {
-	return { type, id: "_", name: "_", description: "" };
+// biome-ignore lint/suspicious/noExplicitAny: Notion property mocks
+function makeProp(type: string, extras: Record<string, unknown> = {}): any {
+	return { type, id: "_", name: "_", description: "", ...extras };
 }
 
-function makeSource(overrides: Partial<ResolvedSource> = {}): ResolvedSource {
+function makeCollection(
+	overrides: Partial<ResolvedCollection> = {},
+): ResolvedCollection {
 	return {
-		config: { name: "posts", dbName: "ブログ記事DB" },
+		name: "posts",
+		config: {
+			dbName: "ブログ記事DB",
+			publishedStatuses: ["公開済み"],
+		},
 		id: "abc-123",
 		dbName: "ブログ記事DB",
 		properties: {
-			Name: makeProp("title"),
-			Slug: makeProp("rich_text"),
-			Status: makeProp("status"),
+			Slug: makeProp("title"),
+			Status: makeProp("select", {
+				select: {
+					options: [
+						{ id: "1", name: "公開済み", color: "green" },
+						{ id: "2", name: "下書き", color: "gray" },
+					],
+				},
+			}),
 		},
 		...overrides,
-	} as ResolvedSource;
+	};
 }
 
 describe("generateSchemaFile", () => {
-	it("ヘッダーにインポート文が含まれる", () => {
-		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain("import type { PropertyMap }");
-		expect(code).toContain("@notion-headless-cms/core");
+	it("コレクション 1 件分の properties / 型 / createCMS を出力する", () => {
+		const code = generateSchemaFile([makeCollection()]);
+		expect(code).toContain('export const postsDataSourceId = "abc-123"');
+		expect(code).toContain("export const postsProperties");
+		expect(code).toContain("export interface Post");
+		expect(code).toContain("export function createCMS(config: NhcConfig)");
+		// select の literal union が出力される
+		expect(code).toContain('"公開済み" | "下書き" | null');
 	});
 
-	it("自動生成コメントを含む", () => {
-		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain(
-			"// このファイルは nhc generate により自動生成されました",
-		);
+	it("公開ステータス値を createCMS 内に埋め込む", () => {
+		const code = generateSchemaFile([makeCollection()]);
+		expect(code).toContain('publishedStatuses: ["公開済み"] as const');
 	});
 
-	it("DB 名と ID がコメントに出力される", () => {
-		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain("// posts  (ブログ記事DB)");
-		expect(code).toContain("// Notion DB ID: abc-123");
-	});
-
-	it("postsSourceId がエクスポートされる", () => {
-		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain('export const postsSourceId = "abc-123";');
-	});
-
-	it("postsProperties オブジェクトがエクスポートされる", () => {
-		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain("export const postsProperties = {");
-		expect(code).toContain("} as const;");
-	});
-
-	it("PostsProperties 型がエクスポートされる", () => {
-		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain(
-			"export type PostsProperties = typeof postsProperties;",
-		);
-	});
-
-	it("rich_text プロパティが richText として出力される", () => {
-		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain(
-			'slug: { type: "richText" as const, notion: "Slug" }',
-		);
-	});
-
-	it("status プロパティが select として出力される", () => {
-		const code = generateSchemaFile([makeSource()]);
-		expect(code).toContain(
-			'status: { type: "select" as const, notion: "Status" }',
-		);
-	});
-
-	it("title プロパティが title として出力される", () => {
-		const source = makeSource({
+	it("対応していないプロパティ型はコメント化される", () => {
+		const collection = makeCollection({
 			properties: {
-				Name: makeProp("title"),
-				Slug: makeProp("rich_text"),
+				Slug: makeProp("title"),
+				Files: makeProp("files"),
 			},
 		});
-		const code = generateSchemaFile([source]);
-		expect(code).toContain('name: { type: "title" as const, notion: "Name" }');
-	});
-
-	it("各プロパティ型が正しい type 値に変換される", () => {
-		const source = makeSource({
-			config: { name: "posts", dbName: "DB" },
-			properties: {
-				Name: makeProp("title"),
-				Slug: makeProp("rich_text"),
-				Category: makeProp("select"),
-				Tags: makeProp("multi_select"),
-				Views: makeProp("number"),
-				Featured: makeProp("checkbox"),
-				Link: makeProp("url"),
-				PublishedAt: makeProp("date"),
-			},
-		});
-		const code = generateSchemaFile([source]);
-		expect(code).toContain('"richText"');
-		expect(code).toContain('"select"');
-		expect(code).toContain('"multiSelect"');
-		expect(code).toContain('"number"');
-		expect(code).toContain('"checkbox"');
-		expect(code).toContain('"url"');
-		expect(code).toContain('"date"');
-	});
-
-	it("サポート外のプロパティ型はスキップしてコメントを出力する", () => {
-		const source = makeSource({
-			properties: {
-				Name: makeProp("title"),
-				Slug: makeProp("rich_text"),
-				Formula: makeProp("formula"),
-				Relation: makeProp("relation"),
-			},
-		});
-		const code = generateSchemaFile([source]);
-		expect(code).toContain("// スキップ: Formula");
-		expect(code).toContain("// スキップ: Relation");
-	});
-
-	it("スペース・ハイフン入りのプロパティ名を camelCase に変換する", () => {
-		const source = makeSource({
-			config: { name: "posts", dbName: "DB" },
-			properties: {
-				Name: makeProp("title"),
-				Slug: makeProp("rich_text"),
-				"Published At": makeProp("date"),
-				"my-field": makeProp("number"),
-			},
-		});
-		const code = generateSchemaFile([source]);
-		expect(code).toContain("publishedAt:");
-		expect(code).toContain("myField:");
-	});
-
-	it("columnMappings 未指定の日本語プロパティ名は CMSError を throw する", () => {
-		const source = makeSource({
-			config: { name: "posts", dbName: "DB" },
-			properties: {
-				Name: makeProp("title"),
-				Slug: makeProp("rich_text"),
-				あいうえお: makeProp("number"),
-			},
-		});
-		expect(() => generateSchemaFile([source])).toThrow();
-		try {
-			generateSchemaFile([source]);
-		} catch (err) {
-			expect(isCMSError(err)).toBe(true);
-			if (isCMSError(err)) {
-				expect(err.code).toBe("cli/schema_invalid");
-				expect(err.message).toContain("あいうえお");
-				expect(err.message).toContain("columnMappings");
-			}
-		}
-	});
-
-	it("複数の非ASCII名がある場合は最初のプロパティで CMSError を throw する", () => {
-		const source = makeSource({
-			config: { name: "posts", dbName: "DB" },
-			properties: {
-				Name: makeProp("title"),
-				Slug: makeProp("rich_text"),
-				あいうえお: makeProp("number"),
-				かきくけこ: makeProp("select"),
-			},
-		});
-		expect(() => generateSchemaFile([source])).toThrow();
-		try {
-			generateSchemaFile([source]);
-		} catch (err) {
-			expect(isCMSError(err)).toBe(true);
-			if (isCMSError(err)) {
-				expect(err.code).toBe("cli/schema_invalid");
-			}
-		}
-	});
-
-	it("columnMappings で日本語プロパティ名を明示マッピングできる", () => {
-		const source = makeSource({
-			config: {
-				name: "posts",
-				dbName: "DB",
-				columnMappings: { あいうえお: "japaneseField" },
-			},
-			properties: {
-				Name: makeProp("title"),
-				Slug: makeProp("rich_text"),
-				あいうえお: makeProp("number"),
-			},
-		});
-		const code = generateSchemaFile([source]);
-		expect(code).toContain("japaneseField");
-		expect(code).toContain('notion: "あいうえお"');
-	});
-
-	it("columnMappings に存在しないプロパティを指定するとエラーになる", () => {
-		const source = makeSource({
-			config: {
-				name: "posts",
-				dbName: "DB",
-				columnMappings: { 存在しない: "missing" },
-			},
-		});
-		expect(() => generateSchemaFile([source])).toThrow("存在しない");
-	});
-
-	it("複数ソースがそれぞれ出力される", () => {
-		const sources: ResolvedSource[] = [
-			makeSource(),
-			{
-				config: { name: "news", id: "xyz-999" },
-				id: "xyz-999",
-				dbName: "ニュースDB",
-				properties: { Title: makeProp("title"), Slug: makeProp("rich_text") },
-			} as ResolvedSource,
-		];
-		const code = generateSchemaFile(sources);
-		expect(code).toContain("postsSourceId");
-		expect(code).toContain("postsProperties");
-		expect(code).toContain("newsSourceId");
-		expect(code).toContain("newsProperties");
-	});
-
-	it("同名に変換される2つのプロパティに連番サフィックスを付与する", () => {
-		const source = makeSource({
-			config: { name: "posts", dbName: "DB" },
-			properties: {
-				Name: makeProp("title"),
-				myField: makeProp("rich_text"),
-				"my-field": makeProp("number"),
-			},
-		});
-		const code = generateSchemaFile([source]);
-		expect(code).toContain("myField:");
-		expect(code).toContain("myField_2:");
-	});
-
-	it("同名に変換される3つのプロパティに連番サフィックスを付与する（while ループ継続ブランチ）", () => {
-		const source = makeSource({
-			config: { name: "posts", dbName: "DB" },
-			properties: {
-				Name: makeProp("title"),
-				myField: makeProp("rich_text"),
-				"my-field": makeProp("number"),
-				"My Field": makeProp("date"),
-			},
-		});
-		const code = generateSchemaFile([source]);
-		expect(code).toContain("myField:");
-		expect(code).toContain("myField_2:");
-		expect(code).toContain("myField_3:");
-	});
-
-	it("Zod や defineSchema は含まれない（新アーキテクチャ）", () => {
-		const code = generateSchemaFile([makeSource()]);
-		expect(code).not.toContain("defineSchema");
-		expect(code).not.toContain("defineMapping");
-		expect(code).not.toContain('from "zod"');
-		expect(code).not.toContain("cmsDataSources");
+		const code = generateSchemaFile([collection]);
+		expect(code).toContain("スキップ: Files");
 	});
 });

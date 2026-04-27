@@ -1,9 +1,9 @@
 ---
 import { env } from "cloudflare:workers";
-import { createCMS } from "../lib/cms";
+import { makeCms } from "../lib/cms";
 
-const cms = createCMS(env as unknown as Parameters<typeof createCMS>[0]);
-const items = await cms.posts.getList();
+const cms = makeCms(env as unknown as Parameters<typeof makeCms>[0]);
+const items = await cms.posts.list();
 ---
 
 <html lang="ja">

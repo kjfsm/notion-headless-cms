@@ -3,71 +3,68 @@ import type {
 	CachedItemContent,
 	CachedItemList,
 	CachedItemMeta,
-	DocumentCacheAdapter,
-	ImageCacheAdapter,
-	InvalidateScope,
+	DocumentCacheOps,
+	ImageCacheOps,
 	StorageBinary,
 } from "../types/index";
 
-/** 何もキャッシュしないドキュメントキャッシュ実装。常に null を返す。 */
-class NoopDocumentCache<T extends BaseContentItem = BaseContentItem>
-	implements DocumentCacheAdapter<T>
-{
-	readonly name = "noop-document";
-
-	getList(): Promise<CachedItemList<T> | null> {
+/** 何もキャッシュしないドキュメントオペレーション。常に null を返す。 */
+const noopDoc: DocumentCacheOps = {
+	getList<T extends BaseContentItem>(
+		_collection: string,
+	): Promise<CachedItemList<T> | null> {
 		return Promise.resolve(null);
-	}
-
-	setList(_data: CachedItemList<T>): Promise<void> {
+	},
+	setList<T extends BaseContentItem>(
+		_collection: string,
+		_data: CachedItemList<T>,
+	): Promise<void> {
 		return Promise.resolve();
-	}
-
-	getItemMeta(_slug: string): Promise<CachedItemMeta<T> | null> {
+	},
+	getMeta<T extends BaseContentItem>(
+		_collection: string,
+		_slug: string,
+	): Promise<CachedItemMeta<T> | null> {
 		return Promise.resolve(null);
-	}
-
-	setItemMeta(_slug: string, _data: CachedItemMeta<T>): Promise<void> {
+	},
+	setMeta<T extends BaseContentItem>(
+		_collection: string,
+		_slug: string,
+		_data: CachedItemMeta<T>,
+	): Promise<void> {
 		return Promise.resolve();
-	}
-
-	getItemContent(_slug: string): Promise<CachedItemContent | null> {
+	},
+	getContent(
+		_collection: string,
+		_slug: string,
+	): Promise<CachedItemContent | null> {
 		return Promise.resolve(null);
-	}
-
-	setItemContent(_slug: string, _data: CachedItemContent): Promise<void> {
+	},
+	setContent(
+		_collection: string,
+		_slug: string,
+		_data: CachedItemContent,
+	): Promise<void> {
 		return Promise.resolve();
-	}
-
-	invalidate(_scope: InvalidateScope): Promise<void> {
+	},
+	invalidate(): Promise<void> {
 		return Promise.resolve();
-	}
-}
+	},
+};
 
-/** 何もキャッシュしない画像キャッシュ実装。常に null を返す。 */
-class NoopImageCache implements ImageCacheAdapter {
-	readonly name = "noop-image";
-
+/** 何もキャッシュしない画像オペレーション。 */
+const noopImg: ImageCacheOps = {
 	get(_hash: string): Promise<StorageBinary | null> {
 		return Promise.resolve(null);
-	}
-
-	set(_hash: string, _data: ArrayBuffer, _contentType: string): Promise<void> {
+	},
+	set(): Promise<void> {
 		return Promise.resolve();
-	}
-}
+	},
+};
 
-const _noopDocument = new NoopDocumentCache();
-const _noopImage = new NoopImageCache();
-
-/** 何もしないドキュメントキャッシュを返す（シングルトン）。 */
-export function noopDocumentCache<
-	T extends BaseContentItem = BaseContentItem,
->(): DocumentCacheAdapter<T> {
-	return _noopDocument as DocumentCacheAdapter<T>;
-}
-
-/** 何もしない画像キャッシュを返す（シングルトン）。 */
-export function noopImageCache(): ImageCacheAdapter {
-	return _noopImage;
-}
+/**
+ * 何もキャッシュしないアダプタ。`createCMS({ cache })` 未指定時の内部デフォルト。
+ * テストでも使える。
+ */
+export const noopDocOps: DocumentCacheOps = noopDoc;
+export const noopImgOps: ImageCacheOps = noopImg;

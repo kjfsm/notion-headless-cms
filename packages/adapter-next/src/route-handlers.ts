@@ -1,4 +1,4 @@
-import type { CMSClient, DataSourceMap } from "@notion-headless-cms/core";
+import type { CMSGlobalOps, InvalidateScope } from "@notion-headless-cms/core";
 
 export interface RevalidateHandlerOptions {
 	/** Webhook 検証用シークレット。Authorization ヘッダと照合する。 */
@@ -7,7 +7,7 @@ export interface RevalidateHandlerOptions {
 
 /**
  * `/app/api/images/[hash]/route.ts` 用の Next.js ルートハンドラを生成する。
- * 内部的に `cms.$handler()` の画像プロキシ部分を抽出。
+ * 内部的に `cms.$getCachedImage()` を呼ぶ。
  *
  * @example
  * // app/api/images/[hash]/route.ts
@@ -15,8 +15,8 @@ export interface RevalidateHandlerOptions {
  * import { createImageRouteHandler } from "@notion-headless-cms/adapter-next";
  * export const GET = createImageRouteHandler(cms);
  */
-export function createImageRouteHandler<D extends DataSourceMap>(
-	cms: CMSClient<D>,
+export function createImageRouteHandler(
+	cms: CMSGlobalOps,
 ): (
 	request: Request,
 	context: { params: Promise<{ hash: string }> },
@@ -34,7 +34,7 @@ export function createImageRouteHandler<D extends DataSourceMap>(
 
 /**
  * Revalidate Webhook 用の Next.js ルートハンドラを生成する。
- * Authorization ヘッダで secret を検証し、`cms.$revalidate()` を呼ぶ。
+ * Authorization ヘッダで secret を検証し、`cms.$invalidate()` を呼ぶ。
  *
  * @example
  * // app/api/revalidate/route.ts
@@ -42,8 +42,8 @@ export function createImageRouteHandler<D extends DataSourceMap>(
  * import { createRevalidateRouteHandler } from "@notion-headless-cms/adapter-next";
  * export const POST = createRevalidateRouteHandler(cms, { secret: process.env.REVALIDATE_SECRET! });
  */
-export function createRevalidateRouteHandler<D extends DataSourceMap>(
-	cms: CMSClient<D>,
+export function createRevalidateRouteHandler(
+	cms: CMSGlobalOps,
 	opts: RevalidateHandlerOptions,
 ): (request: Request) => Promise<Response> {
 	return async (request) => {
@@ -61,23 +61,19 @@ export function createRevalidateRouteHandler<D extends DataSourceMap>(
 			// JSON でなくても動作する
 		}
 
-		if (!payload || payload.all) {
-			await cms.$revalidate("all");
-			return Response.json({ ok: true, scope: "all" });
-		}
-		if (payload.collection && payload.slug) {
-			await cms.$revalidate({
-				collection: payload.collection,
-				slug: payload.slug,
-			});
-			return Response.json({ ok: true, scope: payload });
-		}
-		if (payload.collection) {
-			await cms.$revalidate({ collection: payload.collection });
-			return Response.json({ ok: true, scope: payload });
-		}
+		const scope: InvalidateScope =
+			!payload || payload.all
+				? "all"
+				: payload.collection && payload.slug
+					? { collection: payload.collection, slug: payload.slug }
+					: payload.collection
+						? { collection: payload.collection }
+						: "all";
 
-		await cms.$revalidate("all");
-		return Response.json({ ok: true, scope: "all" });
+		await cms.$invalidate(scope);
+		return Response.json({
+			ok: true,
+			scope: scope === "all" ? "all" : payload,
+		});
 	};
 }

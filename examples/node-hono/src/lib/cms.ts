@@ -1,13 +1,10 @@
-import { createCMS, nodePreset } from "@notion-headless-cms/core";
-import { cmsDataSources } from "../generated/nhc-schema.js";
+import { memoryCache } from "@notion-headless-cms/cache";
+import { createCMS } from "../generated/nhc.js";
 
-/**
- * Node.js 向け CMS クライアント。
- * `nhc generate` で生成した `cmsDataSources` を渡すだけ。
- * 内部で notion-orm の createNotionCollection() が呼ばれているが、
- * ユーザーコードは一切 import していない。
- */
+// `nhc generate` で生成された createCMS にランタイム設定を渡す。
+// TTL は createCMS の ttlMs (createCMS のオプション) で指定する。
 export const cms = createCMS({
-	...nodePreset({ ttlMs: 5 * 60_000 }),
-	dataSources: cmsDataSources,
+	notionToken: process.env.NOTION_TOKEN ?? "",
+	cache: memoryCache(),
+	ttlMs: 5 * 60_000,
 });

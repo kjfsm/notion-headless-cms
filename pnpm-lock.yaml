@@ -77,9 +77,9 @@ importers:
 
   examples/cloudflare-astro:
     dependencies:
-      '@notion-headless-cms/cache-r2':
+      '@notion-headless-cms/cache':
         specifier: workspace:*
-        version: link:../../packages/cache-r2
+        version: link:../../packages/cache
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -120,9 +120,9 @@ importers:
 
   examples/cloudflare-hono:
     dependencies:
-      '@notion-headless-cms/cache-r2':
+      '@notion-headless-cms/cache':
         specifier: workspace:*
-        version: link:../../packages/cache-r2
+        version: link:../../packages/cache
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -154,9 +154,9 @@ importers:
 
   examples/cloudflare-react-router:
     dependencies:
-      '@notion-headless-cms/cache-r2':
+      '@notion-headless-cms/cache':
         specifier: workspace:*
-        version: link:../../packages/cache-r2
+        version: link:../../packages/cache
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -215,9 +215,9 @@ importers:
 
   examples/cloudflare-sveltekit:
     dependencies:
-      '@notion-headless-cms/cache-r2':
+      '@notion-headless-cms/cache':
         specifier: workspace:*
-        version: link:../../packages/cache-r2
+        version: link:../../packages/cache
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -264,6 +264,9 @@ importers:
 
   examples/node-express:
     dependencies:
+      '@notion-headless-cms/cache':
+        specifier: workspace:*
+        version: link:../../packages/cache
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -310,6 +313,9 @@ importers:
       '@hono/node-server':
         specifier: ^1.14.0
         version: 1.19.14(hono@4.12.14)
+      '@notion-headless-cms/cache':
+        specifier: workspace:*
+        version: link:../../packages/cache
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -347,9 +353,9 @@ importers:
       '@notion-headless-cms/adapter-next':
         specifier: workspace:*
         version: link:../../packages/adapter-next
-      '@notion-headless-cms/cache-next':
+      '@notion-headless-cms/cache':
         specifier: workspace:*
-        version: link:../../packages/cache-next
+        version: link:../../packages/cache
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -400,29 +406,14 @@ importers:
         specifier: '>=14.0.0'
         version: 15.5.15(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
 
-  packages/cache-kv:
-    dependencies:
-      '@notion-headless-cms/core':
-        specifier: workspace:*
-        version: link:../core
-
-  packages/cache-next:
+  packages/cache:
     dependencies:
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core
       next:
-        specifier: '>=14.0.0'
-        version: 15.5.15(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-
-  packages/cache-r2:
-    dependencies:
-      '@notion-headless-cms/cache-kv':
-        specifier: workspace:*
-        version: link:../cache-kv
-      '@notion-headless-cms/core':
-        specifier: workspace:*
-        version: link:../core
+        specifier: '>=14'
+        version: 16.2.4(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
 
   packages/cli:
     dependencies:

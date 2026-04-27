@@ -15,11 +15,11 @@ enabled = true
 command = "pnpm --dir=../.. install --frozen-lockfile && pnpm --dir=../.. --filter='@notion-headless-cms/*' build && pnpm build"
 
 [[kv_namespaces]]
-binding = "CACHE_KV"
+binding = "DOC_CACHE"
 id = "d949487218794cbe8e8d3cdaee119790"
 
 [[r2_buckets]]
-binding = "CACHE_BUCKET"
+binding = "IMG_BUCKET"
 bucket_name = "nhc-example-cache"
 preview_bucket_name = "nhc-example-cache-preview"
 

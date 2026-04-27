@@ -8,7 +8,7 @@ import type {
 	CMSHooks,
 	ContentConfig,
 	DataSource,
-	ImageCacheAdapter,
+	ImageCacheOps,
 	Logger,
 	RendererFn,
 } from "./types/index";
@@ -17,7 +17,8 @@ import type {
 export interface RenderContext<T extends BaseContentItem> {
 	source: DataSource<T>;
 	rendererFn: RendererFn | undefined;
-	imgCache: ImageCacheAdapter;
+	imgCache: ImageCacheOps;
+	imgCacheName: string;
 	hasImageCache: boolean;
 	imageProxyBase: string;
 	contentConfig: ContentConfig | undefined;
@@ -83,7 +84,12 @@ export async function buildCachedItemContent<T extends BaseContentItem>(
 	}
 
 	const cacheImage = ctx.hasImageCache
-		? buildCacheImageFn(ctx.imgCache, ctx.imageProxyBase, ctx.logger)
+		? buildCacheImageFn(
+				ctx.imgCache,
+				ctx.imgCacheName,
+				ctx.imageProxyBase,
+				ctx.logger,
+			)
 		: undefined;
 
 	let html: string;

@@ -1,10 +1,10 @@
 // See https://svelte.dev/docs/kit/types#app.d.ts
-import type { CloudflareCMSEnv } from "@notion-headless-cms/adapter-cloudflare";
+import type { Env } from "$lib/cms";
 
 declare global {
 	namespace App {
 		interface Platform {
-			env: CloudflareCMSEnv;
+			env: Env;
 			context: ExecutionContext;
 			caches: CacheStorage & { default: Cache };
 		}

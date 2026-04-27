@@ -2,10 +2,10 @@ import { describe, expect, it, vi } from "vitest";
 import type { HandlerAdapter } from "../handler";
 import { createHandler } from "../handler";
 
+// HandlerAdapter.imageCache は ImageCacheOps（name フィールドなし）
 function makeAdapter(overrides: Partial<HandlerAdapter> = {}): HandlerAdapter {
 	return {
 		imageCache: {
-			name: "test",
 			get: vi.fn().mockResolvedValue(null),
 			set: vi.fn().mockResolvedValue(undefined),
 		},
@@ -21,7 +21,6 @@ describe("createHandler", () => {
 			const data = new ArrayBuffer(8);
 			const adapter = makeAdapter({
 				imageCache: {
-					name: "test",
 					get: vi.fn().mockResolvedValue({ data, contentType: "image/png" }),
 					set: vi.fn().mockResolvedValue(undefined),
 				},
@@ -40,7 +39,6 @@ describe("createHandler", () => {
 		it("contentType がない画像は content-type ヘッダを含まない", async () => {
 			const adapter = makeAdapter({
 				imageCache: {
-					name: "test",
 					get: vi.fn().mockResolvedValue({ data: new ArrayBuffer(4) }),
 					set: vi.fn().mockResolvedValue(undefined),
 				},
@@ -228,7 +226,6 @@ describe("createHandler", () => {
 			const data = new ArrayBuffer(4);
 			const adapter = makeAdapter({
 				imageCache: {
-					name: "test",
 					get: vi.fn().mockResolvedValue({ data, contentType: "image/png" }),
 					set: vi.fn().mockResolvedValue(undefined),
 				},

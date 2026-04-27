@@ -1,12 +1,12 @@
 import { data } from "react-router";
-import { createCMS } from "../lib/cms";
+import { makeCms } from "../lib/cms";
 import type { Route } from "./+types/post";
 
 export async function loader({ params, context }: Route.LoaderArgs) {
-	const cms = createCMS(context.cloudflare.env);
-	const post = await cms.posts.getItem(params.slug ?? "");
+	const cms = makeCms(context.cloudflare.env);
+	const post = await cms.posts.get(params.slug ?? "");
 	if (!post) throw data("Not Found", { status: 404 });
-	const html = await post.content.html();
+	const html = await post.render();
 	return { html, item: post };
 }
 

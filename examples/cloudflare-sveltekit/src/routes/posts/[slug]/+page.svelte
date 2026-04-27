@@ -9,9 +9,6 @@ let { data }: { data: PageData } = $props();
 	{#if data.item.publishedAt}
 		<time>{data.item.publishedAt}</time>
 	{/if}
-	{#if data.item.author}
-		<p>Author: {data.item.author}</p>
-	{/if}
 	<!-- eslint-disable-next-line svelte/no-at-html-tags -->
 	{@html data.html}
 </article>

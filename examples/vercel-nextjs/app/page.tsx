@@ -4,7 +4,7 @@ import { cms } from "./lib/cms";
 export const revalidate = 300;
 
 export default async function HomePage() {
-	const items = await cms.posts.getList().catch(() => []);
+	const items = await cms.posts.list().catch(() => []);
 	return (
 		<main>
 			<h1>記事一覧</h1>

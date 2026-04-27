@@ -38,10 +38,6 @@
 		"./cache/memory": {
 			"types": "./dist/cache/memory.d.mts",
 			"import": "./dist/cache/memory.mjs"
-		},
-		"./cache/noop": {
-			"types": "./dist/cache/noop.d.mts",
-			"import": "./dist/cache/noop.mjs"
 		}
 	},
 	"files": [
@@ -51,7 +47,7 @@
 		"node": ">=24"
 	},
 	"scripts": {
-		"build": "tsdown src/index.ts src/errors.ts src/hooks.ts src/cache/memory.ts src/cache/noop.ts --format esm --dts --sourcemap --out-dir dist",
+		"build": "tsdown src/index.ts src/errors.ts src/hooks.ts src/cache/memory.ts --format esm --dts --sourcemap --out-dir dist",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
 		"test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",

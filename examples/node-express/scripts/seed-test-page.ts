@@ -17,7 +17,7 @@
 import "dotenv/config";
 
 import { Client } from "@notionhq/client";
-import { postsSourceId } from "../src/generated/nhc-schema.js";
+import { postsDataSourceId } from "../src/generated/nhc.js";
 
 const TOKEN = process.env.NOTION_TOKEN;
 if (!TOKEN) {
@@ -41,7 +41,7 @@ async function resolveTestPageId(): Promise<string> {
 	}
 	// Slug が "test" のページを優先。なければ DB の先頭ページを使う。
 	const res = await client.dataSources.query({
-		data_source_id: postsSourceId,
+		data_source_id: postsDataSourceId,
 		page_size: 50,
 	});
 	for (const page of res.results) {
@@ -58,7 +58,7 @@ async function resolveTestPageId(): Promise<string> {
 	const first = res.results[0];
 	if (!first) {
 		throw new Error(
-			`データソース ${postsSourceId} にページが 1 件もありません。NOTION_TEST_PAGE_ID を指定してください。`,
+			`データソース ${postsDataSourceId} にページが 1 件もありません。NOTION_TEST_PAGE_ID を指定してください。`,
 		);
 	}
 	return first.id;

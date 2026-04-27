@@ -2,11 +2,11 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { CMSError } from "@notion-headless-cms/core";
 import { config as dotenvConfig } from "dotenv";
-import type { ResolvedSource } from "../codegen.js";
+import type { ResolvedCollection } from "../codegen.js";
 import { generateSchemaFile } from "../codegen.js";
 import { loadConfig } from "../config-loader.js";
 import { fileExists } from "../fs-utils.js";
-import type { CMSConfig, DataSourceConfig } from "../index.js";
+import type { CMSConfig, CollectionGenConfig } from "../index.js";
 import {
 	createNotionCLIClient,
 	type NotionCLIClient,
@@ -21,7 +21,7 @@ export interface GenerateOptions {
 
 /**
  * --env-file 指定時はそのファイルを、未指定時は .dev.vars があれば自動ロードする。
- * process.env 既存値は上書きしない（dotenv のデフォルト挙動）。
+ * process.env 既存値は上書きしない (dotenv のデフォルト挙動)。
  */
 async function loadEnvFile(
 	envFile: string | undefined,
@@ -41,7 +41,6 @@ async function loadEnvFile(
 		return;
 	}
 
-	// .dev.vars 自動検出（Cloudflare Workers のローカル開発環境向け）
 	const devVarsPath = path.resolve(process.cwd(), ".dev.vars");
 	if (await fileExists(devVarsPath)) {
 		dotenvConfig({ path: devVarsPath });
@@ -64,35 +63,47 @@ function resolveToken(opts: GenerateOptions, config: CMSConfig): string {
 	});
 }
 
-async function resolveDataSource(
-	ds: DataSourceConfig,
+async function resolveCollection(
+	name: string,
+	collection: CollectionGenConfig,
 	client: NotionCLIClient,
-): Promise<ResolvedSource> {
-	let resolvedId = ds.id;
-	if (!resolvedId) {
-		// ds.id が未指定のとき、DataSourceWithDbName として dbName は必ず string
-		const dbName = ds.dbName as string;
-		const found = await client.resolveId(dbName);
+): Promise<ResolvedCollection> {
+	if (!collection.databaseId && !collection.dbName) {
+		throw new CMSError({
+			code: "cli/config_invalid",
+			message: `[${name}] databaseId または dbName のいずれかを指定してください。`,
+			context: { operation: "resolveCollection", collection: name },
+		});
+	}
+
+	let resolvedId = collection.databaseId;
+	if (!resolvedId && collection.dbName) {
+		const found = await client.resolveId(collection.dbName);
 		if (!found) {
 			throw new CMSError({
 				code: "cli/notion_api_failed",
 				message:
-					`データベース "${dbName}" と完全一致する DB が見つかりませんでした。\n` +
+					`[${name}] データベース "${collection.dbName}" と完全一致する DB が見つかりませんでした。\n` +
 					"・Notion トークンにそのデータベースへのアクセス権限があるか確認してください。\n" +
-					"・DB 名が完全に一致しているか確認してください（前後の空白や全角/半角違いも不一致になります）。",
-				context: { operation: "resolveDataSource", dbName },
+					"・DB 名が完全に一致しているか確認してください (前後の空白や全角/半角違いも不一致になります)。",
+				context: {
+					operation: "resolveCollection",
+					collection: name,
+					dbName: collection.dbName,
+				},
 			});
 		}
 		resolvedId = found;
 	}
 
-	const retrieved = await client.retrieveDataSource(resolvedId);
+	const retrieved = await client.retrieveDataSource(resolvedId as string);
 	const retrievedTitle = retrieved.title.map((t) => t.plain_text).join("");
-	const dbName = ds.dbName ?? (retrievedTitle || resolvedId);
+	const dbName = collection.dbName ?? retrievedTitle ?? (resolvedId as string);
 
 	return {
-		config: ds,
-		id: resolvedId,
+		name,
+		config: collection,
+		id: resolvedId as string,
 		dbName,
 		properties: retrieved.properties,
 	};
@@ -112,17 +123,26 @@ export async function runGenerate(opts: GenerateOptions): Promise<void> {
 	const token = resolveToken(opts, config);
 	const notionClient = createNotionCLIClient(token);
 
-	if (!silent)
-		console.log(`${config.dataSources.length} 件のデータソースを解決中...`);
-	const resolvedSources: ResolvedSource[] = [];
-	for (const ds of config.dataSources) {
-		const resolved = await resolveDataSource(ds, notionClient);
-		if (!silent)
-			console.log(`  ✓ ${ds.name}: ${resolved.id} (${resolved.dbName})`);
-		resolvedSources.push(resolved);
+	const collectionEntries = Object.entries(config.collections);
+	if (collectionEntries.length === 0) {
+		throw new CMSError({
+			code: "cli/config_invalid",
+			message:
+				"nhc.config.ts の collections に少なくとも 1 件のコレクションを定義してください。",
+			context: { operation: "runGenerate" },
+		});
 	}
 
-	const code = generateSchemaFile(resolvedSources);
+	if (!silent)
+		console.log(`${collectionEntries.length} 件のコレクションを解決中...`);
+	const resolved: ResolvedCollection[] = [];
+	for (const [name, col] of collectionEntries) {
+		const r = await resolveCollection(name, col, notionClient);
+		if (!silent) console.log(`  ✓ ${name}: ${r.id} (${r.dbName})`);
+		resolved.push(r);
+	}
+
+	const code = generateSchemaFile(resolved);
 	const outputPath = path.resolve(process.cwd(), config.output);
 	await fs.mkdir(path.dirname(outputPath), { recursive: true });
 	await fs.writeFile(outputPath, code, "utf-8");
@@ -130,7 +150,7 @@ export async function runGenerate(opts: GenerateOptions): Promise<void> {
 	if (!silent) {
 		console.log(`\n生成完了: ${outputPath}`);
 		console.log(
-			"次のステップ: createCMS({ ...nodePreset() | ...cloudflarePreset({ env }), dataSources }) で CMS クライアントを組み立ててください。",
+			'次のステップ: import { createCMS } from "./generated/nhc"; を呼び出して CMS クライアントを構築してください。',
 		);
 
 		const relPath = path.relative(process.cwd(), outputPath);

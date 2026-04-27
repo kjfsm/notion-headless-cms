@@ -6,7 +6,7 @@ import {
 
 const makeMockCMS = () => ({
 	$getCachedImage: vi.fn(),
-	$revalidate: vi.fn().mockResolvedValue(undefined),
+	$invalidate: vi.fn().mockResolvedValue(undefined),
 });
 
 describe("createImageRouteHandler", () => {
@@ -41,7 +41,7 @@ describe("createImageRouteHandler", () => {
 });
 
 describe("createRevalidateRouteHandler", () => {
-	it("正しい secret で $revalidate をスコープ付きで呼ぶ", async () => {
+	it("正しい secret で $invalidate をスコープ付きで呼ぶ", async () => {
 		const cms = makeMockCMS();
 		const handler = createRevalidateRouteHandler(cms as never, {
 			secret: "my-secret",
@@ -58,7 +58,7 @@ describe("createRevalidateRouteHandler", () => {
 
 		const res = await handler(request);
 		expect(res.status).toBe(200);
-		expect(cms.$revalidate).toHaveBeenCalledWith({
+		expect(cms.$invalidate).toHaveBeenCalledWith({
 			collection: "posts",
 			slug: "post-a",
 		});
@@ -77,7 +77,7 @@ describe("createRevalidateRouteHandler", () => {
 
 		const res = await handler(request);
 		expect(res.status).toBe(200);
-		expect(cms.$revalidate).toHaveBeenCalledWith("all");
+		expect(cms.$invalidate).toHaveBeenCalledWith("all");
 	});
 
 	it("collection のみ指定（slug なし）はコレクション単位で revalidate する", async () => {
@@ -97,7 +97,7 @@ describe("createRevalidateRouteHandler", () => {
 
 		const res = await handler(request);
 		expect(res.status).toBe(200);
-		expect(cms.$revalidate).toHaveBeenCalledWith({ collection: "posts" });
+		expect(cms.$invalidate).toHaveBeenCalledWith({ collection: "posts" });
 	});
 
 	it("collection も slug もない JSON body は全体を revalidate する", async () => {
@@ -117,7 +117,7 @@ describe("createRevalidateRouteHandler", () => {
 
 		const res = await handler(request);
 		expect(res.status).toBe(200);
-		expect(cms.$revalidate).toHaveBeenCalledWith("all");
+		expect(cms.$invalidate).toHaveBeenCalledWith("all");
 	});
 
 	it("secret が不正の場合は 401 を返す", async () => {
@@ -133,6 +133,6 @@ describe("createRevalidateRouteHandler", () => {
 
 		const res = await handler(request);
 		expect(res.status).toBe(401);
-		expect(cms.$revalidate).not.toHaveBeenCalled();
+		expect(cms.$invalidate).not.toHaveBeenCalled();
 	});
 });

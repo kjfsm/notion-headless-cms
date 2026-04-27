@@ -5,66 +5,30 @@ import { cms } from "./lib/cms.js";
 const app = new Hono();
 
 /**
- * 一覧: 本文なし (getList)
+ * 一覧 (本文なし)
  * GET /posts
  */
 app.get("/posts", async (c) => {
-	const items = await cms.posts.getList();
+	const items = await cms.posts.list();
 	return c.json({ items });
 });
 
 /**
- * 単件 + 本文 blocks + 遅延 html (getItem)
+ * 単件 + 本文の遅延レンダリング
  * GET /posts/:slug
  */
 app.get("/posts/:slug", async (c) => {
-	const post = await cms.posts.getItem(c.req.param("slug"));
+	const post = await cms.posts.get(c.req.param("slug"));
 	if (!post) return c.json({ error: "Not Found" }, 404);
-	const [html, markdown, blocks] = await Promise.all([
-		post.content.html(),
-		post.content.markdown(),
-		post.content.blocks(),
+	const [html, markdown] = await Promise.all([
+		post.render(),
+		post.render({ format: "markdown" }),
 	]);
 	return c.json({
 		item: { id: post.id, slug: post.slug, status: post.status },
-		blocks,
 		html,
 		markdown,
 	});
-});
-
-/**
- * useSWR fetcher 向け: メタデータのみ
- * GET /posts/:slug/meta
- */
-app.get("/posts/:slug/meta", async (c) => {
-	const meta = await cms.posts.getItemMeta(c.req.param("slug"));
-	if (!meta) return c.json({ error: "Not Found" }, 404);
-	return c.json(meta);
-});
-
-/**
- * useSWR fetcher 向け: 本文ペイロード
- * GET /posts/:slug/content
- */
-app.get("/posts/:slug/content", async (c) => {
-	const content = await cms.posts.getItemContent(c.req.param("slug"));
-	if (!content) return c.json({ error: "Not Found" }, 404);
-	return c.json(content);
-});
-
-/**
- * useSWR の再検証トリガ向け: 差分判定（メタのみ）
- * GET /posts/:slug/check?since=...
- */
-app.get("/posts/:slug/check", async (c) => {
-	const since = c.req.query("since");
-	if (!since) return c.json({ error: "since required" }, 400);
-	const result = await cms.posts.checkForUpdate({
-		slug: c.req.param("slug"),
-		since,
-	});
-	return c.json(result);
 });
 
 /**
@@ -72,7 +36,7 @@ app.get("/posts/:slug/check", async (c) => {
  * GET /posts/:slug/adjacent
  */
 app.get("/posts/:slug/adjacent", async (c) => {
-	const { prev, next } = await cms.posts.adjacent(c.req.param("slug"));
+	const { prev, next } = await cms.posts.cache.adjacent(c.req.param("slug"));
 	return c.json({ prev, next });
 });
 

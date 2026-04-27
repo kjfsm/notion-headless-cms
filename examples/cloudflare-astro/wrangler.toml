@@ -7,13 +7,12 @@ compatibility_flags = ["nodejs_compat"]
 enabled = true
 
 [[kv_namespaces]]
-binding = "CACHE_KV"
+binding = "DOC_CACHE"
 id = "d949487218794cbe8e8d3cdaee119790"
 
 [[r2_buckets]]
-binding = "CACHE_BUCKET"
+binding = "IMG_BUCKET"
 bucket_name = "nhc-example-cache"
 
 # wrangler secret put NOTION_TOKEN
-# wrangler secret put NOTION_DATA_SOURCE_ID
 # KV / R2 バインディングは wrangler kv namespace create / wrangler r2 bucket create で作成する

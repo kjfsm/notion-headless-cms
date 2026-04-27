@@ -1,136 +1,90 @@
-import { noopDocumentCache, noopImageCache } from "./cache/noop";
+import { noopDocOps, noopImgOps } from "./cache/noop";
 import { CollectionClientImpl, type CollectionContext } from "./collection";
 import { CMSError } from "./errors";
 import { createHandler, type HandlerOptions } from "./handler";
 import { mergeHooks, mergeLoggers } from "./hooks";
-import { nodePreset } from "./preset-node";
 import type { RenderContext } from "./rendering";
 import type { RetryConfig } from "./retry";
 import { DEFAULT_RETRY_CONFIG } from "./retry";
 import type {
 	BaseContentItem,
-	CacheConfig,
-	CachedItemList,
+	CacheAdapter,
 	CMSHooks,
 	CollectionClient,
-	CollectionSemantics,
+	CollectionsConfig,
 	CreateCMSOptions,
 	DataSource,
-	DataSourceMap,
-	DocumentCacheAdapter,
-	ImageCacheAdapter,
-	InferDataSourceItem,
+	DocumentCacheOps,
+	ImageCacheOps,
+	InferCollectionItem,
 	InvalidateScope,
 	Logger,
 	LogLevel,
 	RendererFn,
+	StorageBinary,
 } from "./types/index";
 
 const DEFAULT_IMAGE_PROXY_BASE = "/api/images";
 
-/** `CMSClient<D>` — コレクション別アクセス + グローバル操作の合成型。 */
-export type CMSClient<D extends DataSourceMap> = {
-	[K in keyof D]: CollectionClient<InferDataSourceItem<D[K]>>;
-} & CMSGlobalOps<D>;
+/** `CMSClient<C>` — コレクション別アクセス + グローバル操作の合成型。 */
+export type CMSClient<C extends CollectionsConfig> = {
+	[K in keyof C]: CollectionClient<InferCollectionItem<C[K]>>;
+} & CMSGlobalOps;
 
 /** `CMSClient` のグローバル名前空間。`$` プレフィックス。 */
-export interface CMSGlobalOps<D extends DataSourceMap> {
+export interface CMSGlobalOps {
 	/** 登録されているコレクション名の一覧。 */
-	readonly $collections: readonly (keyof D & string)[];
-	/** 全コレクションまたは特定コレクションのキャッシュを無効化する。 */
-	$revalidate(scope?: InvalidateScope): Promise<void>;
+	readonly $collections: readonly string[];
+	/** 全コレクションまたは特定スコープのキャッシュを無効化する。 */
+	$invalidate(scope?: InvalidateScope): Promise<void>;
 	/** Web Standard なルーティングハンドラ (画像プロキシ / webhook) を生成する。 */
 	$handler(opts?: HandlerOptions): (req: Request) => Promise<Response>;
 	/** ハッシュキーでキャッシュ画像を取得する。 */
-	$getCachedImage(hash: string): ReturnType<ImageCacheAdapter["get"]>;
+	$getCachedImage(hash: string): Promise<StorageBinary | null>;
 }
 
-function resolveDocumentCache(
-	cache: CacheConfig | undefined,
-	// biome-ignore lint/suspicious/noExplicitAny: 横断的に利用
-): DocumentCacheAdapter<any> {
-	if (!cache || cache === "disabled" || !cache.document) {
-		return noopDocumentCache();
-	}
-	return cache.document;
-}
-
-function resolveImageCache(cache: CacheConfig | undefined): ImageCacheAdapter {
-	if (!cache || cache === "disabled" || !cache.image) {
-		return noopImageCache();
-	}
-	return cache.image;
-}
-
-function resolveTtl(cache: CacheConfig | undefined): number | undefined {
-	if (!cache || cache === "disabled") return undefined;
-	return cache.ttlMs;
-}
-
-function hasImageCacheConfigured(cache: CacheConfig | undefined): boolean {
-	if (!cache || cache === "disabled") return false;
-	return !!cache.image;
+interface ResolvedCache {
+	doc: DocumentCacheOps;
+	docName: string;
+	img: ImageCacheOps;
+	imgName: string;
+	hasImg: boolean;
 }
 
 /**
- * `{collection}:{slug}` キー空間で動作するコレクション別キャッシュビューを生成する。
- * 単一の `DocumentCacheAdapter` に複数コレクションを同居させるためのアダプタ。
+ * `cache` オプションから document / image オペレーションを解決する。
+ *
+ * - 配列で渡された場合は各 adapter の `handles` を見て先勝ち (最初に見つかったもの) で振り分ける
+ * - 単体で渡された場合は `handles` の領域だけ反映、片側は noop
+ * - 未指定なら両方 noop
  */
-function scopeDocumentCache<T extends BaseContentItem>(
-	// biome-ignore lint/suspicious/noExplicitAny: 共有ストレージのため
-	base: DocumentCacheAdapter<any>,
-	collection: string,
-): DocumentCacheAdapter<T> {
-	const itemKey = (slug: string): string => `${collection}:${slug}`;
-	// リストはコレクション別にクロージャ変数で管理する。
-	// base.getList/setList はコレクション名前空間を持たないため、
-	// 複数コレクションが同じ base を共有すると上書きし合うバグが起きる。
-	// 初回アクセスのみ base から読み込むことで pre-populate されたキャッシュを活かしつつ、
-	// 以降の読み書きはコレクション固有のスロットに限定する。
-	let listSlot: CachedItemList<T> | null = null;
-	let listInitialized = false;
+function resolveCache(
+	cache: CacheAdapter | readonly CacheAdapter[] | undefined,
+): ResolvedCache {
+	const adapters =
+		cache === undefined ? [] : Array.isArray(cache) ? cache : [cache];
 
-	const mapInvalidateScope = (scope: InvalidateScope): InvalidateScope => {
-		if (scope === "all") return { collection };
-		if ("slug" in scope) {
-			return {
-				collection: scope.collection,
-				slug: itemKey(scope.slug),
-				kind: scope.kind,
-			};
+	let doc: DocumentCacheOps = noopDocOps;
+	let docName = "noop-document";
+	let img: ImageCacheOps = noopImgOps;
+	let imgName = "noop-image";
+	let docFound = false;
+	let imgFound = false;
+
+	for (const adapter of adapters) {
+		if (!docFound && adapter.handles.includes("document") && adapter.doc) {
+			doc = adapter.doc;
+			docName = adapter.name;
+			docFound = true;
 		}
-		return scope;
-	};
+		if (!imgFound && adapter.handles.includes("image") && adapter.img) {
+			img = adapter.img;
+			imgName = adapter.name;
+			imgFound = true;
+		}
+	}
 
-	return {
-		name: `${base.name}@${collection}`,
-		getList: async () => {
-			if (!listInitialized) {
-				listInitialized = true;
-				listSlot = (await base.getList()) as CachedItemList<T> | null;
-			}
-			return listSlot;
-		},
-		setList: (data) => {
-			listSlot = data as CachedItemList<T>;
-			listInitialized = true;
-			return Promise.resolve();
-		},
-		getItemMeta: (slug) => base.getItemMeta(itemKey(slug)),
-		setItemMeta: (slug, data) => base.setItemMeta(itemKey(slug), data),
-		getItemContent: (slug) => base.getItemContent(itemKey(slug)),
-		setItemContent: (slug, data) => base.setItemContent(itemKey(slug), data),
-		async invalidate(scope) {
-			const kind = scope === "all" ? "all" : (scope.kind ?? "all");
-			// list はメタ操作の一種として扱う。kind === "content" のときは触らない
-			if (kind === "all" || kind === "meta") {
-				listSlot = null;
-				listInitialized = true; // 無効化後は base を再読みしない
-			}
-			if (!base.invalidate) return;
-			return base.invalidate(mapInvalidateScope(scope));
-		},
-	};
+	return { doc, docName, img, imgName, hasImg: imgFound };
 }
 
 const LOG_LEVEL_ORDER: Record<LogLevel, number> = {
@@ -157,79 +111,58 @@ function applyLogLevel(
 }
 
 /**
- * `preset` オプションを解決して `cache` / `renderer` のデフォルトを補完する内部関数。
- * 明示的な `cache` / `renderer` がある場合はそちらが優先される。
- * `preset` 未指定時は opts をそのまま返す。
- */
-function resolvePreset<D extends DataSourceMap>(
-	opts: CreateCMSOptions<D>,
-): CreateCMSOptions<D> {
-	if (opts.preset === "disabled") {
-		return { ...opts, cache: undefined };
-	}
-	if (opts.preset === "node") {
-		const presetResult = nodePreset({ ttlMs: opts.ttlMs });
-		return {
-			...opts,
-			cache: opts.cache ?? presetResult.cache,
-			renderer: opts.renderer ?? presetResult.renderer,
-		};
-	}
-	return opts;
-}
-
-/**
- * 複数の DataSource を束ねた CMS クライアントを生成する。
+ * 複数の `CollectionDef` を束ねた CMS クライアントを生成する。
+ *
+ * 通常はユーザーが直接呼ぶことはなく、CLI 生成の `nhc.ts` の `createCMS`
+ * (低レベルのこの関数をラップしたもの) を経由する。
  *
  * @example
- * // Node.js（preset を使った簡潔な記法）
- * const cms = createCMS({ dataSources: cmsDataSources, preset: "node", ttlMs: 5 * 60_000 });
- *
- * @example
- * // 従来の spread パターン（引き続き動作する）
- * const cms = createCMS({ ...nodePreset({ ttlMs: 5 * 60_000 }), dataSources: cmsDataSources });
- *
- * @example
- * // キャッシュを細かく指定する場合
- * const cms = createCMS({
- *   dataSources,
- *   cache: { document, image, ttlMs: 60_000 },
+ * createCMS({
+ *   collections: {
+ *     posts: {
+ *       source: createNotionCollection({ token, dataSourceId, properties }),
+ *       slugField: "slug",
+ *       statusField: "status",
+ *       publishedStatuses: ["公開済み"],
+ *     }
+ *   },
+ *   cache: memoryCache({ ttlMs: 5 * 60_000 }),
  * });
  */
-export function createCMS<D extends DataSourceMap>(
-	opts: CreateCMSOptions<D>,
-): CMSClient<D> {
-	if (!opts.dataSources || Object.keys(opts.dataSources).length === 0) {
+export function createCMS<C extends CollectionsConfig>(
+	opts: CreateCMSOptions<C>,
+): CMSClient<C> {
+	if (!opts.collections || Object.keys(opts.collections).length === 0) {
 		throw new CMSError({
 			code: "core/config_invalid",
 			message:
-				"createCMS: dataSources に少なくとも1つのコレクションを指定してください。",
+				"createCMS: collections に少なくとも 1 つのコレクションを指定してください。",
 			context: { operation: "createCMS" },
 		});
 	}
 
-	// collections が指定されたコレクションは slug が必須。
-	for (const [name, col] of Object.entries(opts.collections ?? {})) {
-		const c = col as CollectionSemantics | undefined;
-		if (c && !c.slug) {
+	for (const [name, def] of Object.entries(opts.collections)) {
+		if (!def.source) {
 			throw new CMSError({
 				code: "core/config_invalid",
-				message: `createCMS: コレクション "${name}" の collections.slug は必須です。slug として使うフィールド名を指定してください。`,
+				message: `createCMS: コレクション "${name}" の source は必須です。`,
+				context: { operation: "createCMS", collection: name },
+			});
+		}
+		if (!def.slugField) {
+			throw new CMSError({
+				code: "core/config_invalid",
+				message: `createCMS: コレクション "${name}" の slugField は必須です。`,
 				context: { operation: "createCMS", collection: name },
 			});
 		}
 	}
 
-	const resolved = resolvePreset(opts);
-
-	const baseDocCache = resolveDocumentCache(resolved.cache);
-	const imgCache = resolveImageCache(resolved.cache);
-	const hasImageCache = hasImageCacheConfigured(resolved.cache);
-	const ttlMs = resolveTtl(resolved.cache);
-	const imageProxyBase =
-		opts.content?.imageProxyBase ?? DEFAULT_IMAGE_PROXY_BASE;
+	const cacheRes = resolveCache(opts.cache);
+	const ttlMs = opts.ttlMs;
+	const imageProxyBase = opts.imageProxyBase ?? DEFAULT_IMAGE_PROXY_BASE;
 	const contentConfig = opts.content;
-	const rendererFn: RendererFn | undefined = resolved.renderer;
+	const rendererFn: RendererFn | undefined = opts.renderer;
 	const waitUntil = opts.waitUntil;
 	const baseLogger: Logger | undefined = mergeLoggers(
 		opts.plugins ?? [],
@@ -249,26 +182,23 @@ export function createCMS<D extends DataSourceMap>(
 		...(opts.rateLimiter ?? {}),
 	};
 
-	const collectionNames = Object.keys(opts.dataSources) as (keyof D & string)[];
+	const collectionNames = Object.keys(opts.collections) as (keyof C & string)[];
 
 	// biome-ignore lint/suspicious/noExplicitAny: 各 T を保持
 	const collections: Record<string, CollectionClient<any>> = {};
-	// biome-ignore lint/suspicious/noExplicitAny: 横断的に利用
-	const scopedCaches: DocumentCacheAdapter<any>[] = [];
 	for (const name of collectionNames) {
-		const source = opts.dataSources[name] as DataSource<BaseContentItem>;
-		const scopedCache = scopeDocumentCache<BaseContentItem>(baseDocCache, name);
-		scopedCaches.push(scopedCache);
-		const col = opts.collections?.[name] as CollectionSemantics | undefined;
-		const colHooks = col?.hooks as CMSHooks<BaseContentItem> | undefined;
+		const def = opts.collections[name];
+		const source = def.source as DataSource<BaseContentItem>;
+		const colHooks = def.hooks as CMSHooks<BaseContentItem> | undefined;
 		const collectionHooks: CMSHooks<BaseContentItem> = colHooks
 			? mergeHooks([{ name: `${name}:global`, hooks }], colHooks, logger)
 			: hooks;
 		const renderCtx: RenderContext<BaseContentItem> = {
 			source,
 			rendererFn,
-			imgCache,
-			hasImageCache,
+			imgCache: cacheRes.img,
+			imgCacheName: cacheRes.imgName,
+			hasImageCache: cacheRes.hasImg,
 			imageProxyBase,
 			contentConfig,
 			hooks: collectionHooks,
@@ -277,48 +207,43 @@ export function createCMS<D extends DataSourceMap>(
 		const ctx: CollectionContext<BaseContentItem> = {
 			collection: name,
 			source,
-			docCache: scopedCache,
+			docCache: cacheRes.doc,
+			docCacheName: cacheRes.docName,
 			render: renderCtx,
 			hooks: collectionHooks,
 			logger,
 			ttlMs,
-			// 公開条件は CollectionSemantics（createCMS の collections オプション）が権威
-			publishedStatuses: col?.publishedStatuses
-				? [...col.publishedStatuses]
+			publishedStatuses: def.publishedStatuses
+				? [...def.publishedStatuses]
 				: [],
-			accessibleStatuses: col?.accessibleStatuses
-				? [...col.accessibleStatuses]
+			accessibleStatuses: def.accessibleStatuses
+				? [...def.accessibleStatuses]
 				: [],
 			retryConfig,
 			maxConcurrent,
 			waitUntil,
-			slugField: col?.slug,
+			slugField: def.slugField,
 		};
 		collections[name] = new CollectionClientImpl(ctx);
 	}
 
-	const globalOps: CMSGlobalOps<D> = {
+	const globalOps: CMSGlobalOps = {
 		$collections: collectionNames,
-		async $revalidate(scope?: InvalidateScope): Promise<void> {
+		async $invalidate(scope?: InvalidateScope): Promise<void> {
 			logger?.debug?.("グローバルキャッシュを無効化", {
-				operation: "$revalidate",
-				cacheAdapter: baseDocCache.name,
+				operation: "$invalidate",
+				cacheAdapter: cacheRes.docName,
 			});
-			// baseDocCache を直接呼ばず各スコープキャッシュ経由で呼ぶ。
-			// 直接呼ぶと scopeDocumentCache の listSlot がクリアされず stale になる。
-			for (const cache of scopedCaches) {
-				if (!cache.invalidate) continue;
-				await cache.invalidate(scope ?? "all");
-			}
+			await cacheRes.doc.invalidate(scope ?? "all");
 		},
 		$handler(handlerOpts?: HandlerOptions) {
 			return createHandler(
 				{
-					imageCache: imgCache,
+					imageCache: cacheRes.img,
 					parseWebhook: async (req, webhookSecret) => {
-						// 各 DataSource の parseWebhook を順に試す
 						for (const name of collectionNames) {
-							const ds = opts.dataSources[name] as DataSource<BaseContentItem>;
+							const ds = opts.collections[name]
+								.source as DataSource<BaseContentItem>;
 							if (ds.parseWebhook) {
 								try {
 									const scope = await ds.parseWebhook(req.clone(), {
@@ -333,7 +258,7 @@ export function createCMS<D extends DataSourceMap>(
 								}
 							}
 						}
-						// フォールバック: { slug } だけの汎用 JSON body
+						// フォールバック: { slug, collection } だけの汎用 JSON body
 						try {
 							const body = (await req.json()) as {
 								slug?: string;
@@ -350,13 +275,13 @@ export function createCMS<D extends DataSourceMap>(
 						}
 						return null;
 					},
-					revalidate: (scope) => globalOps.$revalidate(scope),
+					revalidate: (scope) => globalOps.$invalidate(scope),
 				},
 				handlerOpts,
 			);
 		},
 		$getCachedImage(hash) {
-			return imgCache.get(hash);
+			return cacheRes.img.get(hash);
 		},
 	};
 
@@ -364,5 +289,5 @@ export function createCMS<D extends DataSourceMap>(
 		Object.create(null) as object,
 		collections,
 		globalOps,
-	) as CMSClient<D>;
+	) as CMSClient<C>;
 }

@@ -1,16 +1,9 @@
-import { nextCache } from "@notion-headless-cms/cache-next";
-import { createCMS, memoryImageCache } from "@notion-headless-cms/core";
-import { renderMarkdown } from "@notion-headless-cms/renderer";
-import { cmsDataSources, type PostsItem } from "../generated/nhc-schema";
+import { memoryCache } from "@notion-headless-cms/cache";
+import { nextCache } from "@notion-headless-cms/cache/next";
+import { createCMS } from "../generated/nhc";
 
-export type BlogPost = PostsItem;
-
+// document は Next.js の unstable_cache + revalidateTag、image は in-process メモリ。
 export const cms = createCMS({
-	dataSources: cmsDataSources,
-	renderer: renderMarkdown,
-	cache: {
-		document: nextCache({ revalidate: 300, tags: ["posts"] }),
-		image: memoryImageCache(),
-		ttlMs: 5 * 60_000,
-	},
+	notionToken: process.env.NOTION_TOKEN ?? "",
+	cache: [nextCache({ revalidate: 300, tags: ["posts"] }), memoryCache()],
 });

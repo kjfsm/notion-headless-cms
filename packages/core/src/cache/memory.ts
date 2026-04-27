@@ -1,25 +1,30 @@
 import type {
 	BaseContentItem,
+	CacheAdapter,
 	CachedItemContent,
 	CachedItemList,
 	CachedItemMeta,
-	DocumentCacheAdapter,
-	ImageCacheAdapter,
+	DocumentCacheOps,
+	ImageCacheOps,
 	InvalidateScope,
 	StorageBinary,
 } from "../types/index";
 
-export interface MemoryDocumentCacheOptions {
+export interface MemoryDocumentOptions {
 	/** アイテム保持上限。未指定時は上限なし。超過時は LRU で古いものから削除。 */
 	maxItems?: number;
 }
 
-export interface MemoryImageCacheOptions {
+export interface MemoryImageOptions {
 	/** エントリ保持上限。未指定時は上限なし。超過時は LRU で古いものから削除。 */
 	maxItems?: number;
 	/** 合計保持サイズ上限（バイト）。未指定時は上限なし。超過時は LRU で古いものから削除。 */
 	maxSizeBytes?: number;
 }
+
+export interface MemoryCacheOptions
+	extends MemoryDocumentOptions,
+		MemoryImageOptions {}
 
 /**
  * Map の挿入順を LRU として扱う軽量実装。
@@ -32,84 +37,113 @@ function touch<K, V>(map: Map<K, V>, key: K): void {
 	map.set(key, v);
 }
 
-/** インメモリのドキュメントキャッシュ実装。プロセス再起動でクリアされる。ローカル開発向け。 */
-export class MemoryDocumentCache<T extends BaseContentItem = BaseContentItem>
-	implements DocumentCacheAdapter<T>
-{
-	readonly name = "memory-document";
-	private list: CachedItemList<T> | null = null;
-	private metas = new Map<string, CachedItemMeta<T>>();
+const itemKey = (collection: string, slug: string): string =>
+	`${collection}:${slug}`;
+
+/** インメモリのドキュメントオペレーション実装。プロセス再起動でクリアされる。 */
+class MemoryDocumentOps implements DocumentCacheOps {
+	// biome-ignore lint/suspicious/noExplicitAny: 複数コレクション分の T を一括保持
+	private lists = new Map<string, CachedItemList<any>>();
+	// biome-ignore lint/suspicious/noExplicitAny: 同上
+	private metas = new Map<string, CachedItemMeta<any>>();
 	private contents = new Map<string, CachedItemContent>();
 	private readonly maxItems: number | undefined;
 
-	constructor(options?: MemoryDocumentCacheOptions) {
+	constructor(options?: MemoryDocumentOptions) {
 		this.maxItems = options?.maxItems;
 	}
 
-	getList(): Promise<CachedItemList<T> | null> {
-		return Promise.resolve(this.list);
+	getList<T extends BaseContentItem>(
+		collection: string,
+	): Promise<CachedItemList<T> | null> {
+		return Promise.resolve(
+			(this.lists.get(collection) as CachedItemList<T> | undefined) ?? null,
+		);
 	}
 
-	setList(data: CachedItemList<T>): Promise<void> {
-		this.list = data;
+	setList<T extends BaseContentItem>(
+		collection: string,
+		data: CachedItemList<T>,
+	): Promise<void> {
+		this.lists.set(collection, data);
 		return Promise.resolve();
 	}
 
-	getItemMeta(slug: string): Promise<CachedItemMeta<T> | null> {
-		const entry = this.metas.get(slug);
-		if (entry) touch(this.metas, slug);
+	getMeta<T extends BaseContentItem>(
+		collection: string,
+		slug: string,
+	): Promise<CachedItemMeta<T> | null> {
+		const key = itemKey(collection, slug);
+		const entry = this.metas.get(key) as CachedItemMeta<T> | undefined;
+		if (entry) touch(this.metas, key);
 		return Promise.resolve(entry ?? null);
 	}
 
-	setItemMeta(slug: string, data: CachedItemMeta<T>): Promise<void> {
-		if (this.metas.has(slug)) this.metas.delete(slug);
-		this.metas.set(slug, data);
+	setMeta<T extends BaseContentItem>(
+		collection: string,
+		slug: string,
+		data: CachedItemMeta<T>,
+	): Promise<void> {
+		const key = itemKey(collection, slug);
+		if (this.metas.has(key)) this.metas.delete(key);
+		this.metas.set(key, data);
 		this.enforceLimit();
 		return Promise.resolve();
 	}
 
-	getItemContent(slug: string): Promise<CachedItemContent | null> {
-		const entry = this.contents.get(slug);
-		if (entry) touch(this.contents, slug);
+	getContent(
+		collection: string,
+		slug: string,
+	): Promise<CachedItemContent | null> {
+		const key = itemKey(collection, slug);
+		const entry = this.contents.get(key);
+		if (entry) touch(this.contents, key);
 		return Promise.resolve(entry ?? null);
 	}
 
-	setItemContent(slug: string, data: CachedItemContent): Promise<void> {
-		if (this.contents.has(slug)) this.contents.delete(slug);
-		this.contents.set(slug, data);
+	setContent(
+		collection: string,
+		slug: string,
+		data: CachedItemContent,
+	): Promise<void> {
+		const key = itemKey(collection, slug);
+		if (this.contents.has(key)) this.contents.delete(key);
+		this.contents.set(key, data);
 		this.enforceLimit();
 		return Promise.resolve();
 	}
 
-	async invalidate(scope: InvalidateScope): Promise<void> {
+	invalidate(scope: InvalidateScope): Promise<void> {
 		if (scope === "all") {
-			this.list = null;
+			this.lists.clear();
 			this.metas.clear();
 			this.contents.clear();
-			return;
+			return Promise.resolve();
 		}
 		const kind = scope.kind ?? "all";
-		if (kind === "all" || kind === "meta") {
-			this.list = null;
-		}
+		const collection = scope.collection;
 		if ("slug" in scope) {
-			if (kind === "all" || kind === "meta") this.metas.delete(scope.slug);
-			if (kind === "all" || kind === "content")
-				this.contents.delete(scope.slug);
-		} else {
-			// scopeDocumentCache 経由でキーは `{collection}:{slug}` 形式になる
-			const prefix = `${scope.collection}:`;
-			if (kind === "all" || kind === "meta") {
-				for (const key of [...this.metas.keys()]) {
-					if (key.startsWith(prefix)) this.metas.delete(key);
-				}
-			}
-			if (kind === "all" || kind === "content") {
-				for (const key of [...this.contents.keys()]) {
-					if (key.startsWith(prefix)) this.contents.delete(key);
-				}
+			const key = itemKey(collection, scope.slug);
+			if (kind === "all" || kind === "meta") this.metas.delete(key);
+			if (kind === "all" || kind === "content") this.contents.delete(key);
+			// 単一スラッグ無効化ではリストは触らない（リスト全体の整合は別管理）
+			return Promise.resolve();
+		}
+		// コレクション全体
+		if (kind === "all" || kind === "meta") {
+			this.lists.delete(collection);
+			const prefix = `${collection}:`;
+			for (const key of [...this.metas.keys()]) {
+				if (key.startsWith(prefix)) this.metas.delete(key);
 			}
 		}
+		if (kind === "all" || kind === "content") {
+			const prefix = `${collection}:`;
+			for (const key of [...this.contents.keys()]) {
+				if (key.startsWith(prefix)) this.contents.delete(key);
+			}
+		}
+		return Promise.resolve();
 	}
 
 	private enforceLimit(): void {
@@ -127,15 +161,14 @@ export class MemoryDocumentCache<T extends BaseContentItem = BaseContentItem>
 	}
 }
 
-/** インメモリの画像キャッシュ実装。プロセス再起動でクリアされる。ローカル開発向け。 */
-export class MemoryImageCache implements ImageCacheAdapter {
-	readonly name = "memory-image";
+/** インメモリの画像オペレーション実装。 */
+class MemoryImageOps implements ImageCacheOps {
 	private store = new Map<string, StorageBinary>();
 	private totalBytes = 0;
 	private readonly maxItems: number | undefined;
 	private readonly maxSizeBytes: number | undefined;
 
-	constructor(options?: MemoryImageCacheOptions) {
+	constructor(options?: MemoryImageOptions) {
 		this.maxItems = options?.maxItems;
 		this.maxSizeBytes = options?.maxSizeBytes;
 	}
@@ -172,16 +205,18 @@ export class MemoryImageCache implements ImageCacheAdapter {
 	}
 }
 
-/** インメモリキャッシュ（ドキュメント用）を生成する。 */
-export function memoryDocumentCache<
-	T extends BaseContentItem = BaseContentItem,
->(options?: MemoryDocumentCacheOptions): DocumentCacheAdapter<T> {
-	return new MemoryDocumentCache<T>(options);
-}
-
-/** インメモリキャッシュ（画像用）を生成する。 */
-export function memoryImageCache(
-	options?: MemoryImageCacheOptions,
-): ImageCacheAdapter {
-	return new MemoryImageCache(options);
+/**
+ * インメモリのキャッシュアダプタ。document + image 両方を担当する。
+ * プロセス再起動でクリアされるため、ローカル開発・SSG ビルド・テスト用途。
+ *
+ * @example
+ * cache: memoryCache({ ttlMs: 5 * 60_000, maxItems: 1000 })
+ */
+export function memoryCache(options?: MemoryCacheOptions): CacheAdapter {
+	return {
+		name: "memory",
+		handles: ["document", "image"] as const,
+		doc: new MemoryDocumentOps(options),
+		img: new MemoryImageOps(options),
+	};
 }

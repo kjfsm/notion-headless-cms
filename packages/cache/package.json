@@ -1,15 +1,15 @@
 {
-	"name": "@notion-headless-cms/cache-kv",
-	"version": "0.1.12",
-	"description": "Cloudflare KV StorageAdapter implementation for notion-headless-cms document cache layer",
+	"name": "@notion-headless-cms/cache",
+	"version": "0.0.0",
+	"description": "Unified cache adapters for notion-headless-cms — memory, Cloudflare (KV/R2), and Next.js",
 	"keywords": [
 		"notion",
 		"headless-cms",
+		"cache",
 		"cloudflare",
 		"cloudflare-kv",
-		"kv",
-		"cache",
-		"workers",
+		"cloudflare-r2",
+		"nextjs",
 		"typescript"
 	],
 	"license": "MIT",
@@ -20,7 +20,7 @@
 	"repository": {
 		"type": "git",
 		"url": "git+https://github.com/kjfsm/notion-headless-cms.git",
-		"directory": "packages/cache-kv"
+		"directory": "packages/cache"
 	},
 	"type": "module",
 	"sideEffects": false,
@@ -28,6 +28,14 @@
 		".": {
 			"types": "./dist/index.d.mts",
 			"import": "./dist/index.mjs"
+		},
+		"./cloudflare": {
+			"types": "./dist/cloudflare.d.mts",
+			"import": "./dist/cloudflare.mjs"
+		},
+		"./next": {
+			"types": "./dist/next.d.mts",
+			"import": "./dist/next.mjs"
 		}
 	},
 	"files": [
@@ -37,7 +45,7 @@
 		"node": ">=24"
 	},
 	"scripts": {
-		"build": "tsdown src/index.ts --format esm --dts --sourcemap --out-dir dist",
+		"build": "tsdown src/index.ts src/cloudflare.ts src/next.ts --format esm --dts --sourcemap --out-dir dist",
 		"typecheck": "tsc --noEmit",
 		"test": "vitest run",
 		"test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
@@ -50,5 +58,14 @@
 	},
 	"dependencies": {
 		"@notion-headless-cms/core": "workspace:*"
-	}
+	},
+	"peerDependencies": {
+		"next": ">=14"
+	},
+	"peerDependenciesMeta": {
+		"next": {
+			"optional": true
+		}
+	},
+	"devDependencies": {}
 }
