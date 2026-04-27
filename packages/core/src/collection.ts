@@ -516,9 +516,7 @@ function applyListOptions<T extends BaseContentItem>(
 		const allow = new Set(
 			Array.isArray(opts.status) ? opts.status : [opts.status],
 		);
-		result = result.filter(
-			(it) => it.status != null && allow.has(it.status),
-		);
+		result = result.filter((it) => it.status != null && allow.has(it.status));
 	}
 
 	if (opts.tag) {
