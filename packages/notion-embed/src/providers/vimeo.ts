@@ -1,7 +1,9 @@
+import { extractIframeSrc, fetchOembed } from "../oembed";
 import type { EmbedProvider } from "../types";
 import { renderIframe } from "./_internal";
 
-const VIMEO_RE = /(?:vimeo\.com\/)(\d+)/;
+const VIMEO_OEMBED = "https://vimeo.com/api/oembed.json";
+const VIMEO_HOST_RE = /(?:^|\.)vimeo\.com$/;
 
 /** Vimeo 動画の embed ウィジェット。 */
 export function vimeoProvider(opts?: {
@@ -12,15 +14,25 @@ export function vimeoProvider(opts?: {
 	const height = opts?.height ?? 360;
 	return {
 		id: "vimeo",
-		match: (url) => VIMEO_RE.test(url),
-		render: ({ url, width: w, height: h }) => {
-			const m = url.match(VIMEO_RE);
-			if (!m?.[1]) return { kind: "skip" };
-			const embedUrl = `https://player.vimeo.com/video/${m[1]}`;
+		match: (url) => {
+			try {
+				return VIMEO_HOST_RE.test(new URL(url).hostname);
+			} catch {
+				return false;
+			}
+		},
+		render: async ({ url, width: w, height: h }) => {
+			// oEmbed から embed src を取得することで URL 正規化・ID 抽出を省略する。
+			const oembed = await fetchOembed(url, VIMEO_OEMBED, {
+				width: w ?? width,
+				height: h ?? height,
+			});
+			const src = oembed.html ? extractIframeSrc(oembed.html) : null;
+			if (!src) return { kind: "skip" };
 			return {
 				kind: "html",
 				html: renderIframe({
-					src: embedUrl,
+					src,
 					width: w ?? width,
 					height: h ?? height,
 					frameborder: 0,

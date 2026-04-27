@@ -147,4 +147,16 @@ describe("notionEmbed 基本スキーマ", () => {
 		expect(schema.tagNames).toContain("details");
 		expect(schema.tagNames).toContain("summary");
 	});
+
+	it("iframe が基本スキーマに含まれる (PDF・汎用 embed 用)", async () => {
+		const plugins = await embedRehypePlugins();
+		const [, sanitize] = plugins;
+		const schema = (sanitize as [unknown, unknown])[1] as {
+			tagNames?: string[];
+			attributes?: Record<string, unknown>;
+		};
+		expect(schema.tagNames).toContain("iframe");
+		expect(schema.attributes?.iframe).toContain("src");
+		expect(schema.attributes?.iframe).toContain("allowfullscreen");
+	});
 });
