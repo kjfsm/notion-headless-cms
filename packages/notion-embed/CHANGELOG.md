@@ -1,5 +1,11 @@
 # @notion-headless-cms/embeds
 
+## 0.1.3
+
+### Patch Changes
+
+- 451b6fd: `rehype-sanitize` スキーマの HTML 属性名を HAST プロパティ名に修正（`frameborder`→`frameBorder`、`allowfullscreen`→`allowFullScreen`）。これにより YouTube・Vimeo・Steam・汎用 iframe の `frameborder` / `allowfullscreen` 属性が削除されなくなった。
+
 ## 0.1.2
 
 ### Patch Changes
