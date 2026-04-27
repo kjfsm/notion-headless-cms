@@ -16,7 +16,7 @@
 		"@notion-headless-cms/core": "workspace:*",
 		"@notion-headless-cms/notion-orm": "workspace:*",
 		"@notion-headless-cms/renderer": "workspace:*",
-		"hono": "^4.6.0",
+		"hono": "^4.12.15",
 		"zod": "^4.1.12"
 	},
 	"devDependencies": {
