@@ -35,7 +35,8 @@ describe("renderBookmark", () => {
 			new Response("<html></html>", { status: 200 }),
 		);
 		const html = await renderBookmark(makeBlock("https://example.com"));
-		expect(html).toContain('class="nhc-bookmark"');
+		// OGP なし時は nhc-bookmark--no-ogp も付くため前方一致で確認
+		expect(html).toContain('class="nhc-bookmark');
 		expect(html).toContain('href="https://example.com"');
 	});
 
@@ -77,10 +78,35 @@ describe("renderBookmark", () => {
 		expect(html).toContain("nhc-bookmark");
 	});
 
-	it("OGP が失敗したとき URL をタイトルとして使う", async () => {
+	it("OGP が失敗したときホスト名をタイトルとして使う", async () => {
 		vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network error"));
 		const html = await renderBookmark(makeBlock("https://example.com/fail"));
-		expect(html).toContain("example.com/fail");
+		expect(html).toContain("example.com");
+		expect(html).not.toContain(">https://example.com/fail<");
+	});
+
+	it("OGP が失敗したとき nhc-bookmark--no-ogp クラスが付く", async () => {
+		vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network error"));
+		const html = await renderBookmark(makeBlock("https://example.com/fail"));
+		expect(html).toContain("nhc-bookmark--no-ogp");
+	});
+
+	it("OGP が取得できたとき nhc-bookmark--no-ogp クラスが付かない", async () => {
+		vi.spyOn(globalThis, "fetch").mockResolvedValue(
+			new Response(
+				`<html><head><meta property="og:title" content="タイトル" /></head></html>`,
+				{ status: 200 },
+			),
+		);
+		const html = await renderBookmark(makeBlock("https://example.com"));
+		expect(html).not.toContain("nhc-bookmark--no-ogp");
+	});
+
+	it("無効な URL でも例外を throw しない", async () => {
+		vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network error"));
+		await expect(
+			renderBookmark(makeBlock("not-a-valid-url")),
+		).resolves.toContain("nhc-bookmark");
 	});
 
 	it("nhc-bookmark__url に短縮 URL を表示する", async () => {

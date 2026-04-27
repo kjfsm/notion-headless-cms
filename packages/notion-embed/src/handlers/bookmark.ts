@@ -35,7 +35,22 @@ export async function renderBookmark(
 		ogp = await fetchOgp(url, fetchOpts).catch(() => EMPTY_OGP);
 	}
 
-	const title = escapeHtml(ogp.title ?? url);
+	const hasOgp = Boolean(
+		ogp.title ?? ogp.description ?? ogp.image ?? ogp.siteName,
+	);
+
+	// OGP タイトル未取得時は生 URL の代わりにホスト名をフォールバックとして使う。
+	// 生 URL だと nhc-bookmark__url と内容が重複するため。
+	const title = escapeHtml(
+		ogp.title ??
+			(() => {
+				try {
+					return new URL(url).hostname;
+				} catch {
+					return url;
+				}
+			})(),
+	);
 	const description = ogp.description
 		? `<p class="nhc-bookmark__description">${escapeHtml(ogp.description)}</p>`
 		: "";
@@ -51,12 +66,17 @@ export async function renderBookmark(
 		? `<p class="nhc-bookmark__caption">${captionHtml}</p>`
 		: "";
 
+	// OGP 取得失敗時は nhc-bookmark--no-ogp を付与し CSS 側でスタイルを切り替えられるようにする。
+	const bookmarkClass = hasOgp
+		? "nhc-bookmark"
+		: "nhc-bookmark nhc-bookmark--no-ogp";
+
 	// 外側を <div> で包むことで markdown がこのブロックを「block-level raw HTML」として
 	// 扱い、<p> でラップしないようにする。<p><a><div></div></a></p> という構造は HTML5
 	// パーサが <div> を <p> 外へ吐き出してリンクを破壊するため、ラッパが必要。
 	return (
 		`<div class="nhc-bookmark-block">` +
-		`<a class="nhc-bookmark" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">` +
+		`<a class="${bookmarkClass}" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">` +
 		`<div class="nhc-bookmark__main">` +
 		siteName +
 		`<p class="nhc-bookmark__title">${title}</p>` +
