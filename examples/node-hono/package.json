@@ -11,7 +11,7 @@
 		"typecheck": "tsc --noEmit"
 	},
 	"dependencies": {
-		"@hono/node-server": "^1.14.0",
+		"@hono/node-server": "^2.0.0",
 		"@notion-headless-cms/cache": "workspace:*",
 		"@notion-headless-cms/core": "workspace:*",
 		"@notion-headless-cms/notion-orm": "workspace:*",
