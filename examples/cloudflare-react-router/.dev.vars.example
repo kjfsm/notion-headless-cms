@@ -1,0 +1,8 @@
+# このファイルを .dev.vars にコピーして値を設定（git 管理対象外）
+# 本番環境: wrangler secret put NOTION_TOKEN
+
+# Notion API トークン
+NOTION_TOKEN=secret_xxxx
+
+# DB 名（nhc.config.ts の dbName として使用、未設定時は "ブログ記事DB"）
+# DB_NAME=ブログ記事DB

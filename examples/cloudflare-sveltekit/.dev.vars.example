@@ -1,5 +1,7 @@
-# Notion API
-# wrangler secret put ... で設定（ローカル開発時は .dev.vars に記述）
+# このファイルを .dev.vars にコピーして値を設定（git 管理対象外）
+# 本番環境: wrangler secret put NOTION_TOKEN
+
+# Notion API トークン
 NOTION_TOKEN=secret_xxxx
 
 # データベース指定はどちらか一方を設定
