@@ -18,9 +18,11 @@ export async function renderParagraph(
 	opts?: RichTextRenderOptions,
 ): Promise<string> {
 	const html = await renderRichText(block.paragraph.rich_text, opts);
+	// notion-to-md v3 から渡されるブロックでは color が欠落するケースがあるため安全側で扱う。
+	const colorValue = block.paragraph.color;
 	const color =
-		block.paragraph.color !== "default"
-			? ` class="nhc-color-bg--${block.paragraph.color.replace("_background", "")}"`
+		typeof colorValue === "string" && colorValue !== "default"
+			? ` class="nhc-color-bg--${colorValue.replace("_background", "")}"`
 			: "";
 	return `<p${color}>${html}</p>`;
 }

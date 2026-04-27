@@ -13,6 +13,12 @@ export default defineConfig({
 				status: "ステータス",
 				publishedAt: "公開日",
 			},
+			// 日本語プロパティ名は識別子に自動変換できないため明示マッピングする。
+			columnMappings: {
+				ステータス: "status",
+				公開日: "publishedAt",
+				名前: "name",
+			},
 		},
 	],
 	output: "./src/generated/nhc-schema.ts",

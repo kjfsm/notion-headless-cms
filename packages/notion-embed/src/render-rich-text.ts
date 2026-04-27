@@ -65,10 +65,20 @@ async function renderMention(
 		const lm = m.link_mention;
 		const href = escapeAttr(normalizeUrl(lm.href));
 		const title = escapeHtml(lm.title ?? lm.href);
+		// Notion の link_mention は API から icon_url / link_provider / title を返す。
+		// 例: YouTube → icon_url=YouTube favicon, link_provider="YouTube", title=動画/チャンネル名。
+		// これにより Notion 上のインラインカードと同じ「アイコン + プロバイダ名 + 太字タイトル」表示が再現できる。
+		const icon = lm.icon_url
+			? `<img class="nhc-mention__icon nhc-mention__icon--image" src="${escapeAttr(lm.icon_url)}" alt="" aria-hidden="true" />`
+			: `<span class="nhc-mention__icon" aria-hidden="true">🔗</span>`;
+		const providerSpan = lm.link_provider
+			? `<span class="nhc-mention__provider">${escapeHtml(lm.link_provider)}</span>`
+			: "";
 		return (
 			`<a class="nhc-mention nhc-mention--link" href="${href}" target="_blank" rel="noopener noreferrer">` +
-			`<span class="nhc-mention__icon" aria-hidden="true">🔗</span>` +
-			`<span class="nhc-mention__title">${title}</span>` +
+			icon +
+			providerSpan +
+			`<strong class="nhc-mention__title">${title}</strong>` +
 			`</a>`
 		);
 	}

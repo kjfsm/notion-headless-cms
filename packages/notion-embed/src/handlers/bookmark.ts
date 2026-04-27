@@ -51,7 +51,11 @@ export async function renderBookmark(
 		? `<p class="nhc-bookmark__caption">${captionHtml}</p>`
 		: "";
 
+	// 外側を <div> で包むことで markdown がこのブロックを「block-level raw HTML」として
+	// 扱い、<p> でラップしないようにする。<p><a><div></div></a></p> という構造は HTML5
+	// パーサが <div> を <p> 外へ吐き出してリンクを破壊するため、ラッパが必要。
 	return (
+		`<div class="nhc-bookmark-block">` +
 		`<a class="nhc-bookmark" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">` +
 		`<div class="nhc-bookmark__main">` +
 		siteName +
@@ -61,6 +65,7 @@ export async function renderBookmark(
 		`</div>` +
 		(imageHtml ? `<div class="nhc-bookmark__cover">${imageHtml}</div>` : "") +
 		`</a>` +
-		captionSection
+		captionSection +
+		`</div>`
 	);
 }

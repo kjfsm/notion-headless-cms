@@ -81,3 +81,26 @@ describe("XSS の排除", () => {
 		expect(result).not.toContain("javascript:");
 	});
 });
+
+describe("nhc-* クラスの保持", () => {
+	it("notionEmbed が出す class 属性 (nhc-bookmark / nhc-mention など) を sanitize で剥がさない", async () => {
+		const html = `<a class="nhc-bookmark" href="https://example.com"><div class="nhc-bookmark__main"><p class="nhc-bookmark__title">Title</p></div></a>`;
+		const result = await renderWithPlugins(html);
+		expect(result).toContain('class="nhc-bookmark"');
+		expect(result).toContain('class="nhc-bookmark__main"');
+		expect(result).toContain('class="nhc-bookmark__title"');
+	});
+
+	it("nhc-mention のアイコン img と <strong> タイトルが残る", async () => {
+		const html = `<a class="nhc-mention nhc-mention--link" href="https://x"><img class="nhc-mention__icon nhc-mention__icon--image" src="https://example.com/icon.png" alt="" /><span class="nhc-mention__provider">YouTube</span><strong class="nhc-mention__title">Foo</strong></a>`;
+		const result = await renderWithPlugins(html);
+		expect(result).toContain('class="nhc-mention nhc-mention--link"');
+		expect(result).toContain(
+			'class="nhc-mention__icon nhc-mention__icon--image"',
+		);
+		expect(result).toContain('src="https://example.com/icon.png"');
+		expect(result).toContain('class="nhc-mention__provider"');
+		expect(result).toContain("YouTube");
+		expect(result).toContain('class="nhc-mention__title"');
+	});
+});
