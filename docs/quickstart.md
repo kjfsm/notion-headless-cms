@@ -10,15 +10,15 @@
 
 ```bash
 pnpm add @notion-headless-cms/core @notion-headless-cms/notion-orm \
-  @notion-headless-cms/renderer @notionhq/client zod \
+  @notion-headless-cms/renderer @notion-headless-cms/cache \
+  @notionhq/client zod \
   unified remark-parse remark-gfm remark-rehype rehype-stringify
 pnpm add -D @notion-headless-cms/cli
 ```
 
-`core` は `createCMS` / `nodePreset` を提供する本体。`notion-orm` は
-CLI が生成する `nhc-schema.ts` から参照される内部パッケージで、
-ユーザーが直接 import する必要はない。`@notionhq/client` / `zod` /
-unified 系は peer 依存のため、利用側でインストールする。
+`core` は CMS エンジン本体。`notion-orm` は CLI が生成する `nhc.ts` から参照される内部パッケージで、
+ユーザーが直接 import する必要はない。`@notionhq/client` / `zod` / unified 系は peer 依存のため、
+利用側でインストールする。
 
 ## スキーマを自動生成する
 
@@ -35,7 +35,7 @@ import { defineConfig, env } from "@notion-headless-cms/cli";
 export default defineConfig({
   notionToken: env("NOTION_TOKEN"),
   dataSources: [{ name: "posts", dbName: "ブログ記事DB" }],
-  output: "./app/generated/nhc-schema.ts",
+  output: "./app/generated/nhc.ts",
 });
 ```
 
@@ -44,55 +44,56 @@ export default defineConfig({
 NOTION_TOKEN=secret_xxx npx nhc generate
 ```
 
+生成された `nhc.ts` には型付きの `createCMS` ラッパーが含まれる。
+`collections` の構成は生成物が持つので、利用側はトークンとキャッシュ設定だけ渡せばよい。
+
 ## 最小構成（インメモリキャッシュ付き）
 
 ```ts
-import { createCMS, nodePreset } from "@notion-headless-cms/core";
-import { cmsDataSources } from "./app/generated/nhc-schema";
+import { memoryCache } from "@notion-headless-cms/cache";
+import { createCMS } from "./app/generated/nhc";  // nhc generate の出力
 
 const cms = createCMS({
-  ...nodePreset({ ttlMs: 5 * 60_000 }), // memory cache + 5分 TTL
-  dataSources: cmsDataSources,
+  notionToken: process.env.NOTION_TOKEN!,
+  cache: memoryCache(),
+  ttlMs: 5 * 60_000, // 5分 TTL
 });
 
 // 一覧取得
-const posts = await cms.posts.getList();
+const posts = await cms.posts.list();
 
-// スラッグで取得 → 本文を blocks / html / markdown で取り出す
-const post = await cms.posts.getItem("my-first-post");
+// スラッグで取得 → 本文を HTML / Markdown で取り出す
+const post = await cms.posts.get("my-first-post");
 if (post) {
-  console.log(post.content.blocks);        // ContentBlock[]
-  console.log(await post.content.html());  // HTML 文字列 (遅延)
+  console.log(await post.render());                        // HTML 文字列
+  console.log(await post.render({ format: "markdown" })); // Markdown 文字列
 }
 ```
 
-`nodePreset()` はデフォルトで `memoryDocumentCache` + `memoryImageCache`
-を有効化する。完全にキャッシュを切る場合は `nodePreset({ cache: "disabled" })`、
-任意の cache adapter を差し込む場合は `nodePreset({ cache: { document: ..., image: ... } })` を使う。
+`memoryCache()` はインプロセス LRU キャッシュ。完全にキャッシュを切る場合は
+`createCMS` の `cache` オプションを省略するか `undefined` を渡す。
 
 ## Cloudflare Workers の場合
 
 ```ts
-import { createCMS } from "@notion-headless-cms/core";
-import { cloudflarePreset } from "@notion-headless-cms/cache-r2";
-import { cmsDataSources } from "./app/generated/nhc-schema";
+import { cloudflareCache } from "@notion-headless-cms/cache/cloudflare";
+import { createCMS } from "./app/generated/nhc";
 
 export default {
   async fetch(req: Request, env: Env) {
     const cms = createCMS({
-      ...cloudflarePreset({ env, ttlMs: 5 * 60_000 }),
-      dataSources: cmsDataSources,
+      notionToken: env.NOTION_TOKEN,
+      cache: cloudflareCache(env),
+      ttlMs: 5 * 60_000,
     });
-    const posts = await cms.posts.getList();
+    const posts = await cms.posts.list();
     return Response.json(posts);
   },
 };
 ```
 
-`cloudflarePreset` は `env.NOTION_TOKEN` / `env.DOC_CACHE` (KV) /
-`env.IMG_BUCKET` (R2) を自動解決する。旧名 `CACHE_KV` / `CACHE_BUCKET`
-もフォールバックとして認識される。binding 名をカスタマイズする場合は
-`cloudflarePreset({ env, bindings: { docCache: "MY_KV", imgBucket: "MY_R2" } })`。
+`cloudflareCache` は `env.DOC_CACHE` (KV) / `env.IMG_BUCKET` (R2) を自動検出して
+`kvCache` + `r2Cache` の配列を返す。binding が設定されていない場合は対応するアダプタをスキップする。
 
 ## 複数の DB を扱う場合
 
@@ -108,18 +109,21 @@ export default defineConfig({
     { name: "posts", dbName: "ブログ記事DB" },
     { name: "news", dbName: "ニュースDB" },
   ],
-  output: "./app/generated/nhc-schema.ts",
+  output: "./app/generated/nhc.ts",
 });
 ```
 
 ```ts
-import { createCMS, nodePreset } from "@notion-headless-cms/core";
-import { cmsDataSources } from "./app/generated/nhc-schema";
+import { memoryCache } from "@notion-headless-cms/cache";
+import { createCMS } from "./app/generated/nhc";
 
-const cms = createCMS({ ...nodePreset(), dataSources: cmsDataSources });
+const cms = createCMS({
+  notionToken: process.env.NOTION_TOKEN!,
+  cache: memoryCache(),
+});
 
-const posts = await cms.posts.getList(); // PostsItem[]
-const news = await cms.news.getList();   // NewsItem[]
+const posts = await cms.posts.list(); // PostsItem[]
+const news = await cms.news.list();   // NewsItem[]
 ```
 
 詳細は [CLI ドキュメント](./cli.md) と [マルチソースレシピ](./recipes/multi-source.md) を参照。

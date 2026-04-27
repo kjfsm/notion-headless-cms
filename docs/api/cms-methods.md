@@ -1,97 +1,113 @@
 # CMS API リファレンス
 
-`@notion-headless-cms/core` の `createCMS()` が返す `CMSClient<D>` が公開する API の一覧。
+`@notion-headless-cms/core` の `createCMS()` が返す `CMSClient<C>` が公開する API の一覧。
 
 ## 全体像
 
 ```ts
+// nhc generate が生成した createCMS ラッパーを使う
+import { createCMS } from "./generated/nhc";
+
 const cms = createCMS({
-  dataSources: { posts, authors, ... },
-  cache?, content?, hooks?, plugins?, logger?, rateLimiter?, waitUntil?,
+  notionToken: "...",
+  cache?: CacheAdapter | CacheAdapter[],
+  ttlMs?: number,
+  renderer?: RendererFn,
 });
 
 // コレクション別
-cms.posts.getItem(slug)
-cms.posts.getList(opts?)
-cms.posts.getStaticParams()
-cms.posts.getStaticPaths()
-cms.posts.adjacent(slug, opts?)
-cms.posts.revalidate(scope?)
-cms.posts.prefetch(opts?)
+cms.posts.get(slug, opts?)
+cms.posts.list(opts?)
+cms.posts.params()
+cms.posts.cache.adjacent(slug, opts?)
+cms.posts.cache.invalidate(slug?)
+cms.posts.cache.warm(opts?)
 
 // グローバル ($ プレフィックス)
 cms.$collections
-cms.$revalidate(scope?)
+cms.$invalidate(scope?)
 cms.$getCachedImage(hash)
 cms.$handler(opts?)
 ```
 
 ## コレクション別メソッド (`CollectionClient<T>`)
 
-### `getItem(slug)`
+### `get(slug, opts?)`
 
-スラッグで単件取得。SWR キャッシュ経由で動作し、本文は `content` プロパティに同梱される。
+スラッグで単件取得。SWR キャッシュ経由で動作し、本文は `render()` メソッドで遅延取得する。
 
 ```ts
-const post = await cms.posts.getItem("hello-world");
+const post = await cms.posts.get("hello-world");
 if (post) {
-  console.log(post.slug, post.status);            // item のプロパティ
-  console.log(post.content.blocks);               // ContentBlock[] (常に同梱)
-  console.log(await post.content.html());         // HTML (遅延)
-  console.log(await post.content.markdown());     // Markdown (遅延)
+  console.log(post.slug, post.status);              // item のプロパティ
+  console.log(await post.render());                 // HTML（遅延）
+  console.log(await post.render({ format: "markdown" })); // Markdown（遅延）
 }
 ```
 
-返り値: `Promise<(T & { content: ContentResult }) | null>`
+返り値: `Promise<(T & { render(opts?) => Promise<string> }) | null>`
 
-### `getList(opts?)`
+`opts.fresh === true` を渡すと TTL に関わらずブロッキングで再取得し、本文キャッシュも破棄する。
+
+### `list(opts?)`
 
 公開済みアイテムの一覧を取得（本文なし、SWR キャッシュ経由）。
 
 ```ts
-interface GetListOptions<T> {
-  statuses?: string[];   // ステータス絞り込み
-  where?: Partial<T>;    // プロパティ一致フィルタ
-  tag?: string;          // タグ絞り込み (schema に tags フィールドがある場合)
-  sort?: { by: keyof T & string; direction?: "asc" | "desc" };
+interface ListOptions<T> {
+  status?: string | readonly string[];  // ステータス絞り込み
+  where?: Partial<Record<keyof T, unknown>>;  // プロパティ一致フィルタ
+  tag?: string;   // タグ絞り込み (schema に tags フィールドがある場合)
+  sort?: { by: keyof T & string; dir?: "asc" | "desc" };
   limit?: number;
   skip?: number;
 }
 
-const posts = await cms.posts.getList({ limit: 10 });
-const featured = await cms.posts.getList({ tag: "featured" });
+const posts = await cms.posts.list({ limit: 10 });
+const featured = await cms.posts.list({ tag: "featured" });
 ```
 
-### `getStaticParams()` / `getStaticPaths()`
+### `params()`
 
-SSG のパス列挙用。
+SSG のパス列挙用。Next.js App Router の `generateStaticParams` に渡せる形式で返す。
 
 ```ts
 // Next.js App Router
 export async function generateStaticParams() {
-  return await cms.posts.getStaticParams();   // [{ slug: "a" }, { slug: "b" }]
+  return await cms.posts.params();   // [{ slug: "a" }, { slug: "b" }]
 }
-
-// React Router / SvelteKit
-const paths = await cms.posts.getStaticPaths();   // ["a", "b"]
 ```
 
-### `adjacent(slug, opts?)`
+## コレクション別キャッシュ操作 (`CollectionCacheOps<T>`)
 
-前後記事を返す。
+`cms.posts.cache` で取得できるキャッシュ操作 namespace。
+
+### `cache.adjacent(slug, opts?)`
+
+前後記事を返す（リスト順序ベース）。
 
 ```ts
-const { prev, next } = await cms.posts.adjacent("current-slug");
+const { prev, next } = await cms.posts.cache.adjacent("current-slug");
 ```
 
-### `revalidate(scope?)` / `prefetch(opts?)`
+### `cache.invalidate(slug?)`
 
-キャッシュ無効化とプリフェッチ。
+キャッシュを無効化する。次回 `get` / `list` で source から再取得される。
 
 ```ts
-await cms.posts.revalidate();             // コレクション全体
-await cms.posts.revalidate({ slug });     // 特定 slug のみ
-await cms.posts.prefetch({ concurrency: 5, onProgress: (done, total) => {} });
+await cms.posts.cache.invalidate();        // コレクション全体
+await cms.posts.cache.invalidate("slug");  // 特定 slug のみ
+```
+
+### `cache.warm(opts?)`
+
+全アイテムを並列に事前取得・レンダリングしてキャッシュに格納する。SSG ビルド前のウォームアップに使う。
+
+```ts
+const { ok, failed } = await cms.posts.cache.warm({
+  concurrency: 5,
+  onProgress: (done, total) => console.log(`${done}/${total}`),
+});
 ```
 
 ## グローバル操作
@@ -99,7 +115,7 @@ await cms.posts.prefetch({ concurrency: 5, onProgress: (done, total) => {} });
 | メソッド | 説明 |
 |---|---|
 | `cms.$collections` | 登録されたコレクション名の配列 |
-| `cms.$revalidate(scope?)` | 全体・コレクション単位・slug 単位のキャッシュ無効化 |
+| `cms.$invalidate(scope?)` | 全体・コレクション単位・slug 単位のキャッシュ無効化 |
 | `cms.$getCachedImage(hash)` | 画像キャッシュから `{ data, contentType }` を取得 |
 | `cms.$handler(opts?)` | Web Standard な `(req: Request) => Promise<Response>` を返す |
 
@@ -108,20 +124,15 @@ await cms.posts.prefetch({ concurrency: 5, onProgress: (done, total) => {} });
 `basePath` (デフォルト `/api/cms`) 以下に以下のルートをマウント:
 
 - `GET {basePath}/images/:hash` — 画像プロキシ
-- `POST {basePath}/revalidate` — Webhook 受信 → `$revalidate(scope)`
+- `POST {basePath}/revalidate` — Webhook 受信 → `$invalidate(scope)`
 
 ```ts
-// Next.js App Router
-// app/api/cms/[[...slug]]/route.ts
-const handler = cms.$handler({
-  basePath: "/api/cms",
-  webhookSecret: process.env.REVALIDATE_SECRET,
-});
-export const GET = handler;
-export const POST = handler;
-
 // Hono
-app.all("/api/cms/*", (c) => cms.$handler({ basePath: "/api/cms" })(c.req.raw));
+const handler = cms.$handler({ basePath: "/api/cms", webhookSecret: env.SECRET });
+app.all("/api/cms/*", (c) => handler(c.req.raw));
+
+// Next.js App Router の場合は adapter-next が簡便なラッパーを提供
+// → createImageRouteHandler / createRevalidateRouteHandler を参照
 ```
 
 ### `InvalidateScope`
@@ -129,36 +140,34 @@ app.all("/api/cms/*", (c) => cms.$handler({ basePath: "/api/cms" })(c.req.raw));
 ```ts
 type InvalidateScope =
   | "all"
-  | { collection: string }
-  | { collection: string; slug: string };
+  | { collection: string; kind?: "all" | "meta" | "content" }
+  | { collection: string; slug: string; kind?: "all" | "meta" | "content" };
 ```
 
-## `createCMS()` オプション
+## `createCMS()` オプション（低レベル）
+
+CLI 生成の `createCMS` ラッパーを使わず、直接 core の `createCMS` を呼ぶ場合のオプション。
 
 ```ts
-interface CreateCMSOptions<D> {
-  dataSources: D;                                        // 必須
-  cache?: CacheConfig;                                   // "disabled" | { document?, image?, ttlMs? }
-  content?: ContentConfig;                               // imageProxyBase, remarkPlugins, rehypePlugins
-  renderer?: RendererFn;                                 // 未指定時は @notion-headless-cms/renderer を動的 import
-  hooks?: CMSHooks;
-  plugins?: CMSPlugin[];
-  logger?: Logger;
-  rateLimiter?: RateLimiterConfig;
-  waitUntil?: (p: Promise<unknown>) => void;
-}
-```
+import { createCMS } from "@notion-headless-cms/core";
 
-### `CacheConfig`
-
-```ts
-type CacheConfig =
-  | "disabled"
-  | {
-      document?: DocumentCacheAdapter;
-      image?: ImageCacheAdapter;
-      ttlMs?: number; // 未指定時は TTL なし（常にフレッシュと判定）
-    };
+const cms = createCMS({
+  collections: {
+    posts: {
+      source: myDataSource,    // DataSource<T> の実装
+      slugField: "slug",
+      statusField: "status",
+      publishedStatuses: ["公開済み"],
+    },
+  },
+  cache?: CacheAdapter | CacheAdapter[],
+  content?: ContentConfig,     // imageProxyBase, remarkPlugins, rehypePlugins
+  renderer?: RendererFn,       // 未指定時は @notion-headless-cms/renderer を動的 import
+  hooks?: CMSHooks,
+  logger?: Logger,
+  rateLimiter?: RateLimiterConfig,
+  waitUntil?: (p: Promise<unknown>) => void,
+});
 ```
 
 ### `RateLimiterConfig`
@@ -170,39 +179,18 @@ type CacheConfig =
 | `maxRetries` | `number` | `4` |
 | `baseDelayMs` | `number` | `1000` |
 
-## `ContentBlock` AST
-
-```ts
-type ContentBlock =
-  | { type: "paragraph"; children: InlineNode[] }
-  | { type: "heading"; level: 1 | 2 | 3; children: InlineNode[] }
-  | { type: "image"; src: string; alt?: string; cachedHash?: string }
-  | { type: "code"; lang?: string; value: string }
-  | { type: "list"; ordered: boolean; items: ContentBlock[][] }
-  | { type: "quote"; children: ContentBlock[] }
-  | { type: "divider" }
-  | { type: "raw"; html: string };   // 対応不可なブロックのフォールバック
-
-type InlineNode =
-  | { type: "text"; value: string; bold?: boolean; italic?: boolean; code?: boolean }
-  | { type: "link"; url: string; children: InlineNode[] }
-  | { type: "break" };
-```
-
 ## ライフサイクルフック
 
-`createCMS({ hooks })` または `plugins` 経由で注入する。
+`createCMS({ hooks })` で注入する。
 
 | フック | シグネチャ | 呼び出しタイミング |
 |---|---|---|
-| `beforeCache` | `(item: CachedItem<T>) => MaybePromise<CachedItem<T>>` | キャッシュに書き込む前（結果を差し替え可能） |
+| `beforeCache` | `(item: CachedItemMeta<T>) => MaybePromise<CachedItemMeta<T>>` | キャッシュに書き込む前 |
 | `afterRender` | `(html: string, item: T) => MaybePromise<string>` | HTML 生成直後（文字列を差し替え可能） |
-| `onCacheHit` | `(slug: string, item: CachedItem<T>) => void` | アイテムキャッシュヒット時 |
+| `onCacheHit` | `(slug: string, item: CachedItemMeta<T>) => void` | アイテムキャッシュヒット時 |
 | `onCacheMiss` | `(slug: string) => void` | アイテムキャッシュミス時 |
-| `onListCacheHit` | `(items: T[], cachedAt: number) => void` | 一覧キャッシュヒット時 |
-| `onListCacheMiss` | `() => void` | 一覧キャッシュミス時 |
 | `onRenderStart` | `(slug: string) => void` | レンダリング開始時 |
-| `onRenderEnd` | `(slug: string, durationMs: number) => void` | レンダリング完了時（所要時間付き） |
+| `onRenderEnd` | `(slug: string, durationMs: number) => void` | レンダリング完了時 |
 | `onError` | `(error: Error) => void` | 内部エラー通知 |
 
 ## エラーハンドリング
@@ -210,10 +198,12 @@ type InlineNode =
 すべての内部エラーは `CMSError` に統一される:
 
 ```ts
-import { CMSError, isCMSError, isCMSErrorInNamespace } from "@notion-headless-cms/core";
+import { isCMSErrorInNamespace } from "@notion-headless-cms/core";
+// または
+import { isCMSError, isCMSErrorInNamespace } from "@notion-headless-cms/core/errors";
 
 try {
-  await cms.posts.getItem(slug);
+  await cms.posts.get(slug);
 } catch (err) {
   if (isCMSErrorInNamespace(err, "source/")) {
     // Notion 取得系エラー
@@ -228,9 +218,8 @@ try {
 | コード | 発生箇所 |
 |---|---|
 | `core/config_invalid` | 必須設定の欠落 |
-| `core/schema_invalid` | Zod / スキーマ検証失敗 |
 | `source/fetch_items_failed` | `list()` の Notion 取得失敗 |
-| `source/fetch_item_failed` | `findBySlug()` の Notion 取得失敗 |
+| `source/fetch_item_failed` | `get()` の Notion 取得失敗 |
 | `source/load_markdown_failed` | ブロック → Markdown 変換失敗 |
 | `cache/io_failed` | キャッシュ R/W 失敗 |
 | `cache/image_fetch_failed` | 画像 fetch の HTTP エラー |
@@ -243,5 +232,5 @@ try {
 | `@notion-headless-cms/core` | 全エクスポート |
 | `@notion-headless-cms/core/errors` | `CMSError` / `isCMSError` / `isCMSErrorInNamespace` |
 | `@notion-headless-cms/core/hooks` | `mergeHooks` / `mergeLoggers` |
-| `@notion-headless-cms/core/cache/memory` | `memoryDocumentCache` / `memoryImageCache` |
-| `@notion-headless-cms/core/cache/noop` | `noopDocumentCache` / `noopImageCache` |
+| `@notion-headless-cms/core/cache/memory` | `memoryCache` |
+| `@notion-headless-cms/core/cache/noop` | `noopDocOps` / `noopImgOps` |

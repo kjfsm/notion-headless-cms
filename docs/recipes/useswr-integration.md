@@ -1,107 +1,134 @@
 # useSWR とのクライアントサイド連携
 
-`@notion-headless-cms/core` v0.4.0 でメタデータと本文が独立したキー / API で扱えるようになりました。
-これにより [useSWR](https://swr.vercel.app/) などのクライアントサイドキャッシュと自然に連携できます。
+`@notion-headless-cms/core` の `cms.posts.get()` / `cms.posts.list()` は
+Server Component / SSR での直接呼び出しを前提とした設計だが、
+サーバ側で API ルートを立てることで [useSWR](https://swr.vercel.app/) などの
+クライアントサイドキャッシュとも自然に連携できる。
 
-## 公開 API
-
-| メソッド | 用途 | 戻り値 |
-| --- | --- | --- |
-| `cms.posts.getItemMeta(slug)` | メタデータのみ | `T \| null` |
-| `cms.posts.getItemContent(slug)` | 本文ペイロード（HTML / Markdown / blocks） | `ItemContentPayload \| null` |
-| `cms.posts.checkForUpdate({ slug, since })` | 差分判定。差分検出時は本文 cache を invalidate + バックグラウンド再生成 | `{ changed: false } \| { changed: true; meta: T }` |
-
-`getItemMeta` / `getItemContent` の戻り値は **関数を含まない pure JSON**。
-`useSWR` の cache に安全に格納でき、`Response.json()` でそのまま返せます。
-
-## サーバ側ルート（Next.js / Hono / Workers いずれでも同形）
+## サーバ側 API ルート（Next.js）
 
 ```ts
-// app/api/posts/[slug]/meta/route.ts
+// app/api/posts/route.ts
 import { cms } from "@/lib/cms";
-export async function GET(_req: Request, { params }: { params: { slug: string } }) {
-	const meta = await cms.posts.getItemMeta(params.slug);
-	return meta ? Response.json(meta) : new Response("Not Found", { status: 404 });
-}
 
-// app/api/posts/[slug]/content/route.ts
-export async function GET(_req: Request, { params }: { params: { slug: string } }) {
-	const content = await cms.posts.getItemContent(params.slug);
-	return content ? Response.json(content) : new Response("Not Found", { status: 404 });
-}
-
-// app/api/posts/[slug]/check/route.ts
-export async function GET(req: Request, { params }: { params: { slug: string } }) {
-	const since = new URL(req.url).searchParams.get("since") ?? "";
-	const result = await cms.posts.checkForUpdate({ slug: params.slug, since });
-	return Response.json(result);
+export async function GET() {
+  const posts = await cms.posts.list();
+  return Response.json(posts);
 }
 ```
+
+```ts
+// app/api/posts/[slug]/route.ts
+import { cms } from "@/lib/cms";
+
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ slug: string }> },
+) {
+  const { slug } = await params;
+  const post = await cms.posts.get(slug);
+  if (!post) return new Response("Not Found", { status: 404 });
+  const html = await post.render();
+  return Response.json({ ...post, html });
+}
+```
+
+Hono / Cloudflare Workers でも同形で書ける。
 
 ## クライアント側 Component
 
 ```tsx
 "use client";
-import useSWR, { useSWRConfig } from "swr";
+import useSWR from "swr";
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
+export function PostsList() {
+  const { data: posts, isLoading } = useSWR<{ slug: string; title?: string }[]>(
+    "/api/posts",
+    fetcher,
+  );
+  if (isLoading) return <p>Loading…</p>;
+  return (
+    <ul>
+      {posts?.map((p) => <li key={p.slug}>{p.title ?? p.slug}</li>)}
+    </ul>
+  );
+}
+
 export function Article({ slug }: { slug: string }) {
-	const { data: meta } = useSWR<{ updatedAt: string; title?: string }>(
-		`/api/posts/${slug}/meta`,
-		fetcher,
-	);
-	// メタが先に来てから content を起動する
-	const { data: content } = useSWR<{ html: string }>(
-		meta ? `/api/posts/${slug}/content` : null,
-		fetcher,
-	);
-	const { mutate } = useSWRConfig();
-
-	// フォーカス時に差分検知 → mutate でローカルキャッシュを置き換え
-	useSWR(
-		meta ? ["check", slug, meta.updatedAt] : null,
-		async () => {
-			const r = await fetch(
-				`/api/posts/${slug}/check?since=${encodeURIComponent(meta!.updatedAt)}`,
-			).then((x) => x.json());
-			if (r.changed) {
-				// メタは戻り値で即時置換。本文はサーバ側でバックグラウンド再生成済みなので
-				// `mutate(contentKey)` で SWR に再フェッチを起こさせるだけでよい。
-				mutate(`/api/posts/${slug}/meta`, r.meta, { revalidate: false });
-				mutate(`/api/posts/${slug}/content`);
-			}
-		},
-		{ revalidateOnFocus: true },
-	);
-
-	return (
-		<article>
-			<h1>{meta?.title ?? "..."}</h1>
-			<div dangerouslySetInnerHTML={{ __html: content?.html ?? "" }} />
-		</article>
-	);
+  const { data } = useSWR<{ html: string; slug: string }>(
+    `/api/posts/${slug}`,
+    fetcher,
+  );
+  if (!data) return <p>Loading…</p>;
+  return (
+    <article>
+      <h1>{data.slug}</h1>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Notion レンダリング結果を表示 */}
+      <div dangerouslySetInnerHTML={{ __html: data.html }} />
+    </article>
+  );
 }
 ```
 
-## なぜこの形が「一番便利」か
+## Webhook で useSWR を即時更新する
 
-- **メタは軽い**: `useSWR` の初回フェッチで HTML を含まず、TTFB が短い
-- **本文は遅延**: メタ表示とは独立して content ロードが進む
-- **差分検知が高速**: `checkForUpdate` は Notion メタのみ取得し、HTML 再生成は **バックグラウンド** で起こる
-- **mutate で即時 UI 反映**: 戻り値の `meta` で楽観的更新、`mutate(contentKey)` でサーバ再フェッチを起動
+Notion Webhook → API ルートでキャッシュを invalidate した後、
+クライアント側で `mutate` を叩くと useSWR のキャッシュもリフレッシュされる。
+
+```tsx
+"use client";
+import useSWR, { useSWRConfig } from "swr";
+import { useEffect } from "react";
+
+export function LiveArticle({ slug }: { slug: string }) {
+  const { mutate } = useSWRConfig();
+  const { data } = useSWR<{ html: string }>(`/api/posts/${slug}`, fetcher, {
+    refreshInterval: 60_000, // 1分ごとに自動リフレッシュ
+  });
+
+  // ページフォーカス時に強制リフレッシュ
+  useEffect(() => {
+    const onFocus = () => mutate(`/api/posts/${slug}`);
+    window.addEventListener("focus", onFocus);
+    return () => window.removeEventListener("focus", onFocus);
+  }, [slug, mutate]);
+
+  return (
+    <article>
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Notion レンダリング結果を表示 */}
+      <div dangerouslySetInnerHTML={{ __html: data?.html ?? "" }} />
+    </article>
+  );
+}
+```
 
 ## SSR との併用
 
-サーバコンポーネント / SSR では `cms.posts.getItem(slug)` を引き続き使えます。
-`getItem()` は **メタを即座に返し、`content.html()` / `content.markdown()` / `content.blocks()` の最初の呼び出し時に本文をロードします（lazy）**。
+Server Component では `cms.posts.get(slug)` を引き続き使う。
+SSR で初期 HTML を返しつつ、クライアントで `useSWR` を起動するパターン:
 
 ```tsx
-// app/posts/[slug]/page.tsx
-export default async function Page({ params }: { params: { slug: string } }) {
-	const post = await cms.posts.getItem(params.slug);
-	if (!post) notFound();
-	const html = await post.content.html(); // ここで初めて本文 cache を読む
-	return <article dangerouslySetInnerHTML={{ __html: html }} />;
+// app/posts/[slug]/page.tsx (Server Component)
+export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const post = await cms.posts.get(slug);
+  if (!post) notFound();
+  const html = await post.render();
+
+  return (
+    <article>
+      <h1>{post.slug}</h1>
+      {/* 初期描画は SSR 済み HTML を使い、クライアント側で useSWR が引き継ぐ */}
+      <div dangerouslySetInnerHTML={{ __html: html }} />
+    </article>
+  );
 }
 ```
+
+## なぜ API ルート経由が「一番便利」か
+
+- **SWR の cache キー管理が明快**: URL がキーになるため、`mutate` でのリフレッシュが直感的
+- **ストリーミング対応**: Next.js の `Suspense` + `useSWR` を組み合わせると、本文の遅延ロードが容易
+- **Webhook との相性**: `revalidateTag` / `cms.posts.cache.invalidate()` の後に `mutate` を呼ぶだけで連動する

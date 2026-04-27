@@ -1,22 +1,22 @@
 # カスタムデータソースの実装
 
-`DataSourceAdapter` インターフェースを実装することで、Notion 以外のバックエンドを利用できる。
+`DataSource<T>` インターフェースを実装することで、Notion 以外のバックエンドを利用できる。
+CLI 生成の `createCMS` ラッパーではなく、core の `createCMS` を直接呼ぶ。
 
 ## インターフェース
 
 ```ts
 import type {
-  DataSourceAdapter,
+  DataSource,
   BaseContentItem,
-  SourceQueryOptions,
-  SourceQueryResult,
+  ListOptions,
 } from "@notion-headless-cms/core";
 
 interface MyItem extends BaseContentItem {
   title: string;
 }
 
-class MyCustomSource implements DataSourceAdapter<MyItem> {
+class MyCustomSource implements DataSource<MyItem> {
   readonly name = "my-custom-source";
   readonly publishedStatuses = ["published"] as const;
   readonly accessibleStatuses = ["published", "draft"] as const;
@@ -38,35 +38,33 @@ class MyCustomSource implements DataSourceAdapter<MyItem> {
   async loadMarkdown(item: MyItem): Promise<string> {
     return fetchMarkdownFromMyAPI(item.id);
   }
-
-  // オプション: ソース側でフィルタ・ソートをサポートすると
-  // QueryBuilder が push-down する（where() 未使用時のみ）
-  async query(opts: SourceQueryOptions): Promise<SourceQueryResult<MyItem>> {
-    const { items, hasMore, nextCursor } = await queryMyAPI({
-      statuses: opts.filter?.statuses,
-      tags: opts.filter?.tags,
-      sort: opts.sort,
-      pageSize: opts.pageSize,
-      cursor: opts.cursor,
-    });
-    return { items, hasMore, nextCursor };
-  }
 }
 ```
 
 ## createCMS で利用
 
+core の `createCMS` に `collections` として渡す。`slugField` と `statusField` も指定する。
+
 ```ts
 import { createCMS } from "@notion-headless-cms/core";
-import { renderMarkdown } from "@notion-headless-cms/renderer";
+import { memoryCache } from "@notion-headless-cms/cache";
 
 const cms = createCMS({
-  source: new MyCustomSource(),
-  renderer: renderMarkdown,
+  collections: {
+    posts: {
+      source: new MyCustomSource(),
+      slugField: "slug",
+      statusField: "status",
+      publishedStatuses: ["published"],
+    },
+  },
+  cache: memoryCache(),
+  ttlMs: 5 * 60_000,
 });
 
-const posts = await cms.list();
-const post = await cms.find("my-post");
+const posts = await cms.posts.list();
+const post = await cms.posts.get("my-post");
+if (post) console.log(await post.render());
 ```
 
 ## エラー処理
@@ -89,3 +87,5 @@ async list() {
   }
 }
 ```
+
+呼び出し側では `isCMSErrorInNamespace(err, "my-source/")` で判定できる。

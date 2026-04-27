@@ -3,14 +3,14 @@
 ## インストール
 
 ```bash
-pnpm add @notion-headless-cms/core @notion-headless-cms/cache-r2 \
-  @notion-headless-cms/notion-orm @notion-headless-cms/renderer \
+pnpm add @notion-headless-cms/core @notion-headless-cms/notion-orm \
+  @notion-headless-cms/renderer @notion-headless-cms/cache \
   @notionhq/client zod \
   unified remark-parse remark-gfm remark-rehype rehype-stringify
 pnpm add -D @notion-headless-cms/cli
 ```
 
-`cache-r2` は `cloudflarePreset` と `cache-kv` を推移依存として含む。
+`@notion-headless-cms/cache` の `cloudflare` サブパスが KV / R2 アダプタを提供する。
 
 ## スキーマの生成
 
@@ -20,7 +20,7 @@ npx nhc init
 NOTION_TOKEN=secret_xxx npx nhc generate
 ```
 
-生成された `nhc-schema.ts` を Workers から読み込む。
+生成された `nhc.ts` を Workers から読み込む。
 
 ## wrangler.toml の設定
 
@@ -45,9 +45,8 @@ wrangler secret put NOTION_TOKEN
 ## Workers のコード
 
 ```ts
-import { createCMS } from "@notion-headless-cms/core";
-import { cloudflarePreset } from "@notion-headless-cms/cache-r2";
-import { cmsDataSources } from "./generated/nhc-schema";
+import { cloudflareCache } from "@notion-headless-cms/cache/cloudflare";
+import { createCMS } from "./generated/nhc";
 
 interface Env {
   NOTION_TOKEN: string;
@@ -58,9 +57,9 @@ interface Env {
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const cms = createCMS({
-      ...cloudflarePreset({ env, ttlMs: 5 * 60_000 }),
-      dataSources: cmsDataSources,
-      waitUntil: ctx.waitUntil.bind(ctx),
+      notionToken: env.NOTION_TOKEN,
+      cache: cloudflareCache(env),
+      ttlMs: 5 * 60_000,
     });
 
     const url = new URL(request.url);
@@ -73,16 +72,16 @@ export default {
 
     // 一覧
     if (url.pathname === "/posts") {
-      const posts = await cms.posts.getList();
+      const posts = await cms.posts.list();
       return Response.json(posts);
     }
 
     // 単一アイテム
     const slug = url.pathname.replace("/posts/", "");
-    const post = await cms.posts.getItem(slug);
+    const post = await cms.posts.get(slug);
     if (!post) return new Response("Not Found", { status: 404 });
 
-    const html = await post.content.html();
+    const html = await post.render();
     return new Response(html, {
       headers: { "Content-Type": "text/html; charset=utf-8" },
     });
@@ -92,23 +91,23 @@ export default {
 
 ## binding 名のカスタマイズ
 
-既定は `DOC_CACHE` / `IMG_BUCKET`。旧名 `CACHE_KV` / `CACHE_BUCKET` も
-フォールバックとして認識される。好みの名前を使う場合:
+既定は `DOC_CACHE` / `IMG_BUCKET`。別の名前を使う場合は `cloudflareCache` の第 2 引数で指定する:
 
 ```ts
-createCMS({
-  ...cloudflarePreset({
-    env,
+import { cloudflareCache } from "@notion-headless-cms/cache/cloudflare";
+
+const cms = createCMS({
+  notionToken: env.NOTION_TOKEN,
+  cache: cloudflareCache(env, {
     bindings: { docCache: "MY_KV", imgBucket: "MY_R2" },
   }),
-  dataSources: cmsDataSources,
 });
 ```
 
 ## キャッシュなしで動かす（ローカル開発）
 
-binding を設定しないと自動的にキャッシュなしで動作する。`wrangler dev`
-でローカル開発するときは `.dev.vars` に `NOTION_TOKEN` だけあれば動く。
+binding を設定しないと `cloudflareCache` はアダプタなし（空配列）を返すので、自動的にキャッシュなしで動作する。
+`wrangler dev` でローカル開発するときは `.dev.vars` に `NOTION_TOKEN` だけあれば動く。
 
 ```
 # .dev.vars
@@ -118,21 +117,28 @@ NOTION_TOKEN=secret_xxx
 ## SWR 裏更新の非同期化 (waitUntil)
 
 SWR キャッシュのバックグラウンド書き戻しを Workers のライフサイクルに
-載せるには `ctx.waitUntil` を渡す。
+載せるには `ctx.waitUntil` を低レベル API に渡す。
 
 ```ts
+import { createCMS } from "@notion-headless-cms/core";
+import { cloudflareCache } from "@notion-headless-cms/cache/cloudflare";
+
+// 低レベル createCMS を使う場合
 const cms = createCMS({
-  ...cloudflarePreset({ env, ttlMs: 5 * 60_000 }),
-  dataSources: cmsDataSources,
+  collections: { /* ... */ },
+  cache: cloudflareCache(env),
+  ttlMs: 5 * 60_000,
   waitUntil: ctx.waitUntil.bind(ctx),
 });
 ```
 
+CLI 生成ラッパーの `createCMS` は `waitUntil` オプションをサポートしていないため、
+Workers ライフサイクルに乗せる必要がある場合は core の `createCMS` を直接使う。
+
 ## Webhook によるキャッシュ invalidate
 
-Notion の webhook を Workers で受けて `cms.$handler({ webhookSecret })` に
-投げると、DataSource の `parseWebhook` が `{ collection, slug? }` を
-返し、該当スコープが invalidate される。
+`cms.$handler({ webhookSecret })` にリクエストを投げると、DataSource の `parseWebhook` が
+`{ collection, slug? }` を返し、該当スコープが invalidate される。
 
 ```ts
 const handler = cms.$handler({ webhookSecret: env.NOTION_WEBHOOK_SECRET });
@@ -151,6 +157,6 @@ R2 に永続保存する。レンダリング後の HTML 内の `<img>` は `/ap
 
 ## R2BucketLike / KVNamespaceLike と型依存
 
-`cloudflarePreset` が受ける env の binding は構造型 (`R2BucketLike` /
+`cloudflareCache` が受ける env の binding は構造型 (`R2BucketLike` /
 `KVNamespaceLike`) を要求するため、`@cloudflare/workers-types` への
 実依存はない。テストではモックに差し替え可能。
