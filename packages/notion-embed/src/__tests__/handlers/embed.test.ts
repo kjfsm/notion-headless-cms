@@ -188,6 +188,21 @@ describe("renderVideo", () => {
 		);
 		expect(html).toContain("<custom-video/>");
 	});
+
+	it("provider が html 以外（skip）を返したら通常のフォールバックに進む", async () => {
+		const skipProvider = {
+			id: "skip",
+			match: () => true,
+			render: () => ({ kind: "skip" as const }),
+		};
+		const html = await renderVideo(
+			makeExternal("https://example.com/video.mp4"),
+			[skipProvider],
+		);
+		// skip 後は外部 URL なので iframe フォールバックが出る
+		expect(html).toContain("<iframe");
+		expect(html).toContain('class="nhc-video"');
+	});
 });
 
 describe("renderAudio", () => {

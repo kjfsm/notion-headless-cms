@@ -135,6 +135,47 @@ describe("MemoryDocumentCache", () => {
 		expect(await cache.getItemMeta("b")).toBeNull();
 		expect(await cache.getItemMeta("c")).not.toBeNull();
 	});
+
+	it("setItemContent でも maxItems 超過分が LRU で退避される", async () => {
+		const cache = memoryDocumentCache({ maxItems: 2 });
+		await cache.setItemContent("a", makeContent("a"));
+		await cache.setItemContent("b", makeContent("b"));
+		await cache.setItemContent("c", makeContent("c"));
+		expect(await cache.getItemContent("a")).toBeNull();
+		expect(await cache.getItemContent("b")).not.toBeNull();
+		expect(await cache.getItemContent("c")).not.toBeNull();
+	});
+
+	it("getItemContent でアクセスされたエントリは LRU の末尾に移動する", async () => {
+		const cache = memoryDocumentCache({ maxItems: 2 });
+		await cache.setItemContent("a", makeContent("a"));
+		await cache.setItemContent("b", makeContent("b"));
+		await cache.getItemContent("a");
+		await cache.setItemContent("c", makeContent("c"));
+		expect(await cache.getItemContent("a")).not.toBeNull();
+		expect(await cache.getItemContent("b")).toBeNull();
+		expect(await cache.getItemContent("c")).not.toBeNull();
+	});
+
+	it("同じスラッグで上書き setItemMeta すると最新値が保持される", async () => {
+		const cache = memoryDocumentCache();
+		const first = makeMeta("a");
+		const second = { ...first, cachedAt: first.cachedAt + 1000 };
+		await cache.setItemMeta("a", first);
+		await cache.setItemMeta("a", second);
+		const result = await cache.getItemMeta("a");
+		expect(result?.cachedAt).toBe(second.cachedAt);
+	});
+
+	it("同じスラッグで上書き setItemContent すると最新値が保持される", async () => {
+		const cache = memoryDocumentCache();
+		const first = makeContent("a");
+		const second = { ...first, html: "<p>updated</p>" };
+		await cache.setItemContent("a", first);
+		await cache.setItemContent("a", second);
+		const result = await cache.getItemContent("a");
+		expect(result?.html).toBe("<p>updated</p>");
+	});
 });
 
 describe("MemoryImageCache", () => {
