@@ -1,60 +1,112 @@
 # カスタムキャッシュアダプタの実装
 
-`@notion-headless-cms/core` は `DocumentCacheAdapter<T>` / `ImageCacheAdapter` という 2 つのインターフェースを公開している。これを実装することで R2 / Next.js ISR 以外のストレージ（Redis / Memcached / S3 など）にキャッシュを差し替えられる。
+`@notion-headless-cms/core` は `DocumentCacheOps` / `ImageCacheOps` という 2 つのインターフェースを公開している。
+`CacheAdapter` としてまとめてから `createCMS` の `cache` に渡すことで、
+R2 / Next.js ISR 以外のストレージ（Redis / Memcached / S3 など）にキャッシュを差し替えられる。
 
-## DocumentCacheAdapter
+## CacheAdapter の構造
+
+```ts
+import type { CacheAdapter, DocumentCacheOps, ImageCacheOps } from "@notion-headless-cms/core";
+
+// handles で document / image のどちらを担当するかを宣言する
+const myAdapter: CacheAdapter = {
+  name: "my-cache",
+  handles: ["document", "image"],
+  doc: myDocumentOps,  // DocumentCacheOps の実装
+  img: myImageOps,     // ImageCacheOps の実装
+};
+```
+
+## DocumentCacheOps の実装例（Redis）
 
 ```ts
 import type {
-  DocumentCacheAdapter,
-  CachedItem,
+  DocumentCacheOps,
   CachedItemList,
+  CachedItemMeta,
+  CachedItemContent,
   BaseContentItem,
+  InvalidateScope,
+  CacheAdapter,
 } from "@notion-headless-cms/core";
+import { CMSError } from "@notion-headless-cms/core";
 
-class RedisDocumentCache<T extends BaseContentItem> implements DocumentCacheAdapter<T> {
-  readonly name = "redis";
-  constructor(private redis: RedisClient) {}
+class RedisDocumentOps implements DocumentCacheOps {
+  constructor(private readonly redis: RedisClient, private readonly prefix = "") {}
 
-  async getList(): Promise<CachedItemList<T> | null> {
-    const json = await this.redis.get("cms:list");
-    return json ? JSON.parse(json) : null;
+  async getList<T extends BaseContentItem>(collection: string): Promise<CachedItemList<T> | null> {
+    const raw = await this.redis.get(`${this.prefix}list:${collection}`);
+    return raw ? JSON.parse(raw) : null;
   }
 
-  async setList(data: CachedItemList<T>): Promise<void> {
-    await this.redis.set("cms:list", JSON.stringify(data));
+  async setList<T extends BaseContentItem>(collection: string, data: CachedItemList<T>): Promise<void> {
+    await this.redis.set(`${this.prefix}list:${collection}`, JSON.stringify(data));
   }
 
-  async getItem(slug: string): Promise<CachedItem<T> | null> {
-    const json = await this.redis.get(`cms:item:${slug}`);
-    return json ? JSON.parse(json) : null;
+  async getMeta<T extends BaseContentItem>(collection: string, slug: string): Promise<CachedItemMeta<T> | null> {
+    const raw = await this.redis.get(`${this.prefix}meta:${collection}:${slug}`);
+    return raw ? JSON.parse(raw) : null;
   }
 
-  async setItem(slug: string, data: CachedItem<T>): Promise<void> {
-    await this.redis.set(`cms:item:${slug}`, JSON.stringify(data));
-  }
-
-  // invalidate はオプション。未実装でも cms.cache.manage.revalidate() が no-op になるだけ。
-  async invalidate(scope: "all" | { slug: string } | { tag: string }): Promise<void> {
-    if (scope === "all") {
-      await this.redis.del("cms:list");
-      // 全アイテムをクリアする場合はパターン削除
-    } else if ("slug" in scope) {
-      await this.redis.del(`cms:item:${scope.slug}`);
+  async setMeta<T extends BaseContentItem>(collection: string, slug: string, data: CachedItemMeta<T>): Promise<void> {
+    try {
+      await this.redis.set(`${this.prefix}meta:${collection}:${slug}`, JSON.stringify(data));
+    } catch (err) {
+      throw new CMSError({
+        code: "cache/io_failed",
+        message: "Failed to write to Redis cache.",
+        cause: err,
+        context: { operation: "RedisDocumentOps.setMeta", collection, slug },
+      });
     }
-    // tag スコープは実装任意
   }
+
+  async getContent(collection: string, slug: string): Promise<CachedItemContent | null> {
+    const raw = await this.redis.get(`${this.prefix}content:${collection}:${slug}`);
+    return raw ? JSON.parse(raw) : null;
+  }
+
+  async setContent(collection: string, slug: string, data: CachedItemContent): Promise<void> {
+    await this.redis.set(`${this.prefix}content:${collection}:${slug}`, JSON.stringify(data));
+  }
+
+  async invalidate(scope: InvalidateScope): Promise<void> {
+    if (scope === "all") {
+      await this.redis.del(`${this.prefix}*`); // パターン削除
+      return;
+    }
+    const { collection } = scope;
+    if ("slug" in scope) {
+      await Promise.all([
+        this.redis.del(`${this.prefix}meta:${collection}:${scope.slug}`),
+        this.redis.del(`${this.prefix}content:${collection}:${scope.slug}`),
+      ]);
+    } else {
+      await Promise.all([
+        this.redis.del(`${this.prefix}list:${collection}`),
+        this.redis.del(`${this.prefix}meta:${collection}:*`),
+        this.redis.del(`${this.prefix}content:${collection}:*`),
+      ]);
+    }
+  }
+}
+
+export function redisCache(redis: RedisClient, prefix = ""): CacheAdapter {
+  return {
+    name: "redis",
+    handles: ["document"],
+    doc: new RedisDocumentOps(redis, prefix),
+  };
 }
 ```
 
-## ImageCacheAdapter
+## ImageCacheOps の実装例（S3）
 
 ```ts
-import type { ImageCacheAdapter, StorageBinary } from "@notion-headless-cms/core";
+import type { ImageCacheOps, StorageBinary, CacheAdapter } from "@notion-headless-cms/core";
 
-class S3ImageCache implements ImageCacheAdapter {
-  readonly name = "s3";
-
+class S3ImageOps implements ImageCacheOps {
   async get(hash: string): Promise<StorageBinary | null> {
     const obj = await s3.getObject({ Key: `images/${hash}` }).catch(() => null);
     if (!obj) return null;
@@ -72,40 +124,40 @@ class S3ImageCache implements ImageCacheAdapter {
     });
   }
 }
+
+export function s3ImageCache(): CacheAdapter {
+  return {
+    name: "s3",
+    handles: ["image"],
+    img: new S3ImageOps(),
+  };
+}
 ```
 
 ## createCMS で利用
+
+複数のアダプタを配列で渡せる。先着順で `handles` の担当が割り当てられる。
 
 ```ts
 import { createCMS } from "@notion-headless-cms/core";
 
 const cms = createCMS({
-  source: mySource,
-  cache: {
-    document: new RedisDocumentCache(redis),
-    image: new S3ImageCache(),
-    ttlMs: 5 * 60_000,
-  },
+  collections: { /* ... */ },
+  cache: [
+    redisCache(redis, "myapp:"),
+    s3ImageCache(),
+  ],
+  ttlMs: 5 * 60_000,
 });
 ```
 
-## エラー処理
-
-キャッシュ R/W 失敗は `CMSError` の `cache/io_failed` コードで投げると、ライブラリ他部分と挙動が揃う。
+単一アダプタで document + image 両方を担う場合は:
 
 ```ts
-import { CMSError } from "@notion-headless-cms/core";
-
-async setItem(slug: string, data: CachedItem<T>): Promise<void> {
-  try {
-    await this.redis.set(`cms:item:${slug}`, JSON.stringify(data));
-  } catch (err) {
-    throw new CMSError({
-      code: "cache/io_failed",
-      message: "Failed to write to Redis cache.",
-      cause: err,
-      context: { operation: "RedisDocumentCache.setItem", slug },
-    });
-  }
+cache: {
+  name: "my-unified",
+  handles: ["document", "image"],
+  doc: myDocOps,
+  img: myImgOps,
 }
 ```

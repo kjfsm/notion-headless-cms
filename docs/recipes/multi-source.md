@@ -1,7 +1,7 @@
 # マルチソースレシピ
 
 複数の Notion DB を 1 つのクライアントで型安全に扱うパターン。
-`nhc generate` が生成した `cmsDataSources` を `createCMS` に渡すだけ。
+`nhc generate` が生成した `createCMS` ラッパーを使うだけ。
 
 ## 事前準備：スキーマの生成
 
@@ -23,7 +23,7 @@ export default defineConfig({
     { name: "posts", dbName: "ブログ記事DB" },
     { name: "news", id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" },
   ],
-  output: "./app/generated/nhc-schema.ts",
+  output: "./app/generated/nhc.ts",
 });
 ```
 
@@ -34,17 +34,18 @@ export default defineConfig({
 ## Node.js
 
 ```ts
-import { createCMS, nodePreset } from "@notion-headless-cms/core";
-import { cmsDataSources } from "./generated/nhc-schema";
+import { memoryCache } from "@notion-headless-cms/cache";
+import { createCMS } from "./generated/nhc";
 
 const cms = createCMS({
-  ...nodePreset({ ttlMs: 5 * 60_000 }),
-  dataSources: cmsDataSources,
+  notionToken: process.env.NOTION_TOKEN!,
+  cache: memoryCache(),
+  ttlMs: 5 * 60_000,
 });
 
 // 各ソースは個別の CollectionClient として推論される
-const posts = await cms.posts.getList(); // PostsItem[]
-const news = await cms.news.getList();   // NewsItem[]
+const posts = await cms.posts.list(); // PostsItem[]
+const news = await cms.news.list();   // NewsItem[]
 ```
 
 ## Cloudflare Workers
@@ -61,20 +62,20 @@ bucket_name = "nhc-images"
 ```
 
 ```ts
-import { createCMS } from "@notion-headless-cms/core";
-import { cloudflarePreset } from "@notion-headless-cms/cache-r2";
-import { cmsDataSources } from "./generated/nhc-schema";
+import { cloudflareCache } from "@notion-headless-cms/cache/cloudflare";
+import { createCMS } from "./generated/nhc";
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const cms = createCMS({
-      ...cloudflarePreset({ env, ttlMs: 5 * 60_000 }),
-      dataSources: cmsDataSources,
+      notionToken: env.NOTION_TOKEN,
+      cache: cloudflareCache(env),
+      ttlMs: 5 * 60_000,
     });
 
     const url = new URL(request.url);
-    if (url.pathname === "/posts") return Response.json(await cms.posts.getList());
-    if (url.pathname === "/news") return Response.json(await cms.news.getList());
+    if (url.pathname === "/posts") return Response.json(await cms.posts.list());
+    if (url.pathname === "/news") return Response.json(await cms.news.list());
     return new Response("Not Found", { status: 404 });
   },
 };
@@ -88,24 +89,28 @@ wrangler secret put NOTION_TOKEN
 
 ## 型推論の仕組み
 
-`cmsDataSources` の型から各ソースのアイテム型が自動推論される。
+`nhc generate` が生成する `createCMS` ラッパーは各ソースのアイテム型を静的に持つ。
 
 ```ts
-// 生成ファイル (nhc-schema.ts) — 編集不要
+// 生成ファイル (nhc.ts) — 編集不要
 export interface PostsItem extends BaseContentItem {
   title: string | null;
   tags: string[];
 }
-export const cmsDataSources = {
-  posts: createNotionCollection({ token: env("NOTION_TOKEN"), dataSourceId: postsSourceId, schema: postsSchema }),
-  news: createNotionCollection({ token: env("NOTION_TOKEN"), dataSourceId: newsSourceId, schema: newsSchema }),
-} as const;
+export interface NewsItem extends BaseContentItem {
+  headline: string | null;
+}
+
+export function createCMS(config: NhcConfig): {
+  posts: CollectionClient<PostsItem>;
+  news: CollectionClient<NewsItem>;
+} { /* ... */ }
 
 // アプリコード
-const cms = createCMS({ ...nodePreset(), dataSources: cmsDataSources });
-//    ^? CMSClient<{ posts: DataSource<PostsItem>, news: DataSource<NewsItem> }>
+const cms = createCMS({ notionToken: "...", cache: memoryCache() });
+//    ^? { posts: CollectionClient<PostsItem>; news: CollectionClient<NewsItem> }
 
-const posts = await cms.posts.getList();
+const posts = await cms.posts.list();
 //    ^? PostsItem[]
 ```
 
@@ -116,8 +121,8 @@ const posts = await cms.posts.getList();
 `nhc.config.ts` の `dataSources` に 1 件だけ登録すれば、そのまま単一 DB 構成としても使える。
 
 ```ts
-const cms = createCMS({ ...nodePreset(), dataSources: cmsDataSources });
-const posts = await cms.posts.getList();
+const cms = createCMS({ notionToken: "...", cache: memoryCache() });
+const posts = await cms.posts.list();
 ```
 
 ## 関連ドキュメント
