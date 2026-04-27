@@ -104,6 +104,16 @@ export async function renderVideo(
 			: "";
 
 	if (isExternal) {
+		// 直接メディアファイル (MP4 等) は <video> タグで描画する。それ以外は iframe 埋め込み。
+		const isDirectMedia = /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url);
+		if (isDirectMedia) {
+			return (
+				`<div class="nhc-video">` +
+				`<video class="nhc-video__player" src="${escapeAttr(url)}" controls></video>` +
+				captionHtml +
+				`</div>`
+			);
+		}
 		return (
 			`<div class="nhc-video">` +
 			renderIframe({ src: url, frameborder: 0 }) +

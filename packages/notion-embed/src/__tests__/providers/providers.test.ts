@@ -169,9 +169,11 @@ describe("youtubeProvider", () => {
 	});
 
 	it("動画 ID が抽出できないチャンネル URL は card にフォールバックする", async () => {
-		const fetchSpy = vi
-			.spyOn(globalThis, "fetch")
-			.mockResolvedValue(new Response("<html></html>"));
+		const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+			new Response(JSON.stringify({}), {
+				headers: { "content-type": "application/json" },
+			}),
+		);
 		try {
 			const out = await provider.render({
 				block: dummyBlock,
@@ -199,18 +201,17 @@ describe("youtubeProvider", () => {
 			expect(cardProvider.match("https://example.com")).toBe(false);
 		});
 
-		it("OGP を取得して bookmark 風カード HTML を返す", async () => {
-			const ogpHtml = `
-				<html><head>
-					<meta property="og:title" content="Euphoric Band" />
-					<meta property="og:description" content="String band that plays game music" />
-					<meta property="og:image" content="https://example.com/cover.jpg" />
-					<meta property="og:site_name" content="YouTube" />
-				</head></html>
-			`;
-			const fetchSpy = vi
-				.spyOn(globalThis, "fetch")
-				.mockResolvedValue(new Response(ogpHtml));
+		it("oEmbed を取得して bookmark 風カード HTML を返す", async () => {
+			const oembedJson = JSON.stringify({
+				title: "Euphoric Band",
+				thumbnail_url: "https://example.com/cover.jpg",
+				author_name: "Euphoric Band Channel",
+			});
+			const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+				new Response(oembedJson, {
+					headers: { "content-type": "application/json" },
+				}),
+			);
 			try {
 				const out = await cardProvider.render({
 					block: dummyBlock,
@@ -223,19 +224,39 @@ describe("youtubeProvider", () => {
 						'href="https://www.youtube.com/@Euphoric-Band"',
 					);
 					expect(out.html).toContain("Euphoric Band");
-					expect(out.html).toContain("String band that plays game music");
 					expect(out.html).toContain("https://example.com/cover.jpg");
-					expect(out.html).toContain(">YouTube</p>");
+					expect(out.html).toContain("Euphoric Band Channel");
 				}
 			} finally {
 				fetchSpy.mockRestore();
 			}
 		});
 
-		it("ogp: false で OGP fetch を抑止する", async () => {
+		it("oEmbed 失敗時にホスト名をタイトルとして使い nhc-bookmark--no-ogp を付ける", async () => {
+			const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+				new Response(JSON.stringify({}), {
+					headers: { "content-type": "application/json" },
+				}),
+			);
+			try {
+				const out = await cardProvider.render({
+					block: dummyBlock,
+					url: "https://www.youtube.com/@some-channel",
+				});
+				expect(out.kind).toBe("html");
+				if (out.kind === "html") {
+					expect(out.html).toContain("nhc-bookmark--no-ogp");
+					expect(out.html).toContain("www.youtube.com");
+				}
+			} finally {
+				fetchSpy.mockRestore();
+			}
+		});
+
+		it("ogp: false では oEmbed fetch を行わず nhc-bookmark--no-ogp を付ける", async () => {
 			const fetchSpy = vi
 				.spyOn(globalThis, "fetch")
-				.mockResolvedValue(new Response(""));
+				.mockResolvedValue(new Response(JSON.stringify({})));
 			const noOgp = youtubeProvider({ display: "card", ogp: false });
 			const out = await noOgp.render({
 				block: dummyBlock,
@@ -245,8 +266,16 @@ describe("youtubeProvider", () => {
 			expect(out.kind).toBe("html");
 			if (out.kind === "html") {
 				expect(out.html).toContain("nhc-bookmark--youtube");
+				expect(out.html).toContain("nhc-bookmark--no-ogp");
 			}
 			fetchSpy.mockRestore();
+		});
+
+		it("無効な URL でも例外を throw しない (ホスト名 fallback)", async () => {
+			const noOgp = youtubeProvider({ display: "card", ogp: false });
+			await expect(
+				noOgp.render({ block: dummyBlock, url: "not-a-valid-url" }),
+			).resolves.toMatchObject({ kind: "html" });
 		});
 	});
 });
@@ -258,35 +287,77 @@ describe("vimeoProvider", () => {
 		expect(provider.match("https://vimeo.com/123456")).toBe(true);
 	});
 
-	it("iframe URL は player.vimeo.com/video/{id}", async () => {
-		const out = await provider.render({
-			block: dummyBlock,
-			url: "https://vimeo.com/123456",
-		});
-		if (out.kind === "html") {
-			expect(out.html).toContain("player.vimeo.com/video/123456");
+	it("非 Vimeo URL にマッチしない", async () => {
+		expect(provider.match("https://example.com")).toBe(false);
+	});
+
+	it("無効な URL 文字列はマッチしない", async () => {
+		expect(provider.match("not-a-url")).toBe(false);
+	});
+
+	it("oEmbed から embed src を取得して iframe を返す", async () => {
+		const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+			new Response(
+				JSON.stringify({
+					html: '<iframe src="https://player.vimeo.com/video/123456?h=abc"></iframe>',
+				}),
+				{ headers: { "content-type": "application/json" } },
+			),
+		);
+		try {
+			const out = await provider.render({
+				block: dummyBlock,
+				url: "https://vimeo.com/123456",
+			});
+			if (out.kind === "html") {
+				expect(out.html).toContain("player.vimeo.com/video/123456");
+				expect(out.html).toContain("<iframe");
+			}
+		} finally {
+			fetchSpy.mockRestore();
 		}
 	});
 
 	it("ctx の width/height で上書きできる", async () => {
-		const out = await provider.render({
-			block: dummyBlock,
-			url: "https://vimeo.com/1",
-			width: 100,
-			height: 50,
-		});
-		if (out.kind === "html") {
-			expect(out.html).toContain('width="100"');
-			expect(out.html).toContain('height="50"');
+		const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+			new Response(
+				JSON.stringify({
+					html: '<iframe src="https://player.vimeo.com/video/1"></iframe>',
+				}),
+				{ headers: { "content-type": "application/json" } },
+			),
+		);
+		try {
+			const out = await provider.render({
+				block: dummyBlock,
+				url: "https://vimeo.com/1",
+				width: 100,
+				height: 50,
+			});
+			if (out.kind === "html") {
+				expect(out.html).toContain('width="100"');
+				expect(out.html).toContain('height="50"');
+			}
+		} finally {
+			fetchSpy.mockRestore();
 		}
 	});
 
-	it("ID が抽出できなければ skip", async () => {
-		const out = await provider.render({
-			block: dummyBlock,
-			url: "https://vimeo.com/",
-		});
-		expect(out.kind).toBe("skip");
+	it("oEmbed が html を返さなければ skip", async () => {
+		const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+			new Response(JSON.stringify({}), {
+				headers: { "content-type": "application/json" },
+			}),
+		);
+		try {
+			const out = await provider.render({
+				block: dummyBlock,
+				url: "https://vimeo.com/",
+			});
+			expect(out.kind).toBe("skip");
+		} finally {
+			fetchSpy.mockRestore();
+		}
 	});
 });
 

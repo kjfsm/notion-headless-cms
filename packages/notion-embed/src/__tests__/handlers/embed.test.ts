@@ -115,13 +115,42 @@ describe("renderVideo", () => {
 			},
 		}) as unknown as VideoBlockObjectResponse;
 
-	it("外部 URL は iframe で出力する", async () => {
+	it("外部 MP4 URL は video タグで出力する", async () => {
 		const html = await renderVideo(
 			makeExternal("https://example.com/video.mp4"),
 			[],
 		);
 		expect(html).toContain('class="nhc-video"');
+		expect(html).toContain("<video");
+		expect(html).not.toContain("<iframe");
+	});
+
+	it("外部ストリーム URL (非メディア拡張子) は iframe で出力する", async () => {
+		const html = await renderVideo(
+			makeExternal("https://example.com/stream"),
+			[],
+		);
+		expect(html).toContain('class="nhc-video"');
 		expect(html).toContain("<iframe");
+	});
+
+	it("外部 WebM / OGG / MOV も video タグで出力する", async () => {
+		for (const ext of ["webm", "ogg", "mov"]) {
+			const html = await renderVideo(
+				makeExternal(`https://example.com/video.${ext}`),
+				[],
+			);
+			expect(html).toContain("<video");
+			expect(html).not.toContain("<iframe");
+		}
+	});
+
+	it("クエリ文字列付き MP4 URL も video タグで出力する", async () => {
+		const html = await renderVideo(
+			makeExternal("https://example.com/video.mp4?t=10"),
+			[],
+		);
+		expect(html).toContain("<video");
 	});
 
 	it("Notion file 系は <video> タグで出力する", async () => {
@@ -195,11 +224,10 @@ describe("renderVideo", () => {
 			match: () => true,
 			render: () => ({ kind: "skip" as const }),
 		};
-		const html = await renderVideo(
-			makeExternal("https://example.com/video.mp4"),
-			[skipProvider],
-		);
-		// skip 後は外部 URL なので iframe フォールバックが出る
+		const html = await renderVideo(makeExternal("https://example.com/stream"), [
+			skipProvider,
+		]);
+		// skip 後は非メディア外部 URL なので iframe フォールバックが出る
 		expect(html).toContain("<iframe");
 		expect(html).toContain('class="nhc-video"');
 	});
