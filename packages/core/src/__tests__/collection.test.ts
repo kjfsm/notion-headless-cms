@@ -663,6 +663,31 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
 		const result = await cms.posts.get("no-status");
 		expect(result).toBeNull();
 	});
+
+	it("アイテムの status が null の場合は accessibleStatuses でフィルタして null を返す", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "null-status",
+			updatedAt: "2024-01-01T00:00:00Z",
+			status: null,
+		};
+		const cms = createCMS({
+			collections: {
+				posts: {
+					source: makeMockSource({
+						async list() {
+							return [item];
+						},
+					}),
+					slugField: "slug",
+					accessibleStatuses: ["公開"],
+				},
+			},
+			renderer: mockRenderer,
+		});
+		const result = await cms.posts.get("null-status");
+		expect(result).toBeNull();
+	});
 });
 
 describe("CollectionClient — render アクセサ", () => {

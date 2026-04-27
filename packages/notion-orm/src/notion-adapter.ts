@@ -186,7 +186,7 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
 				opts?.publishedStatuses && opts.publishedStatuses.length > 0
 					? items.filter(
 							(item) =>
-								item.status !== undefined &&
+								item.status != null &&
 								(opts.publishedStatuses as string[]).includes(item.status),
 						)
 					: items;

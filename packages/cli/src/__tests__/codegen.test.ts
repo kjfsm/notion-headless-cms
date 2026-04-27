@@ -44,6 +44,20 @@ describe("generateSchemaFile", () => {
 		expect(code).toContain('"公開済み" | "下書き" | null');
 	});
 
+	it("slugField に指定されたフィールドは string（null 非許容）で生成される", () => {
+		// richText 型は通常 string | null だが slugField は BaseContentItem.slug 制約を満たすため string
+		const collection = makeCollection({
+			config: { dbName: "DB", publishedStatuses: [], slugField: "mySlug" },
+			properties: {
+				"My Slug": makeProp("rich_text"),
+				Status: makeProp("select"),
+			},
+		});
+		const code = generateSchemaFile([collection]);
+		expect(code).toContain("\tmySlug: string;");
+		expect(code).not.toContain("\tmySlug: string | null;");
+	});
+
 	it("公開ステータス値を createCMS 内に埋め込む", () => {
 		const code = generateSchemaFile([makeCollection()]);
 		expect(code).toContain('publishedStatuses: ["公開済み"] as const');
