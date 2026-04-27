@@ -54,7 +54,7 @@ jobs:
             ${{ runner.os }}-turbo-
       - run: pnpm install --frozen-lockfile --prefer-offline
       - run: pnpm verify:ci
-      - uses: codecov/codecov-action@v5
+      - uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: "**/coverage/lcov.info"
