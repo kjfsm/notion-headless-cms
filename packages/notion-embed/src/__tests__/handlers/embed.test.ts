@@ -134,6 +134,25 @@ describe("renderVideo", () => {
 		expect(html).toContain("<iframe");
 	});
 
+	it("外部 WebM / OGG / MOV も video タグで出力する", async () => {
+		for (const ext of ["webm", "ogg", "mov"]) {
+			const html = await renderVideo(
+				makeExternal(`https://example.com/video.${ext}`),
+				[],
+			);
+			expect(html).toContain("<video");
+			expect(html).not.toContain("<iframe");
+		}
+	});
+
+	it("クエリ文字列付き MP4 URL も video タグで出力する", async () => {
+		const html = await renderVideo(
+			makeExternal("https://example.com/video.mp4?t=10"),
+			[],
+		);
+		expect(html).toContain("<video");
+	});
+
 	it("Notion file 系は <video> タグで出力する", async () => {
 		const html = await renderVideo(
 			makeFile("https://files.notion.so/x.mp4"),

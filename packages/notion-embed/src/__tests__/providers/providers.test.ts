@@ -270,6 +270,13 @@ describe("youtubeProvider", () => {
 			}
 			fetchSpy.mockRestore();
 		});
+
+		it("無効な URL でも例外を throw しない (ホスト名 fallback)", async () => {
+			const noOgp = youtubeProvider({ display: "card", ogp: false });
+			await expect(
+				noOgp.render({ block: dummyBlock, url: "not-a-valid-url" }),
+			).resolves.toMatchObject({ kind: "html" });
+		});
 	});
 });
 
@@ -282,6 +289,10 @@ describe("vimeoProvider", () => {
 
 	it("非 Vimeo URL にマッチしない", async () => {
 		expect(provider.match("https://example.com")).toBe(false);
+	});
+
+	it("無効な URL 文字列はマッチしない", async () => {
+		expect(provider.match("not-a-url")).toBe(false);
 	});
 
 	it("oEmbed から embed src を取得して iframe を返す", async () => {
