@@ -211,6 +211,124 @@ describe("r2Cache", () => {
 			expect(await cache.getItemMeta("a")).toBeNull();
 			expect(await cache.getItemContent("a")).toBeNull();
 		});
+
+		it("invalidate({ slug, kind: 'meta' }) でメタオブジェクトのみ削除する", async () => {
+			await cache.setItemMeta("a", {
+				item: makeItem("a"),
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.setItemContent("a", {
+				html: "<p>x</p>",
+				markdown: "x",
+				blocks: [],
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.invalidate?.({
+				collection: "posts",
+				slug: "a",
+				kind: "meta",
+			});
+			expect(await cache.getItemMeta("a")).toBeNull();
+			expect(await cache.getItemContent("a")).not.toBeNull();
+		});
+
+		it("invalidate({ collection }) で list + meta + content を全削除する", async () => {
+			await cache.setList({ items: [makeItem("a")], cachedAt: 0 });
+			await cache.setItemMeta("a", {
+				item: makeItem("a"),
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.setItemContent("a", {
+				html: "<p>x</p>",
+				markdown: "x",
+				blocks: [],
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.invalidate?.({ collection: "posts" });
+			expect(await cache.getList()).toBeNull();
+			expect(await cache.getItemMeta("a")).toBeNull();
+			expect(await cache.getItemContent("a")).toBeNull();
+		});
+
+		it("invalidate({ collection, kind: 'meta' }) で list + meta のみ削除する", async () => {
+			await cache.setList({ items: [makeItem("a")], cachedAt: 0 });
+			await cache.setItemMeta("a", {
+				item: makeItem("a"),
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.setItemContent("a", {
+				html: "<p>x</p>",
+				markdown: "x",
+				blocks: [],
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.invalidate?.({ collection: "posts", kind: "meta" });
+			expect(await cache.getList()).toBeNull();
+			expect(await cache.getItemMeta("a")).toBeNull();
+			expect(await cache.getItemContent("a")).not.toBeNull();
+		});
+
+		it("invalidate({ collection, kind: 'content' }) で content のみ削除し list / meta は残す", async () => {
+			await cache.setList({ items: [makeItem("a")], cachedAt: 0 });
+			await cache.setItemMeta("a", {
+				item: makeItem("a"),
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.setItemContent("a", {
+				html: "<p>x</p>",
+				markdown: "x",
+				blocks: [],
+				notionUpdatedAt: "2024-01-01",
+				cachedAt: 0,
+			});
+			await cache.invalidate?.({ collection: "posts", kind: "content" });
+			expect(await cache.getList()).not.toBeNull();
+			expect(await cache.getItemMeta("a")).not.toBeNull();
+			expect(await cache.getItemContent("a")).toBeNull();
+		});
+
+		it("deletePrefix が truncated カーソルを最後まで反復する", async () => {
+			// 2 ページに分割される list を返す bucket を組み立てる
+			const objects = [
+				{ key: "meta/a.json" },
+				{ key: "meta/b.json" },
+				{ key: "meta/c.json" },
+			];
+			const customBucket: R2BucketLike = {
+				get: vi.fn().mockResolvedValue(null),
+				put: vi.fn().mockResolvedValue(undefined),
+				delete: vi.fn().mockResolvedValue(undefined),
+				list: vi
+					.fn()
+					.mockResolvedValueOnce({
+						objects: objects.slice(0, 2),
+						truncated: true,
+						cursor: "next-cursor",
+					})
+					.mockResolvedValueOnce({
+						objects: objects.slice(2),
+						truncated: false,
+					}),
+			};
+			const c = r2Cache({ bucket: customBucket });
+			if (!c) throw new Error("unexpected undefined");
+			await c.invalidate?.({ collection: "posts", kind: "meta" });
+			// truncated → cursor 付きでもう一度 list を呼ぶ
+			expect(customBucket.list).toHaveBeenCalledTimes(2);
+			expect(customBucket.list).toHaveBeenNthCalledWith(2, {
+				prefix: "meta/",
+				cursor: "next-cursor",
+			});
+			// 全 3 オブジェクト + listKey の合計 4 回 delete される
+			expect(customBucket.delete).toHaveBeenCalledTimes(4);
+		});
 	});
 
 	describe("ImageCacheAdapter", () => {

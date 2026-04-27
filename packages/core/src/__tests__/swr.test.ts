@@ -689,6 +689,285 @@ describe("metadata と content の分離", () => {
 	});
 });
 
+describe("getItemMeta（CollectionClient）", () => {
+	it("キャッシュヒット時に SWR バックグラウンドチェックを起動する", async () => {
+		const cachedItem: BaseContentItem = {
+			id: "p1",
+			slug: "post-1",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const cache = new MemoryDocumentCache();
+		await cache.setItemMeta("posts:post-1", {
+			item: cachedItem,
+			notionUpdatedAt: cachedItem.updatedAt,
+			cachedAt: Date.now(),
+		});
+
+		const captured: Promise<unknown>[] = [];
+		const onCacheHit = vi.fn();
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						return [cachedItem];
+					},
+				}),
+			},
+			renderer: mockRenderer,
+			cache: { document: cache },
+			hooks: { onCacheHit },
+			waitUntil: (p) => captured.push(p),
+		});
+
+		const meta = await cms.posts.getItemMeta("post-1");
+		expect(meta?.slug).toBe("post-1");
+		expect(onCacheHit).toHaveBeenCalled();
+		expect(captured.length).toBeGreaterThan(0);
+	});
+
+	it("TTL 期限切れではブロッキングで再フェッチする", async () => {
+		const stale: BaseContentItem = {
+			id: "p1",
+			slug: "post-1",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const fresh: BaseContentItem = {
+			id: "p1",
+			slug: "post-1",
+			updatedAt: "2024-01-02T00:00:00Z",
+		};
+		const cache = new MemoryDocumentCache();
+		await cache.setItemMeta("posts:post-1", {
+			item: stale,
+			notionUpdatedAt: stale.updatedAt,
+			cachedAt: 0,
+		});
+
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						return [fresh];
+					},
+				}),
+			},
+			renderer: mockRenderer,
+			cache: { document: cache, ttlMs: 1000 },
+		});
+
+		const meta = await cms.posts.getItemMeta("post-1");
+		expect(meta?.updatedAt).toBe("2024-01-02T00:00:00Z");
+	});
+
+	it("TTL 期限切れで item が見つからない場合は null を返す", async () => {
+		const stale: BaseContentItem = {
+			id: "p1",
+			slug: "missing-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const cache = new MemoryDocumentCache();
+		await cache.setItemMeta("posts:missing-post", {
+			item: stale,
+			notionUpdatedAt: stale.updatedAt,
+			cachedAt: 0,
+		});
+
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						return [];
+					},
+				}),
+			},
+			renderer: mockRenderer,
+			cache: { document: cache, ttlMs: 1000 },
+		});
+
+		expect(await cms.posts.getItemMeta("missing-post")).toBeNull();
+	});
+});
+
+describe("collectionKey", () => {
+	it("slug 無しでは collection 名のみを返す", async () => {
+		const { collectionKey } = await import("../collection");
+		expect(collectionKey("posts")).toBe("posts");
+	});
+
+	it("slug 付きでは {collection}:{slug} を返す", async () => {
+		const { collectionKey } = await import("../collection");
+		expect(collectionKey("posts", "my-post")).toBe("posts:my-post");
+	});
+});
+
+describe("バックグラウンドエラーパス", () => {
+	it("リスト初回フェッチ + waitUntil 指定時に保存 Promise をバックグラウンドに乗せる", async () => {
+		const item: BaseContentItem = {
+			id: "p1",
+			slug: "post-1",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const cache = new MemoryDocumentCache();
+		const captured: Promise<unknown>[] = [];
+
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						return [item];
+					},
+				}),
+			},
+			renderer: mockRenderer,
+			cache: { document: cache },
+			waitUntil: (p) => captured.push(p),
+		});
+
+		// キャッシュ無し + waitUntil あり → fetchList の waitUntil 分岐を通る
+		const { items } = await cms.posts.getList();
+		expect(items).toHaveLength(1);
+		expect(captured.length).toBeGreaterThan(0);
+		await Promise.all(captured);
+	});
+
+	it("rebuildContentBg 失敗時に logger.warn が呼ばれる", async () => {
+		const warnFn = vi.fn();
+		const oldItem: BaseContentItem = {
+			id: "1",
+			slug: "broken-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const freshItem: BaseContentItem = {
+			id: "1",
+			slug: "broken-post",
+			updatedAt: "2024-01-02T00:00:00Z",
+		};
+		const cache = new MemoryDocumentCache();
+
+		// loadMarkdown が失敗 → buildCachedItemContent が throw → rebuildContentBg の catch
+		const failingMarkdown = vi
+			.fn()
+			.mockRejectedValue(new Error("fetch failed"));
+		const captured: Promise<unknown>[] = [];
+
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						return [freshItem];
+					},
+					loadMarkdown: failingMarkdown,
+				}),
+			},
+			renderer: mockRenderer,
+			cache: { document: cache },
+			logger: { warn: warnFn },
+			waitUntil: (p) => captured.push(p),
+		});
+
+		const result = await cms.posts.checkForUpdate({
+			slug: "broken-post",
+			since: oldItem.updatedAt,
+		});
+		expect(result.changed).toBe(true);
+		await Promise.all(captured);
+
+		expect(warnFn).toHaveBeenCalledWith(
+			"本文のバックグラウンド再生成に失敗",
+			expect.objectContaining({
+				slug: "broken-post",
+				collection: "posts",
+				error: expect.any(String),
+			}),
+		);
+	});
+
+	it("checkAndUpdateItemBg が例外時に logger.warn を呼ぶ", async () => {
+		const warnFn = vi.fn();
+		const cachedItem: BaseContentItem = {
+			id: "p1",
+			slug: "post-1",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const cache = new MemoryDocumentCache();
+		await cache.setItemMeta("posts:post-1", {
+			item: cachedItem,
+			notionUpdatedAt: cachedItem.updatedAt,
+			cachedAt: Date.now(),
+		});
+
+		const captured: Promise<unknown>[] = [];
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						throw new Error("upstream down");
+					},
+				}),
+			},
+			renderer: mockRenderer,
+			cache: { document: cache },
+			logger: { warn: warnFn },
+			rateLimiter: { maxRetries: 0, baseDelayMs: 0 },
+			waitUntil: (p) => captured.push(p),
+		});
+
+		await cms.posts.getItem("post-1");
+		await Promise.all(captured);
+
+		expect(warnFn).toHaveBeenCalledWith(
+			"SWR: アイテムのバックグラウンド差分チェックに失敗",
+			expect.objectContaining({
+				slug: "post-1",
+				collection: "posts",
+				error: "upstream down",
+			}),
+		);
+	});
+
+	it("checkAndUpdateListBg が例外時に logger.warn を呼ぶ", async () => {
+		const warnFn = vi.fn();
+		const cachedItem: BaseContentItem = {
+			id: "p1",
+			slug: "post-1",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const cache = new MemoryDocumentCache();
+		await cache.setList({ items: [cachedItem], cachedAt: Date.now() });
+
+		const captured: Promise<unknown>[] = [];
+		let listCallCount = 0;
+		const cms = createCMS({
+			dataSources: {
+				posts: makeMockSource({
+					async list() {
+						listCallCount++;
+						// 1回目（同期パスは cache hit で呼ばれない）→ bg で初回 throw
+						throw new Error("list failed");
+					},
+				}),
+			},
+			renderer: mockRenderer,
+			cache: { document: cache },
+			logger: { warn: warnFn },
+			rateLimiter: { maxRetries: 0, baseDelayMs: 0 },
+			waitUntil: (p) => captured.push(p),
+		});
+
+		await cms.posts.getList();
+		await Promise.all(captured);
+
+		expect(listCallCount).toBeGreaterThan(0);
+		expect(warnFn).toHaveBeenCalledWith(
+			"SWR: リストのバックグラウンド差分チェックに失敗",
+			expect.objectContaining({
+				collection: "posts",
+				error: "list failed",
+			}),
+		);
+	});
+});
+
 describe("リトライ中のロガー", () => {
 	it("getList() がリトライ中に logger.warn を呼ぶ", async () => {
 		const warnFn = vi.fn();
