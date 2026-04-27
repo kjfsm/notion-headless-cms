@@ -1,14 +1,14 @@
 ---
-"@notion-headless-cms/core": major
-"@notion-headless-cms/cache": major
-"@notion-headless-cms/cli": major
-"@notion-headless-cms/notion-orm": major
-"@notion-headless-cms/renderer": major
-"@notion-headless-cms/notion-embed": major
-"@notion-headless-cms/adapter-next": major
+"@notion-headless-cms/core": patch
+"@notion-headless-cms/cache": patch
+"@notion-headless-cms/cli": patch
+"@notion-headless-cms/notion-orm": patch
+"@notion-headless-cms/renderer": patch
+"@notion-headless-cms/notion-embed": patch
+"@notion-headless-cms/adapter-next": patch
 ---
 
-# v1 大規模再設計 (破壊的変更)
+# CMS 再設計 (実装変更が大きい patch)
 
 API・パッケージ構成・CLI 生成物を全面的に作り直した。詳細は `docs/migration/v1.md` を参照。
 

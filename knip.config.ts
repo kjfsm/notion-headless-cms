@@ -19,6 +19,13 @@ export default {
 			entry: ["src/index.ts", "src/providers/index.ts", "src/rehype/index.ts"],
 			project: ["src/**/*.ts"],
 		},
+		"packages/cache": {
+			// package.json の exports サブパス (./, ./cloudflare, ./next)
+			entry: ["src/index.ts", "src/cloudflare.ts", "src/next.ts"],
+			project: ["src/**/*.ts"],
+			// next は ./next エントリで動的 import するためのオプショナル peerDep
+			ignoreDependencies: ["next"],
+		},
 		"packages/*": {
 			entry: ["src/index.ts"],
 			project: ["src/**/*.ts"],
