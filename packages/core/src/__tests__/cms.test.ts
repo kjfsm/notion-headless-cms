@@ -584,54 +584,7 @@ describe("createCMS - $handler", () => {
     expect(typeof handler).toBe("function");
   });
 
-  it("slug と collection を含む JSON body で $invalidate が呼ばれる", async () => {
-    const cms = createCMS({
-      renderer: mockRenderer,
-      collections: { posts: { source: makeMockSource(), slugField: "slug" } },
-    });
-    const handler = cms.$handler();
-    const req = new Request("http://localhost/api/cms/revalidate", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ slug: "my-post", collection: "posts" }),
-    });
-    const res = await handler(req);
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { ok: boolean };
-    expect(body.ok).toBe(true);
-  });
-
-  it("collection のみの JSON body で $invalidate が呼ばれる", async () => {
-    const cms = createCMS({
-      renderer: mockRenderer,
-      collections: { posts: { source: makeMockSource(), slugField: "slug" } },
-    });
-    const handler = cms.$handler();
-    const req = new Request("http://localhost/api/cms/revalidate", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ collection: "posts" }),
-    });
-    const res = await handler(req);
-    expect(res.status).toBe(200);
-  });
-
-  it("不正な JSON body の場合は 400 を返す", async () => {
-    const cms = createCMS({
-      renderer: mockRenderer,
-      collections: { posts: { source: makeMockSource(), slugField: "slug" } },
-    });
-    const handler = cms.$handler();
-    const req = new Request("http://localhost/api/cms/revalidate", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: "not-json",
-    });
-    const res = await handler(req);
-    expect(res.status).toBe(400);
-  });
-
-  it("DataSource に parseWebhook がある場合はそちらを優先する", async () => {
+  it("POST /revalidate/:collection で DataSource の parseWebhook が呼ばれる", async () => {
     const parseWebhook = vi.fn().mockResolvedValue({ collection: "posts" });
     const cms = createCMS({
       renderer: mockRenderer,
@@ -643,48 +596,39 @@ describe("createCMS - $handler", () => {
       },
     });
     const handler = cms.$handler();
-    const req = new Request("http://localhost/api/cms/revalidate", {
+    const req = new Request("http://localhost/api/cms/revalidate/posts", {
       method: "POST",
-      body: "{}",
     });
-    await handler(req);
+    const res = await handler(req);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { ok: boolean };
+    expect(body.ok).toBe(true);
     expect(parseWebhook).toHaveBeenCalled();
   });
 
-  it("DataSource の parseWebhook が失敗した場合は JSON フォールバックを使う", async () => {
-    const parseWebhook = vi.fn().mockRejectedValue(new Error("webhook error"));
-    const cms = createCMS({
-      renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({ parseWebhook }),
-          slugField: "slug",
-        },
-      },
-    });
-    const handler = cms.$handler();
-    const req = new Request("http://localhost/api/cms/revalidate", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ slug: "test", collection: "posts" }),
-    });
-    const res = await handler(req);
-    // パースウェブフック失敗後にJSONフォールバックが動く
-    expect(res.status).toBe(200);
-  });
-
-  it("slug も collection もない JSON body では 400 を返す", async () => {
+  it("unknown collection は 404 を返す", async () => {
     const cms = createCMS({
       renderer: mockRenderer,
       collections: { posts: { source: makeMockSource(), slugField: "slug" } },
     });
     const handler = cms.$handler();
-    const req = new Request("http://localhost/api/cms/revalidate", {
+    const req = new Request("http://localhost/api/cms/revalidate/unknown", {
       method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ other: "data" }),
     });
     const res = await handler(req);
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(404);
+  });
+
+  it("parseWebhook 未実装の DataSource は 501 を返す", async () => {
+    const cms = createCMS({
+      renderer: mockRenderer,
+      collections: { posts: { source: makeMockSource(), slugField: "slug" } },
+    });
+    const handler = cms.$handler();
+    const req = new Request("http://localhost/api/cms/revalidate/posts", {
+      method: "POST",
+    });
+    const res = await handler(req);
+    expect(res.status).toBe(501);
   });
 });

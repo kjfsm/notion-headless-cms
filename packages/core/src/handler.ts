@@ -1,3 +1,4 @@
+import { isCMSError } from "./errors";
 import type { ImageCacheOps, InvalidateScope } from "./types/index";
 
 /** `$handler()` の挙動設定。 */
@@ -17,11 +18,16 @@ export interface HandlerOptions {
 /** `$handler()` が内部で依存する CMS 機能の最小セット。 */
 export interface HandlerAdapter {
   imageCache: ImageCacheOps;
-  /** コレクション名で DataSource を取り出し parseWebhook にフォワードする。 */
-  parseWebhook(
+  /**
+   * 指定コレクションの DataSource.parseWebhook を呼ぶ。
+   * 未知コレクション → `webhook/unknown_collection` CMSError
+   * parseWebhook 未実装 → `webhook/not_implemented` CMSError
+   */
+  parseWebhookFor(
+    collection: string,
     req: Request,
     webhookSecret: string | undefined,
-  ): Promise<InvalidateScope | null>;
+  ): Promise<InvalidateScope>;
   revalidate(scope: InvalidateScope): Promise<void>;
 }
 
@@ -32,12 +38,24 @@ const DEFAULT_OPTS = {
 } as const;
 
 /**
+ * CMSError のコードから HTTP ステータスコードを返す。
+ * 既知の webhook エラーコードのみ対応し、それ以外は null を返す。
+ */
+function webhookErrorStatus(code: string): number | null {
+  if (code === "webhook/signature_invalid") return 401;
+  if (code === "webhook/not_implemented") return 501;
+  if (code === "webhook/unknown_collection") return 404;
+  if (code === "webhook/payload_invalid") return 400;
+  return null;
+}
+
+/**
  * Web Standard な Request → Response ルーター。
  * Next.js / React Router / Hono / Cloudflare Workers いずれでも使える。
  *
  * ルート:
- * - GET  `{basePath}/images/:hash` — 画像プロキシ
- * - POST `{basePath}/revalidate`   — Webhook 受信 + $revalidate()
+ * - GET  `{basePath}/images/:hash`              — 画像プロキシ
+ * - POST `{basePath}/revalidate/:collection`    — Webhook 受信 + $revalidate()
  */
 export function createHandler(
   adapter: HandlerAdapter,
@@ -68,20 +86,38 @@ export function createHandler(
       return new Response(object.data, { headers });
     }
 
-    // Revalidate: POST {basePath}/revalidate
-    if (req.method === "POST" && rel === revalidatePath) {
-      const scope = await adapter.parseWebhook(req, opts.webhookSecret);
-      if (!scope) {
-        return new Response(JSON.stringify({ ok: false, reason: "invalid" }), {
-          status: 400,
+    // Revalidate: POST {basePath}/revalidate/:collection
+    if (req.method === "POST" && rel.startsWith(`${revalidatePath}/`)) {
+      const collection = rel.slice(revalidatePath.length + 1);
+      if (!collection || collection.includes("/")) {
+        return new Response(
+          JSON.stringify({ ok: false, reason: "collection required" }),
+          { status: 400, headers: { "content-type": "application/json" } },
+        );
+      }
+      try {
+        const scope = await adapter.parseWebhookFor(
+          collection,
+          req,
+          opts.webhookSecret,
+        );
+        await adapter.revalidate(scope);
+        return new Response(JSON.stringify({ ok: true, scope }), {
+          status: 200,
           headers: { "content-type": "application/json" },
         });
+      } catch (err) {
+        if (isCMSError(err)) {
+          const status = webhookErrorStatus(err.code);
+          if (status !== null) {
+            return new Response(JSON.stringify({ ok: false, code: err.code }), {
+              status,
+              headers: { "content-type": "application/json" },
+            });
+          }
+        }
+        throw err;
       }
-      await adapter.revalidate(scope);
-      return new Response(JSON.stringify({ ok: true, scope }), {
-        status: 200,
-        headers: { "content-type": "application/json" },
-      });
     }
 
     return new Response("Not Found", { status: 404 });

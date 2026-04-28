@@ -7,6 +7,10 @@
  * | `core/schema_invalid` | schema/mapping の型不整合 |
  * | `core/notion_orm_missing` | `@notion-headless-cms/notion-orm` の動的ロード失敗 |
  * | `core/sort_unsupported_type` | ソートキーの値型が string / number でない |
+ * | `webhook/signature_invalid` | Webhook 署名検証失敗 |
+ * | `webhook/payload_invalid` | Webhook ペイロード形式不正 |
+ * | `webhook/unknown_collection` | Webhook の対象コレクションが未知 |
+ * | `webhook/not_implemented` | DataSource が parseWebhook を実装していない |
  * | `source/fetch_items_failed` | `DataSource.list()` 失敗 |
  * | `source/fetch_item_failed` | `DataSource.findByProp()` 失敗 |
  * | `source/load_markdown_failed` | `DataSource.loadMarkdown()` 失敗 |
@@ -33,6 +37,10 @@ export type BuiltInCMSErrorCode =
   | "core/schema_invalid"
   | "core/notion_orm_missing"
   | "core/sort_unsupported_type"
+  | "webhook/signature_invalid"
+  | "webhook/payload_invalid"
+  | "webhook/unknown_collection"
+  | "webhook/not_implemented"
   | "source/fetch_items_failed"
   | "source/fetch_item_failed"
   | "source/load_markdown_failed"
