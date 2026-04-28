@@ -12,6 +12,7 @@ const baseContentItemSchema = z.object({
   slug: z.string().min(1),
   title: z.string().nullable().optional(),
   updatedAt: z.string().min(1),
+  lastEditedTime: z.string().min(1).optional(),
   status: z.string().optional(),
   publishedAt: z.string().optional(),
   createdAt: z.string().optional(),
@@ -72,6 +73,7 @@ export function mapItemFromPropertyMap(
       | "id"
       | "slug"
       | "updatedAt"
+      | "lastEditedTime"
       | "createdAt"
       | "isArchived"
       | "isInTrash"
@@ -80,6 +82,7 @@ export function mapItemFromPropertyMap(
     > = {
     id: page.id,
     updatedAt: page.last_edited_time,
+    lastEditedTime: page.last_edited_time,
     title: extractPageTitle(page),
     slug: "",
     createdAt: page.created_time,
@@ -174,6 +177,7 @@ export function mapItem(
         ? (dateProperty.date?.start ?? page.created_time)
         : page.created_time,
     updatedAt: page.last_edited_time,
+    lastEditedTime: page.last_edited_time,
     createdAt: page.created_time,
     isArchived: page.archived,
     isInTrash: page.in_trash,

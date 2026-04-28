@@ -20,6 +20,8 @@ export interface BaseContentItem {
   title?: string | null;
   /** 最終更新タイムスタンプ（変更検知に必須）。 */
   updatedAt: string;
+  /** ページの最終編集日時（Notion の last_edited_time、updatedAt と同値）。 */
+  lastEditedTime?: string;
   /** コンテンツのステータス。ステータスのない DB では省略可能。 */
   status?: string | null;
   /** 公開日時。日付プロパティのない DB では省略可能。 */
