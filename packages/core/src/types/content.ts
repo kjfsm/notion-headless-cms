@@ -12,20 +12,31 @@ import type { ContentBlock } from "../content/blocks";
  * createCMS<Post>({ source: createNotionCollection({ ... }) })
  */
 export interface BaseContentItem {
-  /** Notion ページ ID（変更検知に必須）。 */
+  /** ページ ID（変更検知に必須）。 */
   id: string;
   /** URL キー（必須）。 */
   slug: string;
-  /** Notion ページ名（title 型プロパティのテキスト）。 */
+  /** ページ名（title 型プロパティのテキスト）。 */
   title?: string | null;
   /** 最終更新タイムスタンプ（変更検知に必須）。 */
   updatedAt: string;
-  /** Notion ページの最終編集日時（page.last_edited_time と同値）。常にセットされる。 */
+  /** ページの最終編集日時（updatedAt と同値）。後方互換のため残存。 */
   lastEditedTime?: string;
-  /** コンテンツのステータス。ステータスのない DB では省略可能。Notion の select 型は null を返す場合がある。 */
+  /** コンテンツのステータス。ステータスのない DB では省略可能。 */
   status?: string | null;
-  /** 公開日時。日付プロパティのない DB では省略可能。Notion の date 型は null を返す場合がある。 */
+  /** 公開日時。日付プロパティのない DB では省略可能。 */
   publishedAt?: string | null;
+  /** ページ作成日時（ISO8601）。 */
+  createdAt?: string;
+  /**
+   * ページがアーカイブ済みまたはゴミ箱に入っているかどうか。
+   * true の場合、core の list() から自動的に除外される。
+   */
+  isArchived?: boolean;
+  /** カバー画像の URL。cover が設定されていない場合は null。 */
+  coverImageUrl?: string | null;
+  /** 絵文字アイコン。icon が絵文字でない場合や未設定の場合は null。 */
+  iconEmoji?: string | null;
 }
 
 /**

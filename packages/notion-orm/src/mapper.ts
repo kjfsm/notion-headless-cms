@@ -15,11 +15,42 @@ const baseContentItemSchema = z.object({
   lastEditedTime: z.string().min(1).optional(),
   status: z.string().optional(),
   publishedAt: z.string().optional(),
+  createdAt: z.string().optional(),
+  isArchived: z.boolean().optional(),
+  coverImageUrl: z.string().nullable().optional(),
+  iconEmoji: z.string().nullable().optional(),
 });
 
 /** Notionリッチテキスト配列をプレーンテキストに結合する。 */
 export function getPlainText(items: NotionRichTextItem[] | undefined): string {
   return items?.map((item) => item.plain_text).join("") ?? "";
+}
+
+/** ページの title 型プロパティからプレーンテキストを取り出す。 */
+function extractPageTitle(page: NotionPage): string | null {
+  const titleProp = Object.values(page.properties).find(
+    (p) => p.type === "title",
+  );
+  return titleProp?.type === "title"
+    ? getPlainText(titleProp.title) || null
+    : null;
+}
+
+/** page.cover から画像 URL を取り出す。設定なし / 未対応形式は null。 */
+function extractCoverUrl(page: NotionPage): string | null {
+  const cover = page.cover;
+  if (!cover) return null;
+  if (cover.type === "external") return cover.external.url;
+  if (cover.type === "file") return cover.file.url;
+  return null;
+}
+
+/** page.icon から絵文字を取り出す。絵文字でない / 未設定は null。 */
+function extractIconEmoji(page: NotionPage): string | null {
+  const icon = page.icon;
+  if (!icon) return null;
+  if (icon.type === "emoji") return icon.emoji;
+  return null;
 }
 
 type PropertyValue = string | string[] | number | boolean | null;
@@ -33,21 +64,27 @@ export function mapItemFromPropertyMap(
   page: NotionPage,
   properties: PropertyMap,
 ): BaseContentItem {
-  const titleProp = Object.values(page.properties).find(
-    (p) => p.type === "title",
-  );
-  const title =
-    titleProp !== undefined && titleProp.type === "title"
-      ? getPlainText(titleProp.title) || null
-      : null;
-
   const result: Record<string, PropertyValue> &
-    Pick<BaseContentItem, "id" | "slug" | "updatedAt" | "lastEditedTime"> = {
+    Pick<
+      BaseContentItem,
+      | "id"
+      | "slug"
+      | "updatedAt"
+      | "lastEditedTime"
+      | "createdAt"
+      | "isArchived"
+      | "coverImageUrl"
+      | "iconEmoji"
+    > = {
     id: page.id,
     updatedAt: page.last_edited_time,
     lastEditedTime: page.last_edited_time,
-    title,
+    title: extractPageTitle(page),
     slug: "",
+    createdAt: page.created_time,
+    isArchived: page.in_trash || page.archived,
+    coverImageUrl: extractCoverUrl(page),
+    iconEmoji: extractIconEmoji(page),
   };
 
   for (const [tsName, propDef] of Object.entries(properties)) {
@@ -109,21 +146,13 @@ export function mapItem(
   const statusProperty = page.properties[props.status];
   const dateProperty = page.properties[props.date];
 
-  const titleProp = Object.values(page.properties).find(
-    (p) => p.type === "title",
-  );
-  const title =
-    titleProp !== undefined && titleProp.type === "title"
-      ? getPlainText(titleProp.title) || null
-      : null;
-
   const parsed = baseContentItemSchema.safeParse({
     id: page.id,
     slug: (() => {
       const p = page.properties[props.slug];
       return p?.type === "rich_text" ? getPlainText(p.rich_text) : "";
     })(),
-    title,
+    title: extractPageTitle(page),
     status:
       statusProperty?.type === "status"
         ? (statusProperty.status?.name ?? undefined)
@@ -136,6 +165,10 @@ export function mapItem(
         : page.created_time,
     updatedAt: page.last_edited_time,
     lastEditedTime: page.last_edited_time,
+    createdAt: page.created_time,
+    isArchived: page.in_trash || page.archived,
+    coverImageUrl: extractCoverUrl(page),
+    iconEmoji: extractIconEmoji(page),
   });
 
   if (!parsed.success) {

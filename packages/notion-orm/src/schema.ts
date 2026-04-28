@@ -13,8 +13,15 @@ export type NotionFieldType =
   | { type: "select"; notion: string }
   | { type: "status"; notion: string };
 
-// id・updatedAt・lastEditedTime は Notion ページメタデータから自動設定されるシステムフィールド
-type SystemField = "id" | "updatedAt" | "lastEditedTime";
+// id・updatedAt 等は Notion ページメタデータから自動設定されるシステムフィールド
+type SystemField =
+  | "id"
+  | "updatedAt"
+  | "lastEditedTime"
+  | "createdAt"
+  | "isArchived"
+  | "coverImageUrl"
+  | "iconEmoji";
 
 // ── defineMapping ────────────────────────────────────────────────────────────
 
@@ -74,8 +81,30 @@ export function defineSchema<S extends z.ZodRawShape>(
 
 type PropertyValue = NotionPage["properties"][string];
 
-// id と updatedAt は Notion ページのメタデータから自動設定されるシステムフィールド
-const SYSTEM_FIELDS = new Set(["id", "updatedAt", "lastEditedTime"]);
+const SYSTEM_FIELDS = new Set([
+  "id",
+  "updatedAt",
+  "lastEditedTime",
+  "createdAt",
+  "isArchived",
+  "coverImageUrl",
+  "iconEmoji",
+]);
+
+function extractCoverUrl(page: NotionPage): string | null {
+  const cover = page.cover;
+  if (!cover) return null;
+  if (cover.type === "external") return cover.external.url;
+  if (cover.type === "file") return cover.file.url;
+  return null;
+}
+
+function extractIconEmoji(page: NotionPage): string | null {
+  const icon = page.icon;
+  if (!icon) return null;
+  if (icon.type === "emoji") return icon.emoji;
+  return null;
+}
 
 function parseMapping<T>(
   page: NotionPage,
@@ -92,6 +121,10 @@ function parseMapping<T>(
       titleProp?.type === "title"
         ? getPlainText(titleProp.title) || null
         : null,
+    createdAt: page.created_time,
+    isArchived: page.in_trash || page.archived,
+    coverImageUrl: extractCoverUrl(page),
+    iconEmoji: extractIconEmoji(page),
   };
   for (const [key, fieldDef] of Object.entries(mapping) as [
     string,
