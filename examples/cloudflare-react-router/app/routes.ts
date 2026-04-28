@@ -4,4 +4,5 @@ export default [
 	route("/", "routes/home.tsx"),
 	route("/posts/:slug", "routes/post.tsx"),
 	route("/api/images/:hash", "routes/images.ts"),
+	route("/api/posts/:slug/check", "routes/check.ts"),
 ] satisfies RouteConfig;

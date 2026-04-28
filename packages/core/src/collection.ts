@@ -9,6 +9,7 @@ import type {
 	CachedItemContent,
 	CachedItemList,
 	CachedItemMeta,
+	CheckResult,
 	CMSHooks,
 	CollectionCacheOps,
 	CollectionClient,
@@ -145,6 +146,18 @@ export class CollectionClientImpl<T extends BaseContentItem>
 	async params(): Promise<{ slug: string }[]> {
 		const items = await this.fetchList();
 		return items.map((item) => ({ slug: item.slug }));
+	}
+
+	async check(
+		slug: string,
+		currentVersion: string,
+	): Promise<CheckResult<T> | null> {
+		const raw = await this.findRaw(slug);
+		if (!raw) return null;
+		if (raw.updatedAt === currentVersion) return { stale: false };
+		const meta = await this.persistMeta(slug, raw);
+		await this.invalidateContent(slug);
+		return { stale: true, item: this.attachLazyContent(meta) };
 	}
 
 	// ── キャッシュ操作 ────────────────────────────────────────────────────

@@ -23,6 +23,10 @@ binding = "IMG_BUCKET"
 bucket_name = "nhc-example-cache"
 preview_bucket_name = "nhc-example-cache-preview"
 
+[triggers]
+# 15 分ごとに全記事を KV/R2 へ事前レンダリングし、Notion 障害時でも表示できる状態を維持する
+crons = ["*/15 * * * *"]
+
 # ランタイムシークレットは初回デプロイ前に以下で設定してください:
 # wrangler secret put NOTION_TOKEN
 # KV / R2 バインディングは wrangler kv namespace create / wrangler r2 bucket create で作成する

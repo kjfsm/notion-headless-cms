@@ -39,6 +39,7 @@ export type {
 	CachedItemContent,
 	CachedItemList,
 	CachedItemMeta,
+	CheckResult,
 	CMSHooks,
 	CMSPlugin,
 	CMSSchemaProperties,
