@@ -55,6 +55,7 @@ function makeItems(): BaseContentItem[] {
 describe("CollectionClient — params", () => {
   it("params は { slug } オブジェクトの配列を返す", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({
@@ -76,6 +77,7 @@ describe("CollectionClient — params", () => {
 
   it("アイテムがない場合は空配列を返す", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: { source: makeMockSource(), slugField: "slug" },
       },
@@ -87,6 +89,7 @@ describe("CollectionClient — params", () => {
 describe("CollectionClient — cache.adjacent", () => {
   it("中間要素の前後両方を返す", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({
@@ -105,6 +108,7 @@ describe("CollectionClient — cache.adjacent", () => {
 
   it("先頭要素の prev は null", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({
@@ -123,6 +127,7 @@ describe("CollectionClient — cache.adjacent", () => {
 
   it("末尾要素の next は null", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({
@@ -141,6 +146,7 @@ describe("CollectionClient — cache.adjacent", () => {
 
   it("存在しない slug の場合は { prev: null, next: null } を返す", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({
@@ -164,6 +170,7 @@ describe("CollectionClient — cache.adjacent", () => {
       { id: "3", slug: "c", updatedAt: "2024-01-02T00:00:00Z" },
     ];
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({
@@ -186,6 +193,7 @@ describe("CollectionClient — cache.adjacent", () => {
 describe("CollectionClient — cache.invalidate / cache.warm", () => {
   it("キャッシュなしでも cache.invalidate がエラーにならない", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: { posts: { source: makeMockSource(), slugField: "slug" } },
     });
     await expect(
@@ -209,6 +217,7 @@ describe("CollectionClient — cache.invalidate / cache.warm", () => {
     });
     const cache = memoryCache();
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: { posts: { source, slugField: "slug" } },
       cache,
     });
@@ -232,6 +241,7 @@ describe("CollectionClient — cache.invalidate / cache.warm", () => {
     });
     const cache = memoryCache();
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: { posts: { source, slugField: "slug" } },
       cache,
     });
@@ -354,6 +364,7 @@ describe("CollectionClient — cache.warm", () => {
 describe("CollectionClient — list フィルタ・ソート・ページング", () => {
   it("status フィルタで指定ステータスのみ返す", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({
@@ -383,6 +394,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
       },
     ];
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({
@@ -401,6 +413,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
 
   it("where フィルタで id が一致するアイテムのみ返す", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({
@@ -419,6 +432,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
 
   it("sort: asc で updatedAt 昇順になる", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({
@@ -438,6 +452,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
 
   it("sort: desc で updatedAt 降順になる", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({
@@ -457,6 +472,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
 
   it("skip と limit でページングできる", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({
@@ -475,6 +491,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
 
   it("limit のみ指定すると先頭から N 件を返す", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({
@@ -493,6 +510,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
 
   it("skip のみ指定すると N 件スキップして残りを返す", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({
@@ -511,6 +529,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
 
   it("オプションなしで全件返す", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({
@@ -565,6 +584,7 @@ describe("CollectionClient — 並行 get", () => {
 
   it("存在しない slug への並行 get が全て null を返す", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({
@@ -911,6 +931,7 @@ describe("CollectionClient — check()", () => {
 
   it("存在しない slug は null を返す", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: { source: makeMockSource(), slugField: "slug" },
       },
@@ -927,6 +948,7 @@ describe("CollectionClient — check()", () => {
       status: "下書き",
     };
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({

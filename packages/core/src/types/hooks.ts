@@ -1,3 +1,4 @@
+import type { CMSError } from "../errors";
 import type {
   BaseContentItem,
   CachedItemContent,
@@ -32,4 +33,13 @@ export interface CMSHooks<T extends BaseContentItem = BaseContentItem> {
   onError?(error: Error): void;
   onRenderStart?(slug: string): void;
   onRenderEnd?(slug: string, durationMs: number): void;
+  /**
+   * SWR バックグラウンド処理（差分チェック / 本文再生成）の失敗ハンドラ。
+   * これらは UI に伝搬させずに握り続ける必要があるため、エラーを補足するには
+   * この hook を実装する。実装しない場合、エラーは logger.warn のみで消える。
+   */
+  onSwrError?(
+    error: CMSError,
+    ctx: { phase: "item-meta" | "item-content" | "list"; slug?: string },
+  ): void;
 }

@@ -26,7 +26,10 @@ describe("createCMS - collections バリデーション", () => {
   it("collections が空の場合は CMSError をスローする", () => {
     let caught: unknown;
     try {
-      createCMS({ collections: {} });
+      createCMS({
+        renderer: mockRenderer,
+        collections: {},
+      });
     } catch (e) {
       caught = e;
     }
@@ -39,6 +42,7 @@ describe("createCMS - collections バリデーション", () => {
     let caught: unknown;
     try {
       createCMS({
+        renderer: mockRenderer,
         collections: {
           posts: { slugField: "slug" } as CollectionDef<BaseContentItem>,
         },
@@ -55,6 +59,7 @@ describe("createCMS - collections バリデーション", () => {
     let caught: unknown;
     try {
       createCMS({
+        renderer: mockRenderer,
         collections: {
           posts: { source: makeMockSource() } as CollectionDef<BaseContentItem>,
         },
@@ -70,6 +75,7 @@ describe("createCMS - collections バリデーション", () => {
   it("有効な collections を渡した場合はエラーをスローしない", () => {
     expect(() =>
       createCMS({
+        renderer: mockRenderer,
         collections: {
           posts: { source: makeMockSource(), slugField: "slug" },
         },
@@ -111,6 +117,7 @@ describe("createCMS - publishedStatuses / accessibleStatuses", () => {
     const source = makeMockSource({ list: listMock });
 
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source,
@@ -135,6 +142,7 @@ describe("createCMS - publishedStatuses / accessibleStatuses", () => {
     const source = makeMockSource({ list: listMock });
 
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: { source, slugField: "slug" },
       },
@@ -258,6 +266,7 @@ describe("createCMS - コレクション間のキャッシュ独立性", () => {
 
     const { memoryCache } = await import("../cache/memory");
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({ list: postListMock }),
@@ -308,6 +317,7 @@ describe("createCMS - $invalidate", () => {
 
     const { memoryCache } = await import("../cache/memory");
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({ list: listMock }),
@@ -330,6 +340,7 @@ describe("createCMS - $invalidate", () => {
 
   it("$invalidate を呼んでもエラーが発生しない（キャッシュなしの場合）", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: { posts: { source: makeMockSource(), slugField: "slug" } },
     });
     await expect(cms.$invalidate()).resolves.toBeUndefined();
@@ -337,6 +348,7 @@ describe("createCMS - $invalidate", () => {
 
   it("$collections にコレクション名が含まれる", () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: { source: makeMockSource(), slugField: "slug" },
         pages: { source: makeMockSource(), slugField: "slug" },
@@ -400,6 +412,7 @@ describe("createCMS - logLevel オプション", () => {
   it("logger 未設定かつ logLevel を指定しても問題なく動作する", () => {
     expect(() =>
       createCMS({
+        renderer: mockRenderer,
         collections: { posts: { source: makeMockSource(), slugField: "slug" } },
         logLevel: "warn",
       }),
@@ -544,6 +557,7 @@ describe("createCMS - $getCachedImage", () => {
   it("$getCachedImage が imageCache.get を呼ぶ", async () => {
     const getCachedImage = vi.fn().mockResolvedValue(null);
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: { posts: { source: makeMockSource(), slugField: "slug" } },
       cache: {
         name: "test-image-cache",
@@ -563,6 +577,7 @@ describe("createCMS - $getCachedImage", () => {
 describe("createCMS - $handler", () => {
   it("$handler() がハンドラ関数を返す", () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: { posts: { source: makeMockSource(), slugField: "slug" } },
     });
     const handler = cms.$handler();
@@ -571,6 +586,7 @@ describe("createCMS - $handler", () => {
 
   it("slug と collection を含む JSON body で $invalidate が呼ばれる", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: { posts: { source: makeMockSource(), slugField: "slug" } },
     });
     const handler = cms.$handler();
@@ -587,6 +603,7 @@ describe("createCMS - $handler", () => {
 
   it("collection のみの JSON body で $invalidate が呼ばれる", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: { posts: { source: makeMockSource(), slugField: "slug" } },
     });
     const handler = cms.$handler();
@@ -601,6 +618,7 @@ describe("createCMS - $handler", () => {
 
   it("不正な JSON body の場合は 400 を返す", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: { posts: { source: makeMockSource(), slugField: "slug" } },
     });
     const handler = cms.$handler();
@@ -616,6 +634,7 @@ describe("createCMS - $handler", () => {
   it("DataSource に parseWebhook がある場合はそちらを優先する", async () => {
     const parseWebhook = vi.fn().mockResolvedValue({ collection: "posts" });
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({ parseWebhook }),
@@ -635,6 +654,7 @@ describe("createCMS - $handler", () => {
   it("DataSource の parseWebhook が失敗した場合は JSON フォールバックを使う", async () => {
     const parseWebhook = vi.fn().mockRejectedValue(new Error("webhook error"));
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: {
         posts: {
           source: makeMockSource({ parseWebhook }),
@@ -655,6 +675,7 @@ describe("createCMS - $handler", () => {
 
   it("slug も collection もない JSON body では 400 を返す", async () => {
     const cms = createCMS({
+      renderer: mockRenderer,
       collections: { posts: { source: makeMockSource(), slugField: "slug" } },
     });
     const handler = cms.$handler();

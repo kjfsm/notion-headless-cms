@@ -1,4 +1,5 @@
 import { isStale } from "./cache";
+import { CMSError, isCMSError } from "./errors";
 import type { RenderContext } from "./rendering";
 import { buildCachedItemContent, buildCachedItemMeta } from "./rendering";
 import type { RetryConfig } from "./retry";
@@ -289,16 +290,30 @@ export class CollectionClientImpl<T extends BaseContentItem>
     return fresh;
   }
 
-  /** メタ既知の状態で本文だけバックグラウンド再生成する。エラーは握りつぶす。 */
+  /** メタ既知の状態で本文だけバックグラウンド再生成する。エラーは onSwrError フックに通知する。 */
   private async rebuildContentBg(slug: string, item: T): Promise<void> {
     try {
       const fresh = await buildCachedItemContent(item, this.ctx.render);
       await this.ctx.docCache.setContent(this.ctx.collection, slug, fresh);
       this.ctx.hooks.onContentRevalidated?.(slug, fresh);
     } catch (err) {
+      const cmsErr = isCMSError(err)
+        ? err
+        : new CMSError({
+            code: "swr/content_rebuild_failed",
+            message: "SWR background content rebuild failed.",
+            cause: err,
+            context: {
+              operation: "swr.rebuildContentBg",
+              collection: this.ctx.collection,
+              slug,
+            },
+          });
+      this.ctx.hooks.onSwrError?.(cmsErr, { phase: "item-content", slug });
       this.ctx.logger?.warn?.("本文のバックグラウンド再生成に失敗", {
         slug,
         collection: this.ctx.collection,
+        code: cmsErr.code,
         error: err instanceof Error ? err.message : String(err),
       });
     }
@@ -414,11 +429,25 @@ export class CollectionClientImpl<T extends BaseContentItem>
         });
       }
     } catch (err) {
+      const cmsErr = isCMSError(err)
+        ? err
+        : new CMSError({
+            code: "swr/item_check_failed",
+            message: "SWR background item check failed.",
+            cause: err,
+            context: {
+              operation: "swr.checkAndUpdateItemBg",
+              collection: this.ctx.collection,
+              slug,
+            },
+          });
+      this.ctx.hooks.onSwrError?.(cmsErr, { phase: "item-meta", slug });
       this.ctx.logger?.warn?.(
         "SWR: アイテムのバックグラウンド差分チェックに失敗",
         {
           slug,
           collection: this.ctx.collection,
+          code: cmsErr.code,
           error: err instanceof Error ? err.message : String(err),
         },
       );
@@ -453,10 +482,23 @@ export class CollectionClientImpl<T extends BaseContentItem>
         });
       }
     } catch (err) {
+      const cmsErr = isCMSError(err)
+        ? err
+        : new CMSError({
+            code: "swr/list_check_failed",
+            message: "SWR background list check failed.",
+            cause: err,
+            context: {
+              operation: "swr.checkAndUpdateListBg",
+              collection: this.ctx.collection,
+            },
+          });
+      this.ctx.hooks.onSwrError?.(cmsErr, { phase: "list" });
       this.ctx.logger?.warn?.(
         "SWR: リストのバックグラウンド差分チェックに失敗",
         {
           collection: this.ctx.collection,
+          code: cmsErr.code,
           error: err instanceof Error ? err.message : String(err),
         },
       );

@@ -9,9 +9,14 @@
  * | `source/fetch_items_failed` | `DataSource.list()` 失敗 |
  * | `source/fetch_item_failed` | `DataSource.findByProp()` 失敗 |
  * | `source/load_markdown_failed` | `DataSource.loadMarkdown()` 失敗 |
+ * | `source/load_blocks_failed` | `DataSource.loadBlocks()` 失敗 |
  * | `cache/io_failed` | document / image キャッシュの I/O 失敗 |
  * | `cache/image_fetch_failed` | Notion 画像の HTTP 取得失敗 |
+ * | `cache/image_invalid_content_type` | 画像レスポンスの Content-Type が不正 |
  * | `renderer/failed` | Markdown → HTML 変換失敗 |
+ * | `swr/item_check_failed` | SWR バックグラウンドのアイテム差分チェック失敗 |
+ * | `swr/list_check_failed` | SWR バックグラウンドのリスト差分チェック失敗 |
+ * | `swr/content_rebuild_failed` | SWR バックグラウンドの本文再生成失敗 |
  * | `cli/config_invalid` | `nhc.config.ts` の内容不整合 |
  * | `cli/config_load_failed` | 設定ファイルの読み込み / 評価失敗 |
  * | `cli/schema_invalid` | CLI が受け取ったスキーマ / マッピング不整合 |
@@ -29,9 +34,14 @@ export type BuiltInCMSErrorCode =
   | "source/fetch_items_failed"
   | "source/fetch_item_failed"
   | "source/load_markdown_failed"
+  | "source/load_blocks_failed"
   | "cache/io_failed"
   | "cache/image_fetch_failed"
+  | "cache/image_invalid_content_type"
   | "renderer/failed"
+  | "swr/item_check_failed"
+  | "swr/list_check_failed"
+  | "swr/content_rebuild_failed"
   | "cli/config_invalid"
   | "cli/config_load_failed"
   | "cli/schema_invalid"

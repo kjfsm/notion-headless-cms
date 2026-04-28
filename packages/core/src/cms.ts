@@ -162,7 +162,7 @@ export function createCMS<C extends CollectionsConfig>(
   const ttlMs = opts.ttlMs;
   const imageProxyBase = opts.imageProxyBase ?? DEFAULT_IMAGE_PROXY_BASE;
   const contentConfig = opts.content;
-  const rendererFn: RendererFn | undefined = opts.renderer;
+  const rendererFn: RendererFn = opts.renderer;
   const waitUntil = opts.waitUntil;
   const baseLogger: Logger | undefined = mergeLoggers(
     opts.plugins ?? [],

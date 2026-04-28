@@ -2,18 +2,35 @@ import { sha256Hex } from "./cache";
 import { CMSError, isCMSError } from "./errors";
 import type { ImageCacheOps, Logger, StorageBinary } from "./types/index";
 
-/** レスポンスヘッダまたはURLの拡張子からContent-Typeを推測する。 */
-function inferContentType(
-  url: string,
-  responseContentType: string | null,
+/**
+ * レスポンスの Content-Type ヘッダから画像の MIME タイプを取り出す。
+ * ヘッダがない、または image/* でない場合は CMSError を投げる。
+ * URL 拡張子からの推測や jpeg デフォルトは行わない。
+ */
+function pickImageContentType(
+  headerValue: string | null,
+  notionUrl: string,
 ): string {
-  if (responseContentType?.startsWith("image/")) {
-    return (responseContentType.split(";")[0] ?? responseContentType).trim();
+  if (!headerValue) {
+    throw new CMSError({
+      code: "cache/image_invalid_content_type",
+      message: "Image response missing Content-Type header.",
+      context: { operation: "fetchAndCacheImage:contentType", notionUrl },
+    });
   }
-  if (url.includes(".png")) return "image/png";
-  if (url.includes(".gif")) return "image/gif";
-  if (url.includes(".webp")) return "image/webp";
-  return "image/jpeg";
+  const value = (headerValue.split(";")[0] ?? headerValue).trim().toLowerCase();
+  if (!value.startsWith("image/")) {
+    throw new CMSError({
+      code: "cache/image_invalid_content_type",
+      message: `Image response has non-image Content-Type: ${value}`,
+      context: {
+        operation: "fetchAndCacheImage:contentType",
+        notionUrl,
+        contentType: value,
+      },
+    });
+  }
+  return value;
 }
 
 /**
@@ -90,9 +107,9 @@ async function fetchAndCacheImage(
     }
 
     const data = await response.arrayBuffer();
-    const contentType = inferContentType(
-      notionUrl,
+    const contentType = pickImageContentType(
       response.headers.get("content-type"),
+      notionUrl,
     );
     await cache.set(hash, data, contentType);
     logger?.debug?.("画像をキャッシュに保存", {

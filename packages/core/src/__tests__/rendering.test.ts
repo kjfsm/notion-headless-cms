@@ -109,7 +109,7 @@ describe("buildCachedItemContent", () => {
   });
 
   describe("エラー処理・フォールバック", () => {
-    it("loadBlocks が失敗した場合は空配列にフォールバックする", async () => {
+    it("loadBlocks が失敗すると source/load_blocks_failed CMSError をスローする", async () => {
       const item = makeItem();
       const ctx = makeContext({
         source: {
@@ -131,8 +131,10 @@ describe("buildCachedItemContent", () => {
           },
         },
       });
-      const result = await buildCachedItemContent(item, ctx);
-      expect(result.blocks).toEqual([]);
+      await expect(buildCachedItemContent(item, ctx)).rejects.toSatisfy(
+        (err: unknown) =>
+          isCMSError(err) && err.code === "source/load_blocks_failed",
+      );
     });
 
     it("loadMarkdown が失敗すると source/load_markdown_failed CMSError をスローする", async () => {
@@ -281,46 +283,6 @@ describe("buildCachedItemContent", () => {
           durationMs: expect.any(Number),
         }),
       );
-    });
-
-    it("loadBlocks 失敗時に logger.warn が呼ばれる", async () => {
-      const item = makeItem({ slug: "warn-test" });
-      const warnFn = vi.fn();
-      const ctx = makeContext({
-        logger: { warn: warnFn },
-        source: {
-          name: "mock",
-          async list() {
-            return [];
-          },
-          async loadMarkdown() {
-            return "# Hello";
-          },
-          async loadBlocks() {
-            throw new Error("blocks err");
-          },
-          getLastModified(i) {
-            return i.updatedAt;
-          },
-          getListVersion() {
-            return "";
-          },
-        },
-      });
-      await buildCachedItemContent(item, ctx);
-      expect(warnFn).toHaveBeenCalledWith(
-        "loadBlocks に失敗したため raw フォールバック",
-        expect.objectContaining({ slug: "warn-test" }),
-      );
-    });
-  });
-
-  describe("デフォルトレンダラー（rendererFn 未指定）", () => {
-    it("rendererFn が undefined の場合、@notion-headless-cms/renderer をロードして使う", async () => {
-      const item = makeItem({ slug: "default-renderer-test" });
-      const ctx = makeContext({ rendererFn: undefined });
-      const result = await buildCachedItemContent(item, ctx);
-      expect(typeof result.html).toBe("string");
     });
   });
 });
