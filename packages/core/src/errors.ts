@@ -6,6 +6,7 @@
  * | `core/config_invalid` | 設定不備（token 未設定など） |
  * | `core/schema_invalid` | schema/mapping の型不整合 |
  * | `core/notion_orm_missing` | `@notion-headless-cms/notion-orm` の動的ロード失敗 |
+ * | `core/sort_unsupported_type` | ソートキーの値型が string / number でない |
  * | `source/fetch_items_failed` | `DataSource.list()` 失敗 |
  * | `source/fetch_item_failed` | `DataSource.findByProp()` 失敗 |
  * | `source/load_markdown_failed` | `DataSource.loadMarkdown()` 失敗 |
@@ -31,6 +32,7 @@ export type BuiltInCMSErrorCode =
   | "core/config_invalid"
   | "core/schema_invalid"
   | "core/notion_orm_missing"
+  | "core/sort_unsupported_type"
   | "source/fetch_items_failed"
   | "source/fetch_item_failed"
   | "source/load_markdown_failed"

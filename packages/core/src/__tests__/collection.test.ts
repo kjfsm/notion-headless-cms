@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { memoryCache } from "../cache/memory";
 import { createCMS } from "../cms";
+import { isCMSError } from "../errors";
 import type { RendererFn } from "../types/config";
 import type { BaseContentItem } from "../types/content";
 import type { DataSource } from "../types/data-source";
@@ -543,6 +544,104 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     });
     const items = await cms.posts.list();
     expect(items).toHaveLength(3);
+  });
+
+  it("where に配列を渡すと OR 一致でフィルタする", async () => {
+    const cms = createCMS({
+      renderer: mockRenderer,
+      collections: {
+        posts: {
+          source: makeMockSource({
+            async list() {
+              return makeItems();
+            },
+          }),
+          slugField: "slug",
+        },
+      },
+    });
+    const items = await cms.posts.list({ where: { id: ["1", "3"] } });
+    expect(items).toHaveLength(2);
+    expect(items.map((i) => i.slug)).toEqual(["alpha", "gamma"]);
+  });
+
+  it("filter 関数で任意条件でフィルタできる", async () => {
+    const cms = createCMS({
+      renderer: mockRenderer,
+      collections: {
+        posts: {
+          source: makeMockSource({
+            async list() {
+              return makeItems();
+            },
+          }),
+          slugField: "slug",
+        },
+      },
+    });
+    const items = await cms.posts.list({
+      filter: (item) => item.slug.startsWith("a"),
+    });
+    expect(items).toHaveLength(1);
+    expect(items[0]!.slug).toBe("alpha");
+  });
+
+  it("sort.compare カスタム comparator でソートできる", async () => {
+    const cms = createCMS({
+      renderer: mockRenderer,
+      collections: {
+        posts: {
+          source: makeMockSource({
+            async list() {
+              return makeItems();
+            },
+          }),
+          slugField: "slug",
+        },
+      },
+    });
+    const items = await cms.posts.list({
+      sort: {
+        by: "slug",
+        compare: (a, b) => b.slug.localeCompare(a.slug),
+      },
+    });
+    expect(items.map((i) => i.slug)).toEqual(["gamma", "beta", "alpha"]);
+  });
+
+  it("sort.by のフィールド値が string / number 以外の場合は core/sort_unsupported_type CMSError をスローする", async () => {
+    type PostWithObj = BaseContentItem & { meta: object };
+    const items: PostWithObj[] = [
+      {
+        id: "1",
+        slug: "a",
+        updatedAt: "2024-01-01T00:00:00Z",
+        meta: { order: 1 },
+      },
+      {
+        id: "2",
+        slug: "b",
+        updatedAt: "2024-01-02T00:00:00Z",
+        meta: { order: 2 },
+      },
+    ];
+    const source = makeMockSource({
+      async list() {
+        return items as BaseContentItem[];
+      },
+    });
+    const cms = createCMS({
+      renderer: mockRenderer,
+      collections: { posts: { source, slugField: "slug" } },
+    });
+    await expect(
+      cms.posts.list({
+        sort: { by: "meta" as keyof BaseContentItem & string },
+      }),
+    ).rejects.toSatisfy(
+      (err: unknown) =>
+        isCMSError(err) && err.code === "core/sort_unsupported_type",
+    );
   });
 });
 

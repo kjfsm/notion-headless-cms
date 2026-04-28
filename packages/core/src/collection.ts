@@ -22,6 +22,7 @@ import type {
   Logger,
   SortOption,
   WarmOptions,
+  WhereClause,
 } from "./types/index";
 
 /**
@@ -562,6 +563,22 @@ export class CollectionClientImpl<T extends BaseContentItem>
   }
 }
 
+function matchesWhere<T extends BaseContentItem>(
+  item: T,
+  where: WhereClause<T>,
+): boolean {
+  for (const key of Object.keys(where) as (keyof T & string)[]) {
+    const expected = where[key];
+    const actual = item[key];
+    if (Array.isArray(expected)) {
+      if (!(expected as readonly unknown[]).includes(actual)) return false;
+    } else {
+      if (actual !== expected) return false;
+    }
+  }
+  return true;
+}
+
 function applyListOptions<T extends BaseContentItem>(
   items: T[],
   opts?: ListOptions<T>,
@@ -586,11 +603,11 @@ function applyListOptions<T extends BaseContentItem>(
 
   if (opts.where) {
     const where = opts.where;
-    result = result.filter((it) =>
-      Object.entries(where).every(
-        ([key, value]) => (it as Record<string, unknown>)[key] === value,
-      ),
-    );
+    result = result.filter((it) => matchesWhere(it, where));
+  }
+
+  if (opts.filter) {
+    result = result.filter(opts.filter);
   }
 
   if (opts.sort) {
@@ -609,14 +626,29 @@ function applyListOptions<T extends BaseContentItem>(
 function makeComparator<T extends BaseContentItem>(
   sort: SortOption<T>,
 ): (a: T, b: T) => number {
-  const by = sort.by;
+  if (sort.compare) return sort.compare;
+  const by = sort.by as keyof T;
   const dir = sort.dir === "asc" ? 1 : -1;
   return (a, b) => {
-    const av = (a as Record<string, unknown>)[by];
-    const bv = (b as Record<string, unknown>)[by];
+    const av = a[by];
+    const bv = b[by];
     if (av === bv) return 0;
-    if (av === undefined) return 1;
-    if (bv === undefined) return -1;
-    return (av as string | number) > (bv as string | number) ? dir : -dir;
+    if (av === undefined || av === null) return 1;
+    if (bv === undefined || bv === null) return -1;
+    if (typeof av === "string" && typeof bv === "string") {
+      return av > bv ? dir : -dir;
+    }
+    if (typeof av === "number" && typeof bv === "number") {
+      return av > bv ? dir : -dir;
+    }
+    throw new CMSError({
+      code: "core/sort_unsupported_type",
+      message: `"${String(by)}" フィールドの型 "${typeof av}" はソート非対応です。compare 関数を指定してください。`,
+      context: {
+        operation: "makeComparator",
+        field: String(by),
+        type: typeof av,
+      },
+    });
   };
 }

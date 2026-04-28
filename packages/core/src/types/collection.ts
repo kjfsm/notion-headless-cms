@@ -1,19 +1,31 @@
 import type { BaseContentItem } from "./content";
 
+/**
+ * `where` フィルタの型。各フィールドに単一値、または OR 候補の配列を指定できる。
+ * 配列を渡すと「いずれかに一致」(in-match) になる。
+ */
+export type WhereClause<T extends BaseContentItem> = {
+  [K in keyof T]?: T[K] | readonly T[K][];
+};
+
 /** 並び順指定。 */
 export interface SortOption<T extends BaseContentItem = BaseContentItem> {
   /** ソートするプロパティ名。 */
   by: keyof T & string;
   /** 昇順 / 降順。デフォルト "desc"。 */
   dir?: "asc" | "desc";
+  /** カスタム comparator。指定した場合 `by` / `dir` より優先される。 */
+  compare?: (a: T, b: T) => number;
 }
 
 /** `list()` のオプション。ページ取得に必要な絞り込み・ソート・ページングを表現する。 */
 export interface ListOptions<T extends BaseContentItem = BaseContentItem> {
   /** ステータス絞り込み (`publishedStatuses` を上書き)。 */
   status?: string | readonly string[];
-  /** プロパティ一致フィルタ (in-memory フィルタ)。 */
-  where?: Partial<Record<keyof T, unknown>>;
+  /** プロパティ一致フィルタ (in-memory フィルタ)。配列は OR 一致。 */
+  where?: WhereClause<T>;
+  /** 任意ロジックのフィルタ関数。`where` より後に適用される。 */
+  filter?: (item: T) => boolean;
   /** タグ絞り込み (schema に tags: string[] フィールドがある場合)。 */
   tag?: string;
   /** ソート。デフォルトは publishedAt の降順。 */

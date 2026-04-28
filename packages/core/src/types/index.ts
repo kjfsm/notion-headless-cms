@@ -13,6 +13,7 @@ export type {
   ListOptions,
   SortOption,
   WarmOptions,
+  WhereClause,
 } from "./collection";
 export type {
   CollectionDef,
