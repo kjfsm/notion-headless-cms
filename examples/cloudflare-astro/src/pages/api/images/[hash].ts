@@ -1,9 +1,9 @@
 import { env } from "cloudflare:workers";
 import type { APIRoute } from "astro";
-import { makeCms } from "../../../lib/cms";
+import { type Env, makeCms } from "../../../lib/cms";
 
 export const GET: APIRoute = async ({ params }) => {
-	const cms = makeCms(env as unknown as Parameters<typeof makeCms>[0]);
+	const cms = makeCms(env as Env);
 	if (!params.hash) return new Response("Not Found", { status: 404 });
 	const object = await cms.$getCachedImage(params.hash);
 	if (!object) return new Response("Not Found", { status: 404 });

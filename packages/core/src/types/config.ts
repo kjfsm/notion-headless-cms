@@ -12,8 +12,7 @@ export type LogLevel = "debug" | "info" | "warn" | "error";
  * renderer プラグインの不透明型。
  * core は unified / remark / rehype に依存せず、このリストをそのまま renderer に渡すだけ。
  */
-// biome-ignore lint/suspicious/noExplicitAny: core はプラグイン詳細を知らない
-export type RendererPluginList = any[];
+export type RendererPluginList = unknown[];
 
 /**
  * render() オプション。core は renderer の実装を知らず、この型だけを扱う。
@@ -79,8 +78,7 @@ export interface CollectionDef<T extends BaseContentItem = BaseContentItem> {
  * `createCMS({ collections })` の map 型。
  * キーがコレクション名、値が `CollectionDef<T>`。
  */
-// biome-ignore lint/suspicious/noExplicitAny: 各コレクションの T が異なる
-export type CollectionsConfig = Record<string, CollectionDef<any>>;
+export type CollectionsConfig = Record<string, CollectionDef<BaseContentItem>>;
 
 /** `CollectionsConfig` から各 T を抽出するユーティリティ型。 */
 export type InferCollectionItem<C> =
@@ -124,11 +122,9 @@ export interface CreateCMSOptions<
 	/** Cloudflare Workers の `waitUntil` に相当する非同期処理の登録関数。 */
 	waitUntil?: (p: Promise<unknown>) => void;
 	/** ライフサイクルフック (全コレクション共通)。 */
-	// biome-ignore lint/suspicious/noExplicitAny: 全コレクション共通
-	hooks?: CMSHooks<any>;
+	hooks?: CMSHooks<BaseContentItem>;
 	/** プラグイン配列。 */
-	// biome-ignore lint/suspicious/noExplicitAny: 全コレクション共通
-	plugins?: CMSPlugin<any>[];
+	plugins?: CMSPlugin<BaseContentItem>[];
 	/** ロガー。 */
 	logger?: Logger;
 	/** ログレベルの下限。指定したレベル未満のログを内部で抑制する。 */

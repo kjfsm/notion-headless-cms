@@ -1,10 +1,19 @@
 import { describe, expect, it } from "vitest";
 import type { ResolvedCollection } from "../codegen";
 import { generateSchemaFile } from "../codegen";
+import type { DataSourceObjectResponse } from "../notion-client.js";
 
-// biome-ignore lint/suspicious/noExplicitAny: Notion property mocks
-function makeProp(type: string, extras: Record<string, unknown> = {}): any {
-	return { type, id: "_", name: "_", description: "", ...extras };
+function makeProp(
+	type: string,
+	extras: Record<string, object | string | number | boolean | null> = {},
+): DataSourceObjectResponse["properties"][string] {
+	return {
+		type,
+		id: "_",
+		name: "_",
+		description: "",
+		...extras,
+	} as DataSourceObjectResponse["properties"][string];
 }
 
 function makeCollection(

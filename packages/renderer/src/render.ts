@@ -16,7 +16,14 @@ import type { RendererOptions } from "./types";
  * key は (allowDangerousHtml, remark length, rehype length, plugin object identity) の合成。
  * プラグインの参照同一性 (===) で判定するため、毎回新しい配列を渡すと再構築になる。
  */
+interface ProcessorMeta {
+	remarkLen: number;
+	rehypeLen: number;
+	dangerous: boolean;
+}
+
 const PROCESSOR_CACHE = new WeakMap<object, Processor>();
+const PROCESSOR_META = new WeakMap<object, ProcessorMeta>();
 const STATIC_PROCESSORS: Record<string, Processor> = Object.create(null);
 
 interface CacheImageContext {
@@ -30,8 +37,7 @@ function buildProcessor(
 	remarkPlugins: PluggableList,
 	rehypePlugins: PluggableList,
 ): Processor {
-	// biome-ignore lint/suspicious/noExplicitAny: unified の use チェーンは型推論が困難
-	const p: any = unified()
+	const p = unified()
 		.use(remarkParse)
 		.use(remarkGfm)
 		.use(remarkPlugins)
@@ -42,7 +48,7 @@ function buildProcessor(
 		.use(rehypeImageCache, imgCtx)
 		.use(rehypePlugins)
 		.use(rehypeStringify);
-	return p.freeze() as Processor;
+	return p.freeze() as unknown as Processor;
 }
 
 /**
@@ -72,15 +78,15 @@ function getProcessor(
 
 	// それ以外は cacheImage 関数を WeakMap キーにする (createCMS のライフサイクルに同期)
 	const key = imgCtx.cacheImage ?? imgCtx;
-	const cached = PROCESSOR_CACHE.get(key as object);
+	const keyObj = key as object;
+	const cached = PROCESSOR_CACHE.get(keyObj);
+	const meta = cached ? PROCESSOR_META.get(keyObj) : undefined;
 	if (
 		cached &&
-		(cached as unknown as { __remarkLen?: number }).__remarkLen ===
-			remarkPlugins.length &&
-		(cached as unknown as { __rehypeLen?: number }).__rehypeLen ===
-			rehypePlugins.length &&
-		(cached as unknown as { __dangerous?: boolean }).__dangerous ===
-			allowDangerousHtml
+		meta &&
+		meta.remarkLen === remarkPlugins.length &&
+		meta.rehypeLen === rehypePlugins.length &&
+		meta.dangerous === allowDangerousHtml
 	) {
 		return cached;
 	}
@@ -90,13 +96,12 @@ function getProcessor(
 		remarkPlugins,
 		rehypePlugins,
 	);
-	// 構成識別用のメタ情報を付与
-	Object.assign(proc, {
-		__remarkLen: remarkPlugins.length,
-		__rehypeLen: rehypePlugins.length,
-		__dangerous: allowDangerousHtml,
+	PROCESSOR_CACHE.set(keyObj, proc);
+	PROCESSOR_META.set(keyObj, {
+		remarkLen: remarkPlugins.length,
+		rehypeLen: rehypePlugins.length,
+		dangerous: allowDangerousHtml,
 	});
-	PROCESSOR_CACHE.set(key as object, proc);
 	return proc;
 }
 
@@ -130,8 +135,8 @@ export async function renderMarkdown(
 	const processor = getProcessor(
 		{ imageProxyBase, cacheImage },
 		allowDangerousHtml,
-		remarkPlugins,
-		rehypePlugins,
+		remarkPlugins as PluggableList,
+		rehypePlugins as PluggableList,
 	);
 	const result = await processor.process(markdown);
 	return String(result);

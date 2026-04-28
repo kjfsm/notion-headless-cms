@@ -73,7 +73,7 @@ describe("renderCallout", () => {
 					external: { url: "https://example.com/icon.png" },
 				},
 			},
-		} as unknown as CalloutBlockObjectResponse;
+		} as CalloutBlockObjectResponse;
 		const html = await renderCallout(block);
 		expect(html).toContain('<img class="nhc-callout__icon"');
 		expect(html).toContain("https://example.com/icon.png");
@@ -88,7 +88,7 @@ describe("renderCallout", () => {
 				color: "default",
 				icon: { type: "file", file: { url: "https://files.notion.so/x.png" } },
 			},
-		} as unknown as CalloutBlockObjectResponse;
+		} as CalloutBlockObjectResponse;
 		const html = await renderCallout(block);
 		expect(html).toContain("https://files.notion.so/x.png");
 	});
@@ -102,7 +102,7 @@ describe("renderCallout", () => {
 				color: "default",
 				icon: { type: "file", file: { url: "" } },
 			},
-		} as unknown as CalloutBlockObjectResponse;
+		} as CalloutBlockObjectResponse;
 		const html = await renderCallout(block);
 		expect(html).toContain("nofile");
 		expect(html).not.toContain("<img");
@@ -113,7 +113,7 @@ describe("renderCallout", () => {
 			...blockBase,
 			type: "callout",
 			callout: { rich_text: [text("noicon")], color: "default", icon: null },
-		} as unknown as CalloutBlockObjectResponse;
+		} as CalloutBlockObjectResponse;
 		const html = await renderCallout(block);
 		expect(html).toContain("noicon");
 		expect(html).not.toContain("nhc-callout__icon");

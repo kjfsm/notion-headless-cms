@@ -184,8 +184,7 @@ export function createCMS<C extends CollectionsConfig>(
 
 	const collectionNames = Object.keys(opts.collections) as (keyof C & string)[];
 
-	// biome-ignore lint/suspicious/noExplicitAny: 各 T を保持
-	const collections: Record<string, CollectionClient<any>> = {};
+	const collections: Record<string, CollectionClient<BaseContentItem>> = {};
 	for (const name of collectionNames) {
 		const def = opts.collections[name];
 		const source = def.source as DataSource<BaseContentItem>;

@@ -1,9 +1,9 @@
 ---
 import { env } from "cloudflare:workers";
-import { makeCms } from "../../lib/cms";
+import { type Env, makeCms } from "../../lib/cms";
 import { getPost } from "../../lib/data";
 
-const cms = makeCms(env as unknown as Parameters<typeof makeCms>[0]);
+const cms = makeCms(env as Env);
 const { slug } = Astro.params;
 if (!slug) return Astro.redirect("/404");
 const result = await getPost(cms, slug);

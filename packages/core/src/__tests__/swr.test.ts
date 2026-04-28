@@ -562,7 +562,9 @@ describe("metadata と content の分離", () => {
 		};
 		const loadMarkdown = vi.fn().mockResolvedValue("# hi");
 		const cache = memoryCache();
-		const getContentSpy = vi.spyOn(cache.doc!, "getContent");
+		expect(cache.doc).toBeDefined();
+		if (!cache.doc) return;
+		const getContentSpy = vi.spyOn(cache.doc, "getContent");
 
 		const cms = createCMS({
 			collections: {

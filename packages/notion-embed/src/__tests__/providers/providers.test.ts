@@ -14,7 +14,7 @@ import { vimeoProvider } from "../../providers/vimeo";
 import { youtubeProvider } from "../../providers/youtube";
 import type { BlockObjectResponse } from "../../types";
 
-const dummyBlock = {} as unknown as BlockObjectResponse;
+const dummyBlock = {} as BlockObjectResponse;
 
 describe("_internal helpers", () => {
 	describe("escapeAttr / escapeHtml", () => {

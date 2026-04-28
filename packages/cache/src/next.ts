@@ -69,7 +69,7 @@ class NextDocumentOps implements DocumentCacheOps {
 	async invalidate(scope: InvalidateScope): Promise<void> {
 		// next/cache は動的インポートで参照（ビルド時の型エラー回避）
 		const nc = (await import("next/cache")) as unknown as {
-			revalidateTag: (tag: string) => void;
+			revalidateTag(tag: string): void;
 		};
 
 		if (scope === "all") {

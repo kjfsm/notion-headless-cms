@@ -22,7 +22,7 @@ describe("renderRichText 追加カバレッジ", () => {
 			annotations: defaultAnnotations,
 			plain_text: "preview",
 			href: null,
-		} as unknown as RichTextItemResponse;
+		} as RichTextItemResponse;
 		const html = await renderRichText([item]);
 		expect(html).toContain("nhc-mention--link-preview");
 		expect(html).toContain("example.com/preview");
@@ -35,7 +35,7 @@ describe("renderRichText 追加カバレッジ", () => {
 			annotations: defaultAnnotations,
 			plain_text: "db-1",
 			href: null,
-		} as unknown as RichTextItemResponse;
+		} as RichTextItemResponse;
 		const html = await renderRichText([item]);
 		expect(html).toContain("nhc-mention--database");
 		expect(html).toContain("db-1");
@@ -48,7 +48,7 @@ describe("renderRichText 追加カバレッジ", () => {
 			annotations: defaultAnnotations,
 			plain_text: "db-x",
 			href: null,
-		} as unknown as RichTextItemResponse;
+		} as RichTextItemResponse;
 		const html = await renderRichText([item], {
 			resolvePageTitle: async (id) => `DB(${id})`,
 		});
@@ -69,7 +69,7 @@ describe("renderRichText 追加カバレッジ", () => {
 			annotations: defaultAnnotations,
 			plain_text: "smile",
 			href: null,
-		} as unknown as RichTextItemResponse;
+		} as RichTextItemResponse;
 		const html = await renderRichText([item]);
 		expect(html).toContain("<img");
 		expect(html).toContain('src="https://example.com/e.png"');
@@ -83,7 +83,7 @@ describe("renderRichText 追加カバレッジ", () => {
 			annotations: defaultAnnotations,
 			plain_text: ":fallback:",
 			href: null,
-		} as unknown as RichTextItemResponse;
+		} as RichTextItemResponse;
 		const html = await renderRichText([item]);
 		expect(html).toBe(":fallback:");
 	});
@@ -95,7 +95,7 @@ describe("renderRichText 追加カバレッジ", () => {
 			annotations: defaultAnnotations,
 			plain_text: "today",
 			href: null,
-		} as unknown as RichTextItemResponse;
+		} as RichTextItemResponse;
 		const html = await renderRichText([item]);
 		expect(html).toBe("today");
 	});

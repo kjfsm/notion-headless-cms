@@ -2,15 +2,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const searchMock = vi.fn();
 const retrieveMock = vi.fn();
-// biome-ignore lint/suspicious/noExplicitAny: コンストラクタ引数を捕捉するための型アサーション
-let capturedClientOptions:
-	| { auth?: string; fetch?: (...args: any[]) => any }
-	| undefined;
+
+type NotionFetch = typeof globalThis.fetch;
+
+let capturedClientOptions: { auth?: string; fetch?: NotionFetch } | undefined;
 
 vi.mock("@notionhq/client", () => ({
 	Client: class {
-		// biome-ignore lint/suspicious/noExplicitAny: コンストラクタ引数を捕捉するための型アサーション
-		constructor(opts: { auth?: string; fetch?: (...args: any[]) => any }) {
+		constructor(opts: { auth?: string; fetch?: NotionFetch }) {
 			capturedClientOptions = opts;
 		}
 		search = searchMock;
@@ -18,8 +17,10 @@ vi.mock("@notionhq/client", () => ({
 	},
 }));
 
-// biome-ignore lint/suspicious/noExplicitAny: テスト用モックのため型アサーションを許容
-function makeDataSource(id: string, title: string): any {
+function makeDataSource(
+	id: string,
+	title: string,
+): { object: "data_source"; id: string; title: { plain_text: string }[] } {
 	return {
 		object: "data_source",
 		id,
@@ -247,8 +248,9 @@ describe("createNotionCLIClient: no-cache fetch", () => {
 
 		const customFetch = capturedClientOptions?.fetch;
 		expect(customFetch).toBeDefined();
+		if (!customFetch) return;
 
-		await customFetch!("https://api.notion.com/v1/test", {
+		await customFetch("https://api.notion.com/v1/test", {
 			method: "GET",
 			headers: { Authorization: "Bearer token" },
 		});
@@ -267,7 +269,10 @@ describe("createNotionCLIClient: no-cache fetch", () => {
 		createNotionCLIClient("test-token");
 
 		const customFetch = capturedClientOptions?.fetch;
-		await customFetch!("https://api.notion.com/v1/test", undefined);
+		expect(customFetch).toBeDefined();
+		if (!customFetch) return;
+
+		await customFetch("https://api.notion.com/v1/test", undefined);
 
 		expect(fetchSpy).toHaveBeenCalledWith(
 			"https://api.notion.com/v1/test",
