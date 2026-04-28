@@ -422,7 +422,11 @@ describe("createNotionCollection - loadMarkdown() エラー処理", () => {
       token: "test-token",
       dataSourceId: "test-db-id",
     });
-    const item = { id: "page-id", slug: "my-post", lastEditedTime: "2024-01-01" };
+    const item = {
+      id: "page-id",
+      slug: "my-post",
+      lastEditedTime: "2024-01-01",
+    };
     await expect(failAdapter.loadMarkdown(item)).rejects.toSatisfy(
       (err: unknown) =>
         isCMSError(err) && err.code === "source/load_markdown_failed",
@@ -441,7 +445,11 @@ describe("createNotionCollection - loadMarkdown() エラー処理", () => {
       token: "test-token",
       dataSourceId: "test-db-id",
     });
-    const item = { id: "page-id", slug: "my-post", lastEditedTime: "2024-01-01" };
+    const item = {
+      id: "page-id",
+      slug: "my-post",
+      lastEditedTime: "2024-01-01",
+    };
     await expect(errorAdapter.loadMarkdown(item)).rejects.toBe(cmsErr);
   });
 });
@@ -462,7 +470,11 @@ describe("createNotionCollection - loadBlocks()", () => {
       token: "test-token",
       dataSourceId: "test-db-id",
     });
-    const item = { id: "page-id", slug: "my-post", lastEditedTime: "2024-01-01" };
+    const item = {
+      id: "page-id",
+      slug: "my-post",
+      lastEditedTime: "2024-01-01",
+    };
     const blocks = await blocksAdapter.loadBlocks(item);
     expect(Array.isArray(blocks)).toBe(true);
   });

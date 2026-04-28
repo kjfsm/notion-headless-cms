@@ -385,8 +385,18 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   it("tag フィルタで指定タグを持つアイテムのみ返す", async () => {
     type TaggedItem = BaseContentItem & { tags: string[] };
     const taggedItems: TaggedItem[] = [
-      { id: "1", slug: "a", lastEditedTime: "2024-01-01T00:00:00Z", tags: ["tech"] },
-      { id: "2", slug: "b", lastEditedTime: "2024-01-02T00:00:00Z", tags: ["life"] },
+      {
+        id: "1",
+        slug: "a",
+        lastEditedTime: "2024-01-01T00:00:00Z",
+        tags: ["tech"],
+      },
+      {
+        id: "2",
+        slug: "b",
+        lastEditedTime: "2024-01-02T00:00:00Z",
+        tags: ["life"],
+      },
       {
         id: "3",
         slug: "c",
