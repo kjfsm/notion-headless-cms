@@ -1,5 +1,6 @@
 export type { RevalidateHandlerOptions } from "./route-handlers";
 export {
+  createCollectionRevalidateRouteHandler,
   createImageRouteHandler,
-  createRevalidateRouteHandler,
+  createInvalidateAllRouteHandler,
 } from "./route-handlers";

@@ -40,49 +40,48 @@ function decodeHtmlEntities(str: string): string {
     .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)));
 }
 
-/** in-memory キャッシュ。TTL 付き。 */
-const cache = new Map<string, { data: OgpData; expireAt: number }>();
-
+/**
+ * URL から OGP データを取得する。キャッシュなし。
+ * HTTP エラー時は Error を投げる。TTL キャッシュが必要なら {@link createOgpFetcher} を使う。
+ */
 export async function fetchOgp(
   url: string,
   opts?: OgpFetchOptions,
 ): Promise<OgpData> {
-  const ttlMs = opts?.ttlMs ?? DEFAULT_TTL_MS;
-  const now = Date.now();
-
-  const cached = cache.get(url);
-  if (cached && cached.expireAt > now) return cached.data;
-
-  let html: string;
-  try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": opts?.userAgent ?? DEFAULT_UA },
-      redirect: "follow",
-    });
-    if (!res.ok) {
-      console.warn(
-        `[notion-embed] OGP fetch failed: HTTP ${res.status} for ${url}`,
-      );
-      return {};
-    }
-    html = await res.text();
-  } catch (err) {
-    console.warn(`[notion-embed] OGP fetch failed for ${url}:`, err);
-    return {};
+  const res = await fetch(url, {
+    headers: { "User-Agent": opts?.userAgent ?? DEFAULT_UA },
+    redirect: "follow",
+  });
+  if (!res.ok) {
+    throw new Error(
+      `[notion-embed] OGP fetch failed: HTTP ${res.status} for ${url}`,
+    );
   }
-
-  const data: OgpData = {
+  const html = await res.text();
+  return {
     title: matchAny(html, OG_TITLE, OG_TITLE_B, TAG_TITLE),
     description: matchAny(html, OG_DESC, OG_DESC_B),
     image: matchAny(html, OG_IMAGE, OG_IMAGE_B),
     siteName: matchAny(html, OG_SITE, OG_SITE_B),
   };
-
-  cache.set(url, { data, expireAt: now + ttlMs });
-  return data;
 }
 
-/** テスト等でキャッシュをクリアする。 */
-export function clearOgpCache(): void {
-  cache.clear();
+/**
+ * TTL キャッシュ付き OGP フェッチャーを生成する。
+ * インスタンスごとに独立したキャッシュを持ち、インスタンス間でキャッシュを共有しない。
+ */
+export function createOgpFetcher(opts?: {
+  ttlMs?: number;
+}): (url: string, fetchOpts?: OgpFetchOptions) => Promise<OgpData> {
+  const defaultTtl = opts?.ttlMs ?? DEFAULT_TTL_MS;
+  const cache = new Map<string, { data: OgpData; expireAt: number }>();
+  return async (url, fetchOpts) => {
+    const ttlMs = fetchOpts?.ttlMs ?? defaultTtl;
+    const now = Date.now();
+    const cached = cache.get(url);
+    if (cached && cached.expireAt > now) return cached.data;
+    const data = await fetchOgp(url, fetchOpts);
+    cache.set(url, { data, expireAt: now + ttlMs });
+    return data;
+  };
 }

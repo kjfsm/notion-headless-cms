@@ -2,45 +2,35 @@ import { sha256Hex } from "./cache";
 import { CMSError, isCMSError } from "./errors";
 import type { ImageCacheOps, Logger, StorageBinary } from "./types/index";
 
-/** レスポンスヘッダまたはURLの拡張子からContent-Typeを推測する。 */
-function inferContentType(
-  url: string,
-  responseContentType: string | null,
-): string {
-  if (responseContentType?.startsWith("image/")) {
-    return responseContentType.split(";")[0].trim();
-  }
-  if (url.includes(".png")) return "image/png";
-  if (url.includes(".gif")) return "image/gif";
-  if (url.includes(".webp")) return "image/webp";
-  return "image/jpeg";
-}
-
 /**
- * URL → SHA-256 hash のメモ化マップ。
- * Notion の画像 URL は同じ画像でも署名が時刻ごとに変わるが、
- * 1 リクエスト内では同一 URL が複数回現れることが多い (重複ハッシュ計算を回避)。
- *
- * メモリリーク防止に最大エントリ数を設けており、超過時は最古から削除する LRU。
+ * レスポンスの Content-Type ヘッダから画像の MIME タイプを取り出す。
+ * ヘッダがない、または image/* でない場合は CMSError を投げる。
+ * URL 拡張子からの推測や jpeg デフォルトは行わない。
  */
-const HASH_MEMO_LIMIT = 1024;
-const hashMemo = new Map<string, string>();
-
-async function memoSha256(url: string): Promise<string> {
-  const cached = hashMemo.get(url);
-  if (cached !== undefined) {
-    // LRU: アクセスを末尾に移動
-    hashMemo.delete(url);
-    hashMemo.set(url, cached);
-    return cached;
+function pickImageContentType(
+  headerValue: string | null,
+  notionUrl: string,
+): string {
+  if (!headerValue) {
+    throw new CMSError({
+      code: "cache/image_invalid_content_type",
+      message: "Image response missing Content-Type header.",
+      context: { operation: "fetchAndCacheImage:contentType", notionUrl },
+    });
   }
-  const hash = await sha256Hex(url);
-  hashMemo.set(url, hash);
-  if (hashMemo.size > HASH_MEMO_LIMIT) {
-    const firstKey = hashMemo.keys().next().value;
-    if (firstKey !== undefined) hashMemo.delete(firstKey);
+  const value = (headerValue.split(";")[0] ?? headerValue).trim().toLowerCase();
+  if (!value.startsWith("image/")) {
+    throw new CMSError({
+      code: "cache/image_invalid_content_type",
+      message: `Image response has non-image Content-Type: ${value}`,
+      context: {
+        operation: "fetchAndCacheImage:contentType",
+        notionUrl,
+        contentType: value,
+      },
+    });
   }
-  return hash;
+  return value;
 }
 
 /**
@@ -51,10 +41,10 @@ async function fetchAndCacheImage(
   cache: ImageCacheOps,
   cacheName: string,
   notionUrl: string,
+  hash: string,
   imageProxyBase: string,
   logger?: Logger,
 ): Promise<string> {
-  const hash = await memoSha256(notionUrl);
   const proxyUrl = `${imageProxyBase}/${hash}`;
 
   const existing = await cache.get(hash);
@@ -90,9 +80,9 @@ async function fetchAndCacheImage(
     }
 
     const data = await response.arrayBuffer();
-    const contentType = inferContentType(
-      notionUrl,
+    const contentType = pickImageContentType(
       response.headers.get("content-type"),
+      notionUrl,
     );
     await cache.set(hash, data, contentType);
     logger?.debug?.("画像をキャッシュに保存", {
@@ -117,6 +107,9 @@ async function fetchAndCacheImage(
  * `ImageCacheOps` と `imageProxyBase` から `cacheImage` 関数を構築する。
  * 返り値は Notion 画像 URL を受け取り、SHA-256 ハッシュをキャッシュキーとして
  * {@link ImageCacheOps} に保存後、プロキシ URL を返す。
+ *
+ * ハッシュのメモ化はファクトリ呼び出し単位でスコープ化されており、
+ * インスタンス間でキャッシュを共有しない。
  */
 export function buildCacheImageFn(
   cache: ImageCacheOps,
@@ -124,8 +117,22 @@ export function buildCacheImageFn(
   imageProxyBase: string,
   logger?: Logger,
 ): (notionUrl: string) => Promise<string> {
-  return (notionUrl) =>
-    fetchAndCacheImage(cache, cacheName, notionUrl, imageProxyBase, logger);
+  const hashMemo = new Map<string, string>();
+  return async (notionUrl) => {
+    let hash = hashMemo.get(notionUrl);
+    if (hash === undefined) {
+      hash = await sha256Hex(notionUrl);
+      hashMemo.set(notionUrl, hash);
+    }
+    return fetchAndCacheImage(
+      cache,
+      cacheName,
+      notionUrl,
+      hash,
+      imageProxyBase,
+      logger,
+    );
+  };
 }
 
 export type { StorageBinary };

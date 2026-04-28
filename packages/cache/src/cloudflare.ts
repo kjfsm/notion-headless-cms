@@ -349,50 +349,33 @@ export function r2Cache(opts: R2CacheOptions): CacheAdapter {
 
 // ── cloudflareCache (KV + R2 ショートカット) ───────────────────────────────
 
-/** `cloudflareCache(env)` が参照する Workers の env。 */
-export interface CloudflareEnv {
-  /** ドキュメントキャッシュ用 KV namespace (binding 名は変更可)。 */
-  DOC_CACHE?: KVNamespaceLike;
-  /** 画像キャッシュ用 R2 バケット (binding 名は変更可)。 */
-  IMG_BUCKET?: R2BucketLike;
-}
-
-export interface CloudflareCacheOptions {
-  /**
-   * binding 名のカスタマイズ。既定: `{ docCache: "DOC_CACHE", imgBucket: "IMG_BUCKET" }`。
-   */
-  bindings?: { docCache?: string; imgBucket?: string };
-  /** キャッシュキーのプレフィックス。デフォルト: '' */
-  prefix?: string;
+/** `cloudflareCache` に渡す binding オブジェクト。 */
+export interface CloudflareCacheBindings {
+  /** ドキュメントキャッシュ用 KV namespace。 */
+  docCache?: KVNamespaceLike;
+  /** 画像キャッシュ用 R2 バケット。 */
+  imgBucket?: R2BucketLike;
 }
 
 /**
- * Cloudflare Workers の env から KV (document) + R2 (image) アダプタ配列を生成するショートカット。
+ * KV (document) + R2 (image) アダプタ配列を生成するショートカット。
  * binding が未設定の場合は対応するアダプタを省略する。
  *
  * @example
  * createCMS({
  *   collections: { posts: ... },
- *   cache: cloudflareCache(env),
+ *   cache: cloudflareCache({ docCache: env.DOC_CACHE, imgBucket: env.IMG_BUCKET }),
  * });
  */
 export function cloudflareCache(
-  env: CloudflareEnv,
-  opts: CloudflareCacheOptions = {},
+  bindings: CloudflareCacheBindings,
+  opts: { prefix?: string } = {},
 ): CacheAdapter[] {
-  const docKey = opts.bindings?.docCache ?? "DOC_CACHE";
-  const imgKey = opts.bindings?.imgBucket ?? "IMG_BUCKET";
   const prefix = opts.prefix ?? "";
-
   const adapters: CacheAdapter[] = [];
-  const kvNs = (env as Record<string, unknown>)[docKey] as
-    | KVNamespaceLike
-    | undefined;
-  const r2Bucket = (env as Record<string, unknown>)[imgKey] as
-    | R2BucketLike
-    | undefined;
-
-  if (kvNs) adapters.push(kvCache({ namespace: kvNs, prefix }));
-  if (r2Bucket) adapters.push(r2Cache({ bucket: r2Bucket, prefix }));
+  if (bindings.docCache)
+    adapters.push(kvCache({ namespace: bindings.docCache, prefix }));
+  if (bindings.imgBucket)
+    adapters.push(r2Cache({ bucket: bindings.imgBucket, prefix }));
   return adapters;
 }

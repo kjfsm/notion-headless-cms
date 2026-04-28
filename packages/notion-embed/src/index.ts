@@ -6,7 +6,7 @@ import type {
   RendererFn,
 } from "./types";
 
-export { clearOgpCache, fetchOgp } from "./ogp";
+export { createOgpFetcher, fetchOgp } from "./ogp";
 export { dlsiteProvider } from "./providers/dlsite";
 export { genericIframeProvider } from "./providers/generic-iframe";
 export { defineEmbedProvider, matchProvider } from "./providers/index";
@@ -25,7 +25,12 @@ export type {
   OgpData,
   OgpFetchOptions,
 } from "./types";
-export { isHttpUrl, normalizeUrl } from "./url-normalize";
+export {
+  addHttpsToProtocolRelative,
+  extractUrlFromMarkdownLink,
+  isHttpUrl,
+  normalizeUrl,
+} from "./url-normalize";
 
 /**
  * createCMS の引数に差し込んで Notion ブロックを Notion 風 HTML にレンダリングする。

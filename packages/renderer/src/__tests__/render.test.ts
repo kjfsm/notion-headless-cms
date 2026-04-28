@@ -62,7 +62,7 @@ describe("renderMarkdown", () => {
   it("cacheImage が未指定の場合はデフォルト関数が渡される", async () => {
     const customRender = vi.fn().mockResolvedValue("");
     await renderMarkdown("", { render: customRender });
-    const [, ctx] = customRender.mock.calls[0];
+    const [, ctx] = customRender.mock.calls[0]!;
     expect(typeof ctx.cacheImage).toBe("function");
     const url = await ctx.cacheImage("https://example.com/img.png");
     expect(url).toBe("https://example.com/img.png");

@@ -16,7 +16,7 @@ import type {
 /** 本文レンダリングに必要な依存を束ねたコンテキスト。 */
 export interface RenderContext<T extends BaseContentItem> {
   source: DataSource<T>;
-  rendererFn: RendererFn | undefined;
+  rendererFn: RendererFn;
   imgCache: ImageCacheOps;
   imgCacheName: string;
   hasImageCache: boolean;
@@ -72,15 +72,21 @@ export async function buildCachedItemContent<T extends BaseContentItem>(
     });
   }
 
-  let blocks: ContentBlock[] = [];
+  let blocks: ContentBlock[];
   try {
     blocks = await ctx.source.loadBlocks(item);
   } catch (err) {
-    ctx.logger?.warn?.("loadBlocks に失敗したため raw フォールバック", {
-      slug: item.slug,
-      error: err instanceof Error ? err.message : String(err),
+    if (isCMSError(err)) throw err;
+    throw new CMSError({
+      code: "source/load_blocks_failed",
+      message: "Failed to load blocks from source.",
+      cause: err,
+      context: {
+        operation: "buildCachedItemContent:loadBlocks",
+        pageId: item.id,
+        slug: item.slug,
+      },
     });
-    blocks = [];
   }
 
   const cacheImage = ctx.hasImageCache
@@ -93,9 +99,8 @@ export async function buildCachedItemContent<T extends BaseContentItem>(
     : undefined;
 
   let html: string;
-  const rendererFn = ctx.rendererFn ?? (await loadDefaultRenderer());
   try {
-    html = await rendererFn(markdown, {
+    html = await ctx.rendererFn(markdown, {
       imageProxyBase: ctx.imageProxyBase,
       cacheImage,
       remarkPlugins: ctx.contentConfig?.remarkPlugins,
@@ -139,25 +144,4 @@ export async function buildCachedItemContent<T extends BaseContentItem>(
   ctx.hooks.onRenderEnd?.(item.slug, durationMs);
 
   return result;
-}
-
-/**
- * renderer オプション未指定時のフォールバック。
- * @notion-headless-cms/renderer を動的 import する。
- * createCMS({ renderer }) で明示注入された場合はこのパスを通らない。
- */
-async function loadDefaultRenderer(): Promise<RendererFn> {
-  try {
-    const mod = await import("@notion-headless-cms/renderer");
-    return mod.renderMarkdown as RendererFn;
-  } catch (err) {
-    throw new CMSError({
-      code: "renderer/failed",
-      message:
-        "renderer オプションが未指定で @notion-headless-cms/renderer が見つかりません。" +
-        " createCMS({ renderer }) でレンダラーを注入するか、@notion-headless-cms/renderer をインストールしてください。",
-      cause: err,
-      context: { operation: "loadDefaultRenderer" },
-    });
-  }
 }

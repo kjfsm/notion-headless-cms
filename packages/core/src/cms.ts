@@ -162,7 +162,7 @@ export function createCMS<C extends CollectionsConfig>(
   const ttlMs = opts.ttlMs;
   const imageProxyBase = opts.imageProxyBase ?? DEFAULT_IMAGE_PROXY_BASE;
   const contentConfig = opts.content;
-  const rendererFn: RendererFn | undefined = opts.renderer;
+  const rendererFn: RendererFn = opts.renderer;
   const waitUntil = opts.waitUntil;
   const baseLogger: Logger | undefined = mergeLoggers(
     opts.plugins ?? [],
@@ -186,7 +186,7 @@ export function createCMS<C extends CollectionsConfig>(
 
   const collections: Record<string, CollectionClient<BaseContentItem>> = {};
   for (const name of collectionNames) {
-    const def = opts.collections[name];
+    const def = opts.collections[name]!;
     const source = def.source as DataSource<BaseContentItem>;
     const colHooks = def.hooks as CMSHooks<BaseContentItem> | undefined;
     const collectionHooks: CMSHooks<BaseContentItem> = colHooks
@@ -239,42 +239,24 @@ export function createCMS<C extends CollectionsConfig>(
       return createHandler(
         {
           imageCache: cacheRes.img,
-          parseWebhook: async (req, webhookSecret) => {
-            for (const name of collectionNames) {
-              const ds = opts.collections[name]
-                .source as DataSource<BaseContentItem>;
-              if (ds.parseWebhook) {
-                try {
-                  const scope = await ds.parseWebhook(req.clone(), {
-                    secret: webhookSecret,
-                  });
-                  return scope;
-                } catch (err) {
-                  logger?.warn?.("parseWebhook 失敗", {
-                    collection: name,
-                    error: err instanceof Error ? err.message : String(err),
-                  });
-                }
-              }
-            }
-            // フォールバック: { slug, collection } だけの汎用 JSON body
-            try {
-              const body = (await req.json()) as {
-                slug?: string;
-                collection?: string;
-              };
-              if (body.slug && body.collection) {
-                return { collection: body.collection, slug: body.slug };
-              }
-              if (body.collection) {
-                return { collection: body.collection };
-              }
-            } catch (err) {
-              logger?.warn?.("webhook body の JSON パース失敗", {
-                error: err instanceof Error ? err.message : String(err),
+          async parseWebhookFor(collection, req, webhookSecret) {
+            const def = opts.collections[collection];
+            if (!def) {
+              throw new CMSError({
+                code: "webhook/unknown_collection",
+                message: `Unknown collection: ${collection}`,
+                context: { operation: "parseWebhookFor", collection },
               });
             }
-            return null;
+            const ds = def.source as DataSource<BaseContentItem>;
+            if (!ds.parseWebhook) {
+              throw new CMSError({
+                code: "webhook/not_implemented",
+                message: `Collection "${collection}" does not support webhooks.`,
+                context: { operation: "parseWebhookFor", collection },
+              });
+            }
+            return ds.parseWebhook(req, { secret: webhookSecret });
           },
           revalidate: (scope) => globalOps.$invalidate(scope),
         },

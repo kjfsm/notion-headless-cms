@@ -33,47 +33,79 @@ export function createImageRouteHandler(
 }
 
 /**
- * Revalidate Webhook 用の Next.js ルートハンドラを生成する。
- * Authorization ヘッダで secret を検証し、`cms.$invalidate()` を呼ぶ。
+ * `/app/api/revalidate/[collection]/route.ts` 用の Next.js ルートハンドラを生成する。
+ * Authorization ヘッダで secret を検証し、`cms.$invalidate({ collection, slug? })` を呼ぶ。
  *
  * @example
- * // app/api/revalidate/route.ts
+ * // app/api/revalidate/[collection]/route.ts
  * import { cms } from "@/lib/cms";
- * import { createRevalidateRouteHandler } from "@notion-headless-cms/adapter-next";
- * export const POST = createRevalidateRouteHandler(cms, { secret: process.env.REVALIDATE_SECRET! });
+ * import { createCollectionRevalidateRouteHandler } from "@notion-headless-cms/adapter-next";
+ * export const POST = createCollectionRevalidateRouteHandler(cms, { secret: process.env.REVALIDATE_SECRET! });
  */
-export function createRevalidateRouteHandler(
+export function createCollectionRevalidateRouteHandler(
   cms: CMSGlobalOps,
   opts: RevalidateHandlerOptions,
-): (request: Request) => Promise<Response> {
-  return async (request) => {
-    const auth = request.headers.get("authorization");
+): (
+  req: Request,
+  context: { params: Promise<{ collection: string }> },
+) => Promise<Response> {
+  return async (req, context) => {
+    const auth = req.headers.get("authorization");
     if (auth !== `Bearer ${opts.secret}`) {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    let payload:
-      | { collection?: string; slug?: string; all?: boolean }
-      | undefined;
-    try {
-      payload = await request.json();
-    } catch {
-      // JSON でなくても動作する
+    const { collection } = await context.params;
+
+    let slug: string | undefined;
+    const contentType = req.headers.get("content-type") ?? "";
+    if (contentType.includes("application/json")) {
+      let payload: unknown;
+      try {
+        payload = await req.json();
+      } catch {
+        return Response.json(
+          { ok: false, reason: "invalid JSON" },
+          { status: 400 },
+        );
+      }
+      if (
+        payload !== null &&
+        typeof payload === "object" &&
+        "slug" in payload &&
+        typeof (payload as { slug: unknown }).slug === "string"
+      ) {
+        slug = (payload as { slug: string }).slug;
+      }
     }
 
-    const scope: InvalidateScope =
-      !payload || payload.all
-        ? "all"
-        : payload.collection && payload.slug
-          ? { collection: payload.collection, slug: payload.slug }
-          : payload.collection
-            ? { collection: payload.collection }
-            : "all";
+    const scope: InvalidateScope = slug ? { collection, slug } : { collection };
 
     await cms.$invalidate(scope);
-    return Response.json({
-      ok: true,
-      scope: scope === "all" ? "all" : payload,
-    });
+    return Response.json({ ok: true, scope });
+  };
+}
+
+/**
+ * 全コレクションを一括無効化するルートハンドラを生成する。管理用エンドポイント向け。
+ * Authorization ヘッダで secret を検証し、`cms.$invalidate("all")` を呼ぶ。
+ *
+ * @example
+ * // app/api/revalidate/route.ts
+ * import { cms } from "@/lib/cms";
+ * import { createInvalidateAllRouteHandler } from "@notion-headless-cms/adapter-next";
+ * export const POST = createInvalidateAllRouteHandler(cms, { secret: process.env.REVALIDATE_SECRET! });
+ */
+export function createInvalidateAllRouteHandler(
+  cms: CMSGlobalOps,
+  opts: RevalidateHandlerOptions,
+): (req: Request) => Promise<Response> {
+  return async (req) => {
+    const auth = req.headers.get("authorization");
+    if (auth !== `Bearer ${opts.secret}`) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+    await cms.$invalidate("all");
+    return Response.json({ ok: true, scope: "all" });
   };
 }

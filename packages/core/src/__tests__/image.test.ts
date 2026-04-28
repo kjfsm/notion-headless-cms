@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { isCMSError } from "../errors";
 import { buildCacheImageFn } from "../image";
 import type { ImageCacheOps } from "../types/index";
 
@@ -71,7 +72,7 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 
     expect(result).toMatch(/^\/api\/images\//);
     expect(cache.set).toHaveBeenCalledOnce();
-    const [, savedData, savedType] = vi.mocked(cache.set).mock.calls[0];
+    const [, savedData, savedType] = vi.mocked(cache.set).mock.calls[0]!;
     expect((savedData as ArrayBuffer).byteLength).toBe(body.byteLength);
     expect(savedType).toBe("image/webp");
   });
@@ -123,47 +124,41 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 
     await cacheImage("https://example.com/anim.gif");
 
-    const [, , savedType] = vi.mocked(cache.set).mock.calls[0];
+    const [, , savedType] = vi.mocked(cache.set).mock.calls[0]!;
     expect(savedType).toBe("image/gif");
   });
 
-  it("URL の拡張子から PNG を推測する（Content-Type ヘッダなし）", async () => {
+  it("Content-Type ヘッダなしの場合は cache/image_invalid_content_type CMSError をスローする", async () => {
     const cache = makeImageCache();
     const cacheImage = buildCacheImageFn(cache, "memory", "/api/images");
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
       new Response(new ArrayBuffer(4), { status: 200, headers: {} }),
     );
 
-    await cacheImage("https://example.com/image.png?token=abc");
-
-    const [, , savedType] = vi.mocked(cache.set).mock.calls[0];
-    expect(savedType).toBe("image/png");
+    await expect(
+      cacheImage("https://example.com/image.png?token=abc"),
+    ).rejects.toSatisfy(
+      (err: unknown) =>
+        isCMSError(err) && err.code === "cache/image_invalid_content_type",
+    );
   });
 
-  it("URL の拡張子から WebP を推測する（Content-Type ヘッダなし）", async () => {
+  it("image/* 以外の Content-Type の場合は cache/image_invalid_content_type CMSError をスローする", async () => {
     const cache = makeImageCache();
     const cacheImage = buildCacheImageFn(cache, "memory", "/api/images");
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-      new Response(new ArrayBuffer(4), { status: 200, headers: {} }),
+      new Response(new ArrayBuffer(4), {
+        status: 200,
+        headers: { "content-type": "text/html" },
+      }),
     );
 
-    await cacheImage("https://example.com/thumb.webp?s=300");
-
-    const [, , savedType] = vi.mocked(cache.set).mock.calls[0];
-    expect(savedType).toBe("image/webp");
-  });
-
-  it("Content-Type ヘッダなし・URL 拡張子なしの場合は image/jpeg にフォールバックする", async () => {
-    const cache = makeImageCache();
-    const cacheImage = buildCacheImageFn(cache, "memory", "/api/images");
-    vi.mocked(globalThis.fetch).mockResolvedValueOnce(
-      new Response(new ArrayBuffer(4), { status: 200, headers: {} }),
+    await expect(
+      cacheImage("https://notion.so/signed/some-url"),
+    ).rejects.toSatisfy(
+      (err: unknown) =>
+        isCMSError(err) && err.code === "cache/image_invalid_content_type",
     );
-
-    await cacheImage("https://notion.so/signed/secure-image-without-extension");
-
-    const [, , savedType] = vi.mocked(cache.set).mock.calls[0];
-    expect(savedType).toBe("image/jpeg");
   });
 
   it("キャッシュミス時に logger.debug が「キャッシュミス」と「保存」で呼ばれる", async () => {

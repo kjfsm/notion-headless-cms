@@ -1,7 +1,6 @@
 import type { BookmarkBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { renderBookmark } from "../../handlers/bookmark";
-import { clearOgpCache } from "../../ogp";
 
 function makeBlock(
   url: string,
@@ -24,10 +23,8 @@ function makeBlock(
 }
 
 describe("renderBookmark", () => {
-  beforeEach(() => clearOgpCache());
   afterEach(() => {
     vi.restoreAllMocks();
-    clearOgpCache();
   });
 
   it("nhc-bookmark クラスの <a> タグを返す", async () => {

@@ -6,12 +6,22 @@
  * | `core/config_invalid` | 設定不備（token 未設定など） |
  * | `core/schema_invalid` | schema/mapping の型不整合 |
  * | `core/notion_orm_missing` | `@notion-headless-cms/notion-orm` の動的ロード失敗 |
+ * | `core/sort_unsupported_type` | ソートキーの値型が string / number でない |
+ * | `webhook/signature_invalid` | Webhook 署名検証失敗 |
+ * | `webhook/payload_invalid` | Webhook ペイロード形式不正 |
+ * | `webhook/unknown_collection` | Webhook の対象コレクションが未知 |
+ * | `webhook/not_implemented` | DataSource が parseWebhook を実装していない |
  * | `source/fetch_items_failed` | `DataSource.list()` 失敗 |
  * | `source/fetch_item_failed` | `DataSource.findByProp()` 失敗 |
  * | `source/load_markdown_failed` | `DataSource.loadMarkdown()` 失敗 |
+ * | `source/load_blocks_failed` | `DataSource.loadBlocks()` 失敗 |
  * | `cache/io_failed` | document / image キャッシュの I/O 失敗 |
  * | `cache/image_fetch_failed` | Notion 画像の HTTP 取得失敗 |
+ * | `cache/image_invalid_content_type` | 画像レスポンスの Content-Type が不正 |
  * | `renderer/failed` | Markdown → HTML 変換失敗 |
+ * | `swr/item_check_failed` | SWR バックグラウンドのアイテム差分チェック失敗 |
+ * | `swr/list_check_failed` | SWR バックグラウンドのリスト差分チェック失敗 |
+ * | `swr/content_rebuild_failed` | SWR バックグラウンドの本文再生成失敗 |
  * | `cli/config_invalid` | `nhc.config.ts` の内容不整合 |
  * | `cli/config_load_failed` | 設定ファイルの読み込み / 評価失敗 |
  * | `cli/schema_invalid` | CLI が受け取ったスキーマ / マッピング不整合 |
@@ -26,12 +36,22 @@ export type BuiltInCMSErrorCode =
   | "core/config_invalid"
   | "core/schema_invalid"
   | "core/notion_orm_missing"
+  | "core/sort_unsupported_type"
+  | "webhook/signature_invalid"
+  | "webhook/payload_invalid"
+  | "webhook/unknown_collection"
+  | "webhook/not_implemented"
   | "source/fetch_items_failed"
   | "source/fetch_item_failed"
   | "source/load_markdown_failed"
+  | "source/load_blocks_failed"
   | "cache/io_failed"
   | "cache/image_fetch_failed"
+  | "cache/image_invalid_content_type"
   | "renderer/failed"
+  | "swr/item_check_failed"
+  | "swr/list_check_failed"
+  | "swr/content_rebuild_failed"
   | "cli/config_invalid"
   | "cli/config_load_failed"
   | "cli/schema_invalid"

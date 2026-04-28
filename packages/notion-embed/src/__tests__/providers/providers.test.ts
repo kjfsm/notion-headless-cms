@@ -1,5 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { clearOgpCache } from "../../ogp";
+import { describe, expect, it, vi } from "vitest";
 import {
   escapeAttr,
   escapeHtml,
@@ -139,9 +138,6 @@ describe("steamProvider", () => {
 
 describe("youtubeProvider", () => {
   const provider = youtubeProvider();
-
-  beforeEach(() => clearOgpCache());
-  afterEach(() => clearOgpCache());
 
   it("youtube.com/watch?v=... にマッチ", async () => {
     expect(provider.match("https://www.youtube.com/watch?v=dQw4w9WgXcQ")).toBe(

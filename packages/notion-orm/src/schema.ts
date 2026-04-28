@@ -20,6 +20,7 @@ type SystemField =
   | "lastEditedTime"
   | "createdAt"
   | "isArchived"
+  | "isInTrash"
   | "coverImageUrl"
   | "iconEmoji";
 
@@ -87,6 +88,7 @@ const SYSTEM_FIELDS = new Set([
   "lastEditedTime",
   "createdAt",
   "isArchived",
+  "isInTrash",
   "coverImageUrl",
   "iconEmoji",
 ]);
@@ -117,12 +119,10 @@ function parseMapping<T>(
     id: page.id,
     updatedAt: page.last_edited_time,
     lastEditedTime: page.last_edited_time,
-    title:
-      titleProp?.type === "title"
-        ? getPlainText(titleProp.title) || null
-        : null,
+    title: titleProp?.type === "title" ? getPlainText(titleProp.title) : null,
     createdAt: page.created_time,
-    isArchived: page.in_trash || page.archived,
+    isArchived: page.archived,
+    isInTrash: page.in_trash,
     coverImageUrl: extractCoverUrl(page),
     iconEmoji: extractIconEmoji(page),
   };
@@ -148,10 +148,10 @@ function parseField(
 
   switch (fieldDef.type) {
     case "title":
-      return getPlainText(prop.type === "title" ? prop.title : []) || null;
+      return getPlainText(prop.type === "title" ? prop.title : undefined);
     case "richText":
-      return (
-        getPlainText(prop.type === "rich_text" ? prop.rich_text : []) || null
+      return getPlainText(
+        prop.type === "rich_text" ? prop.rich_text : undefined,
       );
     case "date":
       return prop.type === "date" ? (prop.date?.start ?? null) : null;

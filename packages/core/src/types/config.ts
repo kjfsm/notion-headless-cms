@@ -115,8 +115,12 @@ export interface CreateCMSOptions<
   cache?: CacheAdapter | readonly CacheAdapter[];
   /** SWR の有効期間 (ミリ秒)。未設定時は TTL なし (失効まで stale を返す)。 */
   ttlMs?: number;
-  /** カスタムレンダラー。未指定時は `@notion-headless-cms/renderer` の `renderMarkdown` を動的 import。 */
-  renderer?: RendererFn;
+  /**
+   * Markdown→HTML レンダラー（必須）。
+   * renderer パッケージの `renderMarkdown` を渡すのが標準。
+   * カスタム実装も `RendererFn` 型を満たせば使用可能。
+   */
+  renderer: RendererFn;
   /** 画像プロキシのベース URL。デフォルト `/api/images`。 */
   imageProxyBase?: string;
   /** Cloudflare Workers の `waitUntil` に相当する非同期処理の登録関数。 */

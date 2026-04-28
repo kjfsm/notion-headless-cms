@@ -12,16 +12,32 @@
 
 const MARKDOWN_LINK = /^\[[^\]]*\]\((https?:\/\/[^\s)]+)\)$/;
 
+/**
+ * Markdown リンク記法 `[text](url)` から URL を取り出す。
+ * Markdown 形式でない場合は null を返す。
+ */
+export function extractUrlFromMarkdownLink(input: string): string | null {
+  const m = input.match(MARKDOWN_LINK);
+  return m?.[1] ?? null;
+}
+
+/**
+ * プロトコル相対 URL (`//host/path`) に `https:` を付与する。
+ * 既に http(s) スキームがある場合はそのまま返す。
+ */
+export function addHttpsToProtocolRelative(input: string): string {
+  return input.startsWith("//") ? `https:${input}` : input;
+}
+
+/**
+ * Notion URL に入り込みやすい歪みを補正する便利関数。
+ * `extractUrlFromMarkdownLink` → `addHttpsToProtocolRelative` の順に適用する。
+ */
 export function normalizeUrl(input: string): string {
   const trimmed = input.trim();
   if (!trimmed) return trimmed;
-
-  const md = trimmed.match(MARKDOWN_LINK);
-  if (md?.[1]) return md[1];
-
-  if (trimmed.startsWith("//")) return `https:${trimmed}`;
-
-  return trimmed;
+  const fromMd = extractUrlFromMarkdownLink(trimmed);
+  return addHttpsToProtocolRelative(fromMd ?? trimmed);
 }
 
 /**

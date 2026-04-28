@@ -108,11 +108,15 @@ async function renderCard(url: string, fetchData: boolean) {
   let hasData = false;
 
   if (fetchData) {
-    const oembed = await fetchOembed(url, YOUTUBE_OEMBED);
-    hasData = Boolean(oembed.title ?? oembed.thumbnail_url);
-    if (oembed.title) title = oembed.title;
-    if (oembed.thumbnail_url) image = oembed.thumbnail_url;
-    if (oembed.author_name) siteName = oembed.author_name;
+    try {
+      const oembed = await fetchOembed(url, YOUTUBE_OEMBED);
+      hasData = Boolean(oembed.title ?? oembed.thumbnail_url);
+      if (oembed.title) title = oembed.title;
+      if (oembed.thumbnail_url) image = oembed.thumbnail_url;
+      if (oembed.author_name) siteName = oembed.author_name;
+    } catch {
+      // oEmbed 失敗時はデフォルトタイトル・サムネイルなしで続行
+    }
   }
 
   const displayUrl = url.replace(/^https?:\/\//, "").slice(0, 60);
