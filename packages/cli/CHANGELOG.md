@@ -1,5 +1,25 @@
 # @notion-headless-cms/cli
 
+## 1.0.15
+
+### Patch Changes
+
+- 45ee864: `updatedAt` を廃止し `lastEditedTime` に一本化。`list()` に `accessibleStatuses` フィルタを適用、デフォルトソート（`publishedAt` 降順）を実装。
+- 84a5639: Notion Datasource API のページオブジェクトフィールドをサポートし、エラーハンドリングを強化
+
+  - core: `BaseContentItem` に `createdAt`, `isArchived`, `coverImageUrl`, `iconEmoji` を追加。`fetchListRaw`/`findRaw` で `isArchived:true` のアイテムを自動除外
+  - notion-orm: `mapper.ts` でヘルパー関数 (`extractPageTitle`, `extractCoverUrl`, `extractIconEmoji`) を追加し、新フィールドのマッピングをサポート。スラグが空の場合 `CMSError` をスロー
+  - notion-orm: `schema.ts` の `parseMapping` で新フィールドをセット
+  - notion-embed: OGP/oEmbed の HTTP エラーおよびネットワーク例外を `console.warn` で記録
+  - cli: 生成コードに新メタデータフィールドを追加、`DataSourceObjectResponse` インポートをメインエントリに変更して安定化
+
+- Updated dependencies [45ee864]
+- Updated dependencies [84a5639]
+- Updated dependencies [c75218d]
+- Updated dependencies [c75218d]
+- Updated dependencies [c75218d]
+  - @notion-headless-cms/core@0.3.13
+
 ## 1.0.14
 
 ### Patch Changes

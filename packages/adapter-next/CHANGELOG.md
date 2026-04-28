@@ -1,5 +1,31 @@
 # @notion-headless-cms/adapter-next
 
+## 0.2.19
+
+### Patch Changes
+
+- c75218d: webhook `:collection` 単一経路化・adapter-next ハンドラ分割
+
+  **core**:
+
+  - Webhook URL パターンを `POST /revalidate/:collection` に変更（汎用 JSON body フォールバック廃止）
+  - `HandlerAdapter.parseWebhook` を `parseWebhookFor(collection, req, secret)` に置換。未知コレクションは `webhook/unknown_collection`、未実装は `webhook/not_implemented` CMSError をスロー
+  - 新エラーコード追加: `webhook/signature_invalid`, `webhook/payload_invalid`, `webhook/unknown_collection`, `webhook/not_implemented`
+  - CMSError コードから HTTP ステータスへの明示マッピング (401/400/404/501)
+
+  **adapter-next**:
+
+  - `createRevalidateRouteHandler` を廃止し以下の 2 関数に分割:
+    - `createCollectionRevalidateRouteHandler` — `/api/revalidate/[collection]/route.ts` 用。JSON パース失敗は 400 を返す
+    - `createInvalidateAllRouteHandler` — 全体無効化用の管理エンドポイント向け
+
+- Updated dependencies [45ee864]
+- Updated dependencies [84a5639]
+- Updated dependencies [c75218d]
+- Updated dependencies [c75218d]
+- Updated dependencies [c75218d]
+  - @notion-headless-cms/core@0.3.13
+
 ## 0.2.18
 
 ### Patch Changes
