@@ -13,9 +13,11 @@ export default defineConfig({
 			publishedStatuses: ["公開済み"],
 			// 日本語プロパティ名は識別子に自動変換できないため明示マッピングする。
 			columnMappings: {
+				名前: "name",
 				ステータス: "status",
 				公開日: "publishedAt",
-				名前: "name",
+				URL: "slug",
+				著者: "author",
 			},
 		},
 	},
