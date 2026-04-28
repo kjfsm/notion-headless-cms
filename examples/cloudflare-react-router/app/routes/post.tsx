@@ -15,7 +15,7 @@ export default function Post({ loaderData }: Route.ComponentProps) {
 	const { html: initialHtml, item, version } = loaderData;
 	const [html, setHtml] = useState(initialHtml);
 
-	// マウント時に1回だけ更新チェック。差分があればその場で HTML を差し替える
+	// slug または version が変わったとき（=ページ遷移・再検証後）に更新チェックを実行
 	useEffect(() => {
 		fetch(`/api/posts/${item.slug}/check?v=${encodeURIComponent(version)}`)
 			.then((res) => (res.ok ? res.json() : null))
@@ -25,7 +25,7 @@ export default function Post({ loaderData }: Route.ComponentProps) {
 			.catch((err: unknown) => {
 				console.warn("更新チェックに失敗しました:", err);
 			});
-	}, []); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [item.slug, version]);
 
 	return (
 		<article>
