@@ -2,12 +2,10 @@ import { data } from "react-router";
 import useSWR from "swr";
 import type { BlogPost } from "../lib/cms";
 import { makeCms } from "../lib/cms";
+import { fetcher } from "../lib/fetcher";
 import type { Route } from "./+types/post";
 
 type PostApiResponse = { html: string; item: BlogPost };
-
-const fetcher = (url: string): Promise<PostApiResponse> =>
-	fetch(url).then((r) => r.json());
 
 export async function loader({ params, context }: Route.LoaderArgs) {
 	const cms = makeCms(context.cloudflare.env);
@@ -18,18 +16,14 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 }
 
 export default function Post({ loaderData }: Route.ComponentProps) {
-	const { data: postData } = useSWR<PostApiResponse>(
-		`/api/posts/${loaderData.item.slug}`,
-		fetcher,
-		{
-			fallbackData: {
-				html: loaderData.html,
-				item: loaderData.item as BlogPost,
-			},
+	const {
+		data: { html, item },
+	} = useSWR<PostApiResponse>(`/api/posts/${loaderData.item.slug}`, fetcher, {
+		fallbackData: {
+			html: loaderData.html,
+			item: loaderData.item as BlogPost,
 		},
-	);
-	const html = postData?.html ?? loaderData.html;
-	const item = postData?.item ?? loaderData.item;
+	});
 	return (
 		<article>
 			<h1>{item.slug}</h1>
