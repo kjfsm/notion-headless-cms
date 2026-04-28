@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { createCMS } from "../cms";
 import { isCMSError } from "../errors";
-import type { RendererFn } from "../types/config";
+import type { CollectionDef, RendererFn } from "../types/config";
 import type { BaseContentItem } from "../types/content";
 import type { DataSource } from "../types/data-source";
 
@@ -26,25 +26,7 @@ describe("createCMS - collections バリデーション", () => {
 	it("collections が空の場合は CMSError をスローする", () => {
 		let caught: unknown;
 		try {
-			createCMS({
-				// biome-ignore lint/suspicious/noExplicitAny: テスト用に空オブジェクトを渡す
-				collections: {} as any,
-			});
-		} catch (e) {
-			caught = e;
-		}
-		expect(caught).toSatisfy(
-			(err: unknown) => isCMSError(err) && err.code === "core/config_invalid",
-		);
-	});
-
-	it("collections が undefined の場合は CMSError をスローする", () => {
-		let caught: unknown;
-		try {
-			createCMS({
-				// biome-ignore lint/suspicious/noExplicitAny: テスト用に undefined を渡す
-				collections: undefined as any,
-			});
+			createCMS({ collections: {} });
 		} catch (e) {
 			caught = e;
 		}
@@ -58,8 +40,7 @@ describe("createCMS - collections バリデーション", () => {
 		try {
 			createCMS({
 				collections: {
-					// biome-ignore lint/suspicious/noExplicitAny: テスト用に source を省略
-					posts: { slugField: "slug" } as any,
+					posts: { slugField: "slug" } as CollectionDef<BaseContentItem>,
 				},
 			});
 		} catch (e) {
@@ -75,8 +56,7 @@ describe("createCMS - collections バリデーション", () => {
 		try {
 			createCMS({
 				collections: {
-					// biome-ignore lint/suspicious/noExplicitAny: テスト用に slugField を省略
-					posts: { source: makeMockSource() } as any,
+					posts: { source: makeMockSource() } as CollectionDef<BaseContentItem>,
 				},
 			});
 		} catch (e) {

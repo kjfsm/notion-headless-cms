@@ -46,11 +46,20 @@ async function resolveTestPageId(): Promise<string> {
 	});
 	for (const page of res.results) {
 		if (page.object !== "page") continue;
-		// biome-ignore lint/suspicious/noExplicitAny: page.properties は API 型が広いため any で受ける
-		const props = (page as any).properties ?? {};
+		const props =
+			(
+				page as {
+					properties?: Record<
+						string,
+						{ type?: string; rich_text?: { plain_text: string }[] }
+					>;
+				}
+			).properties ?? {};
+		const slugProp = props.Slug;
 		const slug =
-			// biome-ignore lint/suspicious/noExplicitAny: rich_text の plain_text 抽出
-			props.Slug?.rich_text?.map((t: any) => t.plain_text).join("") ?? "";
+			slugProp?.type === "rich_text"
+				? (slugProp.rich_text?.map((t) => t.plain_text).join("") ?? "")
+				: "";
 		if (slug === "test" || slug === "test-blocks") {
 			return page.id;
 		}
@@ -89,8 +98,9 @@ async function clearChildren(pageId: string): Promise<void> {
 	console.log(`既存ブロック ${total} 件を archive しました。`);
 }
 
-// biome-ignore lint/suspicious/noExplicitAny: Notion API のブロック型は union が大きいため any で構築する
-type Block = any;
+type Block = Parameters<
+	typeof client.blocks.children.append
+>[0]["children"][number];
 
 function paragraph(text: string): Block {
 	return {
@@ -256,8 +266,7 @@ function buildBlocks(): Block[] {
 					{
 						type: "text",
 						text: {
-							content:
-								"export function greet(name: string): string {\n\treturn `Hello, ${name}!`;\n}",
+							content: `export function greet(name: string): string {\n\treturn \`Hello, \${name}!\`;\n}`,
 						},
 					},
 				],

@@ -20,11 +20,7 @@ async function renderWithPlugins(markdown: string): Promise<string> {
 		.use(remarkParse)
 		.use(remarkRehype, { allowDangerousHtml: true })
 		// rehypePlugins は [plugin, options] 配列なので個別 use ではなくまとめて適用する
-		.use(
-			rehypePlugins as unknown as Parameters<
-				ReturnType<typeof unified>["use"]
-			>[0],
-		)
+		.use(rehypePlugins)
 		.use(rehypeStringify);
 
 	const result = await processor.process(markdown);

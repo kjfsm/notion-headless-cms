@@ -42,10 +42,8 @@ const itemKey = (collection: string, slug: string): string =>
 
 /** インメモリのドキュメントオペレーション実装。プロセス再起動でクリアされる。 */
 class MemoryDocumentOps implements DocumentCacheOps {
-	// biome-ignore lint/suspicious/noExplicitAny: 複数コレクション分の T を一括保持
-	private lists = new Map<string, CachedItemList<any>>();
-	// biome-ignore lint/suspicious/noExplicitAny: 同上
-	private metas = new Map<string, CachedItemMeta<any>>();
+	private lists = new Map<string, CachedItemList<BaseContentItem>>();
+	private metas = new Map<string, CachedItemMeta<BaseContentItem>>();
 	private contents = new Map<string, CachedItemContent>();
 	private readonly maxItems: number | undefined;
 

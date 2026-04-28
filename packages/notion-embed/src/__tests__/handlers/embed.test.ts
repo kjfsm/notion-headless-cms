@@ -102,7 +102,7 @@ describe("renderVideo", () => {
 				external: { url },
 				caption: [],
 			},
-		}) as unknown as VideoBlockObjectResponse;
+		}) as VideoBlockObjectResponse;
 
 	const makeFile = (url: string): VideoBlockObjectResponse =>
 		({
@@ -113,7 +113,7 @@ describe("renderVideo", () => {
 				file: { url, expiry_time: "" },
 				caption: [],
 			},
-		}) as unknown as VideoBlockObjectResponse;
+		}) as VideoBlockObjectResponse;
 
 	it("外部 MP4 URL は video タグで出力する", async () => {
 		const html = await renderVideo(
@@ -168,7 +168,7 @@ describe("renderVideo", () => {
 				...blockBase,
 				type: "video",
 				video: { type: "external", external: { url: "" }, caption: [] },
-			} as unknown as VideoBlockObjectResponse,
+			} as VideoBlockObjectResponse,
 			[],
 		);
 		// extractFileUrl は url が空文字でも返すため、iframe が出る
@@ -199,7 +199,7 @@ describe("renderVideo", () => {
 					},
 				],
 			},
-		} as unknown as VideoBlockObjectResponse;
+		} as VideoBlockObjectResponse;
 		const html = await renderVideo(block, []);
 		expect(html).toContain("nhc-video__caption");
 		expect(html).toContain("vc");
@@ -242,7 +242,7 @@ describe("renderAudio", () => {
 				type: "external",
 				external: { url: "https://example.com/x.mp3" },
 			},
-		} as unknown as AudioBlockObjectResponse;
+		} as AudioBlockObjectResponse;
 		const html = await renderAudio(block);
 		expect(html).toContain("<audio");
 		expect(html).toContain('src="https://example.com/x.mp3"');
@@ -266,7 +266,7 @@ describe("renderPdf", () => {
 			...blockBase,
 			type: "pdf",
 			pdf: { type: "external", external: { url: "https://example.com/x.pdf" } },
-		} as unknown as PdfBlockObjectResponse;
+		} as PdfBlockObjectResponse;
 		const html = await renderPdf(block);
 		expect(html).toContain('class="nhc-pdf"');
 		expect(html).toContain("<iframe");
@@ -292,7 +292,7 @@ describe("renderImage", () => {
 				external: { url: "https://example.com/x.png" },
 				caption: [],
 			},
-		} as unknown as ImageBlockObjectResponse;
+		} as ImageBlockObjectResponse;
 		const html = await renderImage(block);
 		expect(html).toContain('class="nhc-image"');
 		expect(html).toContain('<img src="https://example.com/x.png"');
@@ -308,7 +308,7 @@ describe("renderImage", () => {
 				external: { url: "https://example.com/x.png" },
 				caption: [{ plain_text: "猫" }],
 			},
-		} as unknown as ImageBlockObjectResponse;
+		} as ImageBlockObjectResponse;
 		const html = await renderImage(block);
 		expect(html).toContain('alt="猫"');
 		expect(html).toContain('class="nhc-image__caption"');

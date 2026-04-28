@@ -535,7 +535,7 @@ function applyListOptions<T extends BaseContentItem>(
 	if (opts.tag) {
 		const tag = opts.tag;
 		result = result.filter((it) => {
-			const tags = (it as unknown as { tags?: unknown }).tags;
+			const tags = (it as { tags?: string[] }).tags;
 			return Array.isArray(tags) && tags.includes(tag);
 		});
 	}
@@ -573,7 +573,6 @@ function makeComparator<T extends BaseContentItem>(
 		if (av === bv) return 0;
 		if (av === undefined) return 1;
 		if (bv === undefined) return -1;
-		// biome-ignore lint/suspicious/noExplicitAny: 汎用比較
-		return (av as any) > (bv as any) ? dir : -dir;
+		return (av as string | number) > (bv as string | number) ? dir : -dir;
 	};
 }

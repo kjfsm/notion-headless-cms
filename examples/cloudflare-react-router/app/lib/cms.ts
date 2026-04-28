@@ -48,5 +48,5 @@ export function makeCms(env: Env): Nhc {
 				publishedStatuses: ["公開済み"] as const,
 			},
 		},
-	}) as unknown as Nhc;
+	}) as Nhc;
 }

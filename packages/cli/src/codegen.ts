@@ -68,10 +68,14 @@ function tsTypeForPropDef(defType: string): string {
 function extractSelectLiterals(
 	prop: DataSourceObjectResponse["properties"][string],
 ): string[] | null {
-	// biome-ignore lint/suspicious/noExplicitAny: Notion SDK の型が弱い箇所
-	const p = prop as any;
-	if (p.type === "status" && Array.isArray(p.status?.options)) {
-		return p.status.options.map((o: { name: string }) => o.name);
+	if ((prop as { type?: string }).type === "status") {
+		const sp = prop as {
+			type: "status";
+			status?: { options?: { name: string }[] };
+		};
+		if (Array.isArray(sp.status?.options)) {
+			return sp.status.options.map((o) => o.name);
+		}
 	}
 	return null;
 }

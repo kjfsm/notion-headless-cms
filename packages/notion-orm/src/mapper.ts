@@ -21,6 +21,8 @@ export function getPlainText(items: NotionRichTextItem[] | undefined): string {
 	return items?.map((item) => item.plain_text).join("") ?? "";
 }
 
+type PropertyValue = string | string[] | number | boolean | null;
+
 /**
  * Notion ページを CLI 生成の PropertyMap に従ってフラットな Record に変換する。
  * ページ構成の知識（slug/status の意味）を持たず、すべてのプロパティを等しく扱う。
@@ -38,7 +40,8 @@ export function mapItemFromPropertyMap(
 			? getPlainText(titleProp.title) || null
 			: null;
 
-	const result: Record<string, unknown> = {
+	const result: Record<string, PropertyValue> &
+		Pick<BaseContentItem, "id" | "slug" | "updatedAt"> = {
 		id: page.id,
 		updatedAt: page.last_edited_time,
 		title,
@@ -50,7 +53,7 @@ export function mapItemFromPropertyMap(
 		result[tsName] = extractPropertyValue(prop, propDef.type);
 	}
 
-	return result as unknown as BaseContentItem;
+	return result as BaseContentItem;
 }
 
 type PropValue = NotionPage["properties"][string] | undefined;
@@ -58,7 +61,7 @@ type PropValue = NotionPage["properties"][string] | undefined;
 function extractPropertyValue(
 	prop: PropValue,
 	type: PropertyMap[string]["type"],
-): unknown {
+): PropertyValue {
 	if (!prop) {
 		if (type === "checkbox") return false;
 		if (type === "multiSelect") return [];

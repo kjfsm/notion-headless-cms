@@ -262,8 +262,7 @@ describe("mergeHooks - エラー処理・エッジケース", () => {
 		const fn = vi.fn();
 		const merged = mergeHooks(
 			[
-				// biome-ignore lint/suspicious/noExplicitAny: テスト用にフックなしプラグイン
-				{ name: "no-hooks" } as any,
+				{ name: "no-hooks" } as CMSPlugin<BaseContentItem>,
 				{ name: "with-hooks", hooks: { onCacheMiss: fn } },
 			],
 			undefined,
@@ -297,8 +296,7 @@ describe("mergeLoggers", () => {
 	it("logger を持たないプラグインは空オブジェクトとして扱われる", () => {
 		const fn = vi.fn();
 		const merged = mergeLoggers(
-			// biome-ignore lint/suspicious/noExplicitAny: テスト用にloggerなしプラグイン
-			[{} as any],
+			[{ name: "dummy" } as CMSPlugin<BaseContentItem>],
 			{ info: fn },
 		);
 		merged?.info?.("hello");

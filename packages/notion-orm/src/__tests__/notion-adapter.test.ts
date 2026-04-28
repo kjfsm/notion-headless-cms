@@ -156,8 +156,11 @@ describe("createNotionCollection - コンストラクタバリデーション", 
 			token: "test-token",
 			dataSourceId: "test-db-id",
 			schema: {
-				// biome-ignore lint/suspicious/noExplicitAny: テスト用の最小実装
-				mapping: {} as any,
+				mapping: {
+					id: { type: "title" as const, notion: "ID" },
+					slug: { type: "richText" as const, notion: "Slug" },
+					updatedAt: { type: "date" as const, notion: "Updated" },
+				},
 				mapItem: (page: { id: string; last_edited_time: string }) => ({
 					id: page.id,
 					slug: "schema-post",
