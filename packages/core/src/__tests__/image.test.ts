@@ -72,7 +72,7 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 
     expect(result).toMatch(/^\/api\/images\//);
     expect(cache.set).toHaveBeenCalledOnce();
-    const [, savedData, savedType] = vi.mocked(cache.set).mock.calls[0]!;
+    const [, savedData, savedType] = vi.mocked(cache.set).mock.calls[0] ?? [];
     expect((savedData as ArrayBuffer).byteLength).toBe(body.byteLength);
     expect(savedType).toBe("image/webp");
   });
@@ -124,7 +124,7 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 
     await cacheImage("https://example.com/anim.gif");
 
-    const [, , savedType] = vi.mocked(cache.set).mock.calls[0]!;
+    const [, , savedType] = vi.mocked(cache.set).mock.calls[0] ?? [];
     expect(savedType).toBe("image/gif");
   });
 

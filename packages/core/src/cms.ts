@@ -182,11 +182,10 @@ export function createCMS<C extends CollectionsConfig>(
     ...(opts.rateLimiter ?? {}),
   };
 
-  const collectionNames = Object.keys(opts.collections) as (keyof C & string)[];
-
+  const collectionNames: (keyof C & string)[] = [];
   const collections: Record<string, CollectionClient<BaseContentItem>> = {};
-  for (const name of collectionNames) {
-    const def = opts.collections[name]!;
+  for (const [name, def] of Object.entries(opts.collections)) {
+    collectionNames.push(name as keyof C & string);
     const source = def.source as DataSource<BaseContentItem>;
     const colHooks = def.hooks as CMSHooks<BaseContentItem> | undefined;
     const collectionHooks: CMSHooks<BaseContentItem> = colHooks
