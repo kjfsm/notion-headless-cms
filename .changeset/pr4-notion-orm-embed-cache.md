@@ -1,8 +1,8 @@
 ---
-"@notion-headless-cms/notion-embed": minor
-"@notion-headless-cms/cache": minor
-"@notion-headless-cms/notion-orm": minor
-"@notion-headless-cms/core": minor
+"@notion-headless-cms/notion-embed": patch
+"@notion-headless-cms/cache": patch
+"@notion-headless-cms/notion-orm": patch
+"@notion-headless-cms/core": patch
 ---
 
 コード予測可能性向上 PR 4: notion-orm / notion-embed / cache 整理
