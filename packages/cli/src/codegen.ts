@@ -299,8 +299,8 @@ export interface NhcConfig {
 	cache?: CacheAdapter | readonly CacheAdapter[];
 	/** SWR の TTL (ミリ秒)。 */
 	ttlMs?: number;
-	/** カスタムレンダラー。未指定時は \`@notion-headless-cms/renderer\` を動的 import。 */
-	renderer?: RendererFn;
+	/** カスタムレンダラー。\`@notion-headless-cms/renderer\` の \`renderMarkdown\` を渡す。 */
+	renderer: RendererFn;
 	/** 画像プロキシのベース URL。デフォルト \`/api/images\`。 */
 	imageProxyBase?: string;
 	/** Cloudflare Workers の \`waitUntil\` 相当。 */
