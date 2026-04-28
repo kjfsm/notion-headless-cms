@@ -591,7 +591,7 @@ function applyListOptions<T extends BaseContentItem>(
   items: T[],
   opts?: ListOptions<T>,
 ): T[] {
-  if (!opts) return items;
+  if (!opts) return sortByPublishedAtDesc(items);
   let result = items;
 
   if (opts.status) {
@@ -620,6 +620,8 @@ function applyListOptions<T extends BaseContentItem>(
 
   if (opts.sort) {
     result = [...result].sort(makeComparator(opts.sort));
+  } else {
+    result = sortByPublishedAtDesc(result);
   }
 
   const skip = opts.skip ?? 0;
@@ -629,6 +631,18 @@ function applyListOptions<T extends BaseContentItem>(
   }
 
   return result;
+}
+
+/** publishedAt 降順、未設定の場合は lastEditedTime 降順でソートする。 */
+function sortByPublishedAtDesc<T extends BaseContentItem>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    const av = a.publishedAt ?? a.lastEditedTime;
+    const bv = b.publishedAt ?? b.lastEditedTime;
+    if (av === bv) return 0;
+    if (!av) return 1;
+    if (!bv) return -1;
+    return av > bv ? -1 : 1;
+  });
 }
 
 function makeComparator<T extends BaseContentItem>(

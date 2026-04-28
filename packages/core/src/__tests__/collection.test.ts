@@ -102,12 +102,13 @@ describe("CollectionClient — cache.adjacent", () => {
         },
       },
     });
+    // デフォルトソート(lastEditedTime 降順): gamma → beta → alpha
     const adj = await cms.posts.cache.adjacent("beta");
-    expect(adj.prev?.slug).toBe("alpha");
-    expect(adj.next?.slug).toBe("gamma");
+    expect(adj.prev?.slug).toBe("gamma");
+    expect(adj.next?.slug).toBe("alpha");
   });
 
-  it("先頭要素の prev は null", async () => {
+  it("先頭要素(最新)の prev は null", async () => {
     const cms = createCMS({
       renderer: mockRenderer,
       collections: {
@@ -121,12 +122,13 @@ describe("CollectionClient — cache.adjacent", () => {
         },
       },
     });
-    const adj = await cms.posts.cache.adjacent("alpha");
+    // デフォルトソート後の先頭は gamma (lastEditedTime が最新)
+    const adj = await cms.posts.cache.adjacent("gamma");
     expect(adj.prev).toBeNull();
     expect(adj.next?.slug).toBe("beta");
   });
 
-  it("末尾要素の next は null", async () => {
+  it("末尾要素(最古)の next は null", async () => {
     const cms = createCMS({
       renderer: mockRenderer,
       collections: {
@@ -140,7 +142,8 @@ describe("CollectionClient — cache.adjacent", () => {
         },
       },
     });
-    const adj = await cms.posts.cache.adjacent("gamma");
+    // デフォルトソート後の末尾は alpha (lastEditedTime が最古)
+    const adj = await cms.posts.cache.adjacent("alpha");
     expect(adj.prev?.slug).toBe("beta");
     expect(adj.next).toBeNull();
   });
@@ -419,7 +422,8 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     });
     const result = await cms.posts.list({ tag: "tech" });
     expect(result).toHaveLength(2);
-    expect(result.map((i) => i.slug)).toEqual(["a", "c"]);
+    // デフォルトソート(lastEditedTime 降順): c(01-03) → a(01-01)
+    expect(result.map((i) => i.slug)).toEqual(["c", "a"]);
   });
 
   it("where フィルタで id が一致するアイテムのみ返す", async () => {
@@ -516,7 +520,8 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     });
     const items = await cms.posts.list({ limit: 2 });
     expect(items).toHaveLength(2);
-    expect(items[0]?.slug).toBe("alpha");
+    // デフォルトソート後の先頭は gamma (lastEditedTime が最新)
+    expect(items[0]?.slug).toBe("gamma");
   });
 
   it("skip のみ指定すると N 件スキップして残りを返す", async () => {
@@ -535,7 +540,8 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     });
     const items = await cms.posts.list({ skip: 2 });
     expect(items).toHaveLength(1);
-    expect(items[0]?.slug).toBe("gamma");
+    // デフォルトソート後の末尾は alpha (lastEditedTime が最古)
+    expect(items[0]?.slug).toBe("alpha");
   });
 
   it("オプションなしで全件返す", async () => {
@@ -572,7 +578,8 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     });
     const items = await cms.posts.list({ where: { id: ["1", "3"] } });
     expect(items).toHaveLength(2);
-    expect(items.map((i) => i.slug)).toEqual(["alpha", "gamma"]);
+    // デフォルトソート(lastEditedTime 降順): gamma(01-03) → alpha(01-01)
+    expect(items.map((i) => i.slug)).toEqual(["gamma", "alpha"]);
   });
 
   it("filter 関数で任意条件でフィルタできる", async () => {
