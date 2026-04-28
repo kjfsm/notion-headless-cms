@@ -21,9 +21,13 @@ const baseContentItemSchema = z.object({
   iconEmoji: z.string().nullable().optional(),
 });
 
-/** Notionリッチテキスト配列をプレーンテキストに結合する。 */
-export function getPlainText(items: NotionRichTextItem[] | undefined): string {
-  return items?.map((item) => item.plain_text).join("") ?? "";
+/** Notionリッチテキスト配列をプレーンテキストに結合する。空または未定義の場合は null を返す。 */
+export function getPlainText(
+  items: NotionRichTextItem[] | undefined,
+): string | null {
+  if (!items || items.length === 0) return null;
+  const joined = items.map((item) => item.plain_text).join("");
+  return joined.length === 0 ? null : joined;
 }
 
 /** ページの title 型プロパティからプレーンテキストを取り出す。 */
@@ -31,9 +35,7 @@ function extractPageTitle(page: NotionPage): string | null {
   const titleProp = Object.values(page.properties).find(
     (p) => p.type === "title",
   );
-  return titleProp?.type === "title"
-    ? getPlainText(titleProp.title) || null
-    : null;
+  return titleProp?.type === "title" ? getPlainText(titleProp.title) : null;
 }
 
 /** page.cover から画像 URL を取り出す。設定なし / 未対応形式は null。 */
@@ -82,7 +84,8 @@ export function mapItemFromPropertyMap(
     title: extractPageTitle(page),
     slug: "",
     createdAt: page.created_time,
-    isArchived: page.in_trash || page.archived,
+    isArchived: page.archived,
+    isInTrash: page.in_trash,
     coverImageUrl: extractCoverUrl(page),
     iconEmoji: extractIconEmoji(page),
   };
@@ -174,7 +177,8 @@ export function mapItem(
     updatedAt: page.last_edited_time,
     lastEditedTime: page.last_edited_time,
     createdAt: page.created_time,
-    isArchived: page.in_trash || page.archived,
+    isArchived: page.archived,
+    isInTrash: page.in_trash,
     coverImageUrl: extractCoverUrl(page),
     iconEmoji: extractIconEmoji(page),
   });

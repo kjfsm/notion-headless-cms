@@ -47,39 +47,29 @@ describe("fetchOembed", () => {
     }
   });
 
-  it("レスポンスが ok でない場合は空オブジェクトを返す", async () => {
+  it("レスポンスが ok でない場合は Error を投げる", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response("Not Found", { status: 404 }));
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
-      const result = await fetchOembed(
-        "https://example.com/404",
-        "https://example.com/oembed",
-      );
-      expect(result).toEqual({});
-      expect(warnSpy).toHaveBeenCalledOnce();
+      await expect(
+        fetchOembed("https://example.com/404", "https://example.com/oembed"),
+      ).rejects.toThrow("HTTP 404");
     } finally {
       fetchSpy.mockRestore();
-      warnSpy.mockRestore();
     }
   });
 
-  it("fetch がネットワークエラーで例外を投げても空オブジェクトを返す", async () => {
+  it("fetch がネットワークエラーで例外を投げた場合はそのまま伝播する", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockRejectedValue(new Error("network error"));
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
-      const result = await fetchOembed(
-        "https://example.com/x",
-        "https://example.com/oembed",
-      );
-      expect(result).toEqual({});
-      expect(warnSpy).toHaveBeenCalledOnce();
+      await expect(
+        fetchOembed("https://example.com/x", "https://example.com/oembed"),
+      ).rejects.toThrow("network error");
     } finally {
       fetchSpy.mockRestore();
-      warnSpy.mockRestore();
     }
   });
 });

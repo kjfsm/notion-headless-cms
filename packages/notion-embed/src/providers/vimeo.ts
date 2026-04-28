@@ -1,3 +1,4 @@
+import type { OembedData } from "../oembed";
 import { extractIframeSrc, fetchOembed } from "../oembed";
 import type { EmbedProvider } from "../types";
 import { renderIframe } from "./_internal";
@@ -23,10 +24,15 @@ export function vimeoProvider(opts?: {
     },
     render: async ({ url, width: w, height: h }) => {
       // oEmbed から embed src を取得することで URL 正規化・ID 抽出を省略する。
-      const oembed = await fetchOembed(url, VIMEO_OEMBED, {
-        width: w ?? width,
-        height: h ?? height,
-      });
+      let oembed: OembedData;
+      try {
+        oembed = await fetchOembed(url, VIMEO_OEMBED, {
+          width: w ?? width,
+          height: h ?? height,
+        });
+      } catch {
+        return { kind: "skip" };
+      }
       const src = oembed.html ? extractIframeSrc(oembed.html) : null;
       if (!src) return { kind: "skip" };
       return {

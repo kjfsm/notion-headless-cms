@@ -28,11 +28,10 @@ export interface BaseContentItem {
   publishedAt?: string | null;
   /** ページ作成日時（ISO8601）。 */
   createdAt?: string;
-  /**
-   * ページがアーカイブ済みまたはゴミ箱に入っているかどうか。
-   * true の場合、core の list() から自動的に除外される。
-   */
+  /** Notion の archived フラグ (手動アーカイブ)。list() から自動的に除外される。 */
   isArchived?: boolean;
+  /** Notion の in_trash フラグ (ゴミ箱)。list() から自動的に除外される。 */
+  isInTrash?: boolean;
   /** カバー画像の URL。cover が設定されていない場合は null。 */
   coverImageUrl?: string | null;
   /** 絵文字アイコン。icon が絵文字でない場合や未設定の場合は null。 */

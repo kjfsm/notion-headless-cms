@@ -12,7 +12,7 @@ export interface OembedData {
 
 /**
  * oEmbed エンドポイントを叩いてデータを返す。
- * 失敗時は空オブジェクトを返す（呼び出し元が catch 不要）。
+ * HTTP エラー時は Error を投げる。
  */
 export async function fetchOembed(
   url: string,
@@ -24,19 +24,13 @@ export async function fetchOembed(
   ep.searchParams.set("format", "json");
   if (opts?.width) ep.searchParams.set("maxwidth", String(opts.width));
   if (opts?.height) ep.searchParams.set("maxheight", String(opts.height));
-  try {
-    const res = await fetch(ep.toString());
-    if (!res.ok) {
-      console.warn(
-        `[notion-embed] oEmbed fetch failed: HTTP ${res.status} for ${url}`,
-      );
-      return {};
-    }
-    return (await res.json()) as OembedData;
-  } catch (err) {
-    console.warn(`[notion-embed] oEmbed fetch failed for ${url}:`, err);
-    return {};
+  const res = await fetch(ep.toString());
+  if (!res.ok) {
+    throw new Error(
+      `[notion-embed] oEmbed fetch failed: HTTP ${res.status} for ${url}`,
+    );
   }
+  return (await res.json()) as OembedData;
 }
 
 /** oEmbed の html フィールドに含まれる iframe の src 属性値を取り出す。 */

@@ -1,5 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { clearOgpCache, fetchOgp } from "../ogp";
+import { describe, expect, it, vi } from "vitest";
+import { createOgpFetcher, fetchOgp } from "../ogp";
 
 const makeHtml = (parts: {
   title?: string;
@@ -21,15 +21,6 @@ ${parts.title ? `<title>${parts.title}</title>` : ""}
 `;
 
 describe("fetchOgp", () => {
-  beforeEach(() => {
-    clearOgpCache();
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-    clearOgpCache();
-  });
-
   it("og:title / og:description / og:image / og:site_name を取得する", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
@@ -48,6 +39,7 @@ describe("fetchOgp", () => {
     expect(result.description).toBe("Test Description");
     expect(result.image).toBe("https://example.com/image.png");
     expect(result.siteName).toBe("Example Site");
+    vi.restoreAllMocks();
   });
 
   it("og:title がなければ <title> タグにフォールバックする", async () => {
@@ -57,30 +49,56 @@ describe("fetchOgp", () => {
 
     const result = await fetchOgp("https://example.com");
     expect(result.title).toBe("Page Title");
+    vi.restoreAllMocks();
   });
 
-  it("HTTP エラーは空オブジェクトを返す", async () => {
+  it("HTTP エラーは Error を投げる", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(null, { status: 404 }),
     );
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    const result = await fetchOgp("https://example.com/404");
-    expect(result).toEqual({});
-    expect(warnSpy).toHaveBeenCalledOnce();
-    warnSpy.mockRestore();
+    await expect(fetchOgp("https://example.com/404")).rejects.toThrow(
+      "HTTP 404",
+    );
+    vi.restoreAllMocks();
   });
 
-  it("fetch が throw しても空オブジェクトを返す", async () => {
+  it("fetch が throw した場合はそのまま伝播する", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network error"));
-    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
-    const result = await fetchOgp("https://unreachable.example.com");
-    expect(result).toEqual({});
-    expect(warnSpy).toHaveBeenCalledOnce();
-    warnSpy.mockRestore();
+    await expect(fetchOgp("https://unreachable.example.com")).rejects.toThrow(
+      "network error",
+    );
+    vi.restoreAllMocks();
   });
 
+  it("HTML エンティティをデコードする", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(makeHtml({ ogTitle: "Hello &amp; World" }), {
+        status: 200,
+      }),
+    );
+
+    const result = await fetchOgp("https://example.com/entities");
+    expect(result.title).toBe("Hello & World");
+    vi.restoreAllMocks();
+  });
+
+  it("content-first バリアントの meta タグも読める", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        `<html><head><meta content="Alt Title" property="og:title" /></head></html>`,
+        { status: 200 },
+      ),
+    );
+
+    const result = await fetchOgp("https://example.com/alt");
+    expect(result.title).toBe("Alt Title");
+    vi.restoreAllMocks();
+  });
+});
+
+describe("createOgpFetcher", () => {
   it("TTL 内はキャッシュを返す (fetch を 1 回しか呼ばない)", async () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
@@ -88,10 +106,12 @@ describe("fetchOgp", () => {
         new Response(makeHtml({ ogTitle: "Cached Title" }), { status: 200 }),
       );
 
-    await fetchOgp("https://example.com/cached");
-    await fetchOgp("https://example.com/cached");
+    const fetcher = createOgpFetcher();
+    await fetcher("https://example.com/cached");
+    await fetcher("https://example.com/cached");
 
     expect(fetchSpy).toHaveBeenCalledTimes(1);
+    vi.restoreAllMocks();
   });
 
   it("TTL 切れ後は再フェッチする", async () => {
@@ -105,32 +125,42 @@ describe("fetchOgp", () => {
         new Response(makeHtml({ ogTitle: "Title" }), { status: 200 }),
       );
 
-    await fetchOgp("https://example.com/ttl", { ttlMs: 100 });
+    const fetcher = createOgpFetcher({ ttlMs: 100 });
+    await fetcher("https://example.com/ttl");
     vi.advanceTimersByTime(200);
-    await fetchOgp("https://example.com/ttl", { ttlMs: 100 });
+    await fetcher("https://example.com/ttl");
 
     expect(fetchSpy).toHaveBeenCalledTimes(2);
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
-  it("HTML エンティティをデコードする", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(makeHtml({ ogTitle: "Hello &amp; World" }), { status: 200 }),
-    );
+  it("インスタンス間でキャッシュを共有しない", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(() =>
+        Promise.resolve(
+          new Response(makeHtml({ ogTitle: "Title" }), { status: 200 }),
+        ),
+      );
 
-    const result = await fetchOgp("https://example.com/entities");
-    expect(result.title).toBe("Hello & World");
+    const a = createOgpFetcher();
+    const b = createOgpFetcher();
+    await a("https://example.com/shared");
+    await b("https://example.com/shared");
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    vi.restoreAllMocks();
   });
 
-  it("content-first バリアントの meta タグも読める", async () => {
+  it("HTTP エラーは Error を投げる", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        `<html><head><meta content="Alt Title" property="og:title" /></head></html>`,
-        { status: 200 },
-      ),
+      new Response(null, { status: 500 }),
     );
-
-    const result = await fetchOgp("https://example.com/alt");
-    expect(result.title).toBe("Alt Title");
+    const fetcher = createOgpFetcher();
+    await expect(fetcher("https://example.com/err")).rejects.toThrow(
+      "HTTP 500",
+    );
+    vi.restoreAllMocks();
   });
 });
