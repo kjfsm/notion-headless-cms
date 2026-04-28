@@ -47,6 +47,18 @@ Node.js 向けプリセット。`{ cache: { document: memoryDocumentCache, image
 - `ttlMs?`: SWR TTL (ミリ秒)
 - `renderer?`: カスタム renderer
 
+### `BaseContentItem` — 全コンテンツの基本型
+
+CLI 生成の `createCMS` ラッパーで返される items は、スキーマで定義されたプロパティに加えて以下の自動フィールドを含む:
+
+- `id: string` — Notion ページ ID
+- `slug: string` — コレクション設定の `fields.slug` で指定したプロパティから抽出
+- `title?: string | null` — Notion `title` 型プロパティ（自動検出）
+- `updatedAt: string` — Notion ページの最終編集時刻（ISO-8601、キャッシュ更新判定に使用）
+- `lastEditedTime?: string` — Notion の `page.last_edited_time` と同値。常にセットされるシステムフィールド（`updatedAt` と同じ値）
+- `status?: string | null` — `fields.status` で指定したプロパティ
+- `publishedAt?: string | null` — `fields.publishedAt` で指定したプロパティ
+
 ### `cms.<collection>` の主なメソッド
 - `getItem(slug)` — 本文込みで単件取得 (SWR)。返り値は `T & { content: { blocks, html(), markdown() } }`
 - `getList(opts?)` — 公開済み一覧 (本文なし)

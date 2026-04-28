@@ -174,7 +174,8 @@ export default defineConfig({
 |---|---|---|
 | `title` | `string \| null` | `"title"` |
 | `rich_text` | `string \| null` | `"richText"` |
-| `select` / `status` | `string \| null` | `"select"` |
+| `select` | `string \| null` | `"select"` |
+| `status` | `string \| null` | `"status"` |
 | `multi_select` | `string[]` | `"multiSelect"` |
 | `date` | `string \| null` | `"date"` |
 | `number` | `number \| null` | `"number"` |
