@@ -1,5 +1,5 @@
 ---
-"@notion-headless-cms/core": minor
+"@notion-headless-cms/core": patch
 ---
 
 サイレントフォールバック撤廃・`onSwrError` hook 追加・`renderer` 必須化
