@@ -1,5 +1,52 @@
 # @notion-headless-cms/core
 
+## 0.3.13
+
+### Patch Changes
+
+- 45ee864: `updatedAt` を廃止し `lastEditedTime` に一本化。`list()` に `accessibleStatuses` フィルタを適用、デフォルトソート（`publishedAt` 降順）を実装。
+- 84a5639: Notion Datasource API のページオブジェクトフィールドをサポートし、エラーハンドリングを強化
+
+  - core: `BaseContentItem` に `createdAt`, `isArchived`, `coverImageUrl`, `iconEmoji` を追加。`fetchListRaw`/`findRaw` で `isArchived:true` のアイテムを自動除外
+  - notion-orm: `mapper.ts` でヘルパー関数 (`extractPageTitle`, `extractCoverUrl`, `extractIconEmoji`) を追加し、新フィールドのマッピングをサポート。スラグが空の場合 `CMSError` をスロー
+  - notion-orm: `schema.ts` の `parseMapping` で新フィールドをセット
+  - notion-embed: OGP/oEmbed の HTTP エラーおよびネットワーク例外を `console.warn` で記録
+  - cli: 生成コードに新メタデータフィールドを追加、`DataSourceObjectResponse` インポートをメインエントリに変更して安定化
+
+- c75218d: サイレントフォールバック撤廃・`onSwrError` hook 追加・`renderer` 必須化
+
+  - `renderer` オプションが必須になりました（`RendererFn` 型、省略不可）。動的 import フォールバックは削除されました。`@notion-headless-cms/renderer` の `renderMarkdown` を明示的に渡してください
+  - `loadBlocks` 失敗時に空配列を返すフォールバックを削除。`source/load_blocks_failed` CMSError をスローするようになりました
+  - `CMSHooks` に `onSwrError(error, ctx)` hook を追加。SWR バックグラウンド処理（メタ更新・コンテンツ再構築・リスト更新）で失敗した場合に呼ばれます
+  - 画像フェッチ時に Content-Type ヘッダがない、または `image/*` でない場合は `cache/image_invalid_content_type` CMSError をスローするようになりました（URL 拡張子推測・`image/jpeg` デフォルトフォールバックを廃止）
+  - 新エラーコード追加: `source/load_blocks_failed`, `cache/image_invalid_content_type`, `swr/item_check_failed`, `swr/list_check_failed`, `swr/content_rebuild_failed`
+
+- c75218d: webhook `:collection` 単一経路化・adapter-next ハンドラ分割
+
+  **core**:
+
+  - Webhook URL パターンを `POST /revalidate/:collection` に変更（汎用 JSON body フォールバック廃止）
+  - `HandlerAdapter.parseWebhook` を `parseWebhookFor(collection, req, secret)` に置換。未知コレクションは `webhook/unknown_collection`、未実装は `webhook/not_implemented` CMSError をスロー
+  - 新エラーコード追加: `webhook/signature_invalid`, `webhook/payload_invalid`, `webhook/unknown_collection`, `webhook/not_implemented`
+  - CMSError コードから HTTP ステータスへの明示マッピング (401/400/404/501)
+
+  **adapter-next**:
+
+  - `createRevalidateRouteHandler` を廃止し以下の 2 関数に分割:
+    - `createCollectionRevalidateRouteHandler` — `/api/revalidate/[collection]/route.ts` 用。JSON パース失敗は 400 を返す
+    - `createInvalidateAllRouteHandler` — 全体無効化用の管理エンドポイント向け
+
+- c75218d: コード予測可能性向上 PR 4: notion-orm / notion-embed / cache 整理
+
+  - **notion-embed**: `fetchOgp` をキャッシュなし純粋関数に変更。HTTP エラー時は Error を投げる (旧: `console.warn + return {}`)。TTL キャッシュが必要な場合は新設の `createOgpFetcher()` ファクトリを使う。インスタンス間でキャッシュを共有しない
+  - **notion-embed**: `fetchOembed` の HTTP エラー時も Error を投げる (旧: `console.warn + return {}`)
+  - **notion-embed**: `clearOgpCache()` を削除 (キャッシュがスコープ化されたため不要)
+  - **notion-embed**: `extractUrlFromMarkdownLink` / `addHttpsToProtocolRelative` / `isHttpUrl` を公開 API として export
+  - **cache**: `cloudflareCache(env, opts)` のシグネチャを `cloudflareCache(bindings, opts)` に変更。`bindings.docCache` / `bindings.imgBucket` に KV / R2 の binding インスタンスを直接渡す (旧: env オブジェクト + binding 名文字列)
+  - **notion-orm**: `getPlainText()` の戻り値型を `string | null` に統一 (旧: 空文字列を返すケースがあった)
+  - **notion-orm / core**: `isArchived` を `archived` フラグのみに変更し `isInTrash` を独立フィールドとして追加 (旧: `isArchived = in_trash || archived` で 2 フラグを混合)
+  - **core**: `buildCacheImageFn` の `hashMemo` をモジュール変数からファクトリスコープローカルに変更。インスタンス間でメモを共有しない
+
 ## 0.3.12
 
 ### Patch Changes
