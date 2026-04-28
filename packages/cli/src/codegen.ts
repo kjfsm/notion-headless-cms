@@ -174,12 +174,12 @@ function generateCollectionBlock(
     return `\t${f.tsName}: { type: "${f.defType}" as const, notion: "${escaped}" },`;
   });
 
-  // アイテム型: 必須フィールド (id, updatedAt) + メタデータ + Notion プロパティ
+  // アイテム型: 必須フィールド (id, lastEditedTime) + メタデータ + Notion プロパティ
   const itemFieldLines: string[] = [
     "\t/** Notion ページ ID。 */",
     "\tid: string;",
-    "\t/** Notion ページの最終更新時刻 (ISO8601)。 */",
-    "\tupdatedAt: string;",
+    "\t/** Notion ページの最終編集時刻 (ISO8601)。 */",
+    "\tlastEditedTime: string;",
     "\t/** ページ作成日時 (ISO8601)。 */",
     "\tcreatedAt?: string;",
     "\t/** アーカイブ済み / ゴミ箱に入っている場合 true。core の list() から自動除外される。 */",

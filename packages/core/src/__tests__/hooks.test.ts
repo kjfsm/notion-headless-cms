@@ -12,7 +12,7 @@ const makeItem = (slug: string): BaseContentItem => ({
   slug,
   status: "公開",
   publishedAt: "2024-01-01",
-  updatedAt: "2024-01-01T00:00:00.000Z",
+  lastEditedTime: "2024-01-01T00:00:00.000Z",
 });
 
 const makeMeta = (slug: string): CachedItemMeta => ({

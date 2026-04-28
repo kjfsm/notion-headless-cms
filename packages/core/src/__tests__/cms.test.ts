@@ -16,7 +16,7 @@ function makeMockSource(
     list: vi.fn().mockResolvedValue([]),
     loadBlocks: vi.fn().mockResolvedValue([]),
     loadMarkdown: vi.fn().mockResolvedValue(""),
-    getLastModified: (item) => item.updatedAt,
+    getLastModified: (item) => item.lastEditedTime,
     getListVersion: () => "",
     ...overrides,
   };
@@ -90,13 +90,13 @@ describe("createCMS - publishedStatuses / accessibleStatuses", () => {
       {
         id: "1",
         slug: "published-post",
-        updatedAt: "2024-01-01T00:00:00Z",
+        lastEditedTime: "2024-01-01T00:00:00Z",
         status: "公開済み",
       },
       {
         id: "2",
         slug: "draft-post",
-        updatedAt: "2024-01-02T00:00:00Z",
+        lastEditedTime: "2024-01-02T00:00:00Z",
         status: "下書き",
       },
     ];
@@ -159,7 +159,7 @@ describe("createCMS - publishedStatuses / accessibleStatuses", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "my-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
       status: "限定公開",
     };
 
@@ -190,7 +190,7 @@ describe("createCMS - findByProp の利用", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "hello",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
 
     const findByPropMock = vi.fn().mockResolvedValue(item);
@@ -220,7 +220,7 @@ describe("createCMS - findByProp の利用", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "hello",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
 
     const listMock = vi.fn().mockResolvedValue([item]);
@@ -253,12 +253,12 @@ describe("createCMS - コレクション間のキャッシュ独立性", () => {
     const postItem: BaseContentItem = {
       id: "p1",
       slug: "post-one",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const pageItem: BaseContentItem = {
       id: "pg1",
       slug: "page-one",
-      updatedAt: "2024-01-02T00:00:00Z",
+      lastEditedTime: "2024-01-02T00:00:00Z",
     };
 
     const postListMock = vi.fn().mockResolvedValue([postItem]);
@@ -302,12 +302,12 @@ describe("createCMS - $invalidate", () => {
     const staleItem: BaseContentItem = {
       id: "1",
       slug: "post-stale",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const freshItem: BaseContentItem = {
       id: "2",
       slug: "post-fresh",
-      updatedAt: "2024-01-02T00:00:00Z",
+      lastEditedTime: "2024-01-02T00:00:00Z",
     };
 
     const listMock = vi
@@ -367,7 +367,7 @@ describe("createCMS - logLevel オプション", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "my-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const source = makeMockSource({
       list: vi.fn().mockResolvedValue([item]),
@@ -392,7 +392,7 @@ describe("createCMS - logLevel オプション", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "my-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const source = makeMockSource({
       list: vi.fn().mockResolvedValue([item]),
@@ -428,14 +428,14 @@ describe("createCMS - collections.hooks コレクション固有フック", () =
     const item: BaseContentItem = {
       id: "1",
       slug: "my-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const { memoryCache } = await import("../cache/memory");
     const cache = memoryCache();
     // キャッシュにアイテムを事前登録
     await cache.doc?.setMeta("posts", "my-post", {
       item,
-      notionUpdatedAt: item.updatedAt,
+      notionUpdatedAt: item.lastEditedTime,
       cachedAt: Date.now(),
     });
 
@@ -467,13 +467,13 @@ describe("createCMS - collections.hooks コレクション固有フック", () =
     const item: BaseContentItem = {
       id: "1",
       slug: "my-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const { memoryCache } = await import("../cache/memory");
     const cache = memoryCache();
     await cache.doc?.setMeta("posts", "my-post", {
       item,
-      notionUpdatedAt: item.updatedAt,
+      notionUpdatedAt: item.lastEditedTime,
       cachedAt: Date.now(),
     });
 
@@ -502,7 +502,7 @@ describe("createCMS - beforeCacheMeta / beforeCacheContent フック", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "test-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
 
     const beforeCacheMeta = vi.fn().mockImplementation((meta) => meta);
@@ -528,7 +528,7 @@ describe("createCMS - beforeCacheMeta / beforeCacheContent フック", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "test-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
 
     const beforeCacheContent = vi.fn().mockImplementation((content) => content);

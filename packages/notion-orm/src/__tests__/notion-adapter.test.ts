@@ -140,7 +140,7 @@ describe("createNotionCollection", () => {
         slug: "my-post",
         status: "公開",
         publishedAt: "2024-01-01",
-        updatedAt: "2024-01-01",
+        lastEditedTime: "2024-01-01",
       };
       const md = await adapter.loadMarkdown(item);
       expect(md).toBe("# Hello");
@@ -168,12 +168,12 @@ describe("createNotionCollection - コンストラクタバリデーション", 
         mapping: {
           id: { type: "title" as const, notion: "ID" },
           slug: { type: "richText" as const, notion: "Slug" },
-          updatedAt: { type: "date" as const, notion: "Updated" },
+          lastEditedTime: { type: "date" as const, notion: "Updated" },
         },
         mapItem: (page: { id: string; last_edited_time: string }) => ({
           id: page.id,
           slug: "schema-post",
-          updatedAt: page.last_edited_time,
+          lastEditedTime: page.last_edited_time,
         }),
       },
     });
@@ -189,7 +189,7 @@ describe("createNotionCollection - コンストラクタバリデーション", 
     const customMapper = vi.fn().mockReturnValue({
       id: "custom-id",
       slug: "custom-post",
-      updatedAt: "2024-01-01",
+      lastEditedTime: "2024-01-01",
     });
     const mapItemAdapter = createNotionCollection({
       token: "test-token",
@@ -422,7 +422,11 @@ describe("createNotionCollection - loadMarkdown() エラー処理", () => {
       token: "test-token",
       dataSourceId: "test-db-id",
     });
-    const item = { id: "page-id", slug: "my-post", updatedAt: "2024-01-01" };
+    const item = {
+      id: "page-id",
+      slug: "my-post",
+      lastEditedTime: "2024-01-01",
+    };
     await expect(failAdapter.loadMarkdown(item)).rejects.toSatisfy(
       (err: unknown) =>
         isCMSError(err) && err.code === "source/load_markdown_failed",
@@ -441,7 +445,11 @@ describe("createNotionCollection - loadMarkdown() エラー処理", () => {
       token: "test-token",
       dataSourceId: "test-db-id",
     });
-    const item = { id: "page-id", slug: "my-post", updatedAt: "2024-01-01" };
+    const item = {
+      id: "page-id",
+      slug: "my-post",
+      lastEditedTime: "2024-01-01",
+    };
     await expect(errorAdapter.loadMarkdown(item)).rejects.toBe(cmsErr);
   });
 });
@@ -462,7 +470,11 @@ describe("createNotionCollection - loadBlocks()", () => {
       token: "test-token",
       dataSourceId: "test-db-id",
     });
-    const item = { id: "page-id", slug: "my-post", updatedAt: "2024-01-01" };
+    const item = {
+      id: "page-id",
+      slug: "my-post",
+      lastEditedTime: "2024-01-01",
+    };
     const blocks = await blocksAdapter.loadBlocks(item);
     expect(Array.isArray(blocks)).toBe(true);
   });
@@ -474,19 +486,19 @@ describe("createNotionCollection - getLastModified / getListVersion", () => {
     dataSourceId: "test-db-id",
   });
 
-  it("getLastModified() はアイテムの updatedAt を返す", () => {
+  it("getLastModified() はアイテムの lastEditedTime を返す", () => {
     const item = {
       id: "page-id",
       slug: "my-post",
-      updatedAt: "2024-06-01T00:00:00Z",
+      lastEditedTime: "2024-06-01T00:00:00Z",
     };
     expect(adapter.getLastModified(item)).toBe("2024-06-01T00:00:00Z");
   });
 
   it("getListVersion() はアイテムリストのバージョン文字列を返す", () => {
     const items = [
-      { id: "id-a", slug: "a", updatedAt: "2024-01-01" },
-      { id: "id-b", slug: "b", updatedAt: "2024-01-02" },
+      { id: "id-a", slug: "a", lastEditedTime: "2024-01-01" },
+      { id: "id-b", slug: "b", lastEditedTime: "2024-01-02" },
     ];
     const version = adapter.getListVersion(items);
     expect(version).toContain("id-a");

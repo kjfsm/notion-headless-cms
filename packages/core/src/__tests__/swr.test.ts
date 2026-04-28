@@ -21,10 +21,10 @@ function makeMockSource(
     },
     loadMarkdown: vi.fn().mockResolvedValue(""),
     getLastModified(item) {
-      return item.updatedAt;
+      return item.lastEditedTime;
     },
     getListVersion(items) {
-      return items.map((i) => i.updatedAt).join(",");
+      return items.map((i) => i.lastEditedTime).join(",");
     },
     ...overrides,
   };
@@ -35,19 +35,19 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const staleItem: BaseContentItem = {
       id: "page-1",
       slug: "my-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const freshItem: BaseContentItem = {
       id: "page-1",
       slug: "my-post",
-      updatedAt: "2024-01-02T00:00:00Z",
+      lastEditedTime: "2024-01-02T00:00:00Z",
     };
 
     // キャッシュに stale アイテムを事前セット（cachedAt: 0 → 必ず TTL 期限切れ）
     const cache = memoryCache();
     await cache.doc?.setMeta("posts", "my-post", {
       item: staleItem,
-      notionUpdatedAt: staleItem.updatedAt,
+      notionUpdatedAt: staleItem.lastEditedTime,
       cachedAt: 0,
     });
 
@@ -71,7 +71,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
     // TTL 期限切れ → ブロッキングで最新データが返される
     expect(result).not.toBeNull();
-    expect(result?.updatedAt).toBe("2024-01-02T00:00:00Z");
+    expect(result?.lastEditedTime).toBe("2024-01-02T00:00:00Z");
 
     // ブロッキングフェッチなのでバックグラウンド Promise は渡されない
     expect(waitUntil).not.toHaveBeenCalled();
@@ -81,18 +81,18 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const cachedItem: BaseContentItem = {
       id: "page-1",
       slug: "my-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const freshItem: BaseContentItem = {
       id: "page-1",
       slug: "my-post",
-      updatedAt: "2024-01-02T00:00:00Z",
+      lastEditedTime: "2024-01-02T00:00:00Z",
     };
 
     const cache = memoryCache();
     await cache.doc?.setMeta("posts", "my-post", {
       item: cachedItem,
-      notionUpdatedAt: cachedItem.updatedAt,
+      notionUpdatedAt: cachedItem.lastEditedTime,
       cachedAt: 0, // 古くてもTTLなしなので期限切れにならない
     });
 
@@ -119,7 +119,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
     // キャッシュが即時返される
     expect(result).not.toBeNull();
-    expect(result?.updatedAt).toBe("2024-01-01T00:00:00Z");
+    expect(result?.lastEditedTime).toBe("2024-01-01T00:00:00Z");
 
     // バックグラウンド差分チェックの Promise が waitUntil に渡されている
     expect(capturedPromises.length).toBeGreaterThan(0);
@@ -130,14 +130,14 @@ describe("SWR（Stale-While-Revalidate）", () => {
       "posts",
       "my-post",
     );
-    expect(updated?.item.updatedAt).toBe("2024-01-02T00:00:00Z");
+    expect(updated?.item.lastEditedTime).toBe("2024-01-02T00:00:00Z");
   });
 
   it("TTL 設定なしの list はキャッシュを即時返却してバックグラウンドで差分チェックする", async () => {
     const cachedItem: BaseContentItem = {
       id: "page-1",
       slug: "my-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
 
     const cache = memoryCache();
@@ -154,7 +154,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const freshItem: BaseContentItem = {
       id: "page-1",
       slug: "my-post",
-      updatedAt: "2024-01-02T00:00:00Z",
+      lastEditedTime: "2024-01-02T00:00:00Z",
     };
 
     const source = makeMockSource({
@@ -175,7 +175,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
     // キャッシュが即時返される
     expect(items).toHaveLength(1);
-    expect(items[0]?.updatedAt).toBe("2024-01-01T00:00:00Z");
+    expect(items[0]?.lastEditedTime).toBe("2024-01-01T00:00:00Z");
 
     // バックグラウンド差分チェックの Promise が waitUntil に渡されている
     expect(capturedPromises.length).toBeGreaterThan(0);
@@ -185,12 +185,12 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const staleItem: BaseContentItem = {
       id: "page-1",
       slug: "my-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const freshItem: BaseContentItem = {
       id: "page-2",
       slug: "new-post",
-      updatedAt: "2024-01-02T00:00:00Z",
+      lastEditedTime: "2024-01-02T00:00:00Z",
     };
 
     const cache = memoryCache();
@@ -229,7 +229,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const source = makeMockSource({
       async list() {
         return [
-          { id: "p1", slug: "post-1", updatedAt: "2024-01-01T00:00:00Z" },
+          { id: "p1", slug: "post-1", lastEditedTime: "2024-01-01T00:00:00Z" },
         ];
       },
     });
@@ -258,12 +258,12 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const item: BaseContentItem = {
       id: "p1",
       slug: "post-1",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const cache = memoryCache();
     await cache.doc?.setMeta("posts", "post-1", {
       item,
-      notionUpdatedAt: item.updatedAt,
+      notionUpdatedAt: item.lastEditedTime,
       cachedAt: Date.now(),
     });
 
@@ -300,12 +300,12 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const item: BaseContentItem = {
       id: "p1",
       slug: "post-1",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const cache = memoryCache();
     await cache.doc?.setMeta("posts", "post-1", {
       item,
-      notionUpdatedAt: item.updatedAt,
+      notionUpdatedAt: item.lastEditedTime,
       cachedAt: 0, // 必ず TTL 期限切れ
     });
 
@@ -341,18 +341,18 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const cachedItem: BaseContentItem = {
       id: "p1",
       slug: "post-1",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const freshItem: BaseContentItem = {
       id: "p1",
       slug: "post-1",
-      updatedAt: "2024-01-02T00:00:00Z",
+      lastEditedTime: "2024-01-02T00:00:00Z",
     };
 
     const cache = memoryCache();
     await cache.doc?.setMeta("posts", "post-1", {
       item: cachedItem,
-      notionUpdatedAt: cachedItem.updatedAt,
+      notionUpdatedAt: cachedItem.lastEditedTime,
       cachedAt: Date.now(),
     });
 
@@ -397,12 +397,12 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const item: BaseContentItem = {
       id: "p1",
       slug: "post-1",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const cache = memoryCache();
     await cache.doc?.setMeta("posts", "post-1", {
       item,
-      notionUpdatedAt: item.updatedAt,
+      notionUpdatedAt: item.lastEditedTime,
       cachedAt: Date.now(),
     });
 
@@ -439,12 +439,12 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const oldItem: BaseContentItem = {
       id: "p1",
       slug: "post-1",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const newItem: BaseContentItem = {
       id: "p2",
       slug: "post-2",
-      updatedAt: "2024-01-02T00:00:00Z",
+      lastEditedTime: "2024-01-02T00:00:00Z",
     };
 
     const cache = memoryCache();
@@ -484,14 +484,14 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const freshItem: BaseContentItem = {
       id: "page-1",
       slug: "my-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
 
     const cache = memoryCache();
     // cachedAt: Date.now()、ttlMs: 60_000 → 期限内
     await cache.doc?.setMeta("posts", "my-post", {
       item: freshItem,
-      notionUpdatedAt: freshItem.updatedAt,
+      notionUpdatedAt: freshItem.lastEditedTime,
       cachedAt: Date.now(),
     });
 
@@ -524,7 +524,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const item: BaseContentItem = {
       id: "p1",
       slug: "post-1",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
 
     const cache = memoryCache();
@@ -558,7 +558,7 @@ describe("metadata と content の分離", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "lazy-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const loadMarkdown = vi.fn().mockResolvedValue("# hi");
     const cache = memoryCache();
@@ -643,7 +643,7 @@ describe("リトライ中のロガー", () => {
     const targetItem: BaseContentItem = {
       id: "1",
       slug: "retry-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     let callCount = 0;
     const cms = createCMS({

@@ -8,7 +8,7 @@ function makeItem(overrides: Partial<BaseContentItem> = {}): BaseContentItem {
   return {
     id: "page-1",
     slug: "test-post",
-    updatedAt: "2024-01-01T00:00:00Z",
+    lastEditedTime: "2024-01-01T00:00:00Z",
     ...overrides,
   };
 }
@@ -29,7 +29,7 @@ function makeContext(
         return [];
       },
       getLastModified(item) {
-        return item.updatedAt;
+        return item.lastEditedTime;
       },
       getListVersion() {
         return "";
@@ -124,7 +124,7 @@ describe("buildCachedItemContent", () => {
             throw new Error("blocks failed");
           },
           getLastModified(i) {
-            return i.updatedAt;
+            return i.lastEditedTime;
           },
           getListVersion() {
             return "";
@@ -152,7 +152,7 @@ describe("buildCachedItemContent", () => {
             return [];
           },
           getLastModified(i) {
-            return i.updatedAt;
+            return i.lastEditedTime;
           },
           getListVersion() {
             return "";
@@ -186,7 +186,7 @@ describe("buildCachedItemContent", () => {
             return [];
           },
           getLastModified(i) {
-            return i.updatedAt;
+            return i.lastEditedTime;
           },
           getListVersion() {
             return "";

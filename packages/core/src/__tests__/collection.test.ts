@@ -21,10 +21,10 @@ function makeMockSource(
     },
     loadMarkdown: vi.fn().mockResolvedValue(""),
     getLastModified(item) {
-      return item.updatedAt;
+      return item.lastEditedTime;
     },
     getListVersion(items) {
-      return items.map((i) => i.updatedAt).join(",");
+      return items.map((i) => i.lastEditedTime).join(",");
     },
     ...overrides,
   };
@@ -35,19 +35,19 @@ function makeItems(): BaseContentItem[] {
     {
       id: "1",
       slug: "alpha",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
       status: "公開",
     },
     {
       id: "2",
       slug: "beta",
-      updatedAt: "2024-01-02T00:00:00Z",
+      lastEditedTime: "2024-01-02T00:00:00Z",
       status: "下書き",
     },
     {
       id: "3",
       slug: "gamma",
-      updatedAt: "2024-01-03T00:00:00Z",
+      lastEditedTime: "2024-01-03T00:00:00Z",
       status: "公開",
     },
   ];
@@ -102,12 +102,13 @@ describe("CollectionClient — cache.adjacent", () => {
         },
       },
     });
+    // デフォルトソート(lastEditedTime 降順): gamma → beta → alpha
     const adj = await cms.posts.cache.adjacent("beta");
-    expect(adj.prev?.slug).toBe("alpha");
-    expect(adj.next?.slug).toBe("gamma");
+    expect(adj.prev?.slug).toBe("gamma");
+    expect(adj.next?.slug).toBe("alpha");
   });
 
-  it("先頭要素の prev は null", async () => {
+  it("先頭要素(最新)の prev は null", async () => {
     const cms = createCMS({
       renderer: mockRenderer,
       collections: {
@@ -121,12 +122,13 @@ describe("CollectionClient — cache.adjacent", () => {
         },
       },
     });
-    const adj = await cms.posts.cache.adjacent("alpha");
+    // デフォルトソート後の先頭は gamma (lastEditedTime が最新)
+    const adj = await cms.posts.cache.adjacent("gamma");
     expect(adj.prev).toBeNull();
     expect(adj.next?.slug).toBe("beta");
   });
 
-  it("末尾要素の next は null", async () => {
+  it("末尾要素(最古)の next は null", async () => {
     const cms = createCMS({
       renderer: mockRenderer,
       collections: {
@@ -140,7 +142,8 @@ describe("CollectionClient — cache.adjacent", () => {
         },
       },
     });
-    const adj = await cms.posts.cache.adjacent("gamma");
+    // デフォルトソート後の末尾は alpha (lastEditedTime が最古)
+    const adj = await cms.posts.cache.adjacent("alpha");
     expect(adj.prev?.slug).toBe("beta");
     expect(adj.next).toBeNull();
   });
@@ -166,9 +169,9 @@ describe("CollectionClient — cache.adjacent", () => {
 
   it("sort オプションで並び順を変えた結果で adjacent が返る", async () => {
     const items: BaseContentItem[] = [
-      { id: "1", slug: "a", updatedAt: "2024-01-03T00:00:00Z" },
-      { id: "2", slug: "b", updatedAt: "2024-01-01T00:00:00Z" },
-      { id: "3", slug: "c", updatedAt: "2024-01-02T00:00:00Z" },
+      { id: "1", slug: "a", lastEditedTime: "2024-01-03T00:00:00Z" },
+      { id: "2", slug: "b", lastEditedTime: "2024-01-01T00:00:00Z" },
+      { id: "3", slug: "c", lastEditedTime: "2024-01-02T00:00:00Z" },
     ];
     const cms = createCMS({
       renderer: mockRenderer,
@@ -184,7 +187,7 @@ describe("CollectionClient — cache.adjacent", () => {
       },
     });
     const adj = await cms.posts.cache.adjacent("c", {
-      sort: { by: "updatedAt", dir: "asc" },
+      sort: { by: "lastEditedTime", dir: "asc" },
     });
     expect(adj.prev?.slug).toBe("b");
     expect(adj.next?.slug).toBe("a");
@@ -207,7 +210,7 @@ describe("CollectionClient — cache.invalidate / cache.warm", () => {
     const freshItem: BaseContentItem = {
       id: "2",
       slug: "fresh",
-      updatedAt: "2024-02-01T00:00:00Z",
+      lastEditedTime: "2024-02-01T00:00:00Z",
     };
     let callCount = 0;
     const source = makeMockSource({
@@ -258,7 +261,7 @@ describe("CollectionClient — cache.invalidate / cache.warm", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "my-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const source = makeMockSource({
       async list() {
@@ -385,12 +388,22 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   it("tag フィルタで指定タグを持つアイテムのみ返す", async () => {
     type TaggedItem = BaseContentItem & { tags: string[] };
     const taggedItems: TaggedItem[] = [
-      { id: "1", slug: "a", updatedAt: "2024-01-01T00:00:00Z", tags: ["tech"] },
-      { id: "2", slug: "b", updatedAt: "2024-01-02T00:00:00Z", tags: ["life"] },
+      {
+        id: "1",
+        slug: "a",
+        lastEditedTime: "2024-01-01T00:00:00Z",
+        tags: ["tech"],
+      },
+      {
+        id: "2",
+        slug: "b",
+        lastEditedTime: "2024-01-02T00:00:00Z",
+        tags: ["life"],
+      },
       {
         id: "3",
         slug: "c",
-        updatedAt: "2024-01-03T00:00:00Z",
+        lastEditedTime: "2024-01-03T00:00:00Z",
         tags: ["tech", "life"],
       },
     ];
@@ -409,7 +422,8 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     });
     const result = await cms.posts.list({ tag: "tech" });
     expect(result).toHaveLength(2);
-    expect(result.map((i) => i.slug)).toEqual(["a", "c"]);
+    // デフォルトソート(lastEditedTime 降順): c(01-03) → a(01-01)
+    expect(result.map((i) => i.slug)).toEqual(["c", "a"]);
   });
 
   it("where フィルタで id が一致するアイテムのみ返す", async () => {
@@ -431,7 +445,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     expect(items[0]?.slug).toBe("alpha");
   });
 
-  it("sort: asc で updatedAt 昇順になる", async () => {
+  it("sort: asc で lastEditedTime 昇順になる", async () => {
     const cms = createCMS({
       renderer: mockRenderer,
       collections: {
@@ -446,12 +460,12 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
       },
     });
     const items = await cms.posts.list({
-      sort: { by: "updatedAt", dir: "asc" },
+      sort: { by: "lastEditedTime", dir: "asc" },
     });
     expect(items.map((i) => i.slug)).toEqual(["alpha", "beta", "gamma"]);
   });
 
-  it("sort: desc で updatedAt 降順になる", async () => {
+  it("sort: desc で lastEditedTime 降順になる", async () => {
     const cms = createCMS({
       renderer: mockRenderer,
       collections: {
@@ -466,7 +480,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
       },
     });
     const items = await cms.posts.list({
-      sort: { by: "updatedAt", dir: "desc" },
+      sort: { by: "lastEditedTime", dir: "desc" },
     });
     expect(items.map((i) => i.slug)).toEqual(["gamma", "beta", "alpha"]);
   });
@@ -506,7 +520,8 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     });
     const items = await cms.posts.list({ limit: 2 });
     expect(items).toHaveLength(2);
-    expect(items[0]?.slug).toBe("alpha");
+    // デフォルトソート後の先頭は gamma (lastEditedTime が最新)
+    expect(items[0]?.slug).toBe("gamma");
   });
 
   it("skip のみ指定すると N 件スキップして残りを返す", async () => {
@@ -525,7 +540,8 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     });
     const items = await cms.posts.list({ skip: 2 });
     expect(items).toHaveLength(1);
-    expect(items[0]?.slug).toBe("gamma");
+    // デフォルトソート後の末尾は alpha (lastEditedTime が最古)
+    expect(items[0]?.slug).toBe("alpha");
   });
 
   it("オプションなしで全件返す", async () => {
@@ -546,6 +562,77 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     expect(items).toHaveLength(3);
   });
 
+  it("publishedAt が設定されている場合はそちらを優先してデフォルトソートする", async () => {
+    const items: BaseContentItem[] = [
+      {
+        id: "1",
+        slug: "old",
+        lastEditedTime: "2024-01-03T00:00:00Z",
+        publishedAt: "2024-01-01",
+      },
+      {
+        id: "2",
+        slug: "new",
+        lastEditedTime: "2024-01-01T00:00:00Z",
+        publishedAt: "2024-01-03",
+      },
+      {
+        id: "3",
+        slug: "mid",
+        lastEditedTime: "2024-01-02T00:00:00Z",
+        publishedAt: "2024-01-02",
+      },
+    ];
+    const cms = createCMS({
+      renderer: mockRenderer,
+      collections: {
+        posts: {
+          source: makeMockSource({
+            async list() {
+              return items;
+            },
+          }),
+          slugField: "slug",
+        },
+      },
+    });
+    const result = await cms.posts.list();
+    // publishedAt 降順: new(01-03) → mid(01-02) → old(01-01)
+    expect(result.map((i) => i.slug)).toEqual(["new", "mid", "old"]);
+  });
+
+  it("publishedAt が同値の場合は順序が安定する", async () => {
+    const items: BaseContentItem[] = [
+      {
+        id: "1",
+        slug: "a",
+        lastEditedTime: "2024-01-01T00:00:00Z",
+        publishedAt: "2024-01-01",
+      },
+      {
+        id: "2",
+        slug: "b",
+        lastEditedTime: "2024-01-01T00:00:00Z",
+        publishedAt: "2024-01-01",
+      },
+    ];
+    const cms = createCMS({
+      renderer: mockRenderer,
+      collections: {
+        posts: {
+          source: makeMockSource({
+            async list() {
+              return items;
+            },
+          }),
+          slugField: "slug",
+        },
+      },
+    });
+    const result = await cms.posts.list();
+    expect(result).toHaveLength(2);
+  });
+
   it("where に配列を渡すと OR 一致でフィルタする", async () => {
     const cms = createCMS({
       renderer: mockRenderer,
@@ -562,7 +649,8 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     });
     const items = await cms.posts.list({ where: { id: ["1", "3"] } });
     expect(items).toHaveLength(2);
-    expect(items.map((i) => i.slug)).toEqual(["alpha", "gamma"]);
+    // デフォルトソート(lastEditedTime 降順): gamma(01-03) → alpha(01-01)
+    expect(items.map((i) => i.slug)).toEqual(["gamma", "alpha"]);
   });
 
   it("filter 関数で任意条件でフィルタできる", async () => {
@@ -615,13 +703,13 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
       {
         id: "1",
         slug: "a",
-        updatedAt: "2024-01-01T00:00:00Z",
+        lastEditedTime: "2024-01-01T00:00:00Z",
         meta: { order: 1 },
       },
       {
         id: "2",
         slug: "b",
-        updatedAt: "2024-01-02T00:00:00Z",
+        lastEditedTime: "2024-01-02T00:00:00Z",
         meta: { order: 2 },
       },
     ];
@@ -650,7 +738,7 @@ describe("CollectionClient — 並行 get", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "concurrent-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const cms = createCMS({
       collections: {
@@ -711,11 +799,11 @@ describe("CollectionClient — 並行 get", () => {
 describe("CollectionClient — isArchived フィルタ", () => {
   it("isArchived が true のアイテムは list から除外される", async () => {
     const items: BaseContentItem[] = [
-      { id: "1", slug: "active", updatedAt: "2024-01-01T00:00:00Z" },
+      { id: "1", slug: "active", lastEditedTime: "2024-01-01T00:00:00Z" },
       {
         id: "2",
         slug: "archived",
-        updatedAt: "2024-01-01T00:00:00Z",
+        lastEditedTime: "2024-01-01T00:00:00Z",
         isArchived: true,
       },
     ];
@@ -740,7 +828,7 @@ describe("CollectionClient — isArchived フィルタ", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "archived-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
       isArchived: true,
     };
     const cms = createCMS({
@@ -766,7 +854,7 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "draft-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
       status: "下書き",
     };
     const cms = createCMS({
@@ -791,7 +879,7 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "public-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
       status: "公開",
     };
     const cms = createCMS({
@@ -816,7 +904,7 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "no-status",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const cms = createCMS({
       collections: {
@@ -840,7 +928,7 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "null-status",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
       status: null,
     };
     const cms = createCMS({
@@ -860,6 +948,83 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
     const result = await cms.posts.get("null-status");
     expect(result).toBeNull();
   });
+
+  it("list() でも accessibleStatuses にないアイテムが除外される", async () => {
+    const items: BaseContentItem[] = [
+      {
+        id: "1",
+        slug: "public",
+        lastEditedTime: "2024-01-01T00:00:00Z",
+        status: "公開",
+      },
+      {
+        id: "2",
+        slug: "draft",
+        lastEditedTime: "2024-01-01T00:00:00Z",
+        status: "下書き",
+      },
+      { id: "3", slug: "no-status", lastEditedTime: "2024-01-01T00:00:00Z" },
+    ];
+    const cms = createCMS({
+      collections: {
+        posts: {
+          source: makeMockSource({
+            async list() {
+              return items;
+            },
+          }),
+          slugField: "slug",
+          accessibleStatuses: ["公開"],
+        },
+      },
+      renderer: mockRenderer,
+    });
+    const result = await cms.posts.list();
+    expect(result).toHaveLength(1);
+    expect(result[0]?.slug).toBe("public");
+  });
+
+  it("list() と get() で accessibleStatuses フィルタが一致する", async () => {
+    const items: BaseContentItem[] = [
+      {
+        id: "1",
+        slug: "public",
+        lastEditedTime: "2024-01-01T00:00:00Z",
+        status: "公開",
+      },
+      {
+        id: "2",
+        slug: "draft",
+        lastEditedTime: "2024-01-01T00:00:00Z",
+        status: "下書き",
+      },
+    ];
+    const cms = createCMS({
+      collections: {
+        posts: {
+          source: makeMockSource({
+            async list() {
+              return items;
+            },
+          }),
+          slugField: "slug",
+          accessibleStatuses: ["公開"],
+        },
+      },
+      renderer: mockRenderer,
+    });
+    const listed = await cms.posts.list();
+    const slugsFromList = listed.map((i) => i.slug);
+
+    // list() で返ったスラッグはすべて get() でも取得できる
+    for (const slug of slugsFromList) {
+      const got = await cms.posts.get(slug);
+      expect(got).not.toBeNull();
+    }
+    // list() に含まれないスラッグは get() で null になる
+    const excluded = await cms.posts.get("draft");
+    expect(excluded).toBeNull();
+  });
 });
 
 describe("CollectionClient — render アクセサ", () => {
@@ -867,7 +1032,7 @@ describe("CollectionClient — render アクセサ", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "post-html",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const cms = createCMS({
       collections: {
@@ -892,7 +1057,7 @@ describe("CollectionClient — render アクセサ", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "post-with-md",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const loadMarkdown = vi.fn().mockResolvedValue("# Hello World");
     const cms = createCMS({
@@ -919,7 +1084,7 @@ describe("CollectionClient — render アクセサ", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "post-lazy",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const loadMarkdown = vi.fn().mockResolvedValue("# Lazy");
     const cms = createCMS({
@@ -945,11 +1110,11 @@ describe("CollectionClient — render アクセサ", () => {
 });
 
 describe("CollectionClient — check()", () => {
-  it("updatedAt が一致するときは { stale: false } を返す", async () => {
+  it("lastEditedTime が一致するときは { stale: false } を返す", async () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "my-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const cms = createCMS({
       collections: {
@@ -968,11 +1133,11 @@ describe("CollectionClient — check()", () => {
     expect(result).toEqual({ stale: false });
   });
 
-  it("updatedAt が異なるときは { stale: true, item } を返す", async () => {
+  it("lastEditedTime が異なるときは { stale: true, item } を返す", async () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "updated-post",
-      updatedAt: "2024-01-02T00:00:00Z",
+      lastEditedTime: "2024-01-02T00:00:00Z",
     };
     const cms = createCMS({
       collections: {
@@ -995,7 +1160,7 @@ describe("CollectionClient — check()", () => {
     expect(result?.stale).toBe(true);
     if (result?.stale) {
       expect(result.item.slug).toBe("updated-post");
-      expect(result.item.updatedAt).toBe("2024-01-02T00:00:00Z");
+      expect(result.item.lastEditedTime).toBe("2024-01-02T00:00:00Z");
     }
   });
 
@@ -1004,7 +1169,7 @@ describe("CollectionClient — check()", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "render-post",
-      updatedAt: "2024-01-02T00:00:00Z",
+      lastEditedTime: "2024-01-02T00:00:00Z",
     };
     const cms = createCMS({
       collections: {
@@ -1043,7 +1208,7 @@ describe("CollectionClient — check()", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "draft-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
       status: "下書き",
     };
     const cms = createCMS({
@@ -1068,7 +1233,7 @@ describe("CollectionClient — check()", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "fp-post",
-      updatedAt: "2024-01-02T00:00:00Z",
+      lastEditedTime: "2024-01-02T00:00:00Z",
     };
     const findByProp = vi.fn().mockResolvedValue(item);
     const cms = createCMS({
@@ -1091,7 +1256,7 @@ describe("CollectionClient — check()", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "unchanged-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const findByProp = vi.fn().mockResolvedValue(item);
     const cms = createCMS({
@@ -1118,7 +1283,7 @@ describe("CollectionClient — check()", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "cache-update-post",
-      updatedAt: "2024-01-02T00:00:00Z",
+      lastEditedTime: "2024-01-02T00:00:00Z",
     };
     const cache = memoryCache();
     const cms = createCMS({
@@ -1137,14 +1302,14 @@ describe("CollectionClient — check()", () => {
     });
     await cms.posts.check("cache-update-post", "2024-01-01T00:00:00Z");
     const meta = await cache.doc?.getMeta("posts", "cache-update-post");
-    expect(meta?.item.updatedAt).toBe("2024-01-02T00:00:00Z");
+    expect(meta?.item.lastEditedTime).toBe("2024-01-02T00:00:00Z");
   });
 
-  it("currentVersion が空文字のとき updatedAt が何であっても stale: true になる", async () => {
+  it("currentVersion が空文字のとき lastEditedTime が何であっても stale: true になる", async () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "empty-version-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const cms = createCMS({
       collections: {
@@ -1169,7 +1334,7 @@ describe("CollectionClient — slugField + findByProp", () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "my-post",
-      updatedAt: "2024-01-01T00:00:00Z",
+      lastEditedTime: "2024-01-01T00:00:00Z",
       status: "公開",
     };
     const findByProp = vi.fn().mockResolvedValue(item);

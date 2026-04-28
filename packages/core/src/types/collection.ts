@@ -115,7 +115,7 @@ export interface CollectionClient<T extends BaseContentItem = BaseContentItem> {
   params(): Promise<{ slug: string }[]>;
 
   /**
-   * Notion から最新版を取得し、`currentVersion`（`item.updatedAt`）と比較する。
+   * Notion から最新版を取得し、`currentVersion`（`item.lastEditedTime`）と比較する。
    * 差分があればキャッシュを更新してアイテムを返す。
    * ページ表示後の1回限りのクライアント再検証エンドポイント用。
    *

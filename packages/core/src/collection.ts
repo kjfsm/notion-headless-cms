@@ -156,7 +156,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
   ): Promise<CheckResult<T> | null> {
     const raw = await this.findRaw(slug);
     if (!raw) return null;
-    if (raw.updatedAt === currentVersion) return { stale: false };
+    if (raw.lastEditedTime === currentVersion) return { stale: false };
     const meta = await this.persistMeta(slug, raw);
     await this.invalidateContent(slug);
     return { stale: true, item: this.attachLazyContent(meta) };
@@ -522,7 +522,15 @@ export class CollectionClientImpl<T extends BaseContentItem>
         },
       },
     );
-    return items.filter((item) => !item.isArchived && !item.isInTrash);
+    return items.filter((item) => {
+      if (item.isArchived || item.isInTrash) return false;
+      if (
+        this.ctx.accessibleStatuses.length > 0 &&
+        (!item.status || !this.ctx.accessibleStatuses.includes(item.status))
+      )
+        return false;
+      return true;
+    });
   }
 
   private async findRaw(slug: string): Promise<T | null> {
@@ -583,7 +591,7 @@ function applyListOptions<T extends BaseContentItem>(
   items: T[],
   opts?: ListOptions<T>,
 ): T[] {
-  if (!opts) return items;
+  if (!opts) return sortByPublishedAtDesc(items);
   let result = items;
 
   if (opts.status) {
@@ -612,6 +620,8 @@ function applyListOptions<T extends BaseContentItem>(
 
   if (opts.sort) {
     result = [...result].sort(makeComparator(opts.sort));
+  } else {
+    result = sortByPublishedAtDesc(result);
   }
 
   const skip = opts.skip ?? 0;
@@ -621,6 +631,17 @@ function applyListOptions<T extends BaseContentItem>(
   }
 
   return result;
+}
+
+/** publishedAt 降順、未設定の場合は lastEditedTime 降順でソートする。 */
+function sortByPublishedAtDesc<T extends BaseContentItem>(items: T[]): T[] {
+  return [...items].sort((a, b) => {
+    // lastEditedTime は必須なので av/bv は常に truthy
+    const av = a.publishedAt ?? a.lastEditedTime;
+    const bv = b.publishedAt ?? b.lastEditedTime;
+    if (av === bv) return 0;
+    return av > bv ? -1 : 1;
+  });
 }
 
 function makeComparator<T extends BaseContentItem>(

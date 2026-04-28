@@ -13,10 +13,9 @@ export type NotionFieldType =
   | { type: "select"; notion: string }
   | { type: "status"; notion: string };
 
-// id・updatedAt 等は Notion ページメタデータから自動設定されるシステムフィールド
+// id・lastEditedTime 等は Notion ページメタデータから自動設定されるシステムフィールド
 type SystemField =
   | "id"
-  | "updatedAt"
   | "lastEditedTime"
   | "createdAt"
   | "isArchived"
@@ -28,7 +27,7 @@ type SystemField =
 
 /**
  * Notion プロパティマッピングを定義する。
- * `id` / `updatedAt` はシステムフィールドのため指定不要。
+ * `id` / `lastEditedTime` はシステムフィールドのため指定不要。
  * 型レベルでキーがスキーマと一致することを保証する。ランタイムは恒等関数。
  */
 export function defineMapping<T extends object>(
@@ -84,7 +83,6 @@ type PropertyValue = NotionPage["properties"][string];
 
 const SYSTEM_FIELDS = new Set([
   "id",
-  "updatedAt",
   "lastEditedTime",
   "createdAt",
   "isArchived",
@@ -117,7 +115,6 @@ function parseMapping<T>(
   );
   const result: Record<string, unknown> = {
     id: page.id,
-    updatedAt: page.last_edited_time,
     lastEditedTime: page.last_edited_time,
     title: titleProp?.type === "title" ? getPlainText(titleProp.title) : null,
     createdAt: page.created_time,
