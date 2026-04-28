@@ -1,6 +1,6 @@
 ---
-"@notion-headless-cms/core": minor
-"@notion-headless-cms/adapter-next": minor
+"@notion-headless-cms/core": patch
+"@notion-headless-cms/adapter-next": patch
 ---
 
 webhook `:collection` 単一経路化・adapter-next ハンドラ分割
