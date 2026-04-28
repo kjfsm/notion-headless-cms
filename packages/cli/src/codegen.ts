@@ -22,6 +22,7 @@ const NOTION_TYPE_MAP: Record<string, string | undefined> = {
 	number: "number",
 	checkbox: "checkbox",
 	url: "url",
+	last_edited_time: "lastEditedTime",
 };
 
 /** Notion プロパティ名 → TypeScript camelCase 識別子。 */
@@ -55,6 +56,8 @@ function tsTypeForPropDef(defType: string): string {
 			return "number | null";
 		case "checkbox":
 			return "boolean";
+		case "lastEditedTime":
+			return "string";
 		default:
 			return "unknown";
 	}

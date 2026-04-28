@@ -141,6 +141,59 @@ describe("defineSchema", () => {
 			expect(() => strictSchema.mapItem(page as never)).toThrow();
 		});
 
+		it("lastEditedTime フィールドをパースする", () => {
+			const LastEditedSchema = z.object({
+				id: z.string(),
+				updatedAt: z.string(),
+				title: z.string().nullable(),
+				editedAt: z.string().nullable(),
+			});
+			const lastEditedMapping = defineMapping<z.infer<typeof LastEditedSchema>>(
+				{
+					title: { type: "title", notion: "Name" },
+					editedAt: { type: "lastEditedTime", notion: "EditedAt" },
+				},
+			);
+			const lastEditedSchema = defineSchema(
+				LastEditedSchema,
+				lastEditedMapping,
+			);
+			const page = makePage({
+				Name: { type: "title", title: [] },
+				EditedAt: {
+					type: "last_edited_time",
+					last_edited_time: "2024-06-01T12:00:00.000Z",
+				},
+			});
+			const item = lastEditedSchema.mapItem(page as never);
+			expect(item.editedAt).toBe("2024-06-01T12:00:00.000Z");
+		});
+
+		it("lastEditedTime フィールドで型が一致しない場合は null を返す", () => {
+			const LastEditedSchema = z.object({
+				id: z.string(),
+				updatedAt: z.string(),
+				title: z.string().nullable(),
+				editedAt: z.string().nullable(),
+			});
+			const lastEditedMapping = defineMapping<z.infer<typeof LastEditedSchema>>(
+				{
+					title: { type: "title", notion: "Name" },
+					editedAt: { type: "lastEditedTime", notion: "EditedAt" },
+				},
+			);
+			const lastEditedSchema = defineSchema(
+				LastEditedSchema,
+				lastEditedMapping,
+			);
+			const page = makePage({
+				Name: { type: "title", title: [] },
+				EditedAt: { type: "rich_text", rich_text: [{ plain_text: "nope" }] },
+			});
+			const item = lastEditedSchema.mapItem(page as never);
+			expect(item.editedAt).toBeNull();
+		});
+
 		it("url フィールドタイプをパースする", () => {
 			const UrlSchema = z.object({
 				id: z.string(),

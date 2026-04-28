@@ -11,7 +11,8 @@ export type NotionFieldType =
 	  }
 	| { type: "multiSelect"; notion: string }
 	| { type: "select"; notion: string }
-	| { type: "status"; notion: string };
+	| { type: "status"; notion: string }
+	| { type: "lastEditedTime"; notion: string };
 
 // id・updatedAt は Notion ページメタデータから自動設定されるシステムフィールド
 type SystemField = "id" | "updatedAt";
@@ -135,5 +136,7 @@ function parseField(
 			return prop.type === "select" ? (prop.select?.name ?? null) : null;
 		case "status":
 			return prop.type === "status" ? (prop.status?.name ?? null) : null;
+		case "lastEditedTime":
+			return prop.type === "last_edited_time" ? prop.last_edited_time : null;
 	}
 }

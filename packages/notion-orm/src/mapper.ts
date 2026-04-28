@@ -90,6 +90,8 @@ function extractPropertyValue(
 			return prop.type === "checkbox" ? prop.checkbox : false;
 		case "url":
 			return prop.type === "url" ? prop.url : null;
+		case "lastEditedTime":
+			return prop.type === "last_edited_time" ? prop.last_edited_time : null;
 		default:
 			return null;
 	}
