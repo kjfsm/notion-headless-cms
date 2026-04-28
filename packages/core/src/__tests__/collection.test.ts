@@ -772,6 +772,224 @@ describe("CollectionClient — render アクセサ", () => {
 	});
 });
 
+describe("CollectionClient — check()", () => {
+	it("updatedAt が一致するときは { stale: false } を返す", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "my-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const cms = createCMS({
+			collections: {
+				posts: {
+					source: makeMockSource({
+						async list() {
+							return [item];
+						},
+					}),
+					slugField: "slug",
+				},
+			},
+			renderer: mockRenderer,
+		});
+		const result = await cms.posts.check("my-post", "2024-01-01T00:00:00Z");
+		expect(result).toEqual({ stale: false });
+	});
+
+	it("updatedAt が異なるときは { stale: true, item } を返す", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "updated-post",
+			updatedAt: "2024-01-02T00:00:00Z",
+		};
+		const cms = createCMS({
+			collections: {
+				posts: {
+					source: makeMockSource({
+						async list() {
+							return [item];
+						},
+					}),
+					slugField: "slug",
+				},
+			},
+			renderer: mockRenderer,
+		});
+		const result = await cms.posts.check(
+			"updated-post",
+			"2024-01-01T00:00:00Z",
+		);
+		expect(result).not.toBeNull();
+		expect(result?.stale).toBe(true);
+		if (result?.stale) {
+			expect(result.item.slug).toBe("updated-post");
+			expect(result.item.updatedAt).toBe("2024-01-02T00:00:00Z");
+		}
+	});
+
+	it("stale のとき render() が HTML を返す", async () => {
+		const loadMarkdown = vi.fn().mockResolvedValue("# Updated");
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "render-post",
+			updatedAt: "2024-01-02T00:00:00Z",
+		};
+		const cms = createCMS({
+			collections: {
+				posts: {
+					source: makeMockSource({
+						async list() {
+							return [item];
+						},
+						loadMarkdown,
+					}),
+					slugField: "slug",
+				},
+			},
+			renderer: mockRenderer,
+		});
+		const result = await cms.posts.check("render-post", "2024-01-01T00:00:00Z");
+		if (result?.stale) {
+			const html = await result.item.render();
+			expect(typeof html).toBe("string");
+			expect(loadMarkdown).toHaveBeenCalled();
+		}
+	});
+
+	it("存在しない slug は null を返す", async () => {
+		const cms = createCMS({
+			collections: {
+				posts: { source: makeMockSource(), slugField: "slug" },
+			},
+		});
+		const result = await cms.posts.check("nonexistent", "2024-01-01T00:00:00Z");
+		expect(result).toBeNull();
+	});
+
+	it("accessibleStatuses にないアイテムは null を返す", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "draft-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+			status: "下書き",
+		};
+		const cms = createCMS({
+			collections: {
+				posts: {
+					source: makeMockSource({
+						async list() {
+							return [item];
+						},
+					}),
+					slugField: "slug",
+					accessibleStatuses: ["公開"],
+				},
+			},
+		});
+		const result = await cms.posts.check("draft-post", "2024-01-01T00:00:00Z");
+		expect(result).toBeNull();
+	});
+
+	it("findByProp が設定されていると効率的なプロパティ検索を使う", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "fp-post",
+			updatedAt: "2024-01-02T00:00:00Z",
+		};
+		const findByProp = vi.fn().mockResolvedValue(item);
+		const cms = createCMS({
+			collections: {
+				posts: {
+					source: makeMockSource({
+						findByProp,
+						properties: { slug: { type: "richText", notion: "Slug" } },
+					}),
+					slugField: "slug",
+				},
+			},
+			renderer: mockRenderer,
+		});
+		await cms.posts.check("fp-post", "2024-01-01T00:00:00Z");
+		expect(findByProp).toHaveBeenCalledWith("Slug", "fp-post");
+	});
+
+	it("not stale のときソースは1回だけ呼ばれる", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "unchanged-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const findByProp = vi.fn().mockResolvedValue(item);
+		const cms = createCMS({
+			collections: {
+				posts: {
+					source: makeMockSource({
+						findByProp,
+						properties: { slug: { type: "richText", notion: "Slug" } },
+					}),
+					slugField: "slug",
+				},
+			},
+			renderer: mockRenderer,
+		});
+		const result = await cms.posts.check(
+			"unchanged-post",
+			"2024-01-01T00:00:00Z",
+		);
+		expect(result).toEqual({ stale: false });
+		expect(findByProp).toHaveBeenCalledTimes(1);
+	});
+
+	it("stale のとき後続の get() でメタが更新されている", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "cache-update-post",
+			updatedAt: "2024-01-02T00:00:00Z",
+		};
+		const cache = memoryCache();
+		const cms = createCMS({
+			collections: {
+				posts: {
+					source: makeMockSource({
+						async list() {
+							return [item];
+						},
+					}),
+					slugField: "slug",
+				},
+			},
+			cache,
+			renderer: mockRenderer,
+		});
+		await cms.posts.check("cache-update-post", "2024-01-01T00:00:00Z");
+		const meta = await cache.doc?.getMeta("posts", "cache-update-post");
+		expect(meta?.item.updatedAt).toBe("2024-01-02T00:00:00Z");
+	});
+
+	it("currentVersion が空文字のとき updatedAt が何であっても stale: true になる", async () => {
+		const item: BaseContentItem = {
+			id: "1",
+			slug: "empty-version-post",
+			updatedAt: "2024-01-01T00:00:00Z",
+		};
+		const cms = createCMS({
+			collections: {
+				posts: {
+					source: makeMockSource({
+						async list() {
+							return [item];
+						},
+					}),
+					slugField: "slug",
+				},
+			},
+			renderer: mockRenderer,
+		});
+		const result = await cms.posts.check("empty-version-post", "");
+		expect(result?.stale).toBe(true);
+	});
+});
+
 describe("CollectionClient — slugField + findByProp", () => {
 	it("slugField と findByProp が設定されていると効率的なプロパティ検索を使う", async () => {
 		const item: BaseContentItem = {

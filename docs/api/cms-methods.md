@@ -19,6 +19,7 @@ const cms = createCMS({
 cms.posts.get(slug, opts?)
 cms.posts.list(opts?)
 cms.posts.params()
+cms.posts.check(slug, currentVersion)
 cms.posts.cache.adjacent(slug, opts?)
 cms.posts.cache.invalidate(slug?)
 cms.posts.cache.warm(opts?)
@@ -76,6 +77,52 @@ SSG のパス列挙用。Next.js App Router の `generateStaticParams` に渡せ
 export async function generateStaticParams() {
   return await cms.posts.params();   // [{ slug: "a" }, { slug: "b" }]
 }
+```
+
+### `check(slug, currentVersion)`
+
+Notion から最新版を取得し、`currentVersion`（`item.updatedAt`）と比較する。
+差分があればキャッシュを更新してアイテムを返す。**ページ表示後の1回限りのクライアント再検証**に使う。
+
+```ts
+type CheckResult<T> =
+  | { stale: false }
+  | { stale: true; item: T & { render(): Promise<string> } };
+
+const result = await cms.posts.check(slug, currentVersion);
+
+if (result === null) {
+  // アイテムが存在しない
+} else if (!result.stale) {
+  // 変更なし
+} else {
+  // 更新あり: result.item で新しいアイテムにアクセスできる
+  const html = await result.item.render();
+}
+```
+
+- `currentVersion` は `post.updatedAt` を渡す
+- 差分なし(`stale: false`)のときはキャッシュに触れないため副作用がない
+- 差分あり(`stale: true`)のときはメタを更新しコンテンツキャッシュを無効化する
+- アイテムが存在しない場合は `null` を返す
+
+**Cloudflare Workers + React Router での使用例:**
+
+```ts
+// サーバー: /api/posts/:slug/check?v={version}
+const result = await cms.posts.check(slug, clientVersion);
+if (result === null) return new Response("Not Found", { status: 404 });
+if (!result.stale) return Response.json({ stale: false });
+const html = await result.item.render();
+return Response.json({ stale: true, html, version: result.item.updatedAt });
+
+// クライアント: マウント時に1回だけ更新チェック
+useEffect(() => {
+  fetch(`/api/posts/${slug}/check?v=${encodeURIComponent(version)}`)
+    .then((res) => res.ok ? res.json() : null)
+    .then((data) => { if (data?.stale) setHtml(data.html); })
+    .catch((err) => console.warn("更新チェック失敗:", err));
+}, []);
 ```
 
 ## コレクション別キャッシュ操作 (`CollectionCacheOps<T>`)

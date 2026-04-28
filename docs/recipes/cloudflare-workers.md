@@ -155,6 +155,62 @@ R2 に永続保存する。レンダリング後の HTML 内の `<img>` は `/ap
 
 `cms.$handler()` はこれを自動でさばくため、ほぼ何も書かなくてよい。
 
+## 表示後のクライアント再検証 (`check()`)
+
+ページ描画後に1回だけ更新チェックを行い、変更があればその場で HTML を差し替えるパターン。
+ポーリング不要で、ページをリロードしなくても最新コンテンツを表示できる。
+
+### サーバー側: check エンドポイント
+
+```ts
+// /api/posts/:slug/check?v={version}
+app.get("/api/posts/:slug/check", async (c) => {
+  const { slug } = c.req.param();
+  const clientVersion = c.req.query("v") ?? "";
+
+  const cms = createCMS({ ... });
+  const result = await cms.posts.check(slug, clientVersion);
+
+  if (result === null) return c.notFound();
+  if (!result.stale) return c.json({ stale: false });
+
+  const html = await result.item.render();
+  return c.json({ stale: true, html, version: result.item.updatedAt });
+});
+```
+
+### クライアント側 (React)
+
+```tsx
+function Post({ item, initialHtml, version }) {
+  const [html, setHtml] = useState(initialHtml);
+
+  // マウント時に1回だけチェック。差分があればその場で HTML を差し替える
+  useEffect(() => {
+    fetch(`/api/posts/${item.slug}/check?v=${encodeURIComponent(version)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => { if (data?.stale) setHtml(data.html); })
+      .catch((err) => console.warn("更新チェック失敗:", err));
+  }, []); // 空の依存配列でマウント時1回のみ実行
+
+  return <div dangerouslySetInnerHTML={{ __html: html }} />;
+}
+```
+
+### 動作フロー
+
+```
+1. ユーザーがページを開く
+2. サーバーが KV キャッシュから HTML を即時返却
+3. React がハイドレーション完了（useEffect が走る）
+4. /api/posts/:slug/check?v=... を1回リクエスト
+5a. 変更なし → stale: false → 何もしない
+5b. 変更あり → stale: true → setHtml() で新しい HTML に差し替え
+```
+
+`check()` は差分がないときはキャッシュに触れないため、大多数のページビューで Notion API を叩くだけで副作用がない。
+差分があった場合は KV のメタを更新し R2 のコンテンツキャッシュを無効化する。
+
 ## R2BucketLike / KVNamespaceLike と型依存
 
 `cloudflareCache` が受ける env の binding は構造型 (`R2BucketLike` /
