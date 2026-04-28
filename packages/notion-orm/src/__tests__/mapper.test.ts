@@ -13,7 +13,7 @@ const makePage = (properties: Record<string, unknown>) => ({
 });
 
 describe("mapItemFromPropertyMap", () => {
-	it("id と updatedAt が設定される", () => {
+	it("id・updatedAt・lastEditedTime が設定される", () => {
 		const page = makePage({
 			Name: { type: "title", title: [{ plain_text: "Test" }] },
 		});
@@ -23,6 +23,7 @@ describe("mapItemFromPropertyMap", () => {
 		const item = mapItemFromPropertyMap(page as never, properties);
 		expect(item.id).toBe("page-id");
 		expect(item.updatedAt).toBe("2024-01-01T00:00:00.000Z");
+		expect(item.lastEditedTime).toBe("2024-01-01T00:00:00.000Z");
 	});
 
 	it("title プロパティが title フィールドに反映される", () => {
@@ -224,40 +225,6 @@ describe("mapItemFromPropertyMap", () => {
 		expect(result.featured).toBe(true);
 	});
 
-	it("lastEditedTime プロパティが文字列として取得される", () => {
-		const page = makePage({
-			Name: { type: "title", title: [] },
-			UpdatedAt: {
-				type: "last_edited_time",
-				last_edited_time: "2024-06-01T12:00:00.000Z",
-			},
-		});
-		const properties: PropertyMap = {
-			name: { type: "title", notion: "Name" },
-			updatedAt: { type: "lastEditedTime", notion: "UpdatedAt" },
-		};
-		const result = mapItemFromPropertyMap(
-			page as never,
-			properties,
-		) as unknown as Record<string, unknown>;
-		expect(result.updatedAt).toBe("2024-06-01T12:00:00.000Z");
-	});
-
-	it("lastEditedTime 型マッピングで実際のプロパティ型が異なる場合は null を返す", () => {
-		const page = makePage({
-			Name: { type: "title", title: [] },
-			UpdatedAt: { type: "rich_text", rich_text: [{ plain_text: "not-time" }] },
-		});
-		const properties: PropertyMap = {
-			updatedAt: { type: "lastEditedTime", notion: "UpdatedAt" },
-		};
-		const result = mapItemFromPropertyMap(
-			page as never,
-			properties,
-		) as unknown as Record<string, unknown>;
-		expect(result.updatedAt).toBeNull();
-	});
-
 	it("url プロパティが文字列として取得される", () => {
 		const page = makePage({
 			Name: { type: "title", title: [] },
@@ -389,6 +356,7 @@ describe("mapItem", () => {
 		const item = mapItem(page as never, defaultProps);
 		expect(item.slug).toBe("my-post");
 		expect(item.status).toBe("公開");
+		expect(item.lastEditedTime).toBe("2024-01-01T00:00:00.000Z");
 	});
 
 	it("status が select タイプの場合は select.name を使う", () => {

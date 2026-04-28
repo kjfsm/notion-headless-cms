@@ -11,11 +11,10 @@ export type NotionFieldType =
 	  }
 	| { type: "multiSelect"; notion: string }
 	| { type: "select"; notion: string }
-	| { type: "status"; notion: string }
-	| { type: "lastEditedTime"; notion: string };
+	| { type: "status"; notion: string };
 
-// id・updatedAt は Notion ページメタデータから自動設定されるシステムフィールド
-type SystemField = "id" | "updatedAt";
+// id・updatedAt・lastEditedTime は Notion ページメタデータから自動設定されるシステムフィールド
+type SystemField = "id" | "updatedAt" | "lastEditedTime";
 
 // ── defineMapping ────────────────────────────────────────────────────────────
 
@@ -76,7 +75,7 @@ export function defineSchema<S extends z.ZodRawShape>(
 type PropertyValue = NotionPage["properties"][string];
 
 // id と updatedAt は Notion ページのメタデータから自動設定されるシステムフィールド
-const SYSTEM_FIELDS = new Set(["id", "updatedAt"]);
+const SYSTEM_FIELDS = new Set(["id", "updatedAt", "lastEditedTime"]);
 
 function parseMapping<T>(
 	page: NotionPage,
@@ -88,6 +87,7 @@ function parseMapping<T>(
 	const result: Record<string, unknown> = {
 		id: page.id,
 		updatedAt: page.last_edited_time,
+		lastEditedTime: page.last_edited_time,
 		title:
 			titleProp?.type === "title"
 				? getPlainText(titleProp.title) || null
@@ -136,7 +136,5 @@ function parseField(
 			return prop.type === "select" ? (prop.select?.name ?? null) : null;
 		case "status":
 			return prop.type === "status" ? (prop.status?.name ?? null) : null;
-		case "lastEditedTime":
-			return prop.type === "last_edited_time" ? prop.last_edited_time : null;
 	}
 }

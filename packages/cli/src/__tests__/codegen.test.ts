@@ -86,8 +86,6 @@ describe("Notion API datasource プロパティ型マッピング", () => {
 				Featured: makeProp("checkbox"),
 				// url → string | null
 				"Source URL": makeProp("url"),
-				// last_edited_time → string (null 非許容)
-				LastEdited: makeProp("last_edited_time"),
 			},
 		});
 		const code = generateSchemaFile([collection]);
@@ -112,9 +110,8 @@ describe("Notion API datasource プロパティ型マッピング", () => {
 		expect(code).toContain("\tfeatured: boolean;");
 		// url (camelCase: "Source URL" → sourceURL)
 		expect(code).toContain("\tsourceURL: string | null;");
-		// last_edited_time は null 非許容の string
-		expect(code).toContain("\tlastEdited: string;");
-		expect(code).not.toContain("\tlastEdited: string | null;");
+		// lastEditedTime はシステムフィールドとして常に出力される
+		expect(code).toContain("\tlastEditedTime: string;");
 	});
 
 	it("サポート済みプロパティ型が PropertyMap の type 値に正しく変換される", () => {
@@ -132,7 +129,6 @@ describe("Notion API datasource プロパティ型マッピング", () => {
 				Views: makeProp("number"),
 				Featured: makeProp("checkbox"),
 				Website: makeProp("url"),
-				LastEdited: makeProp("last_edited_time"),
 			},
 		});
 		const code = generateSchemaFile([collection]);
@@ -163,9 +159,6 @@ describe("Notion API datasource プロパティ型マッピング", () => {
 		);
 		expect(code).toContain(
 			'website: { type: "url" as const, notion: "Website" }',
-		);
-		expect(code).toContain(
-			'lastEdited: { type: "lastEditedTime" as const, notion: "LastEdited" }',
 		);
 	});
 
@@ -202,6 +195,7 @@ describe("Notion API datasource プロパティ型マッピング", () => {
 				CreatedBy: makeProp("created_by"),
 				CreatedTime: makeProp("created_time"),
 				LastEditedBy: makeProp("last_edited_by"),
+				LastEditedTime: makeProp("last_edited_time"),
 			},
 		});
 		const code = generateSchemaFile([collection]);
@@ -219,6 +213,7 @@ describe("Notion API datasource プロパティ型マッピング", () => {
 			["CreatedBy", "created_by"],
 			["CreatedTime", "created_time"],
 			["LastEditedBy", "last_edited_by"],
+			["LastEditedTime", "last_edited_time"],
 		] as const;
 
 		for (const [propName, notionType] of unsupportedTypes) {

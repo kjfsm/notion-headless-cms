@@ -12,6 +12,7 @@ const baseContentItemSchema = z.object({
 	slug: z.string().min(1),
 	title: z.string().nullable().optional(),
 	updatedAt: z.string().min(1),
+	lastEditedTime: z.string().min(1).optional(),
 	status: z.string().optional(),
 	publishedAt: z.string().optional(),
 });
@@ -41,9 +42,10 @@ export function mapItemFromPropertyMap(
 			: null;
 
 	const result: Record<string, PropertyValue> &
-		Pick<BaseContentItem, "id" | "slug" | "updatedAt"> = {
+		Pick<BaseContentItem, "id" | "slug" | "updatedAt" | "lastEditedTime"> = {
 		id: page.id,
 		updatedAt: page.last_edited_time,
+		lastEditedTime: page.last_edited_time,
 		title,
 		slug: "",
 	};
@@ -90,8 +92,6 @@ function extractPropertyValue(
 			return prop.type === "checkbox" ? prop.checkbox : false;
 		case "url":
 			return prop.type === "url" ? prop.url : null;
-		case "lastEditedTime":
-			return prop.type === "last_edited_time" ? prop.last_edited_time : null;
 		default:
 			return null;
 	}
@@ -135,6 +135,7 @@ export function mapItem(
 				? (dateProperty.date?.start ?? page.created_time)
 				: page.created_time,
 		updatedAt: page.last_edited_time,
+		lastEditedTime: page.last_edited_time,
 	});
 
 	if (!parsed.success) {

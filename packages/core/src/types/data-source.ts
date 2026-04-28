@@ -15,8 +15,7 @@ export interface PropertyDef {
 		| "date"
 		| "number"
 		| "checkbox"
-		| "url"
-		| "lastEditedTime";
+		| "url";
 	/** Notion DB 上のプロパティ名（表示名）。 */
 	notion: string;
 }

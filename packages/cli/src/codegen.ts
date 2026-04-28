@@ -22,7 +22,6 @@ const NOTION_TYPE_MAP: Record<string, string | undefined> = {
 	number: "number",
 	checkbox: "checkbox",
 	url: "url",
-	last_edited_time: "lastEditedTime",
 };
 
 /** Notion プロパティ名 → TypeScript camelCase 識別子。 */
@@ -56,8 +55,6 @@ function tsTypeForPropDef(defType: string): string {
 			return "number | null";
 		case "checkbox":
 			return "boolean";
-		case "lastEditedTime":
-			return "string";
 		default:
 			return "unknown";
 	}
@@ -183,6 +180,8 @@ function generateCollectionBlock(
 		"\tid: string;",
 		"\t/** Notion ページの最終更新時刻 (ISO8601)。 */",
 		"\tupdatedAt: string;",
+		"\t/** Notion ページの最終編集日時 (ISO8601)。 */",
+		"\tlastEditedTime: string;",
 	];
 	let hasSlug = false;
 	let hasStatus = false;
