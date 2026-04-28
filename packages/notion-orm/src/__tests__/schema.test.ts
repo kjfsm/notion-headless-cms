@@ -16,7 +16,7 @@ type Post = z.infer<typeof PostSchema>;
 
 const mapping = defineMapping<Post>({
 	slug: { type: "richText", notion: "Slug" },
-	status: { type: "select", notion: "Status" },
+	status: { type: "status", notion: "Status" },
 	title: { type: "title", notion: "Title" },
 	tags: { type: "multiSelect", notion: "Tags" },
 	views: { type: "number", notion: "Views" },
@@ -25,7 +25,7 @@ const mapping = defineMapping<Post>({
 describe("defineMapping", () => {
 	it("受け取ったオブジェクトをそのまま返す（恒等関数）", () => {
 		expect(mapping.slug).toEqual({ type: "richText", notion: "Slug" });
-		expect(mapping.status).toEqual({ type: "select", notion: "Status" });
+		expect(mapping.status).toEqual({ type: "status", notion: "Status" });
 	});
 });
 
@@ -124,7 +124,7 @@ describe("defineSchema", () => {
 			});
 			const strictMapping = defineMapping<z.infer<typeof StrictSchema>>({
 				slug: { type: "richText", notion: "Slug" },
-				status: { type: "select", notion: "Status" },
+				status: { type: "status", notion: "Status" },
 				title: { type: "title", notion: "Title" },
 				tags: { type: "multiSelect", notion: "Tags" },
 				views: { type: "number", notion: "Views" },
@@ -139,6 +139,29 @@ describe("defineSchema", () => {
 				Views: { type: "number", number: null },
 			});
 			expect(() => strictSchema.mapItem(page as never)).toThrow();
+		});
+
+		it("lastEditedTime はマッピング不要でページメタデータから自動設定される", () => {
+			const LastEditedSchema = z.object({
+				id: z.string(),
+				updatedAt: z.string(),
+				lastEditedTime: z.string(),
+				title: z.string().nullable(),
+			});
+			const lastEditedMapping = defineMapping<z.infer<typeof LastEditedSchema>>(
+				{
+					title: { type: "title", notion: "Name" },
+				},
+			);
+			const lastEditedSchema = defineSchema(
+				LastEditedSchema,
+				lastEditedMapping,
+			);
+			const page = makePage({
+				Name: { type: "title", title: [] },
+			});
+			const item = lastEditedSchema.mapItem(page as never);
+			expect(item.lastEditedTime).toBe("2024-06-01T12:00:00.000Z");
 		});
 
 		it("url フィールドタイプをパースする", () => {
@@ -223,6 +246,56 @@ describe("defineSchema", () => {
 			});
 			const item = dateSchema.mapItem(page as never);
 			expect(item.publishedAt).toBeNull();
+		});
+
+		it("status フィールドで status プロパティが null の場合は null を返す", () => {
+			const StatusNullMatchSchema = z.object({
+				id: z.string(),
+				updatedAt: z.string(),
+				title: z.string().nullable(),
+				state: z.string().nullable(),
+			});
+			const statusNullMatchMapping = defineMapping<
+				z.infer<typeof StatusNullMatchSchema>
+			>({
+				title: { type: "title", notion: "Name" },
+				state: { type: "status", notion: "State" },
+			});
+			const statusNullMatchSchema = defineSchema(
+				StatusNullMatchSchema,
+				statusNullMatchMapping,
+			);
+			const page = makePage({
+				Name: { type: "title", title: [] },
+				State: { type: "status", status: null },
+			});
+			const item = statusNullMatchSchema.mapItem(page as never);
+			expect(item.state).toBeNull();
+		});
+
+		it("status フィールドで型が一致しない場合は null を返す", () => {
+			const StatusMismatchSchema = z.object({
+				id: z.string(),
+				updatedAt: z.string(),
+				title: z.string().nullable(),
+				state: z.string().nullable(),
+			});
+			const statusMismatchMapping = defineMapping<
+				z.infer<typeof StatusMismatchSchema>
+			>({
+				title: { type: "title", notion: "Name" },
+				state: { type: "status", notion: "State" },
+			});
+			const statusMismatchSchema = defineSchema(
+				StatusMismatchSchema,
+				statusMismatchMapping,
+			);
+			const page = makePage({
+				Name: { type: "title", title: [] },
+				State: { type: "rich_text", rich_text: [{ plain_text: "not-status" }] },
+			});
+			const item = statusMismatchSchema.mapItem(page as never);
+			expect(item.state).toBeNull();
 		});
 
 		it("select フィールドで prop が select でも status でもない場合は null を返す", () => {

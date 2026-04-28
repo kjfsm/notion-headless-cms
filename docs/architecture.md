@@ -55,7 +55,12 @@ Notion DB
 
 ## Notion 更新検知
 
-`last_edited_time` だけで判定する理由:
+`last_edited_time` は `BaseContentItem.lastEditedTime` として `core` で公開され、
+schema で直接マッピング可能なメタデータフィールドである。
+CLI が Notion DB を introspect する際は `status` 型と同様に自動検出されるが、
+`PropertyDef.type` として定義不要（システム自動セット）。
+
+判定に使う理由:
 
 - Notion API に変更通知 API は無い（v5 時点）
 - `last_edited_time` は ISO-8601 で単調増加（マイクロ秒まで）

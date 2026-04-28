@@ -12,6 +12,7 @@ const baseContentItemSchema = z.object({
 	slug: z.string().min(1),
 	title: z.string().nullable().optional(),
 	updatedAt: z.string().min(1),
+	lastEditedTime: z.string().min(1).optional(),
 	status: z.string().optional(),
 	publishedAt: z.string().optional(),
 });
@@ -41,9 +42,10 @@ export function mapItemFromPropertyMap(
 			: null;
 
 	const result: Record<string, PropertyValue> &
-		Pick<BaseContentItem, "id" | "slug" | "updatedAt"> = {
+		Pick<BaseContentItem, "id" | "slug" | "updatedAt" | "lastEditedTime"> = {
 		id: page.id,
 		updatedAt: page.last_edited_time,
+		lastEditedTime: page.last_edited_time,
 		title,
 		slug: "",
 	};
@@ -75,12 +77,9 @@ function extractPropertyValue(
 				? getPlainText(prop.rich_text) || null
 				: null;
 		case "select":
-			if (prop.type === "select") return prop.select?.name ?? null;
-			if (prop.type === "status")
-				return (
-					(prop as { status?: { name: string } | null }).status?.name ?? null
-				);
-			return null;
+			return prop.type === "select" ? (prop.select?.name ?? null) : null;
+		case "status":
+			return prop.type === "status" ? (prop.status?.name ?? null) : null;
 		case "multiSelect":
 			return prop.type === "multi_select"
 				? prop.multi_select.map((s: { name: string }) => s.name)
@@ -107,12 +106,8 @@ export function mapItem(
 	page: NotionPage,
 	props: Required<CMSSchemaProperties>,
 ): BaseContentItem {
-	const statusProperty = page.properties[props.status] as
-		| { status?: { name: string } | null; select?: { name: string } | null }
-		| undefined;
-	const dateProperty = page.properties[props.date] as
-		| { date?: { start: string } | null }
-		| undefined;
+	const statusProperty = page.properties[props.status];
+	const dateProperty = page.properties[props.date];
 
 	const titleProp = Object.values(page.properties).find(
 		(p) => p.type === "title",
@@ -124,17 +119,23 @@ export function mapItem(
 
 	const parsed = baseContentItemSchema.safeParse({
 		id: page.id,
-		slug: getPlainText(
-			(
-				page.properties[props.slug] as
-					| { rich_text?: NotionRichTextItem[] }
-					| undefined
-			)?.rich_text,
-		),
+		slug: (() => {
+			const p = page.properties[props.slug];
+			return p?.type === "rich_text" ? getPlainText(p.rich_text) : "";
+		})(),
 		title,
-		status: statusProperty?.status?.name ?? statusProperty?.select?.name,
-		publishedAt: dateProperty?.date?.start ?? page.created_time,
+		status:
+			statusProperty?.type === "status"
+				? (statusProperty.status?.name ?? undefined)
+				: statusProperty?.type === "select"
+					? (statusProperty.select?.name ?? undefined)
+					: undefined,
+		publishedAt:
+			dateProperty?.type === "date"
+				? (dateProperty.date?.start ?? page.created_time)
+				: page.created_time,
 		updatedAt: page.last_edited_time,
+		lastEditedTime: page.last_edited_time,
 	});
 
 	if (!parsed.success) {

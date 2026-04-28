@@ -16,7 +16,7 @@ const NOTION_TYPE_MAP: Record<string, string | undefined> = {
 	title: "title",
 	rich_text: "richText",
 	select: "select",
-	status: "select",
+	status: "status",
 	multi_select: "multiSelect",
 	date: "date",
 	number: "number",
@@ -44,8 +44,8 @@ function tsTypeForPropDef(defType: string): string {
 		case "title":
 		case "richText":
 		case "url":
-			return "string | null";
 		case "select":
+		case "status":
 			return "string | null";
 		case "multiSelect":
 			return "string[]";
@@ -68,14 +68,8 @@ function tsTypeForPropDef(defType: string): string {
 function extractSelectLiterals(
 	prop: DataSourceObjectResponse["properties"][string],
 ): string[] | null {
-	if ((prop as { type?: string }).type === "status") {
-		const sp = prop as {
-			type: "status";
-			status?: { options?: { name: string }[] };
-		};
-		if (Array.isArray(sp.status?.options)) {
-			return sp.status.options.map((o) => o.name);
-		}
+	if (prop.type === "status" && Array.isArray(prop.status.options)) {
+		return prop.status.options.map((o) => o.name);
 	}
 	return null;
 }
