@@ -1,8 +1,7 @@
 import { data } from "react-router";
-import useSWR from "swr";
 import type { BlogPost } from "../lib/cms";
 import { makeCms } from "../lib/cms";
-import { fetcher } from "../lib/fetcher";
+import { useSWRWithFallback } from "../lib/fetcher";
 import type { Route } from "./+types/post";
 
 type PostApiResponse = { html: string; item: BlogPost };
@@ -18,12 +17,10 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 export default function Post({ loaderData }: Route.ComponentProps) {
 	const {
 		data: { html, item },
-	} = useSWR<PostApiResponse>(`/api/posts/${loaderData.item.slug}`, fetcher, {
-		fallbackData: {
-			html: loaderData.html,
-			item: loaderData.item as BlogPost,
-		},
-	});
+	} = useSWRWithFallback<PostApiResponse>(
+		`/api/posts/${loaderData.item.slug}`,
+		{ html: loaderData.html, item: loaderData.item as BlogPost },
+	);
 	return (
 		<article>
 			<h1>{item.slug}</h1>
