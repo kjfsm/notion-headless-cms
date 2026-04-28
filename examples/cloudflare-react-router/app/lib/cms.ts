@@ -34,7 +34,6 @@ export function makeCms(env: Env): Nhc {
 
 	return _createCMS({
 		cache: cloudflareCache(env),
-		ttlMs: 5 * 60_000,
 		renderer: embed.renderer,
 		collections: {
 			posts: {

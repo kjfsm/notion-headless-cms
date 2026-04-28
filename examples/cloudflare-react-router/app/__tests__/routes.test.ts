@@ -5,6 +5,9 @@ const fakeCms = {
 		list: vi.fn(),
 		get: vi.fn(),
 		check: vi.fn(),
+		cache: {
+			warm: vi.fn(),
+		},
 	},
 };
 
@@ -15,6 +18,7 @@ vi.mock("../lib/cms.js", () => ({
 const { loader: homeLoader } = await import("../routes/home.js");
 const { loader: postLoader } = await import("../routes/post.js");
 const { loader: checkLoader } = await import("../routes/check.js");
+const { action: warmAction } = await import("../routes/warm.js");
 
 const fakeContext = {
 	cloudflare: { env: { NOTION_TOKEN: "test-token" } },
@@ -112,5 +116,23 @@ describe("check loader()", () => {
 			context: fakeContext,
 		} as never);
 		expect((result as Response).status).toBe(404);
+	});
+});
+
+describe("warm action()", () => {
+	beforeEach(() => vi.clearAllMocks());
+
+	it("ウォームアップ結果を JSON で返す", async () => {
+		fakeCms.posts.cache.warm.mockResolvedValue({ ok: 3, failed: 0 });
+		const result = await warmAction({ context: fakeContext } as never);
+		const json = await (result as Response).json();
+		expect(json).toEqual({ ok: 3, failed: 0 });
+	});
+
+	it("失敗があっても結果を返す", async () => {
+		fakeCms.posts.cache.warm.mockResolvedValue({ ok: 2, failed: 1 });
+		const result = await warmAction({ context: fakeContext } as never);
+		const json = await (result as Response).json();
+		expect(json.failed).toBe(1);
 	});
 });

@@ -6,3 +6,6 @@ NOTION_TOKEN=secret_xxxx
 
 # DB 名（nhc.config.ts の dbName として使用、未設定時は "ブログ記事DB"）
 # DB_NAME=ブログ記事DB
+
+# npm run warm で使う Workers の URL（未設定時は http://localhost:8787）
+# WORKER_URL=https://your-worker.workers.dev
