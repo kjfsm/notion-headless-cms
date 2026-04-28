@@ -1,6 +1,6 @@
 {
   "name": "@notion-headless-cms/cli",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "description": "CLI tool for notion-headless-cms — generates schema files from Notion databases",
   "keywords": [
     "notion",
