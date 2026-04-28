@@ -59,9 +59,15 @@ export async function fetchOgp(
       headers: { "User-Agent": opts?.userAgent ?? DEFAULT_UA },
       redirect: "follow",
     });
-    if (!res.ok) return {};
+    if (!res.ok) {
+      console.warn(
+        `[notion-embed] OGP fetch failed: HTTP ${res.status} for ${url}`,
+      );
+      return {};
+    }
     html = await res.text();
-  } catch {
+  } catch (err) {
+    console.warn(`[notion-embed] OGP fetch failed for ${url}:`, err);
     return {};
   }
 

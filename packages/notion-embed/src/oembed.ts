@@ -26,9 +26,15 @@ export async function fetchOembed(
   if (opts?.height) ep.searchParams.set("maxheight", String(opts.height));
   try {
     const res = await fetch(ep.toString());
-    if (!res.ok) return {};
+    if (!res.ok) {
+      console.warn(
+        `[notion-embed] oEmbed fetch failed: HTTP ${res.status} for ${url}`,
+      );
+      return {};
+    }
     return (await res.json()) as OembedData;
-  } catch {
+  } catch (err) {
+    console.warn(`[notion-embed] oEmbed fetch failed for ${url}:`, err);
     return {};
   }
 }

@@ -463,8 +463,8 @@ export class CollectionClientImpl<T extends BaseContentItem>
     }
   }
 
-  private fetchListRaw(): Promise<T[]> {
-    return withRetry(
+  private async fetchListRaw(): Promise<T[]> {
+    const items = await withRetry(
       () =>
         this.ctx.source.list({
           publishedStatuses:
@@ -479,6 +479,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
         },
       },
     );
+    return items.filter((item) => !item.isArchived);
   }
 
   private async findRaw(slug: string): Promise<T | null> {
@@ -508,6 +509,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
     }
 
     if (!item) return null;
+    if (item.isArchived) return null;
     if (
       this.ctx.accessibleStatuses.length > 0 &&
       (!item.status || !this.ctx.accessibleStatuses.includes(item.status))

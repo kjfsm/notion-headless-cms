@@ -269,8 +269,10 @@ export function createCMS<C extends CollectionsConfig>(
               if (body.collection) {
                 return { collection: body.collection };
               }
-            } catch {
-              // ignore
+            } catch (err) {
+              logger?.warn?.("webhook body の JSON パース失敗", {
+                error: err instanceof Error ? err.message : String(err),
+              });
             }
             return null;
           },

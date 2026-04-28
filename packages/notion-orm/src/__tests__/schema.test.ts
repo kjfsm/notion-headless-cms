@@ -538,6 +538,71 @@ describe("defineSchema", () => {
       expect(item.category).toBeNull();
     });
 
+    it("カバー画像 (external/file) と絵文字アイコンがスキーマに反映される", () => {
+      const MediaSchema = z.object({
+        id: z.string(),
+        updatedAt: z.string(),
+        coverImageUrl: z.string().nullable().optional(),
+        iconEmoji: z.string().nullable().optional(),
+      });
+      const mediaSchema = defineSchema(
+        MediaSchema,
+        defineMapping<z.infer<typeof MediaSchema>>({}),
+      );
+
+      // external カバー画像
+      const pageExternal = {
+        ...makePage({}),
+        cover: {
+          type: "external",
+          external: { url: "https://example.com/cover.jpg" },
+        },
+      };
+      expect(mediaSchema.mapItem(pageExternal as never).coverImageUrl).toBe(
+        "https://example.com/cover.jpg",
+      );
+
+      // file カバー画像
+      const pageFile = {
+        ...makePage({}),
+        cover: {
+          type: "file",
+          file: { url: "https://s3.example.com/cover.png", expiry_time: "" },
+        },
+      };
+      expect(mediaSchema.mapItem(pageFile as never).coverImageUrl).toBe(
+        "https://s3.example.com/cover.png",
+      );
+
+      // 絵文字アイコン
+      const pageEmoji = {
+        ...makePage({}),
+        icon: { type: "emoji", emoji: "🎉" },
+      };
+      expect(mediaSchema.mapItem(pageEmoji as never).iconEmoji).toBe("🎉");
+
+      // 絵文字でないアイコン → null
+      const pageExternalIcon = {
+        ...makePage({}),
+        icon: {
+          type: "external",
+          external: { url: "https://example.com/icon.png" },
+        },
+      };
+      expect(
+        mediaSchema.mapItem(pageExternalIcon as never).iconEmoji,
+      ).toBeNull();
+
+      // 未対応カバータイプ → null
+      const pageUnknownCover = {
+        ...makePage({}),
+        cover: { type: "unsupported" },
+      };
+      expect(
+        mediaSchema.mapItem(pageUnknownCover as never).coverImageUrl,
+      ).toBeNull();
+    });
+
     it("SYSTEM_FIELDS (id, updatedAt) はマッピングでスキップされる", () => {
       const SysSchema = z.object({
         id: z.string(),

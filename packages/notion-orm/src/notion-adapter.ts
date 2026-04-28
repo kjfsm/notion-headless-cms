@@ -8,6 +8,7 @@ import type {
 import { CMSError, isCMSError } from "@notion-headless-cms/core";
 import type { BlockHandler } from "@notion-headless-cms/renderer";
 import { Transformer } from "@notion-headless-cms/renderer";
+import type { DataSourceObjectResponse } from "@notionhq/client";
 import {
   createClient,
   queryAllPages,
@@ -150,25 +151,19 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
       });
       for (const result of response.results) {
         if (result.object !== "data_source") continue;
-        const ds = result as { id: string; title?: { plain_text: string }[] };
-        const title = ds.title?.map((t) => t.plain_text).join("") ?? "";
+        const ds = result as DataSourceObjectResponse;
+        const title = ds.title.map((t) => t.plain_text).join("");
         if (title === dbName) {
           this.resolvedDataSourceId = ds.id;
           return ds.id;
         }
       }
-      const first = response.results.find((r) => r.object === "data_source") as
-        | { id: string }
-        | undefined;
-      if (!first) {
-        throw new CMSError({
-          code: "source/fetch_items_failed",
-          message: `Notion データベース "${dbName}" が見つかりませんでした。インテグレーションが DB にアクセスできるか確認してください。`,
-          context: { operation: "NotionCollection.getDataSourceId", dbName },
-        });
-      }
-      this.resolvedDataSourceId = first.id;
-      return first.id;
+      // 部分一致の結果はあっても完全一致しない場合は意図しないDBを掴むリスクがあるためエラーにする
+      throw new CMSError({
+        code: "source/fetch_items_failed",
+        message: `Notion データベース "${dbName}" が見つかりませんでした。インテグレーションが DB にアクセスできるか確認してください。`,
+        context: { operation: "NotionCollection.getDataSourceId", dbName },
+      });
     })();
     try {
       return await this.resolvingDataSourceId;

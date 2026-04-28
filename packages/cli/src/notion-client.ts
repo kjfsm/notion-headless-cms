@@ -1,6 +1,6 @@
 import { CMSError } from "@notion-headless-cms/core";
+import type { DataSourceObjectResponse } from "@notionhq/client";
 import { Client } from "@notionhq/client";
-import type { DataSourceObjectResponse } from "@notionhq/client/build/src/api-endpoints/data-sources.js";
 
 export type { DataSourceObjectResponse };
 
