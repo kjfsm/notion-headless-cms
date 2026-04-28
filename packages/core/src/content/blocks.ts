@@ -9,26 +9,26 @@
  * `{ type: "raw", html }` にフォールバックする。
  */
 export type ContentBlock =
-	| { type: "paragraph"; children: InlineNode[] }
-	| { type: "heading"; level: 1 | 2 | 3; children: InlineNode[] }
-	| { type: "image"; src: string; alt?: string; cachedHash?: string }
-	| { type: "code"; lang?: string; value: string }
-	| { type: "list"; ordered: boolean; items: ContentBlock[][] }
-	| { type: "quote"; children: ContentBlock[] }
-	| { type: "divider" }
-	| { type: "raw"; html: string };
+  | { type: "paragraph"; children: InlineNode[] }
+  | { type: "heading"; level: 1 | 2 | 3; children: InlineNode[] }
+  | { type: "image"; src: string; alt?: string; cachedHash?: string }
+  | { type: "code"; lang?: string; value: string }
+  | { type: "list"; ordered: boolean; items: ContentBlock[][] }
+  | { type: "quote"; children: ContentBlock[] }
+  | { type: "divider" }
+  | { type: "raw"; html: string };
 
 /** paragraph / heading 等の子に並ぶインラインノード。 */
 export type InlineNode =
-	| {
-			type: "text";
-			value: string;
-			bold?: boolean;
-			italic?: boolean;
-			code?: boolean;
-	  }
-	| { type: "link"; url: string; children: InlineNode[] }
-	| { type: "break" };
+  | {
+      type: "text";
+      value: string;
+      bold?: boolean;
+      italic?: boolean;
+      code?: boolean;
+    }
+  | { type: "link"; url: string; children: InlineNode[] }
+  | { type: "break" };
 
 /**
  * `getItem()` で返される本文アクセサ。すべて遅延ロード（async）。
@@ -36,18 +36,18 @@ export type InlineNode =
  * 同一インスタンス内ではメモ化される。
  */
 export interface ContentResult {
-	/** 本文 AST。 */
-	blocks(): Promise<ContentBlock[]>;
-	/** HTML。 */
-	html(): Promise<string>;
-	/** Markdown。 */
-	markdown(): Promise<string>;
+  /** 本文 AST。 */
+  blocks(): Promise<ContentBlock[]>;
+  /** HTML。 */
+  html(): Promise<string>;
+  /** Markdown。 */
+  markdown(): Promise<string>;
 }
 
 /** 画像参照 (DataSource.resolveImageUrl に渡す)。 */
 export interface ImageRef {
-	/** 元の Notion 画像 URL (期限切れの可能性あり)。 */
-	originalUrl: string;
-	/** 関連するアイテム ID。 */
-	itemId?: string;
+  /** 元の Notion 画像 URL (期限切れの可能性あり)。 */
+  originalUrl: string;
+  /** 関連するアイテム ID。 */
+  itemId?: string;
 }

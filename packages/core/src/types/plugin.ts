@@ -3,13 +3,13 @@ import type { CMSHooks } from "./hooks";
 import type { Logger } from "./logger";
 
 export interface CMSPlugin<T extends BaseContentItem = BaseContentItem> {
-	name: string;
-	hooks?: CMSHooks<T>;
-	logger?: Partial<Logger>;
+  name: string;
+  hooks?: CMSHooks<T>;
+  logger?: Partial<Logger>;
 }
 
 export function definePlugin<T extends BaseContentItem>(
-	plugin: CMSPlugin<T>,
+  plugin: CMSPlugin<T>,
 ): CMSPlugin<T> {
-	return plugin;
+  return plugin;
 }

@@ -1,138 +1,138 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-	createImageRouteHandler,
-	createRevalidateRouteHandler,
+  createImageRouteHandler,
+  createRevalidateRouteHandler,
 } from "../route-handlers";
 
 const makeMockCMS = () => ({
-	$getCachedImage: vi.fn(),
-	$invalidate: vi.fn().mockResolvedValue(undefined),
+  $getCachedImage: vi.fn(),
+  $invalidate: vi.fn().mockResolvedValue(undefined),
 });
 
 describe("createImageRouteHandler", () => {
-	it("画像が存在する場合は Response を返す", async () => {
-		const cms = makeMockCMS();
-		cms.$getCachedImage.mockResolvedValue({
-			data: new ArrayBuffer(4),
-			contentType: "image/png",
-		});
+  it("画像が存在する場合は Response を返す", async () => {
+    const cms = makeMockCMS();
+    cms.$getCachedImage.mockResolvedValue({
+      data: new ArrayBuffer(4),
+      contentType: "image/png",
+    });
 
-		const handler = createImageRouteHandler(cms as never);
-		const res = await handler(new Request("http://localhost"), {
-			params: Promise.resolve({ hash: "abc123" }),
-		});
+    const handler = createImageRouteHandler(cms as never);
+    const res = await handler(new Request("http://localhost"), {
+      params: Promise.resolve({ hash: "abc123" }),
+    });
 
-		expect(res.status).toBe(200);
-		expect(res.headers.get("content-type")).toBe("image/png");
-		expect(cms.$getCachedImage).toHaveBeenCalledWith("abc123");
-	});
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/png");
+    expect(cms.$getCachedImage).toHaveBeenCalledWith("abc123");
+  });
 
-	it("画像が存在しない場合は 404 を返す", async () => {
-		const cms = makeMockCMS();
-		cms.$getCachedImage.mockResolvedValue(null);
+  it("画像が存在しない場合は 404 を返す", async () => {
+    const cms = makeMockCMS();
+    cms.$getCachedImage.mockResolvedValue(null);
 
-		const handler = createImageRouteHandler(cms as never);
-		const res = await handler(new Request("http://localhost"), {
-			params: Promise.resolve({ hash: "notfound" }),
-		});
+    const handler = createImageRouteHandler(cms as never);
+    const res = await handler(new Request("http://localhost"), {
+      params: Promise.resolve({ hash: "notfound" }),
+    });
 
-		expect(res.status).toBe(404);
-	});
+    expect(res.status).toBe(404);
+  });
 });
 
 describe("createRevalidateRouteHandler", () => {
-	it("正しい secret で $invalidate をスコープ付きで呼ぶ", async () => {
-		const cms = makeMockCMS();
-		const handler = createRevalidateRouteHandler(cms as never, {
-			secret: "my-secret",
-		});
+  it("正しい secret で $invalidate をスコープ付きで呼ぶ", async () => {
+    const cms = makeMockCMS();
+    const handler = createRevalidateRouteHandler(cms as never, {
+      secret: "my-secret",
+    });
 
-		const request = new Request("http://localhost", {
-			method: "POST",
-			headers: {
-				Authorization: "Bearer my-secret",
-				"content-type": "application/json",
-			},
-			body: JSON.stringify({ collection: "posts", slug: "post-a" }),
-		});
+    const request = new Request("http://localhost", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer my-secret",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ collection: "posts", slug: "post-a" }),
+    });
 
-		const res = await handler(request);
-		expect(res.status).toBe(200);
-		expect(cms.$invalidate).toHaveBeenCalledWith({
-			collection: "posts",
-			slug: "post-a",
-		});
-	});
+    const res = await handler(request);
+    expect(res.status).toBe(200);
+    expect(cms.$invalidate).toHaveBeenCalledWith({
+      collection: "posts",
+      slug: "post-a",
+    });
+  });
 
-	it("body なしの場合は全体を revalidate する", async () => {
-		const cms = makeMockCMS();
-		const handler = createRevalidateRouteHandler(cms as never, {
-			secret: "my-secret",
-		});
+  it("body なしの場合は全体を revalidate する", async () => {
+    const cms = makeMockCMS();
+    const handler = createRevalidateRouteHandler(cms as never, {
+      secret: "my-secret",
+    });
 
-		const request = new Request("http://localhost", {
-			method: "POST",
-			headers: { Authorization: "Bearer my-secret" },
-		});
+    const request = new Request("http://localhost", {
+      method: "POST",
+      headers: { Authorization: "Bearer my-secret" },
+    });
 
-		const res = await handler(request);
-		expect(res.status).toBe(200);
-		expect(cms.$invalidate).toHaveBeenCalledWith("all");
-	});
+    const res = await handler(request);
+    expect(res.status).toBe(200);
+    expect(cms.$invalidate).toHaveBeenCalledWith("all");
+  });
 
-	it("collection のみ指定（slug なし）はコレクション単位で revalidate する", async () => {
-		const cms = makeMockCMS();
-		const handler = createRevalidateRouteHandler(cms as never, {
-			secret: "my-secret",
-		});
+  it("collection のみ指定（slug なし）はコレクション単位で revalidate する", async () => {
+    const cms = makeMockCMS();
+    const handler = createRevalidateRouteHandler(cms as never, {
+      secret: "my-secret",
+    });
 
-		const request = new Request("http://localhost", {
-			method: "POST",
-			headers: {
-				Authorization: "Bearer my-secret",
-				"content-type": "application/json",
-			},
-			body: JSON.stringify({ collection: "posts" }),
-		});
+    const request = new Request("http://localhost", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer my-secret",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ collection: "posts" }),
+    });
 
-		const res = await handler(request);
-		expect(res.status).toBe(200);
-		expect(cms.$invalidate).toHaveBeenCalledWith({ collection: "posts" });
-	});
+    const res = await handler(request);
+    expect(res.status).toBe(200);
+    expect(cms.$invalidate).toHaveBeenCalledWith({ collection: "posts" });
+  });
 
-	it("collection も slug もない JSON body は全体を revalidate する", async () => {
-		const cms = makeMockCMS();
-		const handler = createRevalidateRouteHandler(cms as never, {
-			secret: "my-secret",
-		});
+  it("collection も slug もない JSON body は全体を revalidate する", async () => {
+    const cms = makeMockCMS();
+    const handler = createRevalidateRouteHandler(cms as never, {
+      secret: "my-secret",
+    });
 
-		const request = new Request("http://localhost", {
-			method: "POST",
-			headers: {
-				Authorization: "Bearer my-secret",
-				"content-type": "application/json",
-			},
-			body: JSON.stringify({ extra: "data" }),
-		});
+    const request = new Request("http://localhost", {
+      method: "POST",
+      headers: {
+        Authorization: "Bearer my-secret",
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({ extra: "data" }),
+    });
 
-		const res = await handler(request);
-		expect(res.status).toBe(200);
-		expect(cms.$invalidate).toHaveBeenCalledWith("all");
-	});
+    const res = await handler(request);
+    expect(res.status).toBe(200);
+    expect(cms.$invalidate).toHaveBeenCalledWith("all");
+  });
 
-	it("secret が不正の場合は 401 を返す", async () => {
-		const cms = makeMockCMS();
-		const handler = createRevalidateRouteHandler(cms as never, {
-			secret: "my-secret",
-		});
+  it("secret が不正の場合は 401 を返す", async () => {
+    const cms = makeMockCMS();
+    const handler = createRevalidateRouteHandler(cms as never, {
+      secret: "my-secret",
+    });
 
-		const request = new Request("http://localhost", {
-			method: "POST",
-			headers: { Authorization: "Bearer wrong-secret" },
-		});
+    const request = new Request("http://localhost", {
+      method: "POST",
+      headers: { Authorization: "Bearer wrong-secret" },
+    });
 
-		const res = await handler(request);
-		expect(res.status).toBe(401);
-		expect(cms.$invalidate).not.toHaveBeenCalled();
-	});
+    const res = await handler(request);
+    expect(res.status).toBe(401);
+    expect(cms.$invalidate).not.toHaveBeenCalled();
+  });
 });

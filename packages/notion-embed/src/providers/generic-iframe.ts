@@ -8,37 +8,37 @@ import { renderIframe } from "./_internal";
  * 空配列を渡すと何もマッチしない。
  */
 export function genericIframeProvider(opts: {
-	allowedHosts: readonly string[];
-	width?: number;
-	height?: number;
+  allowedHosts: readonly string[];
+  width?: number;
+  height?: number;
 }): EmbedProvider {
-	return {
-		id: "generic-iframe",
-		match: (url) => {
-			try {
-				const { hostname } = new URL(url);
-				return opts.allowedHosts.some(
-					(h) => hostname === h || hostname.endsWith(`.${h}`),
-				);
-			} catch {
-				return false;
-			}
-		},
-		render: ({ url, width: w, height: h }) => ({
-			kind: "html",
-			html: renderIframe({
-				src: url,
-				width: w ?? opts.width,
-				height: h ?? opts.height,
-				frameborder: 0,
-			}),
-		}),
-		sanitizeSchema: {
-			tagNames: ["iframe"],
-			attributes: {
-				iframe: ["src", "width", "height", "frameBorder", "loading"],
-			},
-			protocols: { src: ["https", "http"] },
-		},
-	};
+  return {
+    id: "generic-iframe",
+    match: (url) => {
+      try {
+        const { hostname } = new URL(url);
+        return opts.allowedHosts.some(
+          (h) => hostname === h || hostname.endsWith(`.${h}`),
+        );
+      } catch {
+        return false;
+      }
+    },
+    render: ({ url, width: w, height: h }) => ({
+      kind: "html",
+      html: renderIframe({
+        src: url,
+        width: w ?? opts.width,
+        height: h ?? opts.height,
+        frameborder: 0,
+      }),
+    }),
+    sanitizeSchema: {
+      tagNames: ["iframe"],
+      attributes: {
+        iframe: ["src", "width", "height", "frameBorder", "loading"],
+      },
+      protocols: { src: ["https", "http"] },
+    },
+  };
 }

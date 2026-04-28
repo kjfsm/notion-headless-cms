@@ -1,61 +1,61 @@
 {
-	"name": "@notion-headless-cms/cli",
-	"version": "1.0.14",
-	"description": "CLI tool for notion-headless-cms — generates schema files from Notion databases",
-	"keywords": [
-		"notion",
-		"headless-cms",
-		"cli",
-		"codegen",
-		"typescript"
-	],
-	"license": "MIT",
-	"homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
-	"bugs": {
-		"url": "https://github.com/kjfsm/notion-headless-cms/issues"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/kjfsm/notion-headless-cms.git",
-		"directory": "packages/cli"
-	},
-	"type": "module",
-	"bin": {
-		"nhc": "./dist/cli.mjs"
-	},
-	"exports": {
-		".": {
-			"types": "./dist/index.d.mts",
-			"import": "./dist/index.mjs"
-		}
-	},
-	"files": [
-		"dist"
-	],
-	"engines": {
-		"node": ">=24"
-	},
-	"scripts": {
-		"prepare": "pnpm build",
-		"build": "tsdown src/index.ts src/cli.ts --format esm --dts --sourcemap --out-dir dist",
-		"typecheck": "tsc --noEmit",
-		"test": "vitest run",
-		"test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
-		"publint": "publint --strict",
-		"attw": "attw --pack . --profile esm-only"
-	},
-	"publishConfig": {
-		"access": "public",
-		"provenance": true
-	},
-	"dependencies": {
-		"@notion-headless-cms/core": "workspace:*",
-		"@notionhq/client": "catalog:",
-		"commander": "^14.0.3",
-		"dotenv": "^17.4.2",
-		"jiti": "^2.0.0"
-	},
-	"devDependencies": {
-		"@types/node": "catalog:"
-	}
+  "name": "@notion-headless-cms/cli",
+  "version": "1.0.14",
+  "description": "CLI tool for notion-headless-cms — generates schema files from Notion databases",
+  "keywords": [
+    "notion",
+    "headless-cms",
+    "cli",
+    "codegen",
+    "typescript"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
+  "bugs": {
+    "url": "https://github.com/kjfsm/notion-headless-cms/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kjfsm/notion-headless-cms.git",
+    "directory": "packages/cli"
+  },
+  "type": "module",
+  "bin": {
+    "nhc": "./dist/cli.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "prepare": "pnpm build",
+    "build": "tsdown src/index.ts src/cli.ts --format esm --dts --sourcemap --out-dir dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
+    "publint": "publint --strict",
+    "attw": "attw --pack . --profile esm-only"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "dependencies": {
+    "@notion-headless-cms/core": "workspace:*",
+    "@notionhq/client": "catalog:",
+    "commander": "^14.0.3",
+    "dotenv": "^17.4.2",
+    "jiti": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:"
+  }
 }

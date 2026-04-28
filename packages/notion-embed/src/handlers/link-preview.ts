@@ -9,15 +9,15 @@ import { normalizeUrl } from "../url-normalize";
  * クラス名 `.nhc-link-preview` で CSS を当てる。
  */
 export function renderLinkPreview(
-	block: LinkPreviewBlockObjectResponse,
+  block: LinkPreviewBlockObjectResponse,
 ): string {
-	const url = normalizeUrl(block.link_preview.url);
-	const label = escapeHtml(url.replace(/^https?:\/\//, ""));
+  const url = normalizeUrl(block.link_preview.url);
+  const label = escapeHtml(url.replace(/^https?:\/\//, ""));
 
-	return (
-		`<a class="nhc-link-preview" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">` +
-		`<span class="nhc-link-preview__icon" aria-hidden="true">🔗</span>` +
-		`<span class="nhc-link-preview__label">${label}</span>` +
-		`</a>`
-	);
+  return (
+    `<a class="nhc-link-preview" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">` +
+    `<span class="nhc-link-preview__icon" aria-hidden="true">🔗</span>` +
+    `<span class="nhc-link-preview__label">${label}</span>` +
+    `</a>`
+  );
 }

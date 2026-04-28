@@ -5,13 +5,13 @@ import type { NotionPage } from "./types";
 // ── フィールドマッピング型定義 ──────────────────────────────────────────────
 
 export type NotionFieldType =
-	| {
-			type: "title" | "richText" | "url" | "checkbox" | "date" | "number";
-			notion: string;
-	  }
-	| { type: "multiSelect"; notion: string }
-	| { type: "select"; notion: string }
-	| { type: "status"; notion: string };
+  | {
+      type: "title" | "richText" | "url" | "checkbox" | "date" | "number";
+      notion: string;
+    }
+  | { type: "multiSelect"; notion: string }
+  | { type: "select"; notion: string }
+  | { type: "status"; notion: string };
 
 // id・updatedAt・lastEditedTime は Notion ページメタデータから自動設定されるシステムフィールド
 type SystemField = "id" | "updatedAt" | "lastEditedTime";
@@ -24,16 +24,16 @@ type SystemField = "id" | "updatedAt" | "lastEditedTime";
  * 型レベルでキーがスキーマと一致することを保証する。ランタイムは恒等関数。
  */
 export function defineMapping<T extends object>(
-	mapping: { [K in keyof Omit<T, SystemField>]: NotionFieldType },
+  mapping: { [K in keyof Omit<T, SystemField>]: NotionFieldType },
 ): { [K in keyof Omit<T, SystemField>]: NotionFieldType } {
-	return mapping;
+  return mapping;
 }
 
 // ── NotionSchema オブジェクト型 ──────────────────────────────────────────────
 
 export interface NotionSchema<T> {
-	mapping: { [K in keyof T]: NotionFieldType };
-	mapItem: (page: NotionPage) => T;
+  mapping: { [K in keyof T]: NotionFieldType };
+  mapItem: (page: NotionPage) => T;
 }
 
 // ── defineSchema ─────────────────────────────────────────────────────────────
@@ -51,23 +51,23 @@ export interface NotionSchema<T> {
  * const schema = defineSchema(PostSchema, mapping)
  */
 export function defineSchema<S extends z.ZodRawShape>(
-	zodSchema: z.ZodObject<S>,
-	mapping: {
-		[K in keyof Omit<z.infer<z.ZodObject<S>>, SystemField>]: NotionFieldType;
-	},
+  zodSchema: z.ZodObject<S>,
+  mapping: {
+    [K in keyof Omit<z.infer<z.ZodObject<S>>, SystemField>]: NotionFieldType;
+  },
 ): NotionSchema<z.infer<z.ZodObject<S>>> {
-	type T = z.infer<z.ZodObject<S>>;
+  type T = z.infer<z.ZodObject<S>>;
 
-	return {
-		mapping: mapping as { [K in keyof T]: NotionFieldType },
-		mapItem: (page) => {
-			const raw = parseMapping(
-				page,
-				mapping as { [K in keyof T]: NotionFieldType },
-			);
-			return zodSchema.parse(raw) as T;
-		},
-	};
+  return {
+    mapping: mapping as { [K in keyof T]: NotionFieldType },
+    mapItem: (page) => {
+      const raw = parseMapping(
+        page,
+        mapping as { [K in keyof T]: NotionFieldType },
+      );
+      return zodSchema.parse(raw) as T;
+    },
+  };
 }
 
 // ── パーサー ─────────────────────────────────────────────────────────────────
@@ -78,63 +78,63 @@ type PropertyValue = NotionPage["properties"][string];
 const SYSTEM_FIELDS = new Set(["id", "updatedAt", "lastEditedTime"]);
 
 function parseMapping<T>(
-	page: NotionPage,
-	mapping: { [K in keyof T]: NotionFieldType },
+  page: NotionPage,
+  mapping: { [K in keyof T]: NotionFieldType },
 ): Record<string, unknown> {
-	const titleProp = Object.values(page.properties).find(
-		(p) => p.type === "title",
-	);
-	const result: Record<string, unknown> = {
-		id: page.id,
-		updatedAt: page.last_edited_time,
-		lastEditedTime: page.last_edited_time,
-		title:
-			titleProp?.type === "title"
-				? getPlainText(titleProp.title) || null
-				: null,
-	};
-	for (const [key, fieldDef] of Object.entries(mapping) as [
-		string,
-		NotionFieldType,
-	][]) {
-		if (SYSTEM_FIELDS.has(key)) continue;
-		result[key] = parseField(page.properties[fieldDef.notion], fieldDef);
-	}
-	return result;
+  const titleProp = Object.values(page.properties).find(
+    (p) => p.type === "title",
+  );
+  const result: Record<string, unknown> = {
+    id: page.id,
+    updatedAt: page.last_edited_time,
+    lastEditedTime: page.last_edited_time,
+    title:
+      titleProp?.type === "title"
+        ? getPlainText(titleProp.title) || null
+        : null,
+  };
+  for (const [key, fieldDef] of Object.entries(mapping) as [
+    string,
+    NotionFieldType,
+  ][]) {
+    if (SYSTEM_FIELDS.has(key)) continue;
+    result[key] = parseField(page.properties[fieldDef.notion], fieldDef);
+  }
+  return result;
 }
 
 function parseField(
-	prop: PropertyValue | undefined,
-	fieldDef: NotionFieldType,
+  prop: PropertyValue | undefined,
+  fieldDef: NotionFieldType,
 ): unknown {
-	if (!prop) {
-		if (fieldDef.type === "checkbox") return false;
-		if (fieldDef.type === "multiSelect") return [];
-		return null;
-	}
+  if (!prop) {
+    if (fieldDef.type === "checkbox") return false;
+    if (fieldDef.type === "multiSelect") return [];
+    return null;
+  }
 
-	switch (fieldDef.type) {
-		case "title":
-			return getPlainText(prop.type === "title" ? prop.title : []) || null;
-		case "richText":
-			return (
-				getPlainText(prop.type === "rich_text" ? prop.rich_text : []) || null
-			);
-		case "date":
-			return prop.type === "date" ? (prop.date?.start ?? null) : null;
-		case "number":
-			return prop.type === "number" ? prop.number : null;
-		case "checkbox":
-			return prop.type === "checkbox" ? prop.checkbox : false;
-		case "url":
-			return prop.type === "url" ? prop.url : null;
-		case "multiSelect":
-			return prop.type === "multi_select"
-				? prop.multi_select.map((s) => s.name)
-				: [];
-		case "select":
-			return prop.type === "select" ? (prop.select?.name ?? null) : null;
-		case "status":
-			return prop.type === "status" ? (prop.status?.name ?? null) : null;
-	}
+  switch (fieldDef.type) {
+    case "title":
+      return getPlainText(prop.type === "title" ? prop.title : []) || null;
+    case "richText":
+      return (
+        getPlainText(prop.type === "rich_text" ? prop.rich_text : []) || null
+      );
+    case "date":
+      return prop.type === "date" ? (prop.date?.start ?? null) : null;
+    case "number":
+      return prop.type === "number" ? prop.number : null;
+    case "checkbox":
+      return prop.type === "checkbox" ? prop.checkbox : false;
+    case "url":
+      return prop.type === "url" ? prop.url : null;
+    case "multiSelect":
+      return prop.type === "multi_select"
+        ? prop.multi_select.map((s) => s.name)
+        : [];
+    case "select":
+      return prop.type === "select" ? (prop.select?.name ?? null) : null;
+    case "status":
+      return prop.type === "status" ? (prop.status?.name ?? null) : null;
+  }
 }

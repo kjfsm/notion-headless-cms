@@ -4,9 +4,9 @@ import { CMSError } from "@notion-headless-cms/core";
 import { fileExists } from "../fs-utils.js";
 
 export interface InitOptions {
-	output?: string;
-	force?: boolean;
-	silent?: boolean;
+  output?: string;
+  force?: boolean;
+  silent?: boolean;
 }
 
 const CONFIG_TEMPLATE = `import "dotenv/config";
@@ -55,29 +55,29 @@ export default defineConfig({
 `;
 
 export async function runInit(opts: InitOptions): Promise<void> {
-	const outputPath = path.resolve(
-		process.cwd(),
-		opts.output ?? "nhc.config.ts",
-	);
+  const outputPath = path.resolve(
+    process.cwd(),
+    opts.output ?? "nhc.config.ts",
+  );
 
-	if (!opts.force && (await fileExists(outputPath))) {
-		throw new CMSError({
-			code: "cli/init_failed",
-			message: `${outputPath} はすでに存在します。上書きするには --force を指定してください。`,
-			context: { operation: "runInit", outputPath },
-		});
-	}
+  if (!opts.force && (await fileExists(outputPath))) {
+    throw new CMSError({
+      code: "cli/init_failed",
+      message: `${outputPath} はすでに存在します。上書きするには --force を指定してください。`,
+      context: { operation: "runInit", outputPath },
+    });
+  }
 
-	await fs.writeFile(outputPath, CONFIG_TEMPLATE, "utf-8");
+  await fs.writeFile(outputPath, CONFIG_TEMPLATE, "utf-8");
 
-	if (!opts.silent) {
-		console.log(`✓ ${outputPath} を作成しました。`);
-		console.log("");
-		console.log("次のステップ:");
-		console.log("  1. nhc.config.ts を編集して collections を設定する");
-		console.log(
-			"  2. NOTION_TOKEN 環境変数を設定する (Notion インテグレーションのシークレット)",
-		);
-		console.log("  3. pnpm nhc generate でスキーマを生成する");
-	}
+  if (!opts.silent) {
+    console.log(`✓ ${outputPath} を作成しました。`);
+    console.log("");
+    console.log("次のステップ:");
+    console.log("  1. nhc.config.ts を編集して collections を設定する");
+    console.log(
+      "  2. NOTION_TOKEN 環境変数を設定する (Notion インテグレーションのシークレット)",
+    );
+    console.log("  3. pnpm nhc generate でスキーマを生成する");
+  }
 }

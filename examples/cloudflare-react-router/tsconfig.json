@@ -1,18 +1,18 @@
 {
-	"compilerOptions": {
-		"target": "ES2022",
-		"module": "ESNext",
-		"moduleResolution": "bundler",
-		"strict": true,
-		"verbatimModuleSyntax": true,
-		"skipLibCheck": true,
-		"noEmit": true,
-		"jsx": "react-jsx",
-		"rootDirs": [".", "./.react-router/types"],
-		"paths": {
-			"~/*": ["./app/*"]
-		}
-	},
-	"include": ["**/*.ts", "**/*.tsx", ".react-router/types/**/*.d.ts"],
-	"exclude": ["node_modules"]
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "rootDirs": [".", "./.react-router/types"],
+    "paths": {
+      "~/*": ["./app/*"]
+    }
+  },
+  "include": ["**/*.ts", "**/*.tsx", ".react-router/types/**/*.d.ts"],
+  "exclude": ["node_modules"]
 }

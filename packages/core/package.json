@@ -1,72 +1,72 @@
 {
-	"name": "@notion-headless-cms/core",
-	"version": "0.3.12",
-	"description": "Core CMS engine for notion-headless-cms — fetch, transform, cache with stale-while-revalidate strategy",
-	"keywords": [
-		"notion",
-		"headless-cms",
-		"cms",
-		"cache",
-		"stale-while-revalidate",
-		"typescript"
-	],
-	"license": "MIT",
-	"homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
-	"bugs": {
-		"url": "https://github.com/kjfsm/notion-headless-cms/issues"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/kjfsm/notion-headless-cms.git",
-		"directory": "packages/core"
-	},
-	"type": "module",
-	"sideEffects": false,
-	"exports": {
-		".": {
-			"types": "./dist/index.d.mts",
-			"import": "./dist/index.mjs"
-		},
-		"./errors": {
-			"types": "./dist/errors.d.mts",
-			"import": "./dist/errors.mjs"
-		},
-		"./hooks": {
-			"types": "./dist/hooks.d.mts",
-			"import": "./dist/hooks.mjs"
-		},
-		"./cache/memory": {
-			"types": "./dist/cache/memory.d.mts",
-			"import": "./dist/cache/memory.mjs"
-		}
-	},
-	"files": [
-		"dist"
-	],
-	"engines": {
-		"node": ">=24"
-	},
-	"scripts": {
-		"build": "tsdown src/index.ts src/errors.ts src/hooks.ts src/cache/memory.ts --format esm --dts --sourcemap --out-dir dist",
-		"typecheck": "tsc --noEmit",
-		"test": "vitest run",
-		"test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
-		"publint": "publint --strict",
-		"attw": "attw --pack . --profile esm-only"
-	},
-	"publishConfig": {
-		"access": "public",
-		"provenance": true
-	},
-	"peerDependencies": {
-		"@notion-headless-cms/renderer": "workspace:*"
-	},
-	"peerDependenciesMeta": {
-		"@notion-headless-cms/renderer": {
-			"optional": true
-		}
-	},
-	"devDependencies": {
-		"@notion-headless-cms/renderer": "workspace:*"
-	}
+  "name": "@notion-headless-cms/core",
+  "version": "0.3.12",
+  "description": "Core CMS engine for notion-headless-cms — fetch, transform, cache with stale-while-revalidate strategy",
+  "keywords": [
+    "notion",
+    "headless-cms",
+    "cms",
+    "cache",
+    "stale-while-revalidate",
+    "typescript"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
+  "bugs": {
+    "url": "https://github.com/kjfsm/notion-headless-cms/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kjfsm/notion-headless-cms.git",
+    "directory": "packages/core"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./errors": {
+      "types": "./dist/errors.d.mts",
+      "import": "./dist/errors.mjs"
+    },
+    "./hooks": {
+      "types": "./dist/hooks.d.mts",
+      "import": "./dist/hooks.mjs"
+    },
+    "./cache/memory": {
+      "types": "./dist/cache/memory.d.mts",
+      "import": "./dist/cache/memory.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts src/errors.ts src/hooks.ts src/cache/memory.ts --format esm --dts --sourcemap --out-dir dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
+    "publint": "publint --strict",
+    "attw": "attw --pack . --profile esm-only"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "peerDependencies": {
+    "@notion-headless-cms/renderer": "workspace:*"
+  },
+  "peerDependenciesMeta": {
+    "@notion-headless-cms/renderer": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@notion-headless-cms/renderer": "workspace:*"
+  }
 }

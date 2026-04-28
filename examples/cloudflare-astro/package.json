@@ -1,35 +1,35 @@
 {
-	"name": "example-cloudflare-astro",
-	"private": true,
-	"version": "0.0.24",
-	"type": "module",
-	"scripts": {
-		"astro": "astro",
-		"build": "astro build",
-		"cf-typegen": "wrangler types",
-		"check": "astro build && tsc && wrangler deploy --dry-run",
-		"deploy": "wrangler deploy",
-		"dev": "astro dev",
-		"generate": "nhc generate",
-		"preview": "astro build && wrangler dev",
-		"test": "vitest run"
-	},
-	"dependencies": {
-		"@notion-headless-cms/cache": "workspace:*",
-		"@notion-headless-cms/core": "workspace:*",
-		"@notion-headless-cms/notion-orm": "workspace:*",
-		"@notion-headless-cms/renderer": "workspace:*",
-		"astro": "^6.1.9",
-		"zod": "^4.3.6"
-	},
-	"devDependencies": {
-		"@astrojs/check": "^0.9.8",
-		"@astrojs/cloudflare": "^13.2.1",
-		"@notion-headless-cms/cli": "workspace:*",
-		"@types/node": "^25.6.0",
-		"dotenv": "^17.4.2",
-		"typescript": "^6.0.3",
-		"vitest": "^3.2.0",
-		"wrangler": "^4.85.0"
-	}
+  "name": "example-cloudflare-astro",
+  "private": true,
+  "version": "0.0.24",
+  "type": "module",
+  "scripts": {
+    "astro": "astro",
+    "build": "astro build",
+    "cf-typegen": "wrangler types",
+    "check": "astro build && tsc && wrangler deploy --dry-run",
+    "deploy": "wrangler deploy",
+    "dev": "astro dev",
+    "generate": "nhc generate",
+    "preview": "astro build && wrangler dev",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@notion-headless-cms/cache": "workspace:*",
+    "@notion-headless-cms/core": "workspace:*",
+    "@notion-headless-cms/notion-orm": "workspace:*",
+    "@notion-headless-cms/renderer": "workspace:*",
+    "astro": "^6.1.9",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.8",
+    "@astrojs/cloudflare": "^13.2.1",
+    "@notion-headless-cms/cli": "workspace:*",
+    "@types/node": "^25.6.0",
+    "dotenv": "^17.4.2",
+    "typescript": "^6.0.3",
+    "vitest": "^3.2.0",
+    "wrangler": "^4.85.0"
+  }
 }

@@ -1,47 +1,47 @@
 {
-	"$schema": "./node_modules/turbo/schema.json",
-	"globalDependencies": ["tsconfig.json", "biome.json", "vitest.workspace.ts"],
-	"globalEnv": ["NODE_ENV", "CI"],
-	"tasks": {
-		"build": {
-			"dependsOn": ["^build"],
-			"inputs": ["src/**", "package.json", "tsconfig.json"],
-			"outputs": ["dist/**"]
-		},
-		"typecheck": {
-			"dependsOn": ["^build"],
-			"inputs": ["src/**", "tsconfig.json"],
-			"outputs": []
-		},
-		"test": {
-			"dependsOn": ["^build"],
-			"inputs": ["src/**", "app/**", "vitest.config.ts"],
-			"outputs": []
-		},
-		"test:coverage": {
-			"dependsOn": ["^build"],
-			"inputs": ["src/**"],
-			"outputs": ["coverage/**"]
-		},
-		"publint": {
-			"dependsOn": ["build"],
-			"inputs": ["dist/**", "package.json"],
-			"outputs": []
-		},
-		"attw": {
-			"dependsOn": ["build"],
-			"inputs": ["dist/**", "package.json"],
-			"outputs": []
-		},
-		"lint": {
-			"cache": false
-		},
-		"generate": {
-			"dependsOn": ["@notion-headless-cms/cli#build"],
-			"inputs": ["nhc.config.ts", ".env", ".dev.vars"],
-			"outputs": ["src/generated/**", "app/generated/**"],
-			"env": ["NOTION_DATA_SOURCE_ID", "DB_NAME"],
-			"passThroughEnv": ["NOTION_TOKEN"]
-		}
-	}
+  "$schema": "./node_modules/turbo/schema.json",
+  "globalDependencies": ["tsconfig.json", "biome.json", "vitest.workspace.ts"],
+  "globalEnv": ["NODE_ENV", "CI"],
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "package.json", "tsconfig.json"],
+      "outputs": ["dist/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "tsconfig.json"],
+      "outputs": []
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**", "app/**", "vitest.config.ts"],
+      "outputs": []
+    },
+    "test:coverage": {
+      "dependsOn": ["^build"],
+      "inputs": ["src/**"],
+      "outputs": ["coverage/**"]
+    },
+    "publint": {
+      "dependsOn": ["build"],
+      "inputs": ["dist/**", "package.json"],
+      "outputs": []
+    },
+    "attw": {
+      "dependsOn": ["build"],
+      "inputs": ["dist/**", "package.json"],
+      "outputs": []
+    },
+    "lint": {
+      "cache": false
+    },
+    "generate": {
+      "dependsOn": ["@notion-headless-cms/cli#build"],
+      "inputs": ["nhc.config.ts", ".env", ".dev.vars"],
+      "outputs": ["src/generated/**", "app/generated/**"],
+      "env": ["NOTION_DATA_SOURCE_ID", "DB_NAME"],
+      "passThroughEnv": ["NOTION_TOKEN"]
+    }
+  }
 }

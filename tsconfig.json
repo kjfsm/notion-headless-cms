@@ -1,10 +1,10 @@
 {
-	"files": [],
-	"compilerOptions": {
-		"verbatimModuleSyntax": true,
-		"skipLibCheck": true,
-		"strict": true,
-		"useUnknownInCatchVariables": true,
-		"noEmit": true
-	}
+  "files": [],
+  "compilerOptions": {
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "useUnknownInCatchVariables": true,
+    "noEmit": true
+  }
 }

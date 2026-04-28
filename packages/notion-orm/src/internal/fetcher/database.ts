@@ -3,20 +3,20 @@ import { paginate } from "./pagination.js";
 
 /** Notionデータソースをカーソルページネーションで最後まで取得する。 */
 export async function queryAllPages(
-	client: Client,
-	dataSourceId: string,
+  client: Client,
+  dataSourceId: string,
 ): Promise<PageObjectResponse[]> {
-	return paginate<PageObjectResponse>(async (cursor) => {
-		const response = await client.dataSources.query({
-			data_source_id: dataSourceId,
-			start_cursor: cursor,
-		});
-		return {
-			results: response.results as PageObjectResponse[],
-			has_more: response.has_more,
-			next_cursor: response.next_cursor,
-		};
-	});
+  return paginate<PageObjectResponse>(async (cursor) => {
+    const response = await client.dataSources.query({
+      data_source_id: dataSourceId,
+      start_cursor: cursor,
+    });
+    return {
+      results: response.results as PageObjectResponse[],
+      has_more: response.has_more,
+      next_cursor: response.next_cursor,
+    };
+  });
 }
 
 /**
@@ -24,17 +24,17 @@ export async function queryAllPages(
  * Core が `findByProp` を通じて slug ルックアップに使用する。
  */
 export async function queryPageByProp(
-	client: Client,
-	dataSourceId: string,
-	notionPropName: string,
-	value: string,
+  client: Client,
+  dataSourceId: string,
+  notionPropName: string,
+  value: string,
 ): Promise<PageObjectResponse | null> {
-	const filter = { property: notionPropName, rich_text: { equals: value } };
+  const filter = { property: notionPropName, rich_text: { equals: value } };
 
-	const res = await client.dataSources.query({
-		data_source_id: dataSourceId,
-		filter,
-	});
+  const res = await client.dataSources.query({
+    data_source_id: dataSourceId,
+    filter,
+  });
 
-	return (res.results[0] as PageObjectResponse | undefined) ?? null;
+  return (res.results[0] as PageObjectResponse | undefined) ?? null;
 }

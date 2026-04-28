@@ -9,18 +9,18 @@ import { renderRichText } from "../render-rich-text";
  * 子コンテンツは Transformer が別途処理して文字列に追加する設計。
  */
 export async function renderToggle(
-	block: ToggleBlockObjectResponse,
-	opts?: RichTextRenderOptions,
+  block: ToggleBlockObjectResponse,
+  opts?: RichTextRenderOptions,
 ): Promise<string> {
-	const summaryHtml = await renderRichText(block.toggle.rich_text, opts);
+  const summaryHtml = await renderRichText(block.toggle.rich_text, opts);
 
-	// notion-to-md はこのハンドラーの戻り値を Markdown 文字列として受け取る。
-	// <details> の中身 (子ブロック) は現状 notion-to-md が自動で後続に追加しないため、
-	// ここでは単独で <details> を閉じる形にする。
-	// 子コンテンツが必要な場合は利用側で children を取得して文字列を連結する。
-	return (
-		`<details class="nhc-toggle">` +
-		`<summary class="nhc-toggle__summary">${summaryHtml}</summary>` +
-		`</details>`
-	);
+  // notion-to-md はこのハンドラーの戻り値を Markdown 文字列として受け取る。
+  // <details> の中身 (子ブロック) は現状 notion-to-md が自動で後続に追加しないため、
+  // ここでは単独で <details> を閉じる形にする。
+  // 子コンテンツが必要な場合は利用側で children を取得して文字列を連結する。
+  return (
+    `<details class="nhc-toggle">` +
+    `<summary class="nhc-toggle__summary">${summaryHtml}</summary>` +
+    `</details>`
+  );
 }

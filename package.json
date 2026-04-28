@@ -1,43 +1,43 @@
 {
-	"name": "notion-headless-cms",
-	"private": true,
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/kjfsm/notion-headless-cms.git"
-	},
-	"type": "module",
-	"packageManager": "pnpm@10.33.0",
-	"scripts": {
-		"build": "turbo run build --filter=\"./packages/*\"",
-		"typecheck": "turbo run typecheck --filter=\"./packages/*\"",
-		"test": "turbo run test --filter=\"./packages/*\"",
-		"publint": "turbo run publint --filter=\"./packages/*\"",
-		"attw": "turbo run attw --filter=\"./packages/*\"",
-		"verify": "turbo run build typecheck test publint attw --filter=\"./packages/*\" && turbo run test --filter=\"./examples/*\"",
-		"verify:ci": "turbo run build typecheck test:coverage publint attw --filter=\"./packages/*\" && turbo run test --filter=\"./examples/*\"",
-		"generate": "turbo run generate --filter=\"./examples/*\"",
-		"test:examples": "turbo run test --filter=\"./examples/*\"",
-		"format": "biome check --write",
-		"lint": "biome ci",
-		"knip": "knip",
-		"size": "size-limit",
-		"changeset": "changeset",
-		"version": "changeset version",
-		"cf-typegen": "pnpm --filter example-cloudflare-* cf-typegen",
-		"release": "changeset publish"
-	},
-	"devDependencies": {
-		"@arethetypeswrong/cli": "^0.18.2",
-		"@biomejs/biome": "2.4.13",
-		"@changesets/cli": "^2.31.0",
-		"@size-limit/preset-small-lib": "^12.1.0",
-		"@vitest/coverage-v8": "^4.1.5",
-		"knip": "^6.7.0",
-		"publint": "^0.3.18",
-		"size-limit": "^12.1.0",
-		"tsdown": "^0.21.10",
-		"turbo": "^2.9.6",
-		"typescript": "^6.0.3",
-		"vitest": "^4.1.5"
-	}
+  "name": "notion-headless-cms",
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kjfsm/notion-headless-cms.git"
+  },
+  "type": "module",
+  "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "build": "turbo run build --filter=\"./packages/*\"",
+    "typecheck": "turbo run typecheck --filter=\"./packages/*\"",
+    "test": "turbo run test --filter=\"./packages/*\"",
+    "publint": "turbo run publint --filter=\"./packages/*\"",
+    "attw": "turbo run attw --filter=\"./packages/*\"",
+    "verify": "turbo run build typecheck test publint attw --filter=\"./packages/*\" && turbo run test --filter=\"./examples/*\"",
+    "verify:ci": "turbo run build typecheck test:coverage publint attw --filter=\"./packages/*\" && turbo run test --filter=\"./examples/*\"",
+    "generate": "turbo run generate --filter=\"./examples/*\"",
+    "test:examples": "turbo run test --filter=\"./examples/*\"",
+    "format": "biome check --write",
+    "lint": "biome ci",
+    "knip": "knip",
+    "size": "size-limit",
+    "changeset": "changeset",
+    "version": "changeset version",
+    "cf-typegen": "pnpm --filter example-cloudflare-* cf-typegen",
+    "release": "changeset publish"
+  },
+  "devDependencies": {
+    "@arethetypeswrong/cli": "^0.18.2",
+    "@biomejs/biome": "2.4.13",
+    "@changesets/cli": "^2.31.0",
+    "@size-limit/preset-small-lib": "^12.1.0",
+    "@vitest/coverage-v8": "^4.1.5",
+    "knip": "^6.7.0",
+    "publint": "^0.3.18",
+    "size-limit": "^12.1.0",
+    "tsdown": "^0.21.10",
+    "turbo": "^2.9.6",
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.5"
+  }
 }

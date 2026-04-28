@@ -1,71 +1,71 @@
 {
-	"name": "@notion-headless-cms/cache",
-	"version": "0.0.4",
-	"description": "Unified cache adapters for notion-headless-cms — memory, Cloudflare (KV/R2), and Next.js",
-	"keywords": [
-		"notion",
-		"headless-cms",
-		"cache",
-		"cloudflare",
-		"cloudflare-kv",
-		"cloudflare-r2",
-		"nextjs",
-		"typescript"
-	],
-	"license": "MIT",
-	"homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
-	"bugs": {
-		"url": "https://github.com/kjfsm/notion-headless-cms/issues"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/kjfsm/notion-headless-cms.git",
-		"directory": "packages/cache"
-	},
-	"type": "module",
-	"sideEffects": false,
-	"exports": {
-		".": {
-			"types": "./dist/index.d.mts",
-			"import": "./dist/index.mjs"
-		},
-		"./cloudflare": {
-			"types": "./dist/cloudflare.d.mts",
-			"import": "./dist/cloudflare.mjs"
-		},
-		"./next": {
-			"types": "./dist/next.d.mts",
-			"import": "./dist/next.mjs"
-		}
-	},
-	"files": [
-		"dist"
-	],
-	"engines": {
-		"node": ">=24"
-	},
-	"scripts": {
-		"build": "tsdown src/index.ts src/cloudflare.ts src/next.ts --format esm --dts --sourcemap --out-dir dist",
-		"typecheck": "tsc --noEmit",
-		"test": "vitest run",
-		"test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
-		"publint": "publint --strict",
-		"attw": "attw --pack . --profile esm-only"
-	},
-	"publishConfig": {
-		"access": "public",
-		"provenance": true
-	},
-	"dependencies": {
-		"@notion-headless-cms/core": "workspace:*"
-	},
-	"peerDependencies": {
-		"next": ">=14"
-	},
-	"peerDependenciesMeta": {
-		"next": {
-			"optional": true
-		}
-	},
-	"devDependencies": {}
+  "name": "@notion-headless-cms/cache",
+  "version": "0.0.4",
+  "description": "Unified cache adapters for notion-headless-cms — memory, Cloudflare (KV/R2), and Next.js",
+  "keywords": [
+    "notion",
+    "headless-cms",
+    "cache",
+    "cloudflare",
+    "cloudflare-kv",
+    "cloudflare-r2",
+    "nextjs",
+    "typescript"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
+  "bugs": {
+    "url": "https://github.com/kjfsm/notion-headless-cms/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kjfsm/notion-headless-cms.git",
+    "directory": "packages/cache"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./cloudflare": {
+      "types": "./dist/cloudflare.d.mts",
+      "import": "./dist/cloudflare.mjs"
+    },
+    "./next": {
+      "types": "./dist/next.d.mts",
+      "import": "./dist/next.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts src/cloudflare.ts src/next.ts --format esm --dts --sourcemap --out-dir dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
+    "publint": "publint --strict",
+    "attw": "attw --pack . --profile esm-only"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "dependencies": {
+    "@notion-headless-cms/core": "workspace:*"
+  },
+  "peerDependencies": {
+    "next": ">=14"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    }
+  },
+  "devDependencies": {}
 }

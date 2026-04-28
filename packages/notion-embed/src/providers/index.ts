@@ -7,7 +7,7 @@ export type { EmbedProvider } from "../types";
  * 直接オブジェクトリテラルでも作れるが、定義側で型推論が効かない局面があるため。
  */
 export function defineEmbedProvider(provider: EmbedProvider): EmbedProvider {
-	return provider;
+  return provider;
 }
 
 /**
@@ -15,13 +15,13 @@ export function defineEmbedProvider(provider: EmbedProvider): EmbedProvider {
  * undefined を返した場合は呼び出し側で fallback (generic-iframe など) する。
  */
 export function matchProvider(
-	providers: readonly EmbedProvider[],
-	url: string,
+  providers: readonly EmbedProvider[],
+  url: string,
 ): EmbedProvider | undefined {
-	for (const provider of providers) {
-		if (provider.match(url)) return provider;
-	}
-	return undefined;
+  for (const provider of providers) {
+    if (provider.match(url)) return provider;
+  }
+  return undefined;
 }
 
 export { dlsiteProvider } from "./dlsite";

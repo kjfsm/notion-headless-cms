@@ -1,14 +1,14 @@
 export type {
-	BlockHandler,
-	TransformContext,
-	TransformerConfig,
+  BlockHandler,
+  TransformContext,
+  TransformerConfig,
 } from "@notion-headless-cms/renderer";
 export { getPlainText, mapItem } from "./mapper";
 export type {
-	NotionCollectionDefaultOptions,
-	NotionCollectionMapItemOptions,
-	NotionCollectionOptions,
-	NotionCollectionSchemaOptions,
+  NotionCollectionDefaultOptions,
+  NotionCollectionMapItemOptions,
+  NotionCollectionOptions,
+  NotionCollectionSchemaOptions,
 } from "./notion-adapter";
 export { createNotionCollection } from "./notion-adapter";
 export type { NotionFieldType, NotionSchema } from "./schema";

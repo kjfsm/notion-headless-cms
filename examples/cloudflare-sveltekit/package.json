@@ -1,37 +1,37 @@
 {
-	"name": "example-cloudflare-sveltekit",
-	"private": true,
-	"version": "0.0.24",
-	"type": "module",
-	"scripts": {
-		"dev": "vite dev",
-		"build": "vite build",
-		"generate": "nhc generate",
-		"preview": "pnpm run build && wrangler dev",
-		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-		"deploy": "pnpm run build && wrangler deploy",
-		"cf-typegen": "wrangler types",
-		"test": "vitest run"
-	},
-	"dependencies": {
-		"@notion-headless-cms/cache": "workspace:*",
-		"@notion-headless-cms/core": "workspace:*",
-		"@notion-headless-cms/notion-orm": "workspace:*",
-		"@notion-headless-cms/renderer": "workspace:*",
-		"zod": "^4.1.12"
-	},
-	"devDependencies": {
-		"@notion-headless-cms/cli": "workspace:*",
-		"@sveltejs/adapter-cloudflare": "^7.0.0",
-		"@sveltejs/kit": "^2.58.0",
-		"@sveltejs/vite-plugin-svelte": "^7.0.0",
-		"@types/node": "^25.6.0",
-		"dotenv": "^17.4.2",
-		"svelte": "^5.55.5",
-		"typescript": "^6.0.3",
-		"vite": "^8.0.10",
-		"vitest": "^3.2.0",
-		"wrangler": "^4.85.0"
-	}
+  "name": "example-cloudflare-sveltekit",
+  "private": true,
+  "version": "0.0.24",
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "generate": "nhc generate",
+    "preview": "pnpm run build && wrangler dev",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
+    "deploy": "pnpm run build && wrangler deploy",
+    "cf-typegen": "wrangler types",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@notion-headless-cms/cache": "workspace:*",
+    "@notion-headless-cms/core": "workspace:*",
+    "@notion-headless-cms/notion-orm": "workspace:*",
+    "@notion-headless-cms/renderer": "workspace:*",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@notion-headless-cms/cli": "workspace:*",
+    "@sveltejs/adapter-cloudflare": "^7.0.0",
+    "@sveltejs/kit": "^2.58.0",
+    "@sveltejs/vite-plugin-svelte": "^7.0.0",
+    "@types/node": "^25.6.0",
+    "dotenv": "^17.4.2",
+    "svelte": "^5.55.5",
+    "typescript": "^6.0.3",
+    "vite": "^8.0.10",
+    "vitest": "^3.2.0",
+    "wrangler": "^4.85.0"
+  }
 }

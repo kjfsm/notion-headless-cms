@@ -12,20 +12,20 @@ import type { ContentBlock } from "../content/blocks";
  * createCMS<Post>({ source: createNotionCollection({ ... }) })
  */
 export interface BaseContentItem {
-	/** Notion ページ ID（変更検知に必須）。 */
-	id: string;
-	/** URL キー（必須）。 */
-	slug: string;
-	/** Notion ページ名（title 型プロパティのテキスト）。 */
-	title?: string | null;
-	/** 最終更新タイムスタンプ（変更検知に必須）。 */
-	updatedAt: string;
-	/** Notion ページの最終編集日時（page.last_edited_time と同値）。常にセットされる。 */
-	lastEditedTime?: string;
-	/** コンテンツのステータス。ステータスのない DB では省略可能。Notion の select 型は null を返す場合がある。 */
-	status?: string | null;
-	/** 公開日時。日付プロパティのない DB では省略可能。Notion の date 型は null を返す場合がある。 */
-	publishedAt?: string | null;
+  /** Notion ページ ID（変更検知に必須）。 */
+  id: string;
+  /** URL キー（必須）。 */
+  slug: string;
+  /** Notion ページ名（title 型プロパティのテキスト）。 */
+  title?: string | null;
+  /** 最終更新タイムスタンプ（変更検知に必須）。 */
+  updatedAt: string;
+  /** Notion ページの最終編集日時（page.last_edited_time と同値）。常にセットされる。 */
+  lastEditedTime?: string;
+  /** コンテンツのステータス。ステータスのない DB では省略可能。Notion の select 型は null を返す場合がある。 */
+  status?: string | null;
+  /** 公開日時。日付プロパティのない DB では省略可能。Notion の date 型は null を返す場合がある。 */
+  publishedAt?: string | null;
 }
 
 /**
@@ -33,11 +33,11 @@ export interface BaseContentItem {
  * `checkForUpdate` の差分判定や一覧表示など、本文を必要としないパスで使う。
  */
 export interface CachedItemMeta<T extends BaseContentItem = BaseContentItem> {
-	item: T;
-	/** Notion 側の最終更新時刻（差分検知用）。 */
-	notionUpdatedAt: string;
-	/** キャッシュ書き込み時刻（TTL 判定用、ms）。 */
-	cachedAt: number;
+  item: T;
+  /** Notion 側の最終更新時刻（差分検知用）。 */
+  notionUpdatedAt: string;
+  /** キャッシュ書き込み時刻（TTL 判定用、ms）。 */
+  cachedAt: number;
 }
 
 /**
@@ -45,12 +45,12 @@ export interface CachedItemMeta<T extends BaseContentItem = BaseContentItem> {
  * メタデータと別ストレージキーで保存し、必要時のみロードする。
  */
 export interface CachedItemContent {
-	html: string;
-	markdown: string;
-	blocks: ContentBlock[];
-	/** メタデータ整合性検証用に同じ値を保持する。 */
-	notionUpdatedAt: string;
-	cachedAt: number;
+  html: string;
+  markdown: string;
+  blocks: ContentBlock[];
+  /** メタデータ整合性検証用に同じ値を保持する。 */
+  notionUpdatedAt: string;
+  cachedAt: number;
 }
 
 /**
@@ -58,30 +58,30 @@ export interface CachedItemContent {
  * `useSWR` の cache に格納できるよう関数を含まない pure JSON。
  */
 export interface ItemContentPayload {
-	html: string;
-	markdown: string;
-	blocks: ContentBlock[];
-	notionUpdatedAt: string;
+  html: string;
+  markdown: string;
+  blocks: ContentBlock[];
+  notionUpdatedAt: string;
 }
 
 /** ストレージにキャッシュされたコンテンツ一覧。 */
 export interface CachedItemList<T extends BaseContentItem = BaseContentItem> {
-	items: T[];
-	cachedAt: number;
+  items: T[];
+  cachedAt: number;
 }
 
 /** ストレージから取得したバイナリオブジェクト。 */
 export interface StorageBinary {
-	data: ArrayBuffer;
-	contentType?: string;
+  data: ArrayBuffer;
+  contentType?: string;
 }
 
 /** Notionのプロパティ名マッピング（すべてオプション）。 */
 export interface CMSSchemaProperties {
-	/** Notionのスラッグプロパティ名。デフォルト: 'Slug' */
-	slug?: string;
-	/** Notionのステータスプロパティ名。デフォルト: 'Status' */
-	status?: string;
-	/** Notionの公開日プロパティ名。デフォルト: 'CreatedAt' */
-	date?: string;
+  /** Notionのスラッグプロパティ名。デフォルト: 'Slug' */
+  slug?: string;
+  /** Notionのステータスプロパティ名。デフォルト: 'Status' */
+  status?: string;
+  /** Notionの公開日プロパティ名。デフォルト: 'CreatedAt' */
+  date?: string;
 }

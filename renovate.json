@@ -1,26 +1,26 @@
 {
-	"$schema": "https://docs.renovatebot.com/renovate-schema.json",
-	"extends": ["config:base"],
-	"packageRules": [
-		{
-			"groupName": "devtools",
-			"matchPackageNames": ["@biomejs/biome", "turbo", "tsdown"],
-			"automerge": true
-		},
-		{
-			"groupName": "vitest",
-			"matchPackagePatterns": ["^vitest", "^@vitest/"],
-			"automerge": true
-		},
-		{
-			"groupName": "github-actions",
-			"matchManagers": ["github-actions"],
-			"automerge": true
-		},
-		{
-			"groupName": "remark-rehype",
-			"matchPackagePatterns": ["^remark-", "^rehype-", "^unified", "^unist-"],
-			"automerge": false
-		}
-	]
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:base"],
+  "packageRules": [
+    {
+      "groupName": "devtools",
+      "matchPackageNames": ["@biomejs/biome", "turbo", "tsdown"],
+      "automerge": true
+    },
+    {
+      "groupName": "vitest",
+      "matchPackagePatterns": ["^vitest", "^@vitest/"],
+      "automerge": true
+    },
+    {
+      "groupName": "github-actions",
+      "matchManagers": ["github-actions"],
+      "automerge": true
+    },
+    {
+      "groupName": "remark-rehype",
+      "matchPackagePatterns": ["^remark-", "^rehype-", "^unified", "^unist-"],
+      "automerge": false
+    }
+  ]
 }

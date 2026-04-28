@@ -13,15 +13,15 @@
 const MARKDOWN_LINK = /^\[[^\]]*\]\((https?:\/\/[^\s)]+)\)$/;
 
 export function normalizeUrl(input: string): string {
-	const trimmed = input.trim();
-	if (!trimmed) return trimmed;
+  const trimmed = input.trim();
+  if (!trimmed) return trimmed;
 
-	const md = trimmed.match(MARKDOWN_LINK);
-	if (md?.[1]) return md[1];
+  const md = trimmed.match(MARKDOWN_LINK);
+  if (md?.[1]) return md[1];
 
-	if (trimmed.startsWith("//")) return `https:${trimmed}`;
+  if (trimmed.startsWith("//")) return `https:${trimmed}`;
 
-	return trimmed;
+  return trimmed;
 }
 
 /**
@@ -29,5 +29,5 @@ export function normalizeUrl(input: string): string {
  * provider の match 関数で URL の妥当性を切る前段に使う。
  */
 export function isHttpUrl(input: string): boolean {
-	return /^https?:\/\//.test(input);
+  return /^https?:\/\//.test(input);
 }

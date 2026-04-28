@@ -1,9 +1,9 @@
 import type {
-	BaseContentItem,
-	CachedItemContent,
-	CachedItemList,
-	CachedItemMeta,
-	StorageBinary,
+  BaseContentItem,
+  CachedItemContent,
+  CachedItemList,
+  CachedItemMeta,
+  StorageBinary,
 } from "./content";
 import type { InvalidateScope } from "./data-source";
 
@@ -15,38 +15,38 @@ export type { InvalidateKind, InvalidateScope } from "./data-source";
  * アダプタ側で `{collection}:{slug}` のようなキー戦略を組み立てる。
  */
 export interface DocumentCacheOps {
-	getList<T extends BaseContentItem>(
-		collection: string,
-	): Promise<CachedItemList<T> | null>;
-	setList<T extends BaseContentItem>(
-		collection: string,
-		data: CachedItemList<T>,
-	): Promise<void>;
-	getMeta<T extends BaseContentItem>(
-		collection: string,
-		slug: string,
-	): Promise<CachedItemMeta<T> | null>;
-	setMeta<T extends BaseContentItem>(
-		collection: string,
-		slug: string,
-		data: CachedItemMeta<T>,
-	): Promise<void>;
-	getContent(
-		collection: string,
-		slug: string,
-	): Promise<CachedItemContent | null>;
-	setContent(
-		collection: string,
-		slug: string,
-		data: CachedItemContent,
-	): Promise<void>;
-	invalidate(scope: InvalidateScope): Promise<void>;
+  getList<T extends BaseContentItem>(
+    collection: string,
+  ): Promise<CachedItemList<T> | null>;
+  setList<T extends BaseContentItem>(
+    collection: string,
+    data: CachedItemList<T>,
+  ): Promise<void>;
+  getMeta<T extends BaseContentItem>(
+    collection: string,
+    slug: string,
+  ): Promise<CachedItemMeta<T> | null>;
+  setMeta<T extends BaseContentItem>(
+    collection: string,
+    slug: string,
+    data: CachedItemMeta<T>,
+  ): Promise<void>;
+  getContent(
+    collection: string,
+    slug: string,
+  ): Promise<CachedItemContent | null>;
+  setContent(
+    collection: string,
+    slug: string,
+    data: CachedItemContent,
+  ): Promise<void>;
+  invalidate(scope: InvalidateScope): Promise<void>;
 }
 
 /** 画像キャッシュ用のオペレーション群。`CacheAdapter.img` に実装する。 */
 export interface ImageCacheOps {
-	get(hash: string): Promise<StorageBinary | null>;
-	set(hash: string, data: ArrayBuffer, contentType: string): Promise<void>;
+  get(hash: string): Promise<StorageBinary | null>;
+  set(hash: string, data: ArrayBuffer, contentType: string): Promise<void>;
 }
 
 /**
@@ -63,8 +63,8 @@ export interface ImageCacheOps {
  * cache: [kvCache({ ns }), r2Cache({ bucket })]   // 個別に組み合わせ
  */
 export interface CacheAdapter {
-	readonly name: string;
-	readonly handles: readonly ("document" | "image")[];
-	doc?: DocumentCacheOps;
-	img?: ImageCacheOps;
+  readonly name: string;
+  readonly handles: readonly ("document" | "image")[];
+  doc?: DocumentCacheOps;
+  img?: ImageCacheOps;
 }

@@ -1,37 +1,37 @@
 {
-	"name": "example-vercel-nextjs",
-	"private": true,
-	"version": "0.0.22",
-	"scripts": {
-		"build": "next build",
-		"cf-typegen": "wrangler types",
-		"check": "npm run build && tsc",
-		"deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-		"dev": "next dev",
-		"generate": "nhc generate",
-		"lint": "next lint",
-		"preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-		"start": "next start",
-		"test": "vitest run"
-	},
-	"dependencies": {
-		"@notion-headless-cms/adapter-next": "workspace:*",
-		"@notion-headless-cms/cache": "workspace:*",
-		"@notion-headless-cms/core": "workspace:*",
-		"@notion-headless-cms/notion-orm": "workspace:*",
-		"@notion-headless-cms/renderer": "workspace:*",
-		"next": "^16.2.4",
-		"react": "^19.0.0",
-		"react-dom": "^19.0.0",
-		"zod": "^4.1.12"
-	},
-	"devDependencies": {
-		"@notion-headless-cms/cli": "workspace:*",
-		"@types/node": "^25.6.0",
-		"@types/react": "^19.0.0",
-		"@types/react-dom": "^19.0.0",
-		"dotenv": "^17.4.2",
-		"typescript": "^6.0.3",
-		"vitest": "^3.2.0"
-	}
+  "name": "example-vercel-nextjs",
+  "private": true,
+  "version": "0.0.22",
+  "scripts": {
+    "build": "next build",
+    "cf-typegen": "wrangler types",
+    "check": "npm run build && tsc",
+    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "dev": "next dev",
+    "generate": "nhc generate",
+    "lint": "next lint",
+    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "start": "next start",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@notion-headless-cms/adapter-next": "workspace:*",
+    "@notion-headless-cms/cache": "workspace:*",
+    "@notion-headless-cms/core": "workspace:*",
+    "@notion-headless-cms/notion-orm": "workspace:*",
+    "@notion-headless-cms/renderer": "workspace:*",
+    "next": "^16.2.4",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@notion-headless-cms/cli": "workspace:*",
+    "@types/node": "^25.6.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "dotenv": "^17.4.2",
+    "typescript": "^6.0.3",
+    "vitest": "^3.2.0"
+  }
 }

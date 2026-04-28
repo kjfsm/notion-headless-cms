@@ -1,81 +1,81 @@
 {
-	"name": "@notion-headless-cms/renderer",
-	"version": "0.1.6",
-	"description": "Markdown to HTML renderer using remark/rehype for notion-headless-cms",
-	"keywords": [
-		"notion",
-		"headless-cms",
-		"markdown",
-		"html",
-		"remark",
-		"rehype",
-		"unified",
-		"typescript"
-	],
-	"license": "MIT",
-	"homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
-	"bugs": {
-		"url": "https://github.com/kjfsm/notion-headless-cms/issues"
-	},
-	"repository": {
-		"type": "git",
-		"url": "git+https://github.com/kjfsm/notion-headless-cms.git",
-		"directory": "packages/renderer"
-	},
-	"type": "module",
-	"sideEffects": false,
-	"exports": {
-		".": {
-			"types": "./dist/index.d.mts",
-			"import": "./dist/index.mjs"
-		}
-	},
-	"files": [
-		"dist"
-	],
-	"engines": {
-		"node": ">=24"
-	},
-	"scripts": {
-		"build": "tsdown src/index.ts --format esm --dts --sourcemap --out-dir dist",
-		"typecheck": "tsc --noEmit",
-		"test": "vitest run",
-		"test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
-		"publint": "publint --strict",
-		"attw": "attw --pack . --profile esm-only"
-	},
-	"publishConfig": {
-		"access": "public",
-		"provenance": true
-	},
-	"dependencies": {
-		"@types/hast": "^3.0.4",
-		"unist-util-visit": "^5.0.0"
-	},
-	"peerDependencies": {
-		"@notionhq/client": "^5.20.0",
-		"notion-to-md": "^3.1.0",
-		"rehype-stringify": "^10.0.0",
-		"remark-gfm": "^4.0.0",
-		"remark-parse": "^11.0.0",
-		"remark-rehype": "^11.0.0",
-		"unified": "^11.0.0"
-	},
-	"peerDependenciesMeta": {
-		"@notionhq/client": {
-			"optional": true
-		},
-		"notion-to-md": {
-			"optional": true
-		}
-	},
-	"devDependencies": {
-		"@notionhq/client": "catalog:",
-		"notion-to-md": "catalog:",
-		"rehype-stringify": "catalog:",
-		"remark-gfm": "catalog:",
-		"remark-parse": "catalog:",
-		"remark-rehype": "catalog:",
-		"unified": "catalog:"
-	}
+  "name": "@notion-headless-cms/renderer",
+  "version": "0.1.6",
+  "description": "Markdown to HTML renderer using remark/rehype for notion-headless-cms",
+  "keywords": [
+    "notion",
+    "headless-cms",
+    "markdown",
+    "html",
+    "remark",
+    "rehype",
+    "unified",
+    "typescript"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
+  "bugs": {
+    "url": "https://github.com/kjfsm/notion-headless-cms/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kjfsm/notion-headless-cms.git",
+    "directory": "packages/renderer"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts --format esm --dts --sourcemap --out-dir dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
+    "publint": "publint --strict",
+    "attw": "attw --pack . --profile esm-only"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "dependencies": {
+    "@types/hast": "^3.0.4",
+    "unist-util-visit": "^5.0.0"
+  },
+  "peerDependencies": {
+    "@notionhq/client": "^5.20.0",
+    "notion-to-md": "^3.1.0",
+    "rehype-stringify": "^10.0.0",
+    "remark-gfm": "^4.0.0",
+    "remark-parse": "^11.0.0",
+    "remark-rehype": "^11.0.0",
+    "unified": "^11.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@notionhq/client": {
+      "optional": true
+    },
+    "notion-to-md": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@notionhq/client": "catalog:",
+    "notion-to-md": "catalog:",
+    "rehype-stringify": "catalog:",
+    "remark-gfm": "catalog:",
+    "remark-parse": "catalog:",
+    "remark-rehype": "catalog:",
+    "unified": "catalog:"
+  }
 }

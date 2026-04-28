@@ -1,9 +1,9 @@
 import { createBlockHandlers } from "./handlers/index";
 import { embedRehypePlugins } from "./rehype/rehype-sanitize-embeds";
 import type {
-	NotionEmbedOptions,
-	NotionEmbedResult,
-	RendererFn,
+  NotionEmbedOptions,
+  NotionEmbedResult,
+  RendererFn,
 } from "./types";
 
 export { clearOgpCache, fetchOgp } from "./ogp";
@@ -17,13 +17,13 @@ export { youtubeProvider } from "./providers/youtube";
 export { embedRehypePlugins } from "./rehype/rehype-sanitize-embeds";
 export { renderRichText } from "./render-rich-text";
 export type {
-	EmbedOutput,
-	EmbedProvider,
-	EmbedRenderContext,
-	NotionEmbedOptions,
-	NotionEmbedResult,
-	OgpData,
-	OgpFetchOptions,
+  EmbedOutput,
+  EmbedProvider,
+  EmbedRenderContext,
+  NotionEmbedOptions,
+  NotionEmbedResult,
+  OgpData,
+  OgpFetchOptions,
 } from "./types";
 export { isHttpUrl, normalizeUrl } from "./url-normalize";
 
@@ -43,28 +43,28 @@ export { isHttpUrl, normalizeUrl } from "./url-normalize";
  * ```
  */
 export function notionEmbed(opts?: NotionEmbedOptions): NotionEmbedResult {
-	const blocks = createBlockHandlers(opts ?? {});
+  const blocks = createBlockHandlers(opts ?? {});
 
-	const renderer: RendererFn = async (markdown, rendererOpts) => {
-		const { renderMarkdown } = await import("@notion-headless-cms/renderer");
+  const renderer: RendererFn = async (markdown, rendererOpts) => {
+    const { renderMarkdown } = await import("@notion-headless-cms/renderer");
 
-		const rehypePlugins = await embedRehypePlugins({
-			providers: opts?.providers ?? [],
-			extendSchema: undefined,
-		});
+    const rehypePlugins = await embedRehypePlugins({
+      providers: opts?.providers ?? [],
+      extendSchema: undefined,
+    });
 
-		type PluggableList = import("unified").PluggableList;
-		return renderMarkdown(markdown, {
-			imageProxyBase: rendererOpts?.imageProxyBase,
-			cacheImage: rendererOpts?.cacheImage,
-			allowDangerousHtml: true,
-			remarkPlugins: (rendererOpts?.remarkPlugins ?? []) as PluggableList,
-			rehypePlugins: [
-				...(rendererOpts?.rehypePlugins ?? []),
-				...rehypePlugins,
-			] as PluggableList,
-		});
-	};
+    type PluggableList = import("unified").PluggableList;
+    return renderMarkdown(markdown, {
+      imageProxyBase: rendererOpts?.imageProxyBase,
+      cacheImage: rendererOpts?.cacheImage,
+      allowDangerousHtml: true,
+      remarkPlugins: (rendererOpts?.remarkPlugins ?? []) as PluggableList,
+      rehypePlugins: [
+        ...(rendererOpts?.rehypePlugins ?? []),
+        ...rehypePlugins,
+      ] as PluggableList,
+    });
+  };
 
-	return { renderer, blocks };
+  return { renderer, blocks };
 }

@@ -1,6 +1,6 @@
 import type {
-	PageObjectResponse,
-	RichTextItemResponse,
+  PageObjectResponse,
+  RichTextItemResponse,
 } from "@notionhq/client";
 
 /**
