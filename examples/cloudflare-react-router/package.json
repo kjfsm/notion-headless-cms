@@ -14,8 +14,7 @@
 		"preview": "pnpm run build && vite preview",
 		"wrangler:dev": "rm -f .wrangler/deploy/config.json && pnpm run build && wrangler dev",
 		"test": "vitest run",
-		"typecheck": "pnpm run cf-typegen && tsc -b",
-		"warm": "node scripts/warm.mjs"
+		"typecheck": "pnpm run cf-typegen && tsc -b"
 	},
 	"dependencies": {
 		"@notion-headless-cms/cache": "workspace:*",
