@@ -63,16 +63,22 @@ describe("fetchOgp", () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(null, { status: 404 }),
     );
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const result = await fetchOgp("https://example.com/404");
     expect(result).toEqual({});
+    expect(warnSpy).toHaveBeenCalledOnce();
+    warnSpy.mockRestore();
   });
 
   it("fetch が throw しても空オブジェクトを返す", async () => {
     vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("network error"));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
     const result = await fetchOgp("https://unreachable.example.com");
     expect(result).toEqual({});
+    expect(warnSpy).toHaveBeenCalledOnce();
+    warnSpy.mockRestore();
   });
 
   it("TTL 内はキャッシュを返す (fetch を 1 回しか呼ばない)", async () => {
@@ -92,7 +98,10 @@ describe("fetchOgp", () => {
     vi.useFakeTimers();
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
-      .mockResolvedValue(
+      .mockResolvedValueOnce(
+        new Response(makeHtml({ ogTitle: "Title" }), { status: 200 }),
+      )
+      .mockResolvedValueOnce(
         new Response(makeHtml({ ogTitle: "Title" }), { status: 200 }),
       );
 

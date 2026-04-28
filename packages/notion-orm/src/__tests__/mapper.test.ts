@@ -2,15 +2,23 @@ import type {
   CMSSchemaProperties,
   PropertyMap,
 } from "@notion-headless-cms/core";
+import { isCMSError } from "@notion-headless-cms/core";
 import { describe, expect, it } from "vitest";
 import { mapItem, mapItemFromPropertyMap } from "../mapper";
 
-const makePage = (properties: Record<string, unknown>) => ({
+// テスト用ページファクトリ。デフォルトで Slug プロパティを含む
+const makePage = (properties: Record<string, unknown> = {}) => ({
   id: "page-id",
   last_edited_time: "2024-01-01T00:00:00.000Z",
   created_time: "2024-01-01T00:00:00.000Z",
-  properties,
+  properties: {
+    Slug: { type: "rich_text", rich_text: [{ plain_text: "test-slug" }] },
+    ...properties,
+  },
 });
+
+// slug フィールドを PropertyMap に含める最小構成
+const slugProp: PropertyMap = { slug: { type: "richText", notion: "Slug" } };
 
 describe("mapItemFromPropertyMap", () => {
   it("id・updatedAt・lastEditedTime が設定される", () => {
@@ -18,6 +26,7 @@ describe("mapItemFromPropertyMap", () => {
       Name: { type: "title", title: [{ plain_text: "Test" }] },
     });
     const properties: PropertyMap = {
+      ...slugProp,
       name: { type: "title", notion: "Name" },
     };
     const item = mapItemFromPropertyMap(page as never, properties);
@@ -31,6 +40,7 @@ describe("mapItemFromPropertyMap", () => {
       Name: { type: "title", title: [{ plain_text: "Hello" }] },
     });
     const properties: PropertyMap = {
+      ...slugProp,
       name: { type: "title", notion: "Name" },
     };
     const item = mapItemFromPropertyMap(page as never, properties);
@@ -70,6 +80,7 @@ describe("mapItemFromPropertyMap", () => {
       Status: { type: "select", select: { name: "公開" } },
     });
     const properties: PropertyMap = {
+      ...slugProp,
       name: { type: "title", notion: "Name" },
       status: { type: "select", notion: "Status" },
     };
@@ -86,6 +97,7 @@ describe("mapItemFromPropertyMap", () => {
       Status: { type: "status", status: { name: "下書き" } },
     });
     const properties: PropertyMap = {
+      ...slugProp,
       name: { type: "title", notion: "Name" },
       status: { type: "status", notion: "Status" },
     };
@@ -102,6 +114,7 @@ describe("mapItemFromPropertyMap", () => {
       Status: { type: "rich_text", rich_text: [{ plain_text: "not-status" }] },
     });
     const properties: PropertyMap = {
+      ...slugProp,
       status: { type: "status", notion: "Status" },
     };
     const result = mapItemFromPropertyMap(
@@ -120,6 +133,7 @@ describe("mapItemFromPropertyMap", () => {
       },
     });
     const properties: PropertyMap = {
+      ...slugProp,
       category: { type: "select", notion: "Category" },
     };
     const result = mapItemFromPropertyMap(
@@ -138,6 +152,7 @@ describe("mapItemFromPropertyMap", () => {
       },
     });
     const properties: PropertyMap = {
+      ...slugProp,
       name: { type: "title", notion: "Name" },
       tags: { type: "multiSelect", notion: "Tags" },
     };
@@ -153,6 +168,7 @@ describe("mapItemFromPropertyMap", () => {
       Name: { type: "rich_text", rich_text: [{ plain_text: "not title" }] },
     });
     const properties: PropertyMap = {
+      ...slugProp,
       name: { type: "title", notion: "Name" },
     };
     const result = mapItemFromPropertyMap(
@@ -168,6 +184,7 @@ describe("mapItemFromPropertyMap", () => {
       Tags: { type: "rich_text", rich_text: [{ plain_text: "tag" }] },
     });
     const properties: PropertyMap = {
+      ...slugProp,
       tags: { type: "multiSelect", notion: "Tags" },
     };
     const result = mapItemFromPropertyMap(
@@ -183,6 +200,7 @@ describe("mapItemFromPropertyMap", () => {
       PublishedAt: { type: "date", date: { start: "2024-06-01" } },
     });
     const properties: PropertyMap = {
+      ...slugProp,
       name: { type: "title", notion: "Name" },
       publishedAt: { type: "date", notion: "PublishedAt" },
     };
@@ -199,6 +217,7 @@ describe("mapItemFromPropertyMap", () => {
       Views: { type: "number", number: 42 },
     });
     const properties: PropertyMap = {
+      ...slugProp,
       name: { type: "title", notion: "Name" },
       views: { type: "number", notion: "Views" },
     };
@@ -215,6 +234,7 @@ describe("mapItemFromPropertyMap", () => {
       Featured: { type: "checkbox", checkbox: true },
     });
     const properties: PropertyMap = {
+      ...slugProp,
       name: { type: "title", notion: "Name" },
       featured: { type: "checkbox", notion: "Featured" },
     };
@@ -231,6 +251,7 @@ describe("mapItemFromPropertyMap", () => {
       Link: { type: "url", url: "https://example.com" },
     });
     const properties: PropertyMap = {
+      ...slugProp,
       name: { type: "title", notion: "Name" },
       link: { type: "url", notion: "Link" },
     };
@@ -246,6 +267,7 @@ describe("mapItemFromPropertyMap", () => {
       Name: { type: "title", title: [] },
     });
     const properties: PropertyMap = {
+      ...slugProp,
       name: { type: "title", notion: "Name" },
     };
     const item = mapItemFromPropertyMap(page as never, properties);
@@ -255,16 +277,17 @@ describe("mapItemFromPropertyMap", () => {
   it("richText プロパティが空の場合は null になる（|| null フォールバック）", () => {
     const page = makePage({
       Name: { type: "title", title: [] },
-      Slug: { type: "rich_text", rich_text: [] },
+      Body: { type: "rich_text", rich_text: [] },
     });
     const properties: PropertyMap = {
-      slug: { type: "richText", notion: "Slug" },
+      ...slugProp,
+      body: { type: "richText", notion: "Body" },
     };
     const result = mapItemFromPropertyMap(
       page as never,
       properties,
     ) as unknown as Record<string, unknown>;
-    expect(result.slug).toBeNull();
+    expect(result.body).toBeNull();
   });
 
   it("プロパティが存在しない場合のデフォルト値（null/false/[]）", () => {
@@ -272,6 +295,7 @@ describe("mapItemFromPropertyMap", () => {
       Name: { type: "title", title: [] },
     });
     const properties: PropertyMap = {
+      ...slugProp,
       name: { type: "title", notion: "Name" },
       text: { type: "richText", notion: "Missing" },
       tags: { type: "multiSelect", notion: "MissingTags" },
@@ -292,6 +316,7 @@ describe("mapItemFromPropertyMap", () => {
       PublishedAt: { type: "date", date: null },
     });
     const properties: PropertyMap = {
+      ...slugProp,
       publishedAt: { type: "date", notion: "PublishedAt" },
     };
     const result = mapItemFromPropertyMap(
@@ -307,6 +332,7 @@ describe("mapItemFromPropertyMap", () => {
       Status: { type: "select", select: null },
     });
     const properties: PropertyMap = {
+      ...slugProp,
       status: { type: "select", notion: "Status" },
     };
     const result = mapItemFromPropertyMap(
@@ -322,6 +348,7 @@ describe("mapItemFromPropertyMap", () => {
       Status: { type: "status", status: null },
     });
     const properties: PropertyMap = {
+      ...slugProp,
       status: { type: "status", notion: "Status" },
     };
     const result = mapItemFromPropertyMap(
@@ -329,6 +356,45 @@ describe("mapItemFromPropertyMap", () => {
       properties,
     ) as unknown as Record<string, unknown>;
     expect(result.status).toBeNull();
+  });
+
+  it("PropertyMap に slug が含まれない場合は CMSError をスローする", () => {
+    const page = makePage({
+      Name: { type: "title", title: [{ plain_text: "Test" }] },
+    });
+    const properties: PropertyMap = {
+      name: { type: "title", notion: "Name" },
+      // slug キーを意図的に除外
+    };
+    let caughtError: unknown;
+    try {
+      mapItemFromPropertyMap(page as never, properties);
+    } catch (err) {
+      caughtError = err;
+    }
+    expect(isCMSError(caughtError)).toBe(true);
+    expect(isCMSError(caughtError) && caughtError.code).toBe(
+      "core/schema_invalid",
+    );
+  });
+
+  it("slug プロパティの内容が空の場合は CMSError をスローする", () => {
+    const page = makePage({
+      Slug: { type: "rich_text", rich_text: [] },
+    });
+    const properties: PropertyMap = {
+      slug: { type: "richText", notion: "Slug" },
+    };
+    let caughtError: unknown;
+    try {
+      mapItemFromPropertyMap(page as never, properties);
+    } catch (err) {
+      caughtError = err;
+    }
+    expect(isCMSError(caughtError)).toBe(true);
+    expect(isCMSError(caughtError) && caughtError.code).toBe(
+      "core/schema_invalid",
+    );
   });
 });
 
@@ -480,7 +546,7 @@ describe("mapItem", () => {
   it("slug が空の場合は CMSError をスローする", () => {
     const page = {
       ...makePage({
-        // Slug プロパティなし → getPlainText が "" を返す
+        Slug: { type: "rich_text", rich_text: [] },
       }),
       last_edited_time: "2024-01-01T00:00:00.000Z",
       created_time: "2024-01-01T00:00:00.000Z",

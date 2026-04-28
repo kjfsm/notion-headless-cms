@@ -51,14 +51,17 @@ describe("fetchOembed", () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockResolvedValue(new Response("Not Found", { status: 404 }));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       const result = await fetchOembed(
         "https://example.com/404",
         "https://example.com/oembed",
       );
       expect(result).toEqual({});
+      expect(warnSpy).toHaveBeenCalledOnce();
     } finally {
       fetchSpy.mockRestore();
+      warnSpy.mockRestore();
     }
   });
 
@@ -66,14 +69,17 @@ describe("fetchOembed", () => {
     const fetchSpy = vi
       .spyOn(globalThis, "fetch")
       .mockRejectedValue(new Error("network error"));
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
     try {
       const result = await fetchOembed(
         "https://example.com/x",
         "https://example.com/oembed",
       );
       expect(result).toEqual({});
+      expect(warnSpy).toHaveBeenCalledOnce();
     } finally {
       fetchSpy.mockRestore();
+      warnSpy.mockRestore();
     }
   });
 });

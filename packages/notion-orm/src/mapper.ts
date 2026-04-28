@@ -92,6 +92,14 @@ export function mapItemFromPropertyMap(
     result[tsName] = extractPropertyValue(prop, propDef.type);
   }
 
+  if (!result.slug) {
+    throw new CMSError({
+      code: "core/schema_invalid",
+      message: `Notion ページのスラグが空です。PropertyMap に "slug" キーを含め、対応するプロパティに値が設定されているか確認してください。`,
+      context: { operation: "mapItemFromPropertyMap", pageId: page.id },
+    });
+  }
+
   return result as BaseContentItem;
 }
 
