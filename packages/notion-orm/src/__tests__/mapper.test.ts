@@ -95,6 +95,21 @@ describe("mapItemFromPropertyMap", () => {
 		expect(result.status).toBe("下書き");
 	});
 
+	it("status 型マッピングで実際のプロパティ型が異なる場合は null を返す", () => {
+		const page = makePage({
+			Name: { type: "title", title: [] },
+			Status: { type: "rich_text", rich_text: [{ plain_text: "not-status" }] },
+		});
+		const properties: PropertyMap = {
+			status: { type: "status", notion: "Status" },
+		};
+		const result = mapItemFromPropertyMap(
+			page as never,
+			properties,
+		) as unknown as Record<string, unknown>;
+		expect(result.status).toBeNull();
+	});
+
 	it("multiSelect プロパティが文字列配列として取得される", () => {
 		const page = makePage({
 			Name: { type: "title", title: [] },

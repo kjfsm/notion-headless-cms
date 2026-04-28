@@ -225,6 +225,31 @@ describe("defineSchema", () => {
 			expect(item.publishedAt).toBeNull();
 		});
 
+		it("status フィールドで型が一致しない場合は null を返す", () => {
+			const StatusMismatchSchema = z.object({
+				id: z.string(),
+				updatedAt: z.string(),
+				title: z.string().nullable(),
+				state: z.string().nullable(),
+			});
+			const statusMismatchMapping = defineMapping<
+				z.infer<typeof StatusMismatchSchema>
+			>({
+				title: { type: "title", notion: "Name" },
+				state: { type: "status", notion: "State" },
+			});
+			const statusMismatchSchema = defineSchema(
+				StatusMismatchSchema,
+				statusMismatchMapping,
+			);
+			const page = makePage({
+				Name: { type: "title", title: [] },
+				State: { type: "rich_text", rich_text: [{ plain_text: "not-status" }] },
+			});
+			const item = statusMismatchSchema.mapItem(page as never);
+			expect(item.state).toBeNull();
+		});
+
 		it("select フィールドで prop が select でも status でもない場合は null を返す", () => {
 			const SelectSchema = z.object({
 				id: z.string(),
