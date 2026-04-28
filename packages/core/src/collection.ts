@@ -156,7 +156,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
   ): Promise<CheckResult<T> | null> {
     const raw = await this.findRaw(slug);
     if (!raw) return null;
-    if (raw.updatedAt === currentVersion) return { stale: false };
+    if (raw.lastEditedTime === currentVersion) return { stale: false };
     const meta = await this.persistMeta(slug, raw);
     await this.invalidateContent(slug);
     return { stale: true, item: this.attachLazyContent(meta) };

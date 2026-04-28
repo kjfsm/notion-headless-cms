@@ -13,7 +13,7 @@ describe("memoryCache", () => {
   it("doc.setMeta / getMeta が正しく往復する", async () => {
     const adapter = memoryCache();
     const meta = {
-      item: { id: "1", slug: "hello", updatedAt: "2024-01-01" },
+      item: { id: "1", slug: "hello", lastEditedTime: "2024-01-01" },
       notionUpdatedAt: "2024-01-01",
       cachedAt: Date.now(),
     };
@@ -34,7 +34,7 @@ describe("memoryCache", () => {
   it("invalidate(all) で全キャッシュを破棄する", async () => {
     const adapter = memoryCache();
     await adapter.doc?.setMeta("posts", "x", {
-      item: { id: "1", slug: "x", updatedAt: "" },
+      item: { id: "1", slug: "x", lastEditedTime: "" },
       notionUpdatedAt: "",
       cachedAt: 0,
     });

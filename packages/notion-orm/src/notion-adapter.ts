@@ -260,11 +260,11 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
   }
 
   getLastModified(item: T): string {
-    return item.updatedAt;
+    return item.lastEditedTime;
   }
 
   getListVersion(items: T[]): string {
-    return items.map((item) => `${item.id}:${item.updatedAt}`).join("|");
+    return items.map((item) => `${item.id}:${item.lastEditedTime}`).join("|");
   }
 }
 

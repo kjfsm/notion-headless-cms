@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { defineMapping, defineSchema } from "../schema";
 
-// id と updatedAt は Notion ページメタデータから自動設定されるためマッピング不要
+// id と lastEditedTime は Notion ページメタデータから自動設定されるためマッピング不要
 const PostSchema = z.object({
   id: z.string(),
-  updatedAt: z.string(),
+  lastEditedTime: z.string(),
   slug: z.string().nullable(),
   status: z.string().nullable(),
   title: z.string().nullable(),
@@ -59,9 +59,9 @@ describe("defineSchema", () => {
       expect(item.slug).toBe("hello-world");
       expect(item.status).toBe("Published");
       expect(item.views).toBe(42);
-      // id と updatedAt は page メタデータから自動設定される
+      // id と lastEditedTime は page メタデータから自動設定される
       expect(item.id).toBe("page-id-123");
-      expect(item.updatedAt).toBe("2024-06-01T12:00:00.000Z");
+      expect(item.lastEditedTime).toBe("2024-06-01T12:00:00.000Z");
     });
 
     it("multiSelect プロパティをパースする", () => {
@@ -96,7 +96,7 @@ describe("defineSchema", () => {
     it("mapping に title がなくてもページタイトルを自動セットする", () => {
       const NoTitleSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         title: z.string().nullable().optional(),
         slug: z.string().nullable(),
       });
@@ -115,7 +115,7 @@ describe("defineSchema", () => {
     it("Zod バリデーションエラーでスローする", () => {
       const StrictSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         slug: z.string(),
         status: z.string(),
         title: z.string(),
@@ -144,7 +144,6 @@ describe("defineSchema", () => {
     it("lastEditedTime はマッピング不要でページメタデータから自動設定される", () => {
       const LastEditedSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
         lastEditedTime: z.string(),
         title: z.string().nullable(),
       });
@@ -167,7 +166,7 @@ describe("defineSchema", () => {
     it("url フィールドタイプをパースする", () => {
       const UrlSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         title: z.string().nullable(),
         link: z.string().nullable(),
       });
@@ -187,7 +186,7 @@ describe("defineSchema", () => {
     it("url フィールドで型が一致しない場合は null を返す", () => {
       const UrlSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         title: z.string().nullable(),
         link: z.string().nullable(),
       });
@@ -207,7 +206,7 @@ describe("defineSchema", () => {
     it("checkbox フィールドで型が一致しない場合は false を返す", () => {
       const CheckSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         title: z.string().nullable(),
         active: z.boolean(),
       });
@@ -228,7 +227,7 @@ describe("defineSchema", () => {
     it("date フィールドで型が一致しない場合は null を返す", () => {
       const DateSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         title: z.string().nullable(),
         publishedAt: z.string().nullable(),
       });
@@ -251,7 +250,7 @@ describe("defineSchema", () => {
     it("status フィールドで status プロパティが null の場合は null を返す", () => {
       const StatusNullMatchSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         title: z.string().nullable(),
         state: z.string().nullable(),
       });
@@ -276,7 +275,7 @@ describe("defineSchema", () => {
     it("status フィールドで型が一致しない場合は null を返す", () => {
       const StatusMismatchSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         title: z.string().nullable(),
         state: z.string().nullable(),
       });
@@ -301,7 +300,7 @@ describe("defineSchema", () => {
     it("select フィールドで prop が select でも status でもない場合は null を返す", () => {
       const SelectSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         title: z.string().nullable(),
         category: z.string().nullable(),
       });
@@ -321,7 +320,7 @@ describe("defineSchema", () => {
     it("プロパティが undefined の場合の各型デフォルト値", () => {
       const AllTypesSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         title: z.string().nullable(),
         check: z.boolean(),
         tags: z.array(z.string()),
@@ -347,7 +346,7 @@ describe("defineSchema", () => {
     it("title フィールドで型が一致しない場合は null を返す", () => {
       const TitleSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         title: z.string().nullable(),
         name: z.string().nullable(),
       });
@@ -366,7 +365,7 @@ describe("defineSchema", () => {
     it("richText フィールドで型が一致しない場合は null を返す", () => {
       const RichTextSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         title: z.string().nullable(),
         desc: z.string().nullable(),
       });
@@ -386,7 +385,7 @@ describe("defineSchema", () => {
     it("number フィールドで型が一致しない場合は null を返す", () => {
       const NumSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         title: z.string().nullable(),
         count: z.number().nullable(),
       });
@@ -406,7 +405,7 @@ describe("defineSchema", () => {
     it("multiSelect フィールドで型が一致しない場合は空配列を返す", () => {
       const MsSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         title: z.string().nullable(),
         labels: z.array(z.string()),
       });
@@ -426,7 +425,7 @@ describe("defineSchema", () => {
     it("select フィールドで select.name が null の場合は null を返す", () => {
       const SelectNullSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         title: z.string().nullable(),
         category: z.string().nullable(),
       });
@@ -451,7 +450,7 @@ describe("defineSchema", () => {
     it("date フィールドで date プロパティがある場合は start を返す", () => {
       const DateMatchSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         title: z.string().nullable(),
         publishedAt: z.string().nullable(),
       });
@@ -471,7 +470,7 @@ describe("defineSchema", () => {
     it("date フィールドで date が null の場合は null を返す", () => {
       const DateNullSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         title: z.string().nullable(),
         publishedAt: z.string().nullable(),
       });
@@ -491,7 +490,7 @@ describe("defineSchema", () => {
     it("checkbox フィールドで checkbox プロパティがある場合は boolean を返す", () => {
       const CheckMatchSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         title: z.string().nullable(),
         active: z.boolean(),
       });
@@ -516,7 +515,7 @@ describe("defineSchema", () => {
     it("status プロパティが null の場合は null を返す", () => {
       const StatusNullSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         title: z.string().nullable(),
         category: z.string().nullable(),
       });
@@ -541,7 +540,7 @@ describe("defineSchema", () => {
     it("カバー画像 (external/file) と絵文字アイコンがスキーマに反映される", () => {
       const MediaSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         coverImageUrl: z.string().nullable().optional(),
         iconEmoji: z.string().nullable().optional(),
       });
@@ -603,10 +602,10 @@ describe("defineSchema", () => {
       ).toBeNull();
     });
 
-    it("SYSTEM_FIELDS (id, updatedAt) はマッピングでスキップされる", () => {
+    it("SYSTEM_FIELDS (id, lastEditedTime) はマッピングでスキップされる", () => {
       const SysSchema = z.object({
         id: z.string(),
-        updatedAt: z.string(),
+        lastEditedTime: z.string(),
         title: z.string().nullable(),
         slug: z.string().nullable(),
       });

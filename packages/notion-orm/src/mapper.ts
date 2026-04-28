@@ -11,8 +11,7 @@ const baseContentItemSchema = z.object({
   id: z.string().min(1),
   slug: z.string().min(1),
   title: z.string().nullable().optional(),
-  updatedAt: z.string().min(1),
-  lastEditedTime: z.string().min(1).optional(),
+  lastEditedTime: z.string().min(1),
   status: z.string().optional(),
   publishedAt: z.string().optional(),
   createdAt: z.string().optional(),
@@ -61,7 +60,7 @@ type PropertyValue = string | string[] | number | boolean | null;
 /**
  * Notion ページを CLI 生成の PropertyMap に従ってフラットな Record に変換する。
  * ページ構成の知識（slug/status の意味）を持たず、すべてのプロパティを等しく扱う。
- * slug・title・updatedAt などの BaseContentItem フィールドも含む。
+ * slug・title・lastEditedTime などの BaseContentItem フィールドも含む。
  */
 export function mapItemFromPropertyMap(
   page: NotionPage,
@@ -72,7 +71,6 @@ export function mapItemFromPropertyMap(
       BaseContentItem,
       | "id"
       | "slug"
-      | "updatedAt"
       | "lastEditedTime"
       | "createdAt"
       | "isArchived"
@@ -81,7 +79,6 @@ export function mapItemFromPropertyMap(
       | "iconEmoji"
     > = {
     id: page.id,
-    updatedAt: page.last_edited_time,
     lastEditedTime: page.last_edited_time,
     title: extractPageTitle(page),
     slug: "",
@@ -176,7 +173,6 @@ export function mapItem(
       dateProperty?.type === "date"
         ? (dateProperty.date?.start ?? page.created_time)
         : page.created_time,
-    updatedAt: page.last_edited_time,
     lastEditedTime: page.last_edited_time,
     createdAt: page.created_time,
     isArchived: page.archived,

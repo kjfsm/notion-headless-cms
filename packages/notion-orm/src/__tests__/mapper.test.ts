@@ -21,7 +21,7 @@ const makePage = (properties: Record<string, unknown> = {}) => ({
 const slugProp: PropertyMap = { slug: { type: "richText", notion: "Slug" } };
 
 describe("mapItemFromPropertyMap", () => {
-  it("id・updatedAt・lastEditedTime が設定される", () => {
+  it("id・lastEditedTime が設定される", () => {
     const page = makePage({
       Name: { type: "title", title: [{ plain_text: "Test" }] },
     });
@@ -31,7 +31,6 @@ describe("mapItemFromPropertyMap", () => {
     };
     const item = mapItemFromPropertyMap(page as never, properties);
     expect(item.id).toBe("page-id");
-    expect(item.updatedAt).toBe("2024-01-01T00:00:00.000Z");
     expect(item.lastEditedTime).toBe("2024-01-01T00:00:00.000Z");
   });
 
