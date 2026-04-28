@@ -110,6 +110,24 @@ describe("mapItemFromPropertyMap", () => {
 		expect(result.status).toBeNull();
 	});
 
+	it("select 型マッピングで実際のプロパティ型が異なる場合は null を返す", () => {
+		const page = makePage({
+			Name: { type: "title", title: [] },
+			Category: {
+				type: "rich_text",
+				rich_text: [{ plain_text: "not-select" }],
+			},
+		});
+		const properties: PropertyMap = {
+			category: { type: "select", notion: "Category" },
+		};
+		const result = mapItemFromPropertyMap(
+			page as never,
+			properties,
+		) as unknown as Record<string, unknown>;
+		expect(result.category).toBeNull();
+	});
+
 	it("multiSelect プロパティが文字列配列として取得される", () => {
 		const page = makePage({
 			Name: { type: "title", title: [] },
@@ -418,6 +436,36 @@ describe("mapItem", () => {
 				Name: { type: "title", title: [] },
 				Slug: { type: "rich_text", rich_text: [{ plain_text: "my-post" }] },
 				// Status プロパティなし → statusProperty が undefined
+				CreatedAt: { type: "date", date: { start: "2024-01-01" } },
+			}),
+			last_edited_time: "2024-01-01T00:00:00.000Z",
+			created_time: "2024-01-01T00:00:00.000Z",
+		};
+		const item = mapItem(page as never, defaultProps);
+		expect(item.status).toBeUndefined();
+	});
+
+	it("status が null の場合は mapItem で status が undefined になる", () => {
+		const page = {
+			...makePage({
+				Name: { type: "title", title: [] },
+				Slug: { type: "rich_text", rich_text: [{ plain_text: "my-post" }] },
+				Status: { type: "status", status: null },
+				CreatedAt: { type: "date", date: { start: "2024-01-01" } },
+			}),
+			last_edited_time: "2024-01-01T00:00:00.000Z",
+			created_time: "2024-01-01T00:00:00.000Z",
+		};
+		const item = mapItem(page as never, defaultProps);
+		expect(item.status).toBeUndefined();
+	});
+
+	it("select が null の場合は mapItem で status が undefined になる", () => {
+		const page = {
+			...makePage({
+				Name: { type: "title", title: [] },
+				Slug: { type: "rich_text", rich_text: [{ plain_text: "my-post" }] },
+				Status: { type: "select", select: null },
 				CreatedAt: { type: "date", date: { start: "2024-01-01" } },
 			}),
 			last_edited_time: "2024-01-01T00:00:00.000Z",

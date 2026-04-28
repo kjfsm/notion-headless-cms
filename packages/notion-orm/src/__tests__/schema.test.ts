@@ -225,6 +225,31 @@ describe("defineSchema", () => {
 			expect(item.publishedAt).toBeNull();
 		});
 
+		it("status フィールドで status プロパティが null の場合は null を返す", () => {
+			const StatusNullMatchSchema = z.object({
+				id: z.string(),
+				updatedAt: z.string(),
+				title: z.string().nullable(),
+				state: z.string().nullable(),
+			});
+			const statusNullMatchMapping = defineMapping<
+				z.infer<typeof StatusNullMatchSchema>
+			>({
+				title: { type: "title", notion: "Name" },
+				state: { type: "status", notion: "State" },
+			});
+			const statusNullMatchSchema = defineSchema(
+				StatusNullMatchSchema,
+				statusNullMatchMapping,
+			);
+			const page = makePage({
+				Name: { type: "title", title: [] },
+				State: { type: "status", status: null },
+			});
+			const item = statusNullMatchSchema.mapItem(page as never);
+			expect(item.state).toBeNull();
+		});
+
 		it("status フィールドで型が一致しない場合は null を返す", () => {
 			const StatusMismatchSchema = z.object({
 				id: z.string(),
