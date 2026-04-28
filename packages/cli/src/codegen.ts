@@ -180,8 +180,6 @@ function generateCollectionBlock(
 		"\tid: string;",
 		"\t/** Notion ページの最終更新時刻 (ISO8601)。 */",
 		"\tupdatedAt: string;",
-		"\t/** Notion ページの最終編集日時 (ISO8601)。 */",
-		"\tlastEditedTime: string;",
 	];
 	let hasSlug = false;
 	let hasStatus = false;

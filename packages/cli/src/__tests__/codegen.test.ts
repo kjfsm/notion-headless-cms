@@ -110,8 +110,6 @@ describe("Notion API datasource プロパティ型マッピング", () => {
 		expect(code).toContain("\tfeatured: boolean;");
 		// url (camelCase: "Source URL" → sourceURL)
 		expect(code).toContain("\tsourceURL: string | null;");
-		// lastEditedTime はシステムフィールドとして常に出力される
-		expect(code).toContain("\tlastEditedTime: string;");
 	});
 
 	it("サポート済みプロパティ型が PropertyMap の type 値に正しく変換される", () => {
