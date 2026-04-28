@@ -465,7 +465,7 @@ importers:
         version: 25.6.0
 
   packages/core:
-    devDependencies:
+    dependencies:
       '@notion-headless-cms/renderer':
         specifier: workspace:*
         version: link:../renderer
