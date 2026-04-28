@@ -10,6 +10,7 @@ export interface PropertyDef {
 		| "title"
 		| "richText"
 		| "select"
+		| "status"
 		| "multiSelect"
 		| "date"
 		| "number"

@@ -79,14 +79,14 @@ describe("mapItemFromPropertyMap", () => {
 		expect(result.status).toBe("公開");
 	});
 
-	it("status プロパティが select と同様に取得される", () => {
+	it("status プロパティが PropertyDef type: 'status' で取得される", () => {
 		const page = makePage({
 			Name: { type: "title", title: [] },
 			Status: { type: "status", status: { name: "下書き" } },
 		});
 		const properties: PropertyMap = {
 			name: { type: "title", notion: "Name" },
-			status: { type: "select", notion: "Status" },
+			status: { type: "status", notion: "Status" },
 		};
 		const result = mapItemFromPropertyMap(
 			page as never,
@@ -288,7 +288,7 @@ describe("mapItemFromPropertyMap", () => {
 			Status: { type: "status", status: null },
 		});
 		const properties: PropertyMap = {
-			status: { type: "select", notion: "Status" },
+			status: { type: "status", notion: "Status" },
 		};
 		const result = mapItemFromPropertyMap(
 			page as never,
@@ -309,9 +309,12 @@ describe("mapItem", () => {
 		const page = {
 			...makePage({
 				Name: { type: "title", title: [{ plain_text: "My Post" }] },
-				Slug: { rich_text: [{ plain_text: "my-post" }] },
-				Status: { status: { name: "公開" } },
-				CreatedAt: { date: { start: "2024-01-01" } },
+				Slug: { type: "rich_text", rich_text: [{ plain_text: "my-post" }] },
+				Status: {
+					type: "status",
+					status: { id: "s1", name: "公開", color: "green" },
+				},
+				CreatedAt: { type: "date", date: { start: "2024-01-01" } },
 			}),
 			last_edited_time: "2024-01-01T00:00:00.000Z",
 			created_time: "2024-01-01T00:00:00.000Z",
@@ -325,10 +328,13 @@ describe("mapItem", () => {
 		const page = {
 			...makePage({
 				Name: { type: "title", title: [{ plain_text: "Post" }] },
-				Slug: { rich_text: [{ plain_text: "my-post" }] },
-				// status が未定義で select が設定されたケース
-				Status: { select: { name: "Published" } },
-				CreatedAt: { date: { start: "2024-01-01" } },
+				Slug: { type: "rich_text", rich_text: [{ plain_text: "my-post" }] },
+				// Notion の select タイプをステータスフィールドとして使うケース
+				Status: {
+					type: "select",
+					select: { id: "s1", name: "Published", color: "blue" },
+				},
+				CreatedAt: { type: "date", date: { start: "2024-01-01" } },
 			}),
 			last_edited_time: "2024-01-01T00:00:00.000Z",
 			created_time: "2024-01-01T00:00:00.000Z",
@@ -341,9 +347,12 @@ describe("mapItem", () => {
 		const page = {
 			...makePage({
 				Name: { type: "title", title: [{ plain_text: "Post" }] },
-				Slug: { rich_text: [{ plain_text: "my-post" }] },
-				Status: { status: { name: "公開" } },
-				CreatedAt: { date: null },
+				Slug: { type: "rich_text", rich_text: [{ plain_text: "my-post" }] },
+				Status: {
+					type: "status",
+					status: { id: "s1", name: "公開", color: "green" },
+				},
+				CreatedAt: { type: "date", date: null },
 			}),
 			last_edited_time: "2024-01-01T00:00:00.000Z",
 			created_time: "2024-01-01T00:00:00.000Z",
@@ -356,9 +365,12 @@ describe("mapItem", () => {
 		const page = {
 			...makePage({
 				Name: { type: "title", title: [] },
-				Slug: { rich_text: [{ plain_text: "my-post" }] },
-				Status: { status: { name: "公開" } },
-				CreatedAt: { date: { start: "2024-01-01" } },
+				Slug: { type: "rich_text", rich_text: [{ plain_text: "my-post" }] },
+				Status: {
+					type: "status",
+					status: { id: "s1", name: "公開", color: "green" },
+				},
+				CreatedAt: { type: "date", date: { start: "2024-01-01" } },
 			}),
 			last_edited_time: "2024-01-01T00:00:00.000Z",
 			created_time: "2024-01-01T00:00:00.000Z",
@@ -371,8 +383,11 @@ describe("mapItem", () => {
 		const page = {
 			...makePage({
 				Name: { type: "title", title: [] },
-				Slug: { rich_text: [{ plain_text: "my-post" }] },
-				Status: { status: { name: "公開" } },
+				Slug: { type: "rich_text", rich_text: [{ plain_text: "my-post" }] },
+				Status: {
+					type: "status",
+					status: { id: "s1", name: "公開", color: "green" },
+				},
 				// CreatedAt プロパティなし → dateProperty が undefined
 			}),
 			last_edited_time: "2024-01-01T00:00:00.000Z",
@@ -386,9 +401,9 @@ describe("mapItem", () => {
 		const page = {
 			...makePage({
 				Name: { type: "title", title: [] },
-				Slug: { rich_text: [{ plain_text: "my-post" }] },
+				Slug: { type: "rich_text", rich_text: [{ plain_text: "my-post" }] },
 				// Status プロパティなし → statusProperty が undefined
-				CreatedAt: { date: { start: "2024-01-01" } },
+				CreatedAt: { type: "date", date: { start: "2024-01-01" } },
 			}),
 			last_edited_time: "2024-01-01T00:00:00.000Z",
 			created_time: "2024-01-01T00:00:00.000Z",

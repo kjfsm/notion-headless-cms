@@ -33,8 +33,11 @@ const makePage = (slug: string, status: string) => ({
 	properties: {
 		Name: { type: "title", title: [{ plain_text: slug }] },
 		Slug: { type: "rich_text", rich_text: [{ plain_text: slug }] },
-		Status: { status: { name: status } },
-		CreatedAt: { date: { start: "2024-01-01" } },
+		Status: {
+			type: "status",
+			status: { id: "s1", name: status, color: "green" },
+		},
+		CreatedAt: { type: "date", date: { start: "2024-01-01" } },
 	},
 });
 
@@ -90,9 +93,15 @@ describe("createNotionCollection", () => {
 					last_edited_time: "2024-01-01T00:00:00.000Z",
 					created_time: "2024-01-01T00:00:00.000Z",
 					properties: {
-						Slug: { rich_text: [{ plain_text: "no-title" }] },
-						Status: { status: { name: "公開" } },
-						CreatedAt: { date: { start: "2024-01-01" } },
+						Slug: {
+							type: "rich_text",
+							rich_text: [{ plain_text: "no-title" }],
+						},
+						Status: {
+							type: "status",
+							status: { id: "s1", name: "公開", color: "green" },
+						},
+						CreatedAt: { type: "date", date: { start: "2024-01-01" } },
 					},
 				} as never,
 			]);
@@ -107,14 +116,14 @@ describe("createNotionCollection", () => {
 					...makePage("old", "公開"),
 					properties: {
 						...makePage("old", "公開").properties,
-						CreatedAt: { date: { start: "2023-01-01" } },
+						CreatedAt: { type: "date", date: { start: "2023-01-01" } },
 					},
 				} as never,
 				{
 					...makePage("new", "公開"),
 					properties: {
 						...makePage("new", "公開").properties,
-						CreatedAt: { date: { start: "2024-06-01" } },
+						CreatedAt: { type: "date", date: { start: "2024-06-01" } },
 					},
 				} as never,
 			]);
@@ -495,7 +504,7 @@ describe("createNotionCollection - properties オプション（新形式）", (
 		properties: {
 			name: { type: "title", notion: "Name" },
 			slug: { type: "richText", notion: "Slug" },
-			status: { type: "select", notion: "Status" },
+			status: { type: "status", notion: "Status" },
 		},
 	});
 

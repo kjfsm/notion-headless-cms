@@ -10,7 +10,8 @@ export type NotionFieldType =
 			notion: string;
 	  }
 	| { type: "multiSelect"; notion: string }
-	| { type: "select"; notion: string };
+	| { type: "select"; notion: string }
+	| { type: "status"; notion: string };
 
 // id・updatedAt は Notion ページメタデータから自動設定されるシステムフィールド
 type SystemField = "id" | "updatedAt";
@@ -130,14 +131,9 @@ function parseField(
 			return prop.type === "multi_select"
 				? prop.multi_select.map((s) => s.name)
 				: [];
-		case "select": {
-			if (prop.type === "select") return prop.select?.name ?? null;
-			if (prop.type === "status") {
-				return (
-					(prop as { status?: { name: string } | null }).status?.name ?? null
-				);
-			}
-			return null;
-		}
+		case "select":
+			return prop.type === "select" ? (prop.select?.name ?? null) : null;
+		case "status":
+			return prop.type === "status" ? (prop.status?.name ?? null) : null;
 	}
 }

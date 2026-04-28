@@ -16,7 +16,7 @@ type Post = z.infer<typeof PostSchema>;
 
 const mapping = defineMapping<Post>({
 	slug: { type: "richText", notion: "Slug" },
-	status: { type: "select", notion: "Status" },
+	status: { type: "status", notion: "Status" },
 	title: { type: "title", notion: "Title" },
 	tags: { type: "multiSelect", notion: "Tags" },
 	views: { type: "number", notion: "Views" },
@@ -25,7 +25,7 @@ const mapping = defineMapping<Post>({
 describe("defineMapping", () => {
 	it("受け取ったオブジェクトをそのまま返す（恒等関数）", () => {
 		expect(mapping.slug).toEqual({ type: "richText", notion: "Slug" });
-		expect(mapping.status).toEqual({ type: "select", notion: "Status" });
+		expect(mapping.status).toEqual({ type: "status", notion: "Status" });
 	});
 });
 
@@ -124,7 +124,7 @@ describe("defineSchema", () => {
 			});
 			const strictMapping = defineMapping<z.infer<typeof StrictSchema>>({
 				slug: { type: "richText", notion: "Slug" },
-				status: { type: "select", notion: "Status" },
+				status: { type: "status", notion: "Status" },
 				title: { type: "title", notion: "Title" },
 				tags: { type: "multiSelect", notion: "Tags" },
 				views: { type: "number", notion: "Views" },

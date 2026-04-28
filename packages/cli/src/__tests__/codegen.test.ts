@@ -139,9 +139,9 @@ describe("Notion API datasource プロパティ型マッピング", () => {
 		expect(code).toContain(
 			'category: { type: "select" as const, notion: "Category" }',
 		);
-		// status も PropertyMap では type: "select"
+		// status は PropertyMap でも type: "status"
 		expect(code).toContain(
-			'status: { type: "select" as const, notion: "Status" }',
+			'status: { type: "status" as const, notion: "Status" }',
 		);
 		expect(code).toContain(
 			'tags: { type: "multiSelect" as const, notion: "Tags" }',
