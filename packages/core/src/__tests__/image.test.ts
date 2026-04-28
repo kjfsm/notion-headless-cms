@@ -71,7 +71,7 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 
     expect(result).toMatch(/^\/api\/images\//);
     expect(cache.set).toHaveBeenCalledOnce();
-    const [, savedData, savedType] = vi.mocked(cache.set).mock.calls[0];
+    const [, savedData, savedType] = vi.mocked(cache.set).mock.calls[0]!;
     expect((savedData as ArrayBuffer).byteLength).toBe(body.byteLength);
     expect(savedType).toBe("image/webp");
   });
@@ -123,7 +123,7 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 
     await cacheImage("https://example.com/anim.gif");
 
-    const [, , savedType] = vi.mocked(cache.set).mock.calls[0];
+    const [, , savedType] = vi.mocked(cache.set).mock.calls[0]!;
     expect(savedType).toBe("image/gif");
   });
 
@@ -136,7 +136,7 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 
     await cacheImage("https://example.com/image.png?token=abc");
 
-    const [, , savedType] = vi.mocked(cache.set).mock.calls[0];
+    const [, , savedType] = vi.mocked(cache.set).mock.calls[0]!;
     expect(savedType).toBe("image/png");
   });
 
@@ -149,7 +149,7 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 
     await cacheImage("https://example.com/thumb.webp?s=300");
 
-    const [, , savedType] = vi.mocked(cache.set).mock.calls[0];
+    const [, , savedType] = vi.mocked(cache.set).mock.calls[0]!;
     expect(savedType).toBe("image/webp");
   });
 
@@ -162,7 +162,7 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 
     await cacheImage("https://notion.so/signed/secure-image-without-extension");
 
-    const [, , savedType] = vi.mocked(cache.set).mock.calls[0];
+    const [, , savedType] = vi.mocked(cache.set).mock.calls[0]!;
     expect(savedType).toBe("image/jpeg");
   });
 

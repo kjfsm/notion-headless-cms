@@ -8,7 +8,7 @@ function inferContentType(
   responseContentType: string | null,
 ): string {
   if (responseContentType?.startsWith("image/")) {
-    return responseContentType.split(";")[0].trim();
+    return (responseContentType.split(";")[0] ?? responseContentType).trim();
   }
   if (url.includes(".png")) return "image/png";
   if (url.includes(".gif")) return "image/gif";

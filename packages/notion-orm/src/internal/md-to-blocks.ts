@@ -38,8 +38,8 @@ export function markdownToBlocks(markdown: string): ContentBlock[] {
     // 見出し: # / ## / ### (h4 以上は paragraph に潰す)
     const headingMatch = trimmed.match(/^(#{1,3})\s+(.*)$/);
     if (headingMatch) {
-      const level = headingMatch[1].length as 1 | 2 | 3;
-      const text = headingMatch[2];
+      const level = headingMatch[1]!.length as 1 | 2 | 3;
+      const text = headingMatch[2] ?? "";
       blocks.push({ type: "heading", level, children: parseInline(text) });
       i++;
       continue;
@@ -63,7 +63,11 @@ export function markdownToBlocks(markdown: string): ContentBlock[] {
     // 画像単体: ![alt](src)
     const imgMatch = trimmed.match(/^!\[([^\]]*)\]\(([^)]+)\)$/);
     if (imgMatch) {
-      blocks.push({ type: "image", alt: imgMatch[1], src: imgMatch[2] });
+      blocks.push({
+        type: "image",
+        alt: imgMatch[1] ?? "",
+        src: imgMatch[2] ?? "",
+      });
       i++;
       continue;
     }
@@ -94,7 +98,7 @@ export function markdownToBlocks(markdown: string): ContentBlock[] {
           ? cur.match(/^\d+\.\s+(.*)$/)
           : cur.match(/^[-*+]\s+(.*)$/);
         if (!cm) break;
-        const text = cm[1];
+        const text = cm[1] ?? "";
         items.push([{ type: "paragraph", children: parseInline(text) }]);
         i++;
       }

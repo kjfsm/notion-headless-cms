@@ -186,7 +186,7 @@ export function createCMS<C extends CollectionsConfig>(
 
   const collections: Record<string, CollectionClient<BaseContentItem>> = {};
   for (const name of collectionNames) {
-    const def = opts.collections[name];
+    const def = opts.collections[name]!;
     const source = def.source as DataSource<BaseContentItem>;
     const colHooks = def.hooks as CMSHooks<BaseContentItem> | undefined;
     const collectionHooks: CMSHooks<BaseContentItem> = colHooks
@@ -241,7 +241,7 @@ export function createCMS<C extends CollectionsConfig>(
           imageCache: cacheRes.img,
           parseWebhook: async (req, webhookSecret) => {
             for (const name of collectionNames) {
-              const ds = opts.collections[name]
+              const ds = opts.collections[name]!
                 .source as DataSource<BaseContentItem>;
               if (ds.parseWebhook) {
                 try {

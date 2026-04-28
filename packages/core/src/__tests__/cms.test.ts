@@ -123,7 +123,7 @@ describe("createCMS - publishedStatuses / accessibleStatuses", () => {
 
     const items = await cms.posts.list();
     expect(items).toHaveLength(1);
-    expect(items[0].slug).toBe("published-post");
+    expect(items[0]!.slug).toBe("published-post");
     expect(listMock).toHaveBeenCalledWith(
       expect.objectContaining({ publishedStatuses: ["公開済み"] }),
     );
@@ -279,12 +279,12 @@ describe("createCMS - コレクション間のキャッシュ独立性", () => {
     const pagesCached = await cms.pages.list();
 
     expect(posts).toHaveLength(1);
-    expect(posts[0].slug).toBe("post-one");
+    expect(posts[0]!.slug).toBe("post-one");
     expect(pages).toHaveLength(1);
-    expect(pages[0].slug).toBe("page-one");
+    expect(pages[0]!.slug).toBe("page-one");
     // キャッシュがスコープ別に独立しているので posts のリストが pages で上書きされない
-    expect(postsCached[0].slug).toBe("post-one");
-    expect(pagesCached[0].slug).toBe("page-one");
+    expect(postsCached[0]!.slug).toBe("post-one");
+    expect(pagesCached[0]!.slug).toBe("page-one");
   });
 });
 
@@ -318,13 +318,13 @@ describe("createCMS - $invalidate", () => {
     });
 
     const first = await cms.posts.list();
-    expect(first[0].slug).toBe("post-stale");
+    expect(first[0]!.slug).toBe("post-stale");
 
     await cms.$invalidate();
 
     const second = await cms.posts.list();
     // $invalidate 後はキャッシュがクリアされ、新しいデータが返される
-    expect(second[0].slug).toBe("post-fresh");
+    expect(second[0]!.slug).toBe("post-fresh");
     expect(listMock).toHaveBeenCalledTimes(2);
   });
 

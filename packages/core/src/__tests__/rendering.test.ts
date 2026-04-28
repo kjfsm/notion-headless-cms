@@ -80,7 +80,7 @@ describe("buildCachedItemContent", () => {
         item,
         makeContext({ rendererFn, imageProxyBase: "/custom/images" }),
       );
-      const [md, opts] = vi.mocked(rendererFn).mock.calls[0];
+      const [md, opts] = vi.mocked(rendererFn).mock.calls[0]!;
       expect(md).toBe("# Hello");
       expect(opts?.imageProxyBase).toBe("/custom/images");
     });
@@ -92,7 +92,7 @@ describe("buildCachedItemContent", () => {
         item,
         makeContext({ rendererFn, hasImageCache: true }),
       );
-      const [, opts] = vi.mocked(rendererFn).mock.calls[0];
+      const [, opts] = vi.mocked(rendererFn).mock.calls[0]!;
       expect(typeof opts?.cacheImage).toBe("function");
     });
 
@@ -103,7 +103,7 @@ describe("buildCachedItemContent", () => {
         item,
         makeContext({ rendererFn, hasImageCache: false }),
       );
-      const [, opts] = vi.mocked(rendererFn).mock.calls[0];
+      const [, opts] = vi.mocked(rendererFn).mock.calls[0]!;
       expect(opts?.cacheImage).toBeUndefined();
     });
   });

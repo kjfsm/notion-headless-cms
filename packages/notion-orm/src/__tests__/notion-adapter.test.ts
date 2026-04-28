@@ -74,7 +74,7 @@ describe("createNotionCollection", () => {
 
       const items = await adapter.list({ publishedStatuses: ["公開"] });
       expect(items).toHaveLength(1);
-      expect(items[0].slug).toBe("slug-a");
+      expect(items[0]!.slug).toBe("slug-a");
     });
 
     it("ページ名を title として返す", async () => {
@@ -83,7 +83,7 @@ describe("createNotionCollection", () => {
       ]);
 
       const items = await adapter.list();
-      expect(items[0].title).toBe("my-post");
+      expect(items[0]!.title).toBe("my-post");
     });
 
     it("title 型プロパティがない場合は title が null になる", async () => {
@@ -107,7 +107,7 @@ describe("createNotionCollection", () => {
       ]);
 
       const items = await adapter.list();
-      expect(items[0].title).toBeNull();
+      expect(items[0]!.title).toBeNull();
     });
 
     it("publishedAt の降順でソートする", async () => {
@@ -129,7 +129,7 @@ describe("createNotionCollection", () => {
       ]);
 
       const items = await adapter.list();
-      expect(items[0].slug).toBe("new");
+      expect(items[0]!.slug).toBe("new");
     });
   });
 
@@ -179,7 +179,7 @@ describe("createNotionCollection - コンストラクタバリデーション", 
     });
     const items = await schemaAdapter.list();
     expect(items).toHaveLength(1);
-    expect(items[0].slug).toBe("schema-post");
+    expect(items[0]!.slug).toBe("schema-post");
   });
 
   it("mapItem オプションを使用してカスタムマッパーを利用できる", async () => {
@@ -524,7 +524,7 @@ describe("createNotionCollection - properties オプション（新形式）", (
 
     const items = await propertiesAdapter.list();
     expect(items).toHaveLength(1);
-    expect(items[0].slug).toBe("my-post");
+    expect(items[0]!.slug).toBe("my-post");
   });
 
   it("findByProp() が queryPageByProp を呼ぶ", async () => {
