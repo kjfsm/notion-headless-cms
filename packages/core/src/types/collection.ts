@@ -76,6 +76,11 @@ export interface CollectionCacheOps<T extends BaseContentItem> {
 	): Promise<{ prev: T | null; next: T | null }>;
 }
 
+/** `check()` の戻り値。差分なしか、差分ありの場合はアイテムを含む。 */
+export type CheckResult<T extends BaseContentItem> =
+	| { stale: false }
+	| { stale: true; item: ItemWithRender<T> };
+
 /**
  * コレクション別の CMS クライアント。
  * `cms.posts.get(slug)` / `cms.posts.list()` のようにアクセスする。
@@ -96,6 +101,16 @@ export interface CollectionClient<T extends BaseContentItem = BaseContentItem> {
 
 	/** SSG パラメータ生成 (Next App Router の `generateStaticParams` 互換)。 */
 	params(): Promise<{ slug: string }[]>;
+
+	/**
+	 * Notion から最新版を取得し、`currentVersion`（`item.updatedAt`）と比較する。
+	 * 差分があればキャッシュを更新してアイテムを返す。
+	 * ページ表示後の1回限りのクライアント再検証エンドポイント用。
+	 *
+	 * @returns 差分なし: `{ stale: false }`、差分あり: `{ stale: true; item }`、
+	 *          アイテムが存在しない: `null`
+	 */
+	check(slug: string, currentVersion: string): Promise<CheckResult<T> | null>;
 
 	/** キャッシュ操作 namespace。 */
 	cache: CollectionCacheOps<T>;

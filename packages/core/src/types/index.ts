@@ -5,6 +5,7 @@ export type {
 } from "./cache";
 export type {
 	AdjacencyOptions,
+	CheckResult,
 	CollectionCacheOps,
 	CollectionClient,
 	GetOptions,
