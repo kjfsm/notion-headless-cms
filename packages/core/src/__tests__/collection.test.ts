@@ -562,6 +562,77 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     expect(items).toHaveLength(3);
   });
 
+  it("publishedAt が設定されている場合はそちらを優先してデフォルトソートする", async () => {
+    const items: BaseContentItem[] = [
+      {
+        id: "1",
+        slug: "old",
+        lastEditedTime: "2024-01-03T00:00:00Z",
+        publishedAt: "2024-01-01",
+      },
+      {
+        id: "2",
+        slug: "new",
+        lastEditedTime: "2024-01-01T00:00:00Z",
+        publishedAt: "2024-01-03",
+      },
+      {
+        id: "3",
+        slug: "mid",
+        lastEditedTime: "2024-01-02T00:00:00Z",
+        publishedAt: "2024-01-02",
+      },
+    ];
+    const cms = createCMS({
+      renderer: mockRenderer,
+      collections: {
+        posts: {
+          source: makeMockSource({
+            async list() {
+              return items;
+            },
+          }),
+          slugField: "slug",
+        },
+      },
+    });
+    const result = await cms.posts.list();
+    // publishedAt 降順: new(01-03) → mid(01-02) → old(01-01)
+    expect(result.map((i) => i.slug)).toEqual(["new", "mid", "old"]);
+  });
+
+  it("publishedAt が同値の場合は順序が安定する", async () => {
+    const items: BaseContentItem[] = [
+      {
+        id: "1",
+        slug: "a",
+        lastEditedTime: "2024-01-01T00:00:00Z",
+        publishedAt: "2024-01-01",
+      },
+      {
+        id: "2",
+        slug: "b",
+        lastEditedTime: "2024-01-01T00:00:00Z",
+        publishedAt: "2024-01-01",
+      },
+    ];
+    const cms = createCMS({
+      renderer: mockRenderer,
+      collections: {
+        posts: {
+          source: makeMockSource({
+            async list() {
+              return items;
+            },
+          }),
+          slugField: "slug",
+        },
+      },
+    });
+    const result = await cms.posts.list();
+    expect(result).toHaveLength(2);
+  });
+
   it("where に配列を渡すと OR 一致でフィルタする", async () => {
     const cms = createCMS({
       renderer: mockRenderer,

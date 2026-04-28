@@ -636,11 +636,10 @@ function applyListOptions<T extends BaseContentItem>(
 /** publishedAt 降順、未設定の場合は lastEditedTime 降順でソートする。 */
 function sortByPublishedAtDesc<T extends BaseContentItem>(items: T[]): T[] {
   return [...items].sort((a, b) => {
+    // lastEditedTime は必須なので av/bv は常に truthy
     const av = a.publishedAt ?? a.lastEditedTime;
     const bv = b.publishedAt ?? b.lastEditedTime;
     if (av === bv) return 0;
-    if (!av) return 1;
-    if (!bv) return -1;
     return av > bv ? -1 : 1;
   });
 }
