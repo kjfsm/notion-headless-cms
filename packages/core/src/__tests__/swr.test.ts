@@ -175,7 +175,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
     // キャッシュが即時返される
     expect(items).toHaveLength(1);
-    expect(items[0]!.updatedAt).toBe("2024-01-01T00:00:00Z");
+    expect(items[0]?.updatedAt).toBe("2024-01-01T00:00:00Z");
 
     // バックグラウンド差分チェックの Promise が waitUntil に渡されている
     expect(capturedPromises.length).toBeGreaterThan(0);

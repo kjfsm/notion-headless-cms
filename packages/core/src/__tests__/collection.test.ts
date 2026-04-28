@@ -229,7 +229,7 @@ describe("CollectionClient — cache.invalidate / cache.warm", () => {
 
     expect(callCount).toBe(2);
     expect(second).toHaveLength(1);
-    expect(second[0]!.slug).toBe("fresh");
+    expect(second[0]?.slug).toBe("fresh");
   });
 
   it("cache.invalidate() でコレクション全体が無効化される", async () => {
@@ -428,7 +428,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     });
     const items = await cms.posts.list({ where: { id: "1" } });
     expect(items).toHaveLength(1);
-    expect(items[0]!.slug).toBe("alpha");
+    expect(items[0]?.slug).toBe("alpha");
   });
 
   it("sort: asc で updatedAt 昇順になる", async () => {
@@ -487,7 +487,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     });
     const items = await cms.posts.list({ skip: 1, limit: 1 });
     expect(items).toHaveLength(1);
-    expect(items[0]!.slug).toBe("beta");
+    expect(items[0]?.slug).toBe("beta");
   });
 
   it("limit のみ指定すると先頭から N 件を返す", async () => {
@@ -506,7 +506,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     });
     const items = await cms.posts.list({ limit: 2 });
     expect(items).toHaveLength(2);
-    expect(items[0]!.slug).toBe("alpha");
+    expect(items[0]?.slug).toBe("alpha");
   });
 
   it("skip のみ指定すると N 件スキップして残りを返す", async () => {
@@ -525,7 +525,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     });
     const items = await cms.posts.list({ skip: 2 });
     expect(items).toHaveLength(1);
-    expect(items[0]!.slug).toBe("gamma");
+    expect(items[0]?.slug).toBe("gamma");
   });
 
   it("オプションなしで全件返す", async () => {
@@ -583,7 +583,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
       filter: (item) => item.slug.startsWith("a"),
     });
     expect(items).toHaveLength(1);
-    expect(items[0]!.slug).toBe("alpha");
+    expect(items[0]?.slug).toBe("alpha");
   });
 
   it("sort.compare カスタム comparator でソートできる", async () => {
