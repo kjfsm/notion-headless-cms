@@ -31,6 +31,18 @@ cms.$getCachedImage(hash)
 cms.$handler(opts?)
 ```
 
+## `BaseContentItem` — 自動フィールド
+
+CLI 生成の `createCMS` ラッパーで返されるすべてのアイテムには、スキーマで定義したプロパティに加えて以下の自動フィールドが含まれます:
+
+- `id: string` — Notion ページ ID
+- `slug: string` — スキーマの `slug` フィールドから抽出
+- `title?: string | null` — Notion `title` 型プロパティ（自動検出）
+- `updatedAt: string` — Notion ページの最終編集時刻（ISO-8601、キャッシュ更新判定に使用）
+- `lastEditedTime?: string` — Notion の `page.last_edited_time` と同値。常にセットされるシステムフィールド（`updatedAt` と同じ値）
+- `status?: string | null` — スキーマの `status` フィールド
+- `publishedAt?: string | null` — スキーマの `publishedAt` フィールド
+
 ## コレクション別メソッド (`CollectionClient<T>`)
 
 ### `get(slug, opts?)`
