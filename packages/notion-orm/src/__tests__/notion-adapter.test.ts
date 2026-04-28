@@ -233,12 +233,12 @@ describe("createNotionCollection - dbName 解決", () => {
     );
   });
 
-  it("タイトル完全一致がない場合は最初の data_source を使う", async () => {
+  it("タイトル完全一致がない場合は CMSError をスローする", async () => {
     const mockSearch = vi.fn().mockResolvedValue({
       results: [
         {
           object: "data_source",
-          id: "fallback-db-id",
+          id: "other-db-id",
           title: [{ plain_text: "OtherDB" }],
         },
       ],
@@ -249,11 +249,9 @@ describe("createNotionCollection - dbName 解決", () => {
       token: "test-token",
       dbName: "MyDB",
     });
-    vi.mocked(queryAllPages).mockResolvedValue([]);
-    await dbNameAdapter.list();
-    expect(queryAllPages).toHaveBeenCalledWith(
-      expect.anything(),
-      "fallback-db-id",
+    await expect(dbNameAdapter.list()).rejects.toSatisfy(
+      (err: unknown) =>
+        isCMSError(err) && err.code === "source/fetch_items_failed",
     );
   });
 
@@ -292,11 +290,11 @@ describe("createNotionCollection - dbName 解決", () => {
     expect(mockSearch).toHaveBeenCalledTimes(1);
   });
 
-  it("title が未定義の data_source はタイトル一致から除外され最初の data_source を使う", async () => {
+  it("title なしの data_source はスキップされ、完全一致する data_source を使う", async () => {
     const mockSearch = vi.fn().mockResolvedValue({
       results: [
-        // title なし data_source → title = "" → マッチしない
-        { object: "data_source", id: "no-title-db-id" },
+        // title プロパティなし → title 配列が空扱い → "" → マッチしない
+        { object: "data_source", id: "no-title-db-id", title: [] },
         {
           object: "data_source",
           id: "titled-db-id",
@@ -312,7 +310,6 @@ describe("createNotionCollection - dbName 解決", () => {
     });
     vi.mocked(queryAllPages).mockResolvedValue([]);
     await dbNameAdapter.list();
-    // タイトル一致する "titled-db-id" が使われる
     expect(queryAllPages).toHaveBeenCalledWith(
       expect.anything(),
       "titled-db-id",
