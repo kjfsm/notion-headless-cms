@@ -358,6 +358,64 @@ describe("mapItemFromPropertyMap", () => {
     expect(result.status).toBeNull();
   });
 
+  it("カバー画像が external タイプの場合は coverImageUrl に URL が設定される", () => {
+    const page = {
+      ...makePage({}),
+      cover: {
+        type: "external",
+        external: { url: "https://example.com/cover.jpg" },
+      },
+    };
+    const item = mapItemFromPropertyMap(page as never, slugProp);
+    expect(item.coverImageUrl).toBe("https://example.com/cover.jpg");
+  });
+
+  it("カバー画像が file タイプの場合は coverImageUrl に URL が設定される", () => {
+    const page = {
+      ...makePage({}),
+      cover: {
+        type: "file",
+        file: { url: "https://s3.example.com/cover.png", expiry_time: "" },
+      },
+    };
+    const item = mapItemFromPropertyMap(page as never, slugProp);
+    expect(item.coverImageUrl).toBe("https://s3.example.com/cover.png");
+  });
+
+  it("アイコンが絵文字タイプの場合は iconEmoji に絵文字が設定される", () => {
+    const page = {
+      ...makePage({}),
+      icon: { type: "emoji", emoji: "🎉" },
+    };
+    const item = mapItemFromPropertyMap(page as never, slugProp);
+    expect(item.iconEmoji).toBe("🎉");
+  });
+
+  it("アイコンが絵文字でない場合は iconEmoji が null になる", () => {
+    const page = {
+      ...makePage({}),
+      icon: {
+        type: "external",
+        external: { url: "https://example.com/icon.png" },
+      },
+    };
+    const item = mapItemFromPropertyMap(page as never, slugProp);
+    expect(item.iconEmoji).toBeNull();
+  });
+
+  it("カバーもアイコンも未設定の場合は coverImageUrl・iconEmoji が null になる", () => {
+    const page = { ...makePage({}), cover: null, icon: null };
+    const item = mapItemFromPropertyMap(page as never, slugProp);
+    expect(item.coverImageUrl).toBeNull();
+    expect(item.iconEmoji).toBeNull();
+  });
+
+  it("カバー画像が未対応タイプの場合は coverImageUrl が null になる", () => {
+    const page = { ...makePage({}), cover: { type: "unsupported" } };
+    const item = mapItemFromPropertyMap(page as never, slugProp);
+    expect(item.coverImageUrl).toBeNull();
+  });
+
   it("PropertyMap に slug が含まれない場合は CMSError をスローする", () => {
     const page = makePage({
       Name: { type: "title", title: [{ plain_text: "Test" }] },

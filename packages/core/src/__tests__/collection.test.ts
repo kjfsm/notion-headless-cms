@@ -589,6 +589,59 @@ describe("CollectionClient — 並行 get", () => {
   });
 });
 
+describe("CollectionClient — isArchived フィルタ", () => {
+  it("isArchived が true のアイテムは list から除外される", async () => {
+    const items: BaseContentItem[] = [
+      { id: "1", slug: "active", updatedAt: "2024-01-01T00:00:00Z" },
+      {
+        id: "2",
+        slug: "archived",
+        updatedAt: "2024-01-01T00:00:00Z",
+        isArchived: true,
+      },
+    ];
+    const cms = createCMS({
+      collections: {
+        posts: {
+          source: makeMockSource({
+            async list() {
+              return items;
+            },
+          }),
+          slugField: "slug",
+        },
+      },
+      renderer: mockRenderer,
+    });
+    const result = await cms.posts.list();
+    expect(result.map((i) => i.slug)).toEqual(["active"]);
+  });
+
+  it("isArchived が true のアイテムは get で null を返す", async () => {
+    const item: BaseContentItem = {
+      id: "1",
+      slug: "archived-post",
+      updatedAt: "2024-01-01T00:00:00Z",
+      isArchived: true,
+    };
+    const cms = createCMS({
+      collections: {
+        posts: {
+          source: makeMockSource({
+            async list() {
+              return [item];
+            },
+          }),
+          slugField: "slug",
+        },
+      },
+      renderer: mockRenderer,
+    });
+    const result = await cms.posts.get("archived-post");
+    expect(result).toBeNull();
+  });
+});
+
 describe("CollectionClient — accessibleStatuses フィルタ", () => {
   it("accessibleStatuses にないステータスのアイテムは get で null を返す", async () => {
     const item: BaseContentItem = {
