@@ -522,7 +522,15 @@ export class CollectionClientImpl<T extends BaseContentItem>
         },
       },
     );
-    return items.filter((item) => !item.isArchived && !item.isInTrash);
+    return items.filter((item) => {
+      if (item.isArchived || item.isInTrash) return false;
+      if (
+        this.ctx.accessibleStatuses.length > 0 &&
+        (!item.status || !this.ctx.accessibleStatuses.includes(item.status))
+      )
+        return false;
+      return true;
+    });
   }
 
   private async findRaw(slug: string): Promise<T | null> {

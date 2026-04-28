@@ -21,7 +21,7 @@ const makePage = (properties: Record<string, unknown> = {}) => ({
 const slugProp: PropertyMap = { slug: { type: "richText", notion: "Slug" } };
 
 describe("mapItemFromPropertyMap", () => {
-  it("id・updatedAt・lastEditedTime が設定される", () => {
+  it("id・updatedAt が設定される", () => {
     const page = makePage({
       Name: { type: "title", title: [{ plain_text: "Test" }] },
     });
@@ -32,7 +32,6 @@ describe("mapItemFromPropertyMap", () => {
     const item = mapItemFromPropertyMap(page as never, properties);
     expect(item.id).toBe("page-id");
     expect(item.updatedAt).toBe("2024-01-01T00:00:00.000Z");
-    expect(item.lastEditedTime).toBe("2024-01-01T00:00:00.000Z");
   });
 
   it("title プロパティが title フィールドに反映される", () => {
@@ -480,7 +479,7 @@ describe("mapItem", () => {
     const item = mapItem(page as never, defaultProps);
     expect(item.slug).toBe("my-post");
     expect(item.status).toBe("公開");
-    expect(item.lastEditedTime).toBe("2024-01-01T00:00:00.000Z");
+    expect(item.updatedAt).toBe("2024-01-01T00:00:00.000Z");
   });
 
   it("status が select タイプの場合は select.name を使う", () => {

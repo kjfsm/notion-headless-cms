@@ -141,29 +141,6 @@ describe("defineSchema", () => {
       expect(() => strictSchema.mapItem(page as never)).toThrow();
     });
 
-    it("lastEditedTime はマッピング不要でページメタデータから自動設定される", () => {
-      const LastEditedSchema = z.object({
-        id: z.string(),
-        updatedAt: z.string(),
-        lastEditedTime: z.string(),
-        title: z.string().nullable(),
-      });
-      const lastEditedMapping = defineMapping<z.infer<typeof LastEditedSchema>>(
-        {
-          title: { type: "title", notion: "Name" },
-        },
-      );
-      const lastEditedSchema = defineSchema(
-        LastEditedSchema,
-        lastEditedMapping,
-      );
-      const page = makePage({
-        Name: { type: "title", title: [] },
-      });
-      const item = lastEditedSchema.mapItem(page as never);
-      expect(item.lastEditedTime).toBe("2024-06-01T12:00:00.000Z");
-    });
-
     it("url フィールドタイプをパースする", () => {
       const UrlSchema = z.object({
         id: z.string(),

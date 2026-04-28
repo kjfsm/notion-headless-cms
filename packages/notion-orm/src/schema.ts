@@ -17,7 +17,6 @@ export type NotionFieldType =
 type SystemField =
   | "id"
   | "updatedAt"
-  | "lastEditedTime"
   | "createdAt"
   | "isArchived"
   | "isInTrash"
@@ -85,7 +84,6 @@ type PropertyValue = NotionPage["properties"][string];
 const SYSTEM_FIELDS = new Set([
   "id",
   "updatedAt",
-  "lastEditedTime",
   "createdAt",
   "isArchived",
   "isInTrash",
@@ -118,7 +116,6 @@ function parseMapping<T>(
   const result: Record<string, unknown> = {
     id: page.id,
     updatedAt: page.last_edited_time,
-    lastEditedTime: page.last_edited_time,
     title: titleProp?.type === "title" ? getPlainText(titleProp.title) : null,
     createdAt: page.created_time,
     isArchived: page.archived,

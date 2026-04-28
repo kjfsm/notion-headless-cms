@@ -860,6 +860,83 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
     const result = await cms.posts.get("null-status");
     expect(result).toBeNull();
   });
+
+  it("list() でも accessibleStatuses にないアイテムが除外される", async () => {
+    const items: BaseContentItem[] = [
+      {
+        id: "1",
+        slug: "public",
+        updatedAt: "2024-01-01T00:00:00Z",
+        status: "公開",
+      },
+      {
+        id: "2",
+        slug: "draft",
+        updatedAt: "2024-01-01T00:00:00Z",
+        status: "下書き",
+      },
+      { id: "3", slug: "no-status", updatedAt: "2024-01-01T00:00:00Z" },
+    ];
+    const cms = createCMS({
+      collections: {
+        posts: {
+          source: makeMockSource({
+            async list() {
+              return items;
+            },
+          }),
+          slugField: "slug",
+          accessibleStatuses: ["公開"],
+        },
+      },
+      renderer: mockRenderer,
+    });
+    const result = await cms.posts.list();
+    expect(result).toHaveLength(1);
+    expect(result[0]?.slug).toBe("public");
+  });
+
+  it("list() と get() で accessibleStatuses フィルタが一致する", async () => {
+    const items: BaseContentItem[] = [
+      {
+        id: "1",
+        slug: "public",
+        updatedAt: "2024-01-01T00:00:00Z",
+        status: "公開",
+      },
+      {
+        id: "2",
+        slug: "draft",
+        updatedAt: "2024-01-01T00:00:00Z",
+        status: "下書き",
+      },
+    ];
+    const cms = createCMS({
+      collections: {
+        posts: {
+          source: makeMockSource({
+            async list() {
+              return items;
+            },
+          }),
+          slugField: "slug",
+          accessibleStatuses: ["公開"],
+        },
+      },
+      renderer: mockRenderer,
+    });
+    const listed = await cms.posts.list();
+    const slugsFromList = listed.map((i) => i.slug);
+
+    // list() で返ったスラッグはすべて get() でも取得できる
+    for (const slug of slugsFromList) {
+      const got = await cms.posts.get(slug);
+      expect(got).not.toBeNull();
+    }
+    // list() に含まれないスラッグは get() で null になる
+    const excluded = await cms.posts.get("draft");
+    expect(excluded).toBeNull();
+  });
 });
 
 describe("CollectionClient — render アクセサ", () => {
