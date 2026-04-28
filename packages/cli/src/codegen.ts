@@ -60,15 +60,16 @@ function tsTypeForPropDef(defType: string): string {
 	}
 }
 
-/** Notion プロパティから select の literal union を抽出する (取得できない場合は null)。 */
+/**
+ * Notion プロパティから status の literal union を抽出する (取得できない場合は null)。
+ * Notion の status 型（ワークフロー状態）のみ literal union を生成する。
+ * select 型はユーザーが自由に選択肢を追加できるため string | null のままにする。
+ */
 function extractSelectLiterals(
 	prop: DataSourceObjectResponse["properties"][string],
 ): string[] | null {
 	// biome-ignore lint/suspicious/noExplicitAny: Notion SDK の型が弱い箇所
 	const p = prop as any;
-	if (p.type === "select" && Array.isArray(p.select?.options)) {
-		return p.select.options.map((o: { name: string }) => o.name);
-	}
 	if (p.type === "status" && Array.isArray(p.status?.options)) {
 		return p.status.options.map((o: { name: string }) => o.name);
 	}
