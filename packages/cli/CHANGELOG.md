@@ -1,5 +1,11 @@
 # @notion-headless-cms/cli
 
+## 1.0.17
+
+### Patch Changes
+
+- e7ca2ad: 生成される `NhcConfig` に `blocks` / `logger` / `hooks` フィールドを追加。embed/video ブロックのカスタム処理とキャッシュイベント監視が `createCMS` 経由で行えるようになった。
+
 ## 1.0.16
 
 ### Patch Changes
