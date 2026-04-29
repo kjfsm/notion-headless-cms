@@ -55,3 +55,52 @@ describe("GET /posts/:slug", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("GET /ui/posts", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("記事一覧を HTML で返す", async () => {
+    vi.mocked(cms.posts.list).mockResolvedValue([
+      { slug: "hello", title: "Hello World" } as never,
+    ]);
+    const res = await app.request("/ui/posts");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/html");
+    const body = await res.text();
+    expect(body).toContain("/ui/posts/hello");
+  });
+});
+
+describe("GET /ui/posts/:slug", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("記事詳細を HTML で返す", async () => {
+    vi.mocked(cms.posts.get).mockResolvedValue({
+      id: "id-1",
+      slug: "hello",
+      status: "公開済み",
+      render: vi.fn().mockResolvedValue("<p>内容</p>"),
+    } as never);
+    const res = await app.request("/ui/posts/hello");
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/html");
+    const body = await res.text();
+    expect(body).toContain("<p>内容</p>");
+    expect(body).toContain("hello");
+  });
+
+  it("存在しないスラグは HTML 404 を返す", async () => {
+    vi.mocked(cms.posts.get).mockResolvedValue(null);
+    const res = await app.request("/ui/posts/not-found");
+    expect(res.status).toBe(404);
+    expect(res.headers.get("content-type")).toContain("text/html");
+  });
+});
+
+describe("GET /", () => {
+  it("/ui へリダイレクトする", async () => {
+    const res = await app.request("/");
+    expect(res.status).toBe(302);
+    expect(res.headers.get("location")).toBe("/ui");
+  });
+});
