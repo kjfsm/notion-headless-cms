@@ -8,15 +8,15 @@ assets = { directory = "./build/client" }
 [observability]
 enabled = true
 
-# Cloudflare GitHub App（Workers Builds）連携時に実行されるビルドコマンド。
-# モノリポルートで依存インストール → ワークスペースパッケージのビルド →
-# nhc generate（Notion から型/データ取得）→ react-router build の順に実行する。
-# - NOTION_TOKEN は Cloudflare Dashboard > Settings > Variables and Secrets で
-#   "Build variables" として追加する（ランタイムの secret とは別枠）。
-# - GitHub Actions 経由でデプロイする場合はワークフロー側で同等の処理を行うため
-#   この [build] は冪等に再実行されるが、追加コストは frozen-lockfile/turbo cache で軽減される。
-[build]
-command = "pnpm --dir=../.. install --frozen-lockfile && pnpm --dir=../.. --filter='@notion-headless-cms/*' build && pnpm generate && pnpm build"
+# 注: Vite 経由（@cloudflare/vite-plugin）で運用するため [build] セクションは置かない。
+# vite が無視する旨を warning で出力する。実際のビルドは外部から以下を実行する:
+#   - Cloudflare GitHub App（Workers Builds）: Dashboard の Build command に設定
+#   - GitHub Actions: .github/workflows/deploy-examples-cloudflare.yml が実行
+# どちらも以下の順序で実行する:
+#   pnpm --dir=../.. install --frozen-lockfile \
+#     && pnpm --dir=../.. --filter='@notion-headless-cms/*' build \
+#     && pnpm generate && pnpm build
+# ビルド成果物の build/server/wrangler.json を wrangler deploy が読み取る。
 
 [[kv_namespaces]]
 binding = "DOC_CACHE"
