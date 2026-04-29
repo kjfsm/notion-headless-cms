@@ -19,7 +19,8 @@ paths:
 
 - Next.js App Router 向けのルートハンドラ群（ファクトリ関数ではなく handler を返す）
 - `createImageRouteHandler(cms)` — `/api/images/[hash]/route.ts` 用
-- `createRevalidateRouteHandler(cms, { secret })` — Webhook 受信用
+- `createCollectionRevalidateRouteHandler(cms, { secret })` — `/api/revalidate/[collection]` Webhook 受信用
+- `createInvalidateAllRouteHandler(cms, { secret })` — `/api/revalidate` 全件無効化用
 - CMS インスタンスを受け取り、Next.js の `Route Handler` に適合する関数を返す
 
 ## 新 adapter 追加時（SvelteKit / Astro integration 等）
