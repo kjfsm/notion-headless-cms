@@ -1,5 +1,11 @@
 # example-cloudflare-astro
 
+## 0.0.26
+
+### Patch Changes
+
+- efca5a2: cloudflare 系 example のデプロイ設定を整備。各 `wrangler.toml` の `[build]` コマンドに `nhc generate` を組み込み、Cloudflare GitHub App（Workers Builds）からそのままビルド・デプロイできるようにした。GitHub Actions 側にも `workflow_dispatch` で起動できる `deploy-examples-cloudflare.yml` を追加し、`example` 選択 + `dry-run` に対応。`cloudflare-hono` には no-op の `build` スクリプトを追加して 4 example のフローを統一。
+
 ## 0.0.25
 
 ### Patch Changes
