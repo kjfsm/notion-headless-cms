@@ -5,6 +5,7 @@ export type { Post as BlogPost };
 
 export interface Env {
   NOTION_TOKEN: string;
+  // 推奨 binding 名 (cloudflareCache のデフォルト)
   DOC_CACHE?: KVNamespace;
   IMG_BUCKET?: R2Bucket;
 }

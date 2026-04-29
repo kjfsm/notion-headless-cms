@@ -280,6 +280,7 @@ function generateClientBlock(collections: ResolvedCollection[]): string {
 					token: config.notionToken,
 					dataSourceId: ${c.name}DataSourceId,
 					properties: ${c.name}Properties,
+					...(config.blocks ? { blocks: config.blocks } : {}),
 				}),
 				slugField: ${JSON.stringify(slugField)},
 				statusField: ${JSON.stringify(statusField)},
@@ -305,6 +306,12 @@ export interface NhcConfig {
 	imageProxyBase?: string;
 	/** Cloudflare Workers の \`waitUntil\` 相当。 */
 	waitUntil?: (p: Promise<unknown>) => void;
+	/** embed / video 等の Notion ブロックをカスタム処理するハンドラマップ。 */
+	blocks?: Record<string, BlockHandler>;
+	/** ロガー。キャッシュイベントや内部処理のログを受け取る。 */
+	logger?: Logger;
+	/** ライフサイクルフック (onCacheHit / onCacheMiss 等)。 */
+	hooks?: CMSHooks;
 }
 
 /** 生成された CMS クライアントの型。 */
@@ -335,6 +342,8 @@ export function createCMS(config: NhcConfig): Nhc {
 		renderer: config.renderer,
 		imageProxyBase: config.imageProxyBase,
 		waitUntil: config.waitUntil,
+		logger: config.logger,
+		hooks: config.hooks,
 		collections: {
 ${innerCollections.join("\n")}
 		},
@@ -353,11 +362,14 @@ export function generateSchemaFile(collections: ResolvedCollection[]): string {
     "\tcreateCMS as _createCMS,",
     "\ttype CacheAdapter,",
     "\ttype CMSGlobalOps,",
+    "\ttype CMSHooks,",
     "\ttype CollectionClient,",
+    "\ttype Logger,",
     "\ttype PropertyMap,",
     "\ttype RendererFn,",
     '} from "@notion-headless-cms/core";',
     'import { createNotionCollection } from "@notion-headless-cms/notion-orm";',
+    'import type { BlockHandler } from "@notion-headless-cms/renderer";',
     "",
   ].join("\n");
 
