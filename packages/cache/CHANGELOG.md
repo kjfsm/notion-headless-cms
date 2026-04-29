@@ -1,5 +1,14 @@
 # @notion-headless-cms/cache
 
+## 0.0.6
+
+### Patch Changes
+
+- 1bae29d: `NextCacheOptions` から未実装の `revalidate` フィールドを削除。
+
+  このオプションは定義されていたが `nextCache()` の実装で一度も参照されておらず、
+  ページレベルの `export const revalidate` と混同しやすかった。
+
 ## 0.0.5
 
 ### Patch Changes

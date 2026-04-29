@@ -1,6 +1,6 @@
 {
   "name": "@notion-headless-cms/cache",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "description": "Unified cache adapters for notion-headless-cms — memory, Cloudflare (KV/R2), and Next.js",
   "keywords": [
     "notion",
