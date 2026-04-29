@@ -10,7 +10,7 @@
     "preview": "pnpm run build && wrangler dev",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
-    "deploy": "pnpm run build && wrangler deploy",
+    "deploy": "wrangler deploy",
     "cf-typegen": "wrangler types",
     "test": "vitest run"
   },
