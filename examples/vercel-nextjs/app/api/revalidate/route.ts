@@ -1,6 +1,6 @@
-import { createRevalidateRouteHandler } from "@notion-headless-cms/adapter-next";
-import { cms } from "../../lib/cms";
+import { createInvalidateAllRouteHandler } from "@notion-headless-cms/adapter-next";
+import { cms } from "@/app/lib/cms";
 
-export const POST = createRevalidateRouteHandler(cms, {
+export const POST = createInvalidateAllRouteHandler(cms, {
   secret: process.env.REVALIDATE_SECRET ?? "",
 });

@@ -325,9 +325,14 @@ ${nhcMembers.join("\n")}
  * @example
  * import { createCMS } from "./generated/nhc";
  * import { memoryCache } from "@notion-headless-cms/cache";
+ * import { notionEmbed, youtubeProvider } from "@notion-headless-cms/notion-embed";
+ *
+ * const embed = notionEmbed({ providers: [youtubeProvider({ display: "card" })] });
  *
  * export const cms = createCMS({
  *   notionToken: process.env.NOTION_TOKEN!,
+ *   renderer: embed.renderer,
+ *   blocks: embed.blocks,
  *   cache: memoryCache({ ttlMs: 5 * 60_000 }),
  * });
  *

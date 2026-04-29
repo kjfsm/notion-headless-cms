@@ -9,8 +9,6 @@ import type {
 } from "@notion-headless-cms/core";
 
 export interface NextCacheOptions {
-  /** Next.js ISR の revalidate 秒数。デフォルト: 300 */
-  revalidate?: number;
   /**
    * ユーザーが任意に設定する追加タグ。
    * `invalidate("all")` 時にまとめて revalidateTag される。
