@@ -27,10 +27,12 @@
   },
   "devDependencies": {
     "@notion-headless-cms/cli": "workspace:*",
+    "@tailwindcss/postcss": "^4",
     "@types/node": "^25.6.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "dotenv": "^17.4.2",
+    "tailwindcss": "^4",
     "typescript": "^6.0.3",
     "vitest": "^3.2.0"
   }

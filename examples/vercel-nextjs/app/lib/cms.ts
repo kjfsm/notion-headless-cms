@@ -1,6 +1,6 @@
 import { memoryCache } from "@notion-headless-cms/cache";
 import { nextCache } from "@notion-headless-cms/cache/next";
-import { createCMS } from "../generated/nhc";
+import { createCMS } from "@/app/generated/nhc";
 
 // document は Next.js の unstable_cache + revalidateTag、image は in-process メモリ。
 export const cms = createCMS({
