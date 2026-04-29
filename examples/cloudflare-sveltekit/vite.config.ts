@@ -4,10 +4,11 @@ import { defineConfig } from "vite";
 export default defineConfig({
   plugins: [sveltekit()],
   ssr: {
-    // @notionhq/client と notion-to-md は CJS のみのパッケージ。
-    // Vite SSR ビルドで external のままにすると wrangler が
-    // createRequire(import.meta.url) ラッパーを生成し Workers 上で失敗する。
-    // noExternal に指定して Vite (rollup) 側で ESM へ変換させる。
-    noExternal: ["@notionhq/client", "notion-to-md"],
+    // Vite 8 は rolldown を使用しており、CJS パッケージを external のままにすると
+    // createRequire(import.meta.url) ラッパーが生成され、Cloudflare Workers の
+    // バリデーション時に import.meta.url === undefined でクラッシュする。
+    // noExternal: true で全 node_modules を Vite (rolldown) 側でバンドルし
+    // createRequire 依存を排除する。Node.js 組み込み (node:*) は自動的に除外される。
+    noExternal: true,
   },
 });
