@@ -1,5 +1,14 @@
 # @notion-headless-cms/cli
 
+## 1.0.18
+
+### Patch Changes
+
+- 1bae29d: `createCMS` の JSDoc @example に必須フィールド `renderer` / `blocks` を追記。
+
+  `NhcConfig.renderer` は必須フィールドだが例示コードから抜けており、
+  そのまま貼り付けると型エラーになっていた。
+
 ## 1.0.17
 
 ### Patch Changes
