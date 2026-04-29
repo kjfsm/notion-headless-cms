@@ -383,6 +383,9 @@ importers:
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@notion-headless-cms/notion-embed':
+        specifier: workspace:*
+        version: link:../../packages/notion-embed
       '@notion-headless-cms/notion-orm':
         specifier: workspace:*
         version: link:../../packages/notion-orm

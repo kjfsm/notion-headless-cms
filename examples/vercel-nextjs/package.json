@@ -18,6 +18,7 @@
     "@notion-headless-cms/adapter-next": "workspace:*",
     "@notion-headless-cms/cache": "workspace:*",
     "@notion-headless-cms/core": "workspace:*",
+    "@notion-headless-cms/notion-embed": "workspace:*",
     "@notion-headless-cms/notion-orm": "workspace:*",
     "@notion-headless-cms/renderer": "workspace:*",
     "next": "^16.2.4",
