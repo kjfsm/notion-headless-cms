@@ -1,0 +1,102 @@
+name: Deploy examples cloudflare
+
+# Cloudflare GitHub App（Workers Builds）と二重起動しないよう、自動 push トリガは設けず
+# workflow_dispatch のみ受け付ける。GitHub App 連携をしないリポジトリでも、
+# このワークフローから手動デプロイできる構成。
+on:
+  workflow_dispatch:
+    inputs:
+      example:
+        description: "デプロイ対象の example"
+        type: choice
+        required: true
+        default: cloudflare-react-router
+        options:
+          - cloudflare-hono
+          - cloudflare-astro
+          - cloudflare-react-router
+          - cloudflare-sveltekit
+          - all
+      dry-run:
+        description: "wrangler deploy --dry-run（実デプロイなし）"
+        type: boolean
+        required: false
+        default: false
+
+concurrency:
+  group: deploy-examples-cloudflare-${{ inputs.example }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    outputs:
+      examples: ${{ steps.list.outputs.examples }}
+    steps:
+      - id: list
+        run: |
+          if [ "${{ inputs.example }}" = "all" ]; then
+            echo 'examples=["cloudflare-hono","cloudflare-astro","cloudflare-react-router","cloudflare-sveltekit"]' >> "$GITHUB_OUTPUT"
+          else
+            echo 'examples=["${{ inputs.example }}"]' >> "$GITHUB_OUTPUT"
+          fi
+
+  deploy:
+    needs: resolve
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        example: ${{ fromJSON(needs.resolve.outputs.examples) }}
+    # Cloudflare 認証情報・NOTION_TOKEN を分離するための GitHub Environment。
+    # Settings > Environments で `cloudflare-examples` を作成し、Secrets に
+    # CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID / NOTION_TOKEN を登録する。
+    environment: cloudflare-examples
+    steps:
+      - uses: actions/checkout@v6
+
+      # pnpm のバージョンは package.json の packageManager フィールドから自動検出させる
+      - uses: pnpm/action-setup@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.x"
+          cache: "pnpm"
+
+      - name: 依存関係のインストール
+        run: pnpm install --frozen-lockfile --prefer-offline
+
+      - name: ワークスペースパッケージのビルド
+        run: pnpm build
+
+      # nhc generate は Notion API にアクセスして src/generated or app/generated を生成する。
+      - name: スキーマ/データ生成（nhc generate）
+        working-directory: examples/${{ matrix.example }}
+        run: pnpm generate
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
+
+      # 各 example の framework build。Hono は src/index.ts を wrangler が直接バンドルするため
+      # package.json に no-op の build スクリプトを置いてここでも統一的に実行する。
+      - name: Framework build
+        working-directory: examples/${{ matrix.example }}
+        run: pnpm build
+
+      # wrangler deploy は wrangler.toml の [build] を再実行するが、
+      # frozen-lockfile + turbo キャッシュで追加コストは小さい。
+      - name: Cloudflare Workers へデプロイ
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: examples/${{ matrix.example }}
+          command: ${{ inputs.dry-run && 'deploy --dry-run' || 'deploy' }}
+          # NOTION_TOKEN をランタイム secret として Worker に同期。
+          # 既存値と同じであれば no-op。
+          secrets: |
+            NOTION_TOKEN
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}

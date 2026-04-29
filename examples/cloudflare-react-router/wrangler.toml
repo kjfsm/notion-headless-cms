@@ -8,11 +8,15 @@ assets = { directory = "./build/client" }
 [observability]
 enabled = true
 
-# モノリポのルートから依存インストール・パッケージビルド・本 example ビルドを順に実行する。
-# NOTION_TOKEN はビルド時に nhc generate が Notion API へアクセスするために必要。
-# Cloudflare Dashboard の Build 設定で環境変数 NOTION_TOKEN を追加すること。
+# Cloudflare GitHub App（Workers Builds）連携時に実行されるビルドコマンド。
+# モノリポルートで依存インストール → ワークスペースパッケージのビルド →
+# nhc generate（Notion から型/データ取得）→ react-router build の順に実行する。
+# - NOTION_TOKEN は Cloudflare Dashboard > Settings > Variables and Secrets で
+#   "Build variables" として追加する（ランタイムの secret とは別枠）。
+# - GitHub Actions 経由でデプロイする場合はワークフロー側で同等の処理を行うため
+#   この [build] は冪等に再実行されるが、追加コストは frozen-lockfile/turbo cache で軽減される。
 [build]
-command = "pnpm --dir=../.. install --frozen-lockfile && pnpm --dir=../.. --filter='@notion-headless-cms/*' build && pnpm build"
+command = "pnpm --dir=../.. install --frozen-lockfile && pnpm --dir=../.. --filter='@notion-headless-cms/*' build && pnpm generate && pnpm build"
 
 [[kv_namespaces]]
 binding = "DOC_CACHE"
