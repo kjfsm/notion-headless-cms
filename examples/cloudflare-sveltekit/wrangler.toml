@@ -8,13 +8,13 @@ assets = { directory = ".svelte-kit/cloudflare", binding = "ASSETS" }
 [observability]
 enabled = true
 
-# Cloudflare GitHub App（Workers Builds）連携時に実行されるビルドコマンド。
-# モノリポルートで依存インストール → ワークスペースパッケージのビルド →
-# nhc generate（Notion から型/データ取得）→ vite build (sveltekit) の順に実行する。
+# 注: ビルドコマンドは Cloudflare GitHub App / GitHub Actions 側で明示実行する運用にしている
+# （wrangler.toml の [build] と Dashboard の Build command の優先順位混乱を避けるため）。
+# SvelteKit では以下の順で実行する:
+#   pnpm --dir=../.. install --frozen-lockfile \
+#     && pnpm --dir=../.. --filter='@notion-headless-cms/*' build \
+#     && pnpm generate && pnpm build
 # vite build は @sveltejs/adapter-cloudflare 経由で .svelte-kit/cloudflare/ を生成する。
-# - NOTION_TOKEN は Dashboard > Settings > Variables and Secrets の "Build variables" に追加。
-[build]
-command = "pnpm --dir=../.. install --frozen-lockfile && pnpm --dir=../.. --filter='@notion-headless-cms/*' build && pnpm generate && pnpm build"
 
 [[kv_namespaces]]
 binding = "DOC_CACHE"
