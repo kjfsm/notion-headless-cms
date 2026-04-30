@@ -1077,6 +1077,55 @@ describe("CollectionClient — コンテンツアクセサ", () => {
     expect(md).toBe("# Hello World");
   });
 
+  it("blocks() はコンテンツ AST を返す", async () => {
+    const item: BaseContentItem = {
+      id: "1",
+      slug: "post-blocks",
+      lastEditedTime: "2024-01-01T00:00:00Z",
+    };
+    const fakeBlocks = [{ type: "paragraph", content: [] }];
+    const cms = createCMS({
+      collections: {
+        posts: {
+          source: makeMockSource({
+            async list() {
+              return [item];
+            },
+            async loadBlocks() {
+              return fakeBlocks as never;
+            },
+          }),
+          slugField: "slug",
+        },
+      },
+      renderer: mockRenderer,
+    });
+    const result = await cms.posts.get("post-blocks");
+    expect(result).not.toBeNull();
+    const blocks = await result?.blocks();
+    expect(blocks).toEqual(fakeBlocks);
+  });
+
+  it("statuses を単一文字列で指定すると一致するアイテムだけ返す", async () => {
+    const cms = createCMS({
+      renderer: mockRenderer,
+      collections: {
+        posts: {
+          source: makeMockSource({
+            async list() {
+              return makeItems();
+            },
+          }),
+          slugField: "slug",
+        },
+      },
+    });
+    // statuses: string (配列ではなく単一文字列)
+    const items = await cms.posts.list({ statuses: "公開" });
+    expect(items.length).toBeGreaterThan(0);
+    expect(items.every((i) => i.status === "公開")).toBe(true);
+  });
+
   it("html() を複数回呼んでも loadMarkdown は 1 回のみ呼ばれる", async () => {
     const item: BaseContentItem = {
       id: "1",
