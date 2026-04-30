@@ -1,7 +1,7 @@
 ---
-"@notion-headless-cms/core": major
-"@notion-headless-cms/adapter-next": major
-"@notion-headless-cms/cli": major
+"@notion-headless-cms/core": patch
+"@notion-headless-cms/adapter-next": patch
+"@notion-headless-cms/cli": patch
 ---
 
 v1.0: ライブラリ使い勝手改善（破壊的変更）
