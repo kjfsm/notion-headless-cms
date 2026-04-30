@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const fakeCms = {
   posts: {
     list: vi.fn(),
-    get: vi.fn(),
+    find: vi.fn(),
     check: vi.fn(),
     cache: {
       warm: vi.fn(),
@@ -43,7 +43,7 @@ describe("post loader()", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("ページ詳細と HTML を返す", async () => {
-    fakeCms.posts.get.mockResolvedValue({
+    fakeCms.posts.find.mockResolvedValue({
       id: "id-1",
       slug: "hello",
       html: vi.fn().mockResolvedValue("<p>内容</p>"),
@@ -56,7 +56,7 @@ describe("post loader()", () => {
   });
 
   it("存在しないスラグは例外を投げる", async () => {
-    fakeCms.posts.get.mockResolvedValue(null);
+    fakeCms.posts.find.mockResolvedValue(null);
     await expect(
       postLoader({
         params: { slug: "not-found" },
