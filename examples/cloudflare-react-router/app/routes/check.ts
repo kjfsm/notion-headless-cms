@@ -6,12 +6,12 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   const clientVersion = new URL(request.url).searchParams.get("v") ?? "";
 
   const cms = makeCms(context.cloudflare.env);
-  const result = await cms.posts.check(slug, clientVersion);
+  const result = await cms.posts.revalidate(slug, clientVersion);
 
   if (result === null) return new Response("Not Found", { status: 404 });
   if (!result.stale) return Response.json({ stale: false });
 
-  const html = await result.item.render();
+  const html = await result.item.html();
   return Response.json({
     stale: true,
     html,

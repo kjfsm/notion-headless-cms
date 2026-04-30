@@ -15,7 +15,7 @@ posts.get("/:slug", async (c) => {
   const slug = c.req.param("slug");
   const post = await cms.posts.get(slug);
   if (!post) return c.json({ error: "Not Found" }, 404);
-  const html = await post.render();
+  const html = await post.html();
   return c.json({ html, item: post });
 });
 

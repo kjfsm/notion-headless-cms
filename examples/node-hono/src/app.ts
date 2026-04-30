@@ -15,8 +15,8 @@ app.get("/posts/:slug", async (c) => {
   const post = await cms.posts.get(c.req.param("slug"));
   if (!post) return c.json({ error: "Not Found" }, 404);
   const [renderedHtml, markdown] = await Promise.all([
-    post.render(),
-    post.render({ format: "markdown" }),
+    post.html(),
+    post.markdown(),
   ]);
   return c.json({
     item: { id: post.id, slug: post.slug, status: post.status },
@@ -26,7 +26,7 @@ app.get("/posts/:slug", async (c) => {
 });
 
 app.get("/posts/:slug/adjacent", async (c) => {
-  const { prev, next } = await cms.posts.cache.adjacent(c.req.param("slug"));
+  const { prev, next } = await cms.posts.adjacent(c.req.param("slug"));
   return c.json({ prev, next });
 });
 
@@ -89,7 +89,7 @@ app.get("/ui/posts/:slug", async (c) => {
       layout("Not Found", "<h1>404 - 記事が見つかりません</h1>"),
       404,
     );
-  const content = await post.render();
+  const content = await post.html();
   return c.html(
     layout(post.slug, `<h1>${post.slug}</h1><article>${content}</article>`),
   );
