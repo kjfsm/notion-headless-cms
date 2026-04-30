@@ -14,7 +14,7 @@ app.get("/posts/:slug", async (req, res) => {
     res.status(404).json({ error: "Not Found" });
     return;
   }
-  const html = await post.render();
+  const html = await post.html();
   res.json({ html, item: post });
 });
 

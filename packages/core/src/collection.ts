@@ -10,18 +10,19 @@ import type {
   CachedItemContent,
   CachedItemList,
   CachedItemMeta,
-  CheckResult,
   CMSHooks,
   CollectionCacheOps,
   CollectionClient,
   DataSource,
   DocumentCacheOps,
   GetOptions,
-  ItemWithRender,
+  ItemWithContent,
   ListOptions,
   Logger,
+  RevalidateResult,
   SortOption,
   WarmOptions,
+  WarmResult,
   WhereClause,
 } from "./types/index";
 
@@ -67,9 +68,9 @@ export class CollectionClientImpl<T extends BaseContentItem>
 
   constructor(private readonly ctx: CollectionContext<T>) {
     this.cache = {
-      invalidate: (slug?: string) => this.invalidateImpl(slug),
+      invalidate: () => this.invalidateImpl(),
+      invalidateItem: (slug: string) => this.invalidateItemImpl(slug),
       warm: (opts?: WarmOptions) => this.warmImpl(opts),
-      adjacent: (slug, opts) => this.adjacentImpl(slug, opts),
     };
   }
 
@@ -78,14 +79,14 @@ export class CollectionClientImpl<T extends BaseContentItem>
   async get(
     slug: string,
     opts: GetOptions = {},
-  ): Promise<ItemWithRender<T> | null> {
-    // fresh: 強制ブロッキング取得
-    if (opts.fresh) {
+  ): Promise<ItemWithContent<T> | null> {
+    // bypassCache: 強制ブロッキング取得
+    if (opts.bypassCache) {
       this.ctx.hooks.onCacheMiss?.(slug);
       const item = await this.findRaw(slug);
       if (!item) return null;
       const meta = await this.persistMeta(slug, item);
-      await this.invalidateContent(slug);
+      await this.invalidateContentEntry(slug);
       return this.attachLazyContent(meta);
     }
 
@@ -109,7 +110,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
         const item = await this.findRaw(slug);
         if (!item) return null;
         const meta = await this.persistMeta(slug, item);
-        await this.invalidateContent(slug);
+        await this.invalidateContentEntry(slug);
         return this.attachLazyContent(meta);
       }
       // SWR: キャッシュ即時返却 + バックグラウンド差分チェック
@@ -145,39 +146,41 @@ export class CollectionClientImpl<T extends BaseContentItem>
     return applyListOptions(allItems, opts);
   }
 
-  async params(): Promise<{ slug: string }[]> {
+  async slugs(): Promise<string[]> {
     const items = await this.fetchList();
-    return items.map((item) => ({ slug: item.slug }));
+    return items.map((item) => item.slug);
   }
 
-  async check(
+  async revalidate(
     slug: string,
     currentVersion: string,
-  ): Promise<CheckResult<T> | null> {
+  ): Promise<RevalidateResult<T> | null> {
     const raw = await this.findRaw(slug);
     if (!raw) return null;
     if (raw.lastEditedTime === currentVersion) return { stale: false };
     const meta = await this.persistMeta(slug, raw);
-    await this.invalidateContent(slug);
+    await this.invalidateContentEntry(slug);
     return { stale: true, item: this.attachLazyContent(meta) };
+  }
+
+  async adjacent(
+    slug: string,
+    opts?: AdjacencyOptions<T>,
+  ): Promise<{ prev: T | null; next: T | null }> {
+    const items = applyListOptions(await this.fetchList(), {
+      sort: opts?.sort,
+    });
+    const index = items.findIndex((it) => it.slug === slug);
+    if (index === -1) return { prev: null, next: null };
+    return {
+      prev: index > 0 ? (items[index - 1] ?? null) : null,
+      next: index < items.length - 1 ? (items[index + 1] ?? null) : null,
+    };
   }
 
   // ── キャッシュ操作 ────────────────────────────────────────────────────
 
-  private async invalidateImpl(slug?: string): Promise<void> {
-    if (slug !== undefined) {
-      this.ctx.logger?.debug?.("アイテムキャッシュを無効化", {
-        operation: "cache.invalidate",
-        collection: this.ctx.collection,
-        cacheAdapter: this.ctx.docCacheName,
-        slug,
-      });
-      await this.ctx.docCache.invalidate({
-        collection: this.ctx.collection,
-        slug,
-      });
-      return;
-    }
+  private async invalidateImpl(): Promise<void> {
     this.ctx.logger?.debug?.("コレクション全体のキャッシュを無効化", {
       operation: "cache.invalidate",
       collection: this.ctx.collection,
@@ -186,13 +189,24 @@ export class CollectionClientImpl<T extends BaseContentItem>
     await this.ctx.docCache.invalidate({ collection: this.ctx.collection });
   }
 
-  private async warmImpl(
-    opts?: WarmOptions,
-  ): Promise<{ ok: number; failed: number }> {
+  private async invalidateItemImpl(slug: string): Promise<void> {
+    this.ctx.logger?.debug?.("アイテムキャッシュを無効化", {
+      operation: "cache.invalidateItem",
+      collection: this.ctx.collection,
+      cacheAdapter: this.ctx.docCacheName,
+      slug,
+    });
+    await this.ctx.docCache.invalidate({
+      collection: this.ctx.collection,
+      slug,
+    });
+  }
+
+  private async warmImpl(opts?: WarmOptions): Promise<WarmResult> {
     const items = await this.fetchListRaw();
     const concurrency = opts?.concurrency ?? this.ctx.maxConcurrent;
     let ok = 0;
-    let failed = 0;
+    const failed: Array<{ slug: string; error: unknown }> = [];
 
     for (let i = 0; i < items.length; i += concurrency) {
       const chunk = items.slice(i, i + concurrency);
@@ -208,7 +222,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
             );
             ok++;
           } catch (err) {
-            failed++;
+            failed.push({ slug: item.slug, error: err });
             this.ctx.logger?.warn?.("warm: アイテムの事前レンダリングに失敗", {
               slug: item.slug,
               pageId: item.id,
@@ -225,21 +239,6 @@ export class CollectionClientImpl<T extends BaseContentItem>
       cachedAt: Date.now(),
     });
     return { ok, failed };
-  }
-
-  private async adjacentImpl(
-    slug: string,
-    opts?: AdjacencyOptions<T>,
-  ): Promise<{ prev: T | null; next: T | null }> {
-    const items = applyListOptions(await this.fetchList(), {
-      sort: opts?.sort,
-    });
-    const index = items.findIndex((it) => it.slug === slug);
-    if (index === -1) return { prev: null, next: null };
-    return {
-      prev: index > 0 ? (items[index - 1] ?? null) : null,
-      next: index < items.length - 1 ? (items[index + 1] ?? null) : null,
-    };
   }
 
   // ── 内部 ──────────────────────────────────────────────────────────────
@@ -262,7 +261,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
     return meta;
   }
 
-  private async invalidateContent(slug: string): Promise<void> {
+  private async invalidateContentEntry(slug: string): Promise<void> {
     await this.ctx.docCache.invalidate({
       collection: this.ctx.collection,
       slug,
@@ -320,10 +319,10 @@ export class CollectionClientImpl<T extends BaseContentItem>
     }
   }
 
-  private attachLazyContent(meta: CachedItemMeta<T>): ItemWithRender<T> {
+  private attachLazyContent(meta: CachedItemMeta<T>): ItemWithContent<T> {
     const slug = meta.item.slug;
     const item = meta.item;
-    // 同一インスタンス内で本文ロードを集約する (複数 render() でも 1 回の I/O)
+    // 同一インスタンス内で本文ロードを集約する (複数呼び出しでも 1 回の I/O)
     let payloadPromise: Promise<CachedItemContent> | undefined;
     const loadPayload = (): Promise<CachedItemContent> => {
       if (!payloadPromise) {
@@ -332,16 +331,11 @@ export class CollectionClientImpl<T extends BaseContentItem>
       return payloadPromise;
     };
 
-    const render = async (opts?: {
-      format?: "html" | "markdown";
-    }): Promise<string> => {
-      const payload = await loadPayload();
-      return opts?.format === "markdown" ? payload.markdown : payload.html;
-    };
-
     return Object.assign(Object.create(null) as object, item, {
-      render,
-    }) as ItemWithRender<T>;
+      html: async () => (await loadPayload()).html,
+      markdown: async () => (await loadPayload()).markdown,
+      blocks: async () => (await loadPayload()).blocks,
+    }) as ItemWithContent<T>;
   }
 
   private async fetchList(): Promise<T[]> {
@@ -408,7 +402,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
       const lm = this.ctx.source.getLastModified(item);
       if (lm !== cached.notionUpdatedAt) {
         const meta = await this.persistMeta(slug, item);
-        await this.invalidateContent(slug);
+        await this.invalidateContentEntry(slug);
         this.ctx.logger?.debug?.("SWR: 差分を検出、メタを差し替え", {
           operation: "get:bg",
           slug,
@@ -594,9 +588,9 @@ function applyListOptions<T extends BaseContentItem>(
   if (!opts) return sortByPublishedAtDesc(items);
   let result = items;
 
-  if (opts.status) {
+  if (opts.statuses) {
     const allow = new Set(
-      Array.isArray(opts.status) ? opts.status : [opts.status],
+      Array.isArray(opts.statuses) ? opts.statuses : [opts.statuses],
     );
     result = result.filter((it) => it.status != null && allow.has(it.status));
   }

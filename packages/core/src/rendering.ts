@@ -13,10 +13,29 @@ import type {
   RendererFn,
 } from "./types/index";
 
+/**
+ * `@notion-headless-cms/renderer` を動的 import してデフォルトレンダラーを返す。
+ * core のゼロ依存ルールを守るため静的 import は禁止。
+ */
+async function loadDefaultRenderer(): Promise<RendererFn> {
+  try {
+    const mod = await import("@notion-headless-cms/renderer");
+    return (mod as { renderMarkdown: RendererFn }).renderMarkdown;
+  } catch {
+    throw new CMSError({
+      code: "core/config_invalid",
+      message:
+        "renderer が未指定で、@notion-headless-cms/renderer のロードにも失敗しました。" +
+        " createCMS の renderer オプションを指定するか、@notion-headless-cms/renderer をインストールしてください。",
+      context: { operation: "loadDefaultRenderer" },
+    });
+  }
+}
+
 /** 本文レンダリングに必要な依存を束ねたコンテキスト。 */
 export interface RenderContext<T extends BaseContentItem> {
   source: DataSource<T>;
-  rendererFn: RendererFn;
+  rendererFn: RendererFn | undefined;
   imgCache: ImageCacheOps;
   imgCacheName: string;
   hasImageCache: boolean;
@@ -98,9 +117,11 @@ export async function buildCachedItemContent<T extends BaseContentItem>(
       )
     : undefined;
 
+  const rendererFn = ctx.rendererFn ?? (await loadDefaultRenderer());
+
   let html: string;
   try {
-    html = await ctx.rendererFn(markdown, {
+    html = await rendererFn(markdown, {
       imageProxyBase: ctx.imageProxyBase,
       cacheImage,
       remarkPlugins: ctx.contentConfig?.remarkPlugins,

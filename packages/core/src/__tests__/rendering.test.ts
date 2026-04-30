@@ -108,6 +108,17 @@ describe("buildCachedItemContent", () => {
     });
   });
 
+  describe("renderer フォールバック", () => {
+    it("rendererFn が undefined のとき @notion-headless-cms/renderer を自動ロードして HTML を返す", async () => {
+      const item = makeItem();
+      // rendererFn を省略して、インストール済みの renderer パッケージへフォールバックさせる
+      const ctx = makeContext({ rendererFn: undefined });
+      const result = await buildCachedItemContent(item, ctx);
+      expect(typeof result.html).toBe("string");
+      expect(result.html.length).toBeGreaterThan(0);
+    });
+  });
+
   describe("エラー処理・フォールバック", () => {
     it("loadBlocks が失敗すると source/load_blocks_failed CMSError をスローする", async () => {
       const item = makeItem();

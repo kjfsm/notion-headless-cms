@@ -5,7 +5,7 @@ export const revalidate = 300;
 
 export async function generateStaticParams() {
   try {
-    return await cms.posts.params();
+    return (await cms.posts.slugs()).map((slug) => ({ slug }));
   } catch {
     return [];
   }
@@ -20,7 +20,7 @@ export default async function PostPage({
   const post = await cms.posts.get(slug);
   if (!post) notFound();
 
-  const html = await post.render();
+  const html = await post.html();
   return (
     <article className="max-w-2xl mx-auto px-4 py-12">
       <h1 className="text-3xl font-bold mb-4">{post.slug}</h1>

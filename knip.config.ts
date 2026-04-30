@@ -26,6 +26,12 @@ export default {
       // next は ./next エントリで動的 import するためのオプショナル peerDep
       ignoreDependencies: ["next"],
     },
+    "packages/core": {
+      entry: ["src/index.ts"],
+      project: ["src/**/*.ts"],
+      // renderer は rendering.ts で動的 import するオプショナル peerDep
+      ignoreDependencies: ["@notion-headless-cms/renderer"],
+    },
     "packages/*": {
       entry: ["src/index.ts"],
       project: ["src/**/*.ts"],

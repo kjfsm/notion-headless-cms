@@ -11,7 +11,7 @@ vi.mock("../lib/cms", () => ({
     posts: {
       list: vi.fn(),
       get: vi.fn(),
-      params: vi.fn(),
+      slugs: vi.fn(),
     },
   },
 }));
@@ -35,17 +35,17 @@ describe("HomePage", () => {
 describe("PostPage", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("ページ詳細を取得して render() を呼ぶ", async () => {
-    const mockRender = vi.fn().mockResolvedValue("<p>内容</p>");
+  it("ページ詳細を取得して html() を呼ぶ", async () => {
+    const mockHtml = vi.fn().mockResolvedValue("<p>内容</p>");
     vi.mocked(cms.posts.get).mockResolvedValue({
       id: "id-1",
       slug: "hello",
       publishedAt: "2024-01-01",
-      render: mockRender,
+      html: mockHtml,
     } as never);
     await PostPage({ params: Promise.resolve({ slug: "hello" }) });
     expect(cms.posts.get).toHaveBeenCalledWith("hello");
-    expect(mockRender).toHaveBeenCalled();
+    expect(mockHtml).toHaveBeenCalled();
   });
 
   it("存在しないスラグは notFound() を呼ぶ", async () => {

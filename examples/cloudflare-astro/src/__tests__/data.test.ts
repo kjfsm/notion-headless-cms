@@ -28,7 +28,7 @@ describe("getPost()", () => {
     cms.posts.get.mockResolvedValue({
       id: "id-1",
       slug: "hello",
-      render: vi.fn().mockResolvedValue("<p>内容</p>"),
+      html: vi.fn().mockResolvedValue("<p>内容</p>"),
     });
     const result = await getPost(cms as never, "hello");
     expect(result).not.toBeNull();

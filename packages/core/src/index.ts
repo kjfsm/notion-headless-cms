@@ -39,7 +39,6 @@ export type {
   CachedItemContent,
   CachedItemList,
   CachedItemMeta,
-  CheckResult,
   CMSHooks,
   CMSPlugin,
   CMSSchemaProperties,
@@ -56,7 +55,7 @@ export type {
   InferCollectionItem,
   InvalidateKind,
   InvalidateScope,
-  ItemWithRender,
+  ItemWithContent,
   ListOptions,
   Logger,
   LogLevel,
@@ -67,9 +66,11 @@ export type {
   RendererFn,
   RendererPluginList,
   RenderOptions,
+  RevalidateResult,
   SortOption,
   StorageBinary,
   WarmOptions,
+  WarmResult,
   WebhookConfig,
 } from "./types/index";
 export { definePlugin } from "./types/plugin";

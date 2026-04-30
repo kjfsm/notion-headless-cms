@@ -5,7 +5,7 @@ vi.mock("../lib/cms.js", () => ({
     posts: {
       list: vi.fn(),
       get: vi.fn(),
-      cache: { adjacent: vi.fn() },
+      adjacent: vi.fn(),
     },
     $handler: vi
       .fn()
@@ -40,7 +40,8 @@ describe("GET /posts/:slug", () => {
       id: "id-1",
       slug: "hello",
       status: "公開済み",
-      render: vi.fn().mockResolvedValue("<p>内容</p>"),
+      html: vi.fn().mockResolvedValue("<p>内容</p>"),
+      markdown: vi.fn().mockResolvedValue("内容"),
     } as never);
     const res = await app.request("/posts/hello");
     expect(res.status).toBe(200);
@@ -79,7 +80,8 @@ describe("GET /ui/posts/:slug", () => {
       id: "id-1",
       slug: "hello",
       status: "公開済み",
-      render: vi.fn().mockResolvedValue("<p>内容</p>"),
+      html: vi.fn().mockResolvedValue("<p>内容</p>"),
+      markdown: vi.fn().mockResolvedValue("内容"),
     } as never);
     const res = await app.request("/ui/posts/hello");
     expect(res.status).toBe(200);

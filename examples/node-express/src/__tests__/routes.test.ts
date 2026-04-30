@@ -35,7 +35,7 @@ describe("GET /posts/:slug", () => {
     vi.mocked(cms.posts.get).mockResolvedValue({
       id: "id-1",
       slug: "hello",
-      render: vi.fn().mockResolvedValue("<p>内容</p>"),
+      html: vi.fn().mockResolvedValue("<p>内容</p>"),
     } as never);
     const res = await request(app).get("/posts/hello");
     expect(res.status).toBe(200);

@@ -5,14 +5,15 @@ export type {
 } from "./cache";
 export type {
   AdjacencyOptions,
-  CheckResult,
   CollectionCacheOps,
   CollectionClient,
   GetOptions,
-  ItemWithRender,
+  ItemWithContent,
   ListOptions,
+  RevalidateResult,
   SortOption,
   WarmOptions,
+  WarmResult,
   WhereClause,
 } from "./collection";
 export type {

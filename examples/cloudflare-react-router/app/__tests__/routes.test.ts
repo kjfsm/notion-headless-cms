@@ -4,7 +4,7 @@ const fakeCms = {
   posts: {
     list: vi.fn(),
     get: vi.fn(),
-    check: vi.fn(),
+    revalidate: vi.fn(),
     cache: {
       warm: vi.fn(),
     },
@@ -46,7 +46,7 @@ describe("post loader()", () => {
     fakeCms.posts.get.mockResolvedValue({
       id: "id-1",
       slug: "hello",
-      render: vi.fn().mockResolvedValue("<p>内容</p>"),
+      html: vi.fn().mockResolvedValue("<p>内容</p>"),
     });
     const result = await postLoader({
       params: { slug: "hello" },
@@ -70,7 +70,7 @@ describe("check loader()", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("バージョンが一致するときは stale: false を返す", async () => {
-    fakeCms.posts.check.mockResolvedValue({ stale: false });
+    fakeCms.posts.revalidate.mockResolvedValue({ stale: false });
     const req = new Request(
       "http://localhost/api/posts/hello/check?v=2024-01-01T00%3A00%3A00Z",
     );
@@ -84,11 +84,11 @@ describe("check loader()", () => {
   });
 
   it("バージョンが異なるときは stale: true と html を返す", async () => {
-    fakeCms.posts.check.mockResolvedValue({
+    fakeCms.posts.revalidate.mockResolvedValue({
       stale: true,
       item: {
         updatedAt: "2024-01-02T00:00:00Z",
-        render: vi.fn().mockResolvedValue("<p>新しい内容</p>"),
+        html: vi.fn().mockResolvedValue("<p>新しい内容</p>"),
       },
     });
     const req = new Request(
@@ -106,7 +106,7 @@ describe("check loader()", () => {
   });
 
   it("存在しないスラグは 404 を返す", async () => {
-    fakeCms.posts.check.mockResolvedValue(null);
+    fakeCms.posts.revalidate.mockResolvedValue(null);
     const req = new Request(
       "http://localhost/api/posts/not-found/check?v=2024-01-01T00%3A00%3A00Z",
     );
@@ -123,16 +123,19 @@ describe("warm action()", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("ウォームアップ結果を JSON で返す", async () => {
-    fakeCms.posts.cache.warm.mockResolvedValue({ ok: 3, failed: 0 });
+    fakeCms.posts.cache.warm.mockResolvedValue({ ok: 3, failed: [] });
     const result = await warmAction({ context: fakeContext } as never);
     const json = await (result as Response).json();
-    expect(json).toEqual({ ok: 3, failed: 0 });
+    expect(json).toEqual({ ok: 3, failed: [] });
   });
 
   it("失敗があっても結果を返す", async () => {
-    fakeCms.posts.cache.warm.mockResolvedValue({ ok: 2, failed: 1 });
+    fakeCms.posts.cache.warm.mockResolvedValue({
+      ok: 2,
+      failed: [{ slug: "bad-slug", error: new Error("fetch failed") }],
+    });
     const result = await warmAction({ context: fakeContext } as never);
     const json = await (result as Response).json();
-    expect(json.failed).toBe(1);
+    expect(json.failed).toHaveLength(1);
   });
 });
