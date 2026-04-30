@@ -73,7 +73,7 @@ export default async function PostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const post = await cms.posts.get(slug);
+  const post = await cms.posts.find(slug);
   if (!post) return <div>Not Found</div>;
   const html = await post.render();
   return (
@@ -86,29 +86,21 @@ export default async function PostPage({
 }
 ```
 
-## 画像配信ルート
+## 画像配信・Webhook の統合ルート
 
 ```ts
-// app/api/images/[hash]/route.ts
+// app/api/cms/[...route]/route.ts
 import { cms } from "@/lib/cms";
-import { createImageRouteHandler } from "@notion-headless-cms/adapter-next";
+import { createNextHandler } from "@notion-headless-cms/adapter-next";
 
-export const GET = createImageRouteHandler(cms);
-```
-
-## Revalidate Webhook
-
-```ts
-// app/api/revalidate/route.ts
-import { cms } from "@/lib/cms";
-import { createRevalidateRouteHandler } from "@notion-headless-cms/adapter-next";
-
-export const POST = createRevalidateRouteHandler(cms, {
-  secret: process.env.REVALIDATE_SECRET!,
+export const { GET, POST } = createNextHandler(cms, {
+  webhookSecret: process.env.REVALIDATE_SECRET,
 });
 ```
 
-Notion に変更があった際に `POST /api/revalidate` を
+`createNextHandler` は画像プロキシ (`GET /api/cms/images/:hash`) と
+Webhook 受信 (`POST /api/cms/revalidate`) をまとめて処理する。
+Notion に変更があった際に `POST /api/cms/revalidate` を
 `Authorization: Bearer <secret>` で叩くと、該当コレクション / slug の
 キャッシュ規約タグ (`nhc:col:<name>` / `nhc:col:<name>:slug:<slug>`) が
 `revalidateTag()` される。

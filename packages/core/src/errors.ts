@@ -92,6 +92,16 @@ export class CMSError extends Error {
     this.cause = params.cause;
     this.context = params.context;
   }
+
+  /** エラーコードが指定した値と一致するか判定する。 */
+  is(code: CMSErrorCode): boolean {
+    return this.code === code;
+  }
+
+  /** エラーコードが指定した名前空間に属するか判定する（例: `"source/"`）。 */
+  inNamespace(namespace: string): boolean {
+    return this.code.startsWith(namespace);
+  }
 }
 
 export function isCMSError(error: unknown): error is CMSError {
@@ -104,4 +114,31 @@ export function isCMSErrorInNamespace(
   namespace: string,
 ): error is CMSError {
   return isCMSError(error) && error.code.startsWith(namespace);
+}
+
+type CMSErrorHandler<R> = (err: CMSError) => R;
+
+/**
+ * `CMSError` を switch 式のように分岐して処理するユーティリティ。
+ * `_` キーはフォールバック（CMSError 以外 or 未マッチ時）に使われる。
+ *
+ * @example
+ * matchCMSError(err, {
+ *   "source/fetch_items_failed": (e) => handleFetchError(e),
+ *   _: (e) => { throw e; },
+ * });
+ */
+export function matchCMSError<R>(
+  error: unknown,
+  handlers: Partial<Record<CMSErrorCode, CMSErrorHandler<R>>> & {
+    _?: (err: unknown) => R;
+  },
+): R | undefined {
+  if (!isCMSError(error)) {
+    return handlers._?.(error);
+  }
+  const handler =
+    handlers[error.code as CMSErrorCode] ??
+    (handlers._ as CMSErrorHandler<R> | undefined);
+  return handler?.(error);
 }

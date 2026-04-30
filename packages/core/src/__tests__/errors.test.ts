@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { CMSError, isCMSError, isCMSErrorInNamespace } from "../errors";
+import {
+  CMSError,
+  isCMSError,
+  isCMSErrorInNamespace,
+  matchCMSError,
+} from "../errors";
 
 describe("CMSError", () => {
   const baseParams = {
@@ -116,6 +121,77 @@ describe("isCMSError", () => {
 
   it("undefined なら false を返す", () => {
     expect(isCMSError(undefined)).toBe(false);
+  });
+});
+
+describe("CMSError — is() / inNamespace()", () => {
+  const err = new CMSError({
+    code: "source/fetch_items_failed",
+    message: "test",
+    context: { operation: "test" },
+  });
+
+  it("is() — 一致するコードで true を返す", () => {
+    expect(err.is("source/fetch_items_failed")).toBe(true);
+  });
+
+  it("is() — 不一致コードで false を返す", () => {
+    expect(err.is("cache/io_failed")).toBe(false);
+  });
+
+  it("inNamespace() — 一致する名前空間で true を返す", () => {
+    expect(err.inNamespace("source/")).toBe(true);
+  });
+
+  it("inNamespace() — 不一致の名前空間で false を返す", () => {
+    expect(err.inNamespace("cache/")).toBe(false);
+  });
+});
+
+describe("matchCMSError", () => {
+  it("一致するコードのハンドラが呼ばれる", () => {
+    const err = new CMSError({
+      code: "source/fetch_items_failed",
+      message: "test",
+      context: { operation: "test" },
+    });
+    const handler = (e: CMSError) => `handled: ${e.code}`;
+    const result = matchCMSError(err, {
+      "source/fetch_items_failed": handler,
+    });
+    expect(result).toBe("handled: source/fetch_items_failed");
+  });
+
+  it("未マッチ時は _ フォールバックが呼ばれる", () => {
+    const err = new CMSError({
+      code: "cache/io_failed",
+      message: "test",
+      context: { operation: "test" },
+    });
+    const result = matchCMSError(err, {
+      "source/fetch_items_failed": () => "source",
+      _: () => "fallback",
+    });
+    expect(result).toBe("fallback");
+  });
+
+  it("CMSError でない場合は _ フォールバックが呼ばれる", () => {
+    const result = matchCMSError(new Error("plain"), {
+      _: () => "not-cms",
+    });
+    expect(result).toBe("not-cms");
+  });
+
+  it("ハンドラも _ もない場合は undefined を返す", () => {
+    const err = new CMSError({
+      code: "renderer/failed",
+      message: "test",
+      context: { operation: "test" },
+    });
+    const result = matchCMSError(err, {
+      "source/fetch_items_failed": () => "source",
+    });
+    expect(result).toBeUndefined();
   });
 });
 

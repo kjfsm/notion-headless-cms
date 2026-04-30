@@ -31,16 +31,16 @@ export type CMSClient<C extends CollectionsConfig> = {
   [K in keyof C]: CollectionClient<InferCollectionItem<C[K]>>;
 } & CMSGlobalOps;
 
-/** `CMSClient` のグローバル名前空間。`$` プレフィックス。 */
+/** `CMSClient` のグローバル名前空間。 */
 export interface CMSGlobalOps {
   /** 登録されているコレクション名の一覧。 */
-  readonly $collections: readonly string[];
+  readonly collections: readonly string[];
   /** 全コレクションまたは特定スコープのキャッシュを無効化する。 */
-  $invalidate(scope?: InvalidateScope): Promise<void>;
+  invalidate(scope?: InvalidateScope): Promise<void>;
   /** Web Standard なルーティングハンドラ (画像プロキシ / webhook) を生成する。 */
-  $handler(opts?: HandlerOptions): (req: Request) => Promise<Response>;
+  handler(opts?: HandlerOptions): (req: Request) => Promise<Response>;
   /** ハッシュキーでキャッシュ画像を取得する。 */
-  $getCachedImage(hash: string): Promise<StorageBinary | null>;
+  getCachedImage(hash: string): Promise<StorageBinary | null>;
 }
 
 interface ResolvedCache {
@@ -54,15 +54,11 @@ interface ResolvedCache {
 /**
  * `cache` オプションから document / image オペレーションを解決する。
  *
- * - 配列で渡された場合は各 adapter の `handles` を見て先勝ち (最初に見つかったもの) で振り分ける
- * - 単体で渡された場合は `handles` の領域だけ反映、片側は noop
+ * - 各 adapter の `handles` を見て先勝ち (最初に見つかったもの) で振り分ける
  * - 未指定なら両方 noop
  */
-function resolveCache(
-  cache: CacheAdapter | readonly CacheAdapter[] | undefined,
-): ResolvedCache {
-  const adapters =
-    cache === undefined ? [] : Array.isArray(cache) ? cache : [cache];
+function resolveCache(cache: readonly CacheAdapter[] | undefined): ResolvedCache {
+  const adapters = cache ?? [];
 
   let doc: DocumentCacheOps = noopDocOps;
   let docName = "noop-document";
@@ -126,7 +122,8 @@ function applyLogLevel(
  *       publishedStatuses: ["公開済み"],
  *     }
  *   },
- *   cache: memoryCache({ ttlMs: 5 * 60_000 }),
+ *   cache: [memoryCache()],
+ *   swr: { ttlMs: 5 * 60_000 },
  * });
  */
 export function createCMS<C extends CollectionsConfig>(
@@ -159,7 +156,7 @@ export function createCMS<C extends CollectionsConfig>(
   }
 
   const cacheRes = resolveCache(opts.cache);
-  const ttlMs = opts.ttlMs;
+  const ttlMs = opts.swr?.ttlMs;
   const imageProxyBase = opts.imageProxyBase ?? DEFAULT_IMAGE_PROXY_BASE;
   const contentConfig = opts.content;
   const rendererFn: RendererFn | undefined = opts.renderer;
@@ -226,15 +223,15 @@ export function createCMS<C extends CollectionsConfig>(
   }
 
   const globalOps: CMSGlobalOps = {
-    $collections: collectionNames,
-    async $invalidate(scope?: InvalidateScope): Promise<void> {
+    collections: collectionNames,
+    async invalidate(scope?: InvalidateScope): Promise<void> {
       logger?.debug?.("グローバルキャッシュを無効化", {
-        operation: "$invalidate",
+        operation: "invalidate",
         cacheAdapter: cacheRes.docName,
       });
       await cacheRes.doc.invalidate(scope ?? "all");
     },
-    $handler(handlerOpts?: HandlerOptions) {
+    handler(handlerOpts?: HandlerOptions) {
       return createHandler(
         {
           imageCache: cacheRes.img,
@@ -257,12 +254,12 @@ export function createCMS<C extends CollectionsConfig>(
             }
             return ds.parseWebhook(req, { secret: webhookSecret });
           },
-          revalidate: (scope) => globalOps.$invalidate(scope),
+          revalidate: (scope) => globalOps.invalidate(scope),
         },
         handlerOpts,
       );
     },
-    $getCachedImage(hash) {
+    getCachedImage(hash) {
       return cacheRes.img.get(hash);
     },
   };

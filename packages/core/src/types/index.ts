@@ -5,12 +5,12 @@ export type {
 } from "./cache";
 export type {
   AdjacencyOptions,
+  CheckResult,
   CollectionCacheOps,
   CollectionClient,
-  GetOptions,
+  FindOptions,
   ItemWithContent,
   ListOptions,
-  RevalidateResult,
   SortOption,
   WarmOptions,
   WarmResult,
@@ -27,6 +27,7 @@ export type {
   RendererFn,
   RendererPluginList,
   RenderOptions,
+  SWRConfig,
 } from "./config";
 export type {
   BaseContentItem,

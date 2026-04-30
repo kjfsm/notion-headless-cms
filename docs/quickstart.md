@@ -55,15 +55,15 @@ import { createCMS } from "./app/generated/nhc";  // nhc generate の出力
 
 const cms = createCMS({
   notionToken: process.env.NOTION_TOKEN!,
-  cache: memoryCache(),
-  ttlMs: 5 * 60_000, // 5分 TTL
+  cache: [memoryCache()],
+  swr: { ttlMs: 5 * 60_000 }, // 5分 TTL
 });
 
 // 一覧取得
 const posts = await cms.posts.list();
 
 // スラッグで取得 → 本文を HTML / Markdown で取り出す
-const post = await cms.posts.get("my-first-post");
+const post = await cms.posts.find("my-first-post");
 if (post) {
   console.log(await post.render());                        // HTML 文字列
   console.log(await post.render({ format: "markdown" })); // Markdown 文字列
@@ -84,7 +84,7 @@ export default {
     const cms = createCMS({
       notionToken: env.NOTION_TOKEN,
       cache: cloudflareCache(env),
-      ttlMs: 5 * 60_000,
+      swr: { ttlMs: 5 * 60_000 },
     });
     const posts = await cms.posts.list();
     return Response.json(posts);
@@ -119,7 +119,7 @@ import { createCMS } from "./app/generated/nhc";
 
 const cms = createCMS({
   notionToken: process.env.NOTION_TOKEN!,
-  cache: memoryCache(),
+  cache: [memoryCache()],
 });
 
 const posts = await cms.posts.list(); // PostsItem[]
@@ -137,4 +137,5 @@ const news = await cms.news.list();   // NewsItem[]
 - [Node スクリプト](./recipes/nodejs-script.md)
 - [カスタムデータソース](./recipes/custom-source.md)
 - [CMS メソッド一覧](./api/cms-methods.md)
+- [v1.0 移行ガイド](./migration/v1.0.md)
 - [v0.2 → v0.3 移行ガイド](./migration/v0.3.md)

@@ -147,17 +147,17 @@ const cms = createCMS({
     redisCache(redis, "myapp:"),
     s3ImageCache(),
   ],
-  ttlMs: 5 * 60_000,
+  swr: { ttlMs: 5 * 60_000 },
 });
 ```
 
 単一アダプタで document + image 両方を担う場合は:
 
 ```ts
-cache: {
+cache: [{
   name: "my-unified",
   handles: ["document", "image"],
   doc: myDocOps,
   img: myImgOps,
-}
+}]
 ```

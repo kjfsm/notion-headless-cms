@@ -62,12 +62,12 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const cms = createCMS({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
-      cache,
-      ttlMs: 1000,
+      cache: [cache],
+      swr: { ttlMs: 1000 },
       waitUntil,
     });
 
-    const result = await cms.posts.get("my-post");
+    const result = await cms.posts.find("my-post");
 
     // TTL 期限切れ → ブロッキングで最新データが返される
     expect(result).not.toBeNull();
@@ -111,11 +111,11 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const cms = createCMS({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
-      cache,
+      cache: [cache],
       waitUntil,
     });
 
-    const result = await cms.posts.get("my-post");
+    const result = await cms.posts.find("my-post");
 
     // キャッシュが即時返される
     expect(result).not.toBeNull();
@@ -167,7 +167,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const cms = createCMS({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
-      cache,
+      cache: [cache],
       waitUntil,
     });
 
@@ -210,8 +210,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const cms = createCMS({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
-      cache,
-      ttlMs: 1000,
+      cache: [cache],
+      swr: { ttlMs: 1000 },
       waitUntil,
     });
 
@@ -237,16 +237,16 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const cms = createCMS({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
-      cache: memoryCache(),
+      cache: [memoryCache()],
       logger: { debug: debugFn },
     });
 
-    await cms.posts.get("post-1");
+    await cms.posts.find("post-1");
 
     expect(debugFn).toHaveBeenCalledWith(
       "キャッシュミス、フェッチ",
       expect.objectContaining({
-        operation: "get",
+        operation: "find",
         slug: "post-1",
         collection: "posts",
       }),
@@ -279,16 +279,16 @@ describe("SWR（Stale-While-Revalidate）", () => {
         },
       },
       renderer: mockRenderer,
-      cache,
+      cache: [cache],
       logger: { debug: debugFn },
     });
 
-    await cms.posts.get("post-1");
+    await cms.posts.find("post-1");
 
     expect(debugFn).toHaveBeenCalledWith(
       "キャッシュヒット",
       expect.objectContaining({
-        operation: "get",
+        operation: "find",
         slug: "post-1",
         collection: "posts",
       }),
@@ -317,17 +317,17 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const cms = createCMS({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
-      cache,
-      ttlMs: 1000,
+      cache: [cache],
+      swr: { ttlMs: 1000 },
       logger: { debug: debugFn },
     });
 
-    await cms.posts.get("post-1");
+    await cms.posts.find("post-1");
 
     expect(debugFn).toHaveBeenCalledWith(
       "キャッシュ期限切れ（TTL）、フェッチ",
       expect.objectContaining({
-        operation: "get",
+        operation: "find",
         slug: "post-1",
         collection: "posts",
       }),
@@ -366,13 +366,13 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const cms = createCMS({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
-      cache,
+      cache: [cache],
       logger: { debug: debugFn },
       hooks: { onCacheRevalidated },
       waitUntil: (p) => capturedPromises.push(p),
     });
 
-    await cms.posts.get("post-1");
+    await cms.posts.find("post-1");
     await Promise.all(capturedPromises);
 
     expect(debugFn).toHaveBeenCalledWith(
@@ -416,14 +416,14 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const cms = createCMS({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
-      cache,
-      ttlMs: 60_000,
+      cache: [cache],
+      swr: { ttlMs: 60_000 },
       logger: { debug: debugFn },
       hooks: { onCacheRevalidated },
       waitUntil: (p) => capturedPromises.push(p),
     });
 
-    await cms.posts.get("post-1");
+    await cms.posts.find("post-1");
     await Promise.all(capturedPromises);
 
     expect(debugFn).toHaveBeenCalledWith(
@@ -463,7 +463,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const cms = createCMS({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
-      cache,
+      cache: [cache],
       hooks: { onListCacheRevalidated },
       waitUntil: (p) => capturedPromises.push(p),
     });
@@ -509,12 +509,12 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const cms = createCMS({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
-      cache,
-      ttlMs: 60_000,
+      cache: [cache],
+      swr: { ttlMs: 60_000 },
       waitUntil,
     });
 
-    await cms.posts.get("my-post");
+    await cms.posts.find("my-post");
 
     // 期限内でもバックグラウンド差分チェックは行われる
     expect(capturedPromises.length).toBeGreaterThan(0);
@@ -541,8 +541,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
       // ttlMs を設定するとリスト差分なし時に cachedAt がリセットされる
-      cache,
-      ttlMs: 60_000,
+      cache: [cache],
+      swr: { ttlMs: 60_000 },
       waitUntil: (p) => capturedPromises.push(p),
     });
 
@@ -579,10 +579,10 @@ describe("metadata と content の分離", () => {
         },
       },
       renderer: mockRenderer,
-      cache,
+      cache: [cache],
     });
 
-    const result = await cms.posts.get("lazy-post");
+    const result = await cms.posts.find("lazy-post");
     expect(getContentSpy).not.toHaveBeenCalled();
     expect(loadMarkdown).not.toHaveBeenCalled();
 
@@ -663,9 +663,9 @@ describe("リトライ中のロガー", () => {
       logger: { warn: warnFn },
       rateLimiter: { maxRetries: 1, baseDelayMs: 0, retryOn: [503] },
     });
-    await cms.posts.get("retry-post");
+    await cms.posts.find("retry-post");
     expect(warnFn).toHaveBeenCalledWith(
-      "get() リトライ中",
+      "find() リトライ中",
       expect.objectContaining({ attempt: 1, status: 503 }),
     );
   });

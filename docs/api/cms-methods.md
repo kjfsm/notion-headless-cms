@@ -10,13 +10,13 @@ import { createCMS } from "./generated/nhc";
 
 const cms = createCMS({
   notionToken: "...",
-  cache?: CacheAdapter | CacheAdapter[],
-  ttlMs?: number,
+  cache?: CacheAdapter[],
+  swr?: { ttlMs?: number },
   renderer?: RendererFn,
 });
 
 // コレクション別
-cms.posts.get(slug, opts?)
+cms.posts.find(slug, opts?)
 cms.posts.list(opts?)
 cms.posts.params()
 cms.posts.check(slug, currentVersion)
@@ -24,11 +24,11 @@ cms.posts.cache.adjacent(slug, opts?)
 cms.posts.cache.invalidate(slug?)
 cms.posts.cache.warm(opts?)
 
-// グローバル ($ プレフィックス)
-cms.$collections
-cms.$invalidate(scope?)
-cms.$getCachedImage(hash)
-cms.$handler(opts?)
+// グローバル
+cms.collections
+cms.invalidate(scope?)
+cms.getCachedImage(hash)
+cms.handler(opts?)
 ```
 
 ## `BaseContentItem` — 自動フィールド
@@ -45,12 +45,12 @@ CLI 生成の `createCMS` ラッパーで返されるすべてのアイテムに
 
 ## コレクション別メソッド (`CollectionClient<T>`)
 
-### `get(slug, opts?)`
+### `find(slug, opts?)`
 
 スラッグで単件取得。SWR キャッシュ経由で動作し、本文は `render()` メソッドで遅延取得する。
 
 ```ts
-const post = await cms.posts.get("hello-world");
+const post = await cms.posts.find("hello-world");
 if (post) {
   console.log(post.slug, post.status);              // item のプロパティ
   console.log(await post.render());                 // HTML（遅延）
@@ -58,7 +58,7 @@ if (post) {
 }
 ```
 
-返り値: `Promise<(T & { render(opts?) => Promise<string> }) | null>`
+返り値: `Promise<ItemWithContent<T> | null>`
 
 `opts.fresh === true` を渡すと TTL に関わらずブロッキングで再取得し、本文キャッシュも破棄する。
 
@@ -173,25 +173,26 @@ const { ok, failed } = await cms.posts.cache.warm({
 
 | メソッド | 説明 |
 |---|---|
-| `cms.$collections` | 登録されたコレクション名の配列 |
-| `cms.$invalidate(scope?)` | 全体・コレクション単位・slug 単位のキャッシュ無効化 |
-| `cms.$getCachedImage(hash)` | 画像キャッシュから `{ data, contentType }` を取得 |
-| `cms.$handler(opts?)` | Web Standard な `(req: Request) => Promise<Response>` を返す |
+| `cms.collections` | 登録されたコレクション名の配列 |
+| `cms.invalidate(scope?)` | 全体・コレクション単位・slug 単位のキャッシュ無効化 |
+| `cms.getCachedImage(hash)` | 画像キャッシュから `{ data, contentType }` を取得 |
+| `cms.handler(opts?)` | Web Standard な `(req: Request) => Promise<Response>` を返す |
 
-### `$handler` のルート
+### `handler` のルート
 
 `basePath` (デフォルト `/api/cms`) 以下に以下のルートをマウント:
 
 - `GET {basePath}/images/:hash` — 画像プロキシ
-- `POST {basePath}/revalidate` — Webhook 受信 → `$invalidate(scope)`
+- `POST {basePath}/revalidate` — Webhook 受信 → `invalidate(scope)`
 
 ```ts
 // Hono
-const handler = cms.$handler({ basePath: "/api/cms", webhookSecret: env.SECRET });
+const handler = cms.handler({ basePath: "/api/cms", webhookSecret: env.SECRET });
 app.all("/api/cms/*", (c) => handler(c.req.raw));
 
-// Next.js App Router の場合は adapter-next が簡便なラッパーを提供
-// → createImageRouteHandler / createRevalidateRouteHandler を参照
+// Next.js App Router の場合は adapter-next の createNextHandler を使う
+import { createNextHandler } from "@notion-headless-cms/adapter-next";
+export const { GET, POST } = createNextHandler(cms, { webhookSecret: process.env.SECRET });
 ```
 
 ### `InvalidateScope`
@@ -219,7 +220,8 @@ const cms = createCMS({
       publishedStatuses: ["公開済み"],
     },
   },
-  cache?: CacheAdapter | CacheAdapter[],
+  cache?: CacheAdapter[],
+  swr?: { ttlMs?: number },
   content?: ContentConfig,     // imageProxyBase, remarkPlugins, rehypePlugins
   renderer?: RendererFn,       // 未指定時は @notion-headless-cms/renderer を動的 import
   hooks?: CMSHooks,
@@ -257,12 +259,37 @@ const cms = createCMS({
 すべての内部エラーは `CMSError` に統一される:
 
 ```ts
-import { isCMSErrorInNamespace } from "@notion-headless-cms/core";
+import { isCMSErrorInNamespace, matchCMSError } from "@notion-headless-cms/core";
 // または
-import { isCMSError, isCMSErrorInNamespace } from "@notion-headless-cms/core/errors";
+import { isCMSError, isCMSErrorInNamespace, matchCMSError } from "@notion-headless-cms/core/errors";
 
+// パターン 1: matchCMSError でエルゴノミックに処理
 try {
-  await cms.posts.get(slug);
+  await cms.posts.find(slug);
+} catch (err) {
+  matchCMSError(err, {
+    "source/fetch_item_failed": (e) => console.error("Notion 取得失敗:", e.message),
+    "cache/io_failed": (e) => console.error("キャッシュ失敗:", e.message),
+    _: (e) => { throw e; }, // その他は再 throw
+  });
+}
+
+// パターン 2: インスタンスメソッドで判定
+try {
+  await cms.posts.find(slug);
+} catch (err) {
+  if (err instanceof CMSError) {
+    if (err.inNamespace("source/")) {
+      // Notion 取得系エラー
+    } else if (err.is("cache/io_failed")) {
+      // キャッシュ I/O エラー
+    }
+  }
+}
+
+// パターン 3: 従来の関数形式（後方互換）
+try {
+  await cms.posts.find(slug);
 } catch (err) {
   if (isCMSErrorInNamespace(err, "source/")) {
     // Notion 取得系エラー
@@ -278,7 +305,7 @@ try {
 |---|---|
 | `core/config_invalid` | 必須設定の欠落 |
 | `source/fetch_items_failed` | `list()` の Notion 取得失敗 |
-| `source/fetch_item_failed` | `get()` の Notion 取得失敗 |
+| `source/fetch_item_failed` | `find()` の Notion 取得失敗 |
 | `source/load_markdown_failed` | ブロック → Markdown 変換失敗 |
 | `cache/io_failed` | キャッシュ R/W 失敗 |
 | `cache/image_fetch_failed` | 画像 fetch の HTTP エラー |
@@ -289,7 +316,7 @@ try {
 | サブパス | 内容 |
 |---|---|
 | `@notion-headless-cms/core` | 全エクスポート |
-| `@notion-headless-cms/core/errors` | `CMSError` / `isCMSError` / `isCMSErrorInNamespace` |
+| `@notion-headless-cms/core/errors` | `CMSError` / `isCMSError` / `isCMSErrorInNamespace` / `matchCMSError` |
 | `@notion-headless-cms/core/hooks` | `mergeHooks` / `mergeLoggers` |
 | `@notion-headless-cms/core/cache/memory` | `memoryCache` |
 | `@notion-headless-cms/core/cache/noop` | `noopDocOps` / `noopImgOps` |

@@ -19,14 +19,14 @@ export interface CollectionGenConfig {
   statusField?: string;
   /** 公開扱いするステータス値。`list()` のデフォルト絞り込みに使う。 */
   publishedStatuses?: readonly string[];
-  /** アクセス許可するステータス値。`get()` の閲覧可否判定に使う。 */
+  /** アクセス許可するステータス値。`find()` の閲覧可否判定に使う。 */
   accessibleStatuses?: readonly string[];
   /**
    * Notion プロパティ名 → TypeScript フィールド名の明示マッピング。
    * ASCII に変換できないプロパティ名（日本語など）はここで指定する。
    * @example { "タイトル": "customTitle", "カテゴリ": "category" }
    */
-  columnMappings?: Record<string, string>;
+  fieldMappings?: Record<string, string>;
 }
 
 /**

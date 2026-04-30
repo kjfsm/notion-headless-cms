@@ -42,14 +42,14 @@ export interface AdjacencyOptions<T extends BaseContentItem = BaseContentItem> {
   sort?: SortOption<T>;
 }
 
-/** `get()` のオプション。 */
-export interface GetOptions {
+/** `find()` のオプション。 */
+export interface FindOptions {
   /** true なら TTL に関わらずブロッキングで再取得し、本文 cache を破棄する。 */
   bypassCache?: boolean;
 }
 
 /**
- * `get()` の戻り値。アイテム本体に `html()` / `markdown()` / `blocks()` が生える。
+ * `find()` の戻り値。アイテム本体に `html()` / `markdown()` / `blocks()` が生える。
  * これらを呼んだ時点で初めて本文をロードする lazy 設計。
  */
 export type ItemWithContent<T extends BaseContentItem> = T & {
@@ -97,14 +97,14 @@ export interface CollectionCacheOps<T extends BaseContentItem> {
   warm(opts?: WarmOptions): Promise<WarmResult>;
 }
 
-/** `revalidate()` の戻り値。差分なしか、差分ありの場合はアイテムを含む。 */
-export type RevalidateResult<T extends BaseContentItem> =
+/** `check()` の戻り値。差分なしか、差分ありの場合はアイテムを含む。 */
+export type CheckResult<T extends BaseContentItem> =
   | { stale: false }
   | { stale: true; item: ItemWithContent<T> };
 
 /**
  * コレクション別の CMS クライアント。
- * `cms.posts.get(slug)` / `cms.posts.list()` のようにアクセスする。
+ * `cms.posts.find(slug)` / `cms.posts.list()` のようにアクセスする。
  */
 export interface CollectionClient<T extends BaseContentItem = BaseContentItem> {
   /**
@@ -115,13 +115,13 @@ export interface CollectionClient<T extends BaseContentItem = BaseContentItem> {
    *
    * @returns キャッシュまたは source から取得したアイテム。存在しない場合は null。
    */
-  get(slug: string, opts?: GetOptions): Promise<ItemWithContent<T> | null>;
+  find(slug: string, opts?: FindOptions): Promise<ItemWithContent<T> | null>;
 
   /** 公開済みアイテム一覧を取得する。 */
   list(opts?: ListOptions<T>): Promise<T[]>;
 
-  /** コレクション内の全スラッグを返す。SSG パラメータ生成に利用する。 */
-  slugs(): Promise<string[]>;
+  /** コレクション内の全スラッグを返す。`generateStaticParams` 等の SSG パラメータ生成に利用する。 */
+  params(): Promise<string[]>;
 
   /**
    * Notion から最新版を取得し、`currentVersion`（`item.lastEditedTime`）と比較する。
@@ -131,10 +131,10 @@ export interface CollectionClient<T extends BaseContentItem = BaseContentItem> {
    * @returns 差分なし: `{ stale: false }`、差分あり: `{ stale: true; item }`、
    *          アイテムが存在しない: `null`
    */
-  revalidate(
+  check(
     slug: string,
     currentVersion: string,
-  ): Promise<RevalidateResult<T> | null>;
+  ): Promise<CheckResult<T> | null>;
 
   /** 前後アイテムのナビゲーション (リスト順序ベース)。 */
   adjacent(

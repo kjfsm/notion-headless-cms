@@ -33,7 +33,7 @@ export default defineConfig({
 			publishedStatuses: ["公開済み"],
 
 			// 日本語など ASCII 変換できないプロパティ名は明示マッピング必須
-			// columnMappings: { "タイトル": "title", "カテゴリ": "category" },
+			// fieldMappings: { "タイトル": "title", "カテゴリ": "category" },
 		},
 	},
 });

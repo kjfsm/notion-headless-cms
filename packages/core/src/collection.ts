@@ -10,16 +10,16 @@ import type {
   CachedItemContent,
   CachedItemList,
   CachedItemMeta,
+  CheckResult,
   CMSHooks,
   CollectionCacheOps,
   CollectionClient,
   DataSource,
   DocumentCacheOps,
-  GetOptions,
+  FindOptions,
   ItemWithContent,
   ListOptions,
   Logger,
-  RevalidateResult,
   SortOption,
   WarmOptions,
   WarmResult,
@@ -76,14 +76,14 @@ export class CollectionClientImpl<T extends BaseContentItem>
 
   // ── 基本取得 ──────────────────────────────────────────────────────────
 
-  async get(
+  async find(
     slug: string,
-    opts: GetOptions = {},
+    opts: FindOptions = {},
   ): Promise<ItemWithContent<T> | null> {
     // bypassCache: 強制ブロッキング取得
     if (opts.bypassCache) {
       this.ctx.hooks.onCacheMiss?.(slug);
-      const item = await this.findRaw(slug);
+      const item = await this.fetchRaw(slug);
       if (!item) return null;
       const meta = await this.persistMeta(slug, item);
       await this.invalidateContentEntry(slug);
@@ -101,13 +101,13 @@ export class CollectionClientImpl<T extends BaseContentItem>
       ) {
         // TTL 切れ: ブロッキング再取得
         this.ctx.logger?.debug?.("キャッシュ期限切れ（TTL）、フェッチ", {
-          operation: "get",
+          operation: "find",
           slug,
           collection: this.ctx.collection,
           cacheAdapter: this.ctx.docCacheName,
         });
         this.ctx.hooks.onCacheMiss?.(slug);
-        const item = await this.findRaw(slug);
+        const item = await this.fetchRaw(slug);
         if (!item) return null;
         const meta = await this.persistMeta(slug, item);
         await this.invalidateContentEntry(slug);
@@ -117,7 +117,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
       const bg = this.checkAndUpdateItemBg(slug, cachedMeta);
       if (this.ctx.waitUntil) this.ctx.waitUntil(bg);
       this.ctx.logger?.debug?.("キャッシュヒット", {
-        operation: "get",
+        operation: "find",
         slug,
         collection: this.ctx.collection,
         cacheAdapter: this.ctx.docCacheName,
@@ -129,13 +129,13 @@ export class CollectionClientImpl<T extends BaseContentItem>
 
     // メタ未キャッシュ: 同期フェッチ (保存はバックグラウンド可)
     this.ctx.logger?.debug?.("キャッシュミス、フェッチ", {
-      operation: "get",
+      operation: "find",
       slug,
       collection: this.ctx.collection,
       cacheAdapter: this.ctx.docCacheName,
     });
     this.ctx.hooks.onCacheMiss?.(slug);
-    const item = await this.findRaw(slug);
+    const item = await this.fetchRaw(slug);
     if (!item) return null;
     const meta = await this.persistMeta(slug, item, { background: true });
     return this.attachLazyContent(meta);
@@ -146,16 +146,16 @@ export class CollectionClientImpl<T extends BaseContentItem>
     return applyListOptions(allItems, opts);
   }
 
-  async slugs(): Promise<string[]> {
+  async params(): Promise<string[]> {
     const items = await this.fetchList();
     return items.map((item) => item.slug);
   }
 
-  async revalidate(
+  async check(
     slug: string,
     currentVersion: string,
-  ): Promise<RevalidateResult<T> | null> {
-    const raw = await this.findRaw(slug);
+  ): Promise<CheckResult<T> | null> {
+    const raw = await this.fetchRaw(slug);
     if (!raw) return null;
     if (raw.lastEditedTime === currentVersion) return { stale: false };
     const meta = await this.persistMeta(slug, raw);
@@ -397,7 +397,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
     cached: CachedItemMeta<T>,
   ): Promise<void> {
     try {
-      const item = await this.findRaw(slug);
+      const item = await this.fetchRaw(slug);
       if (!item) return;
       const lm = this.ctx.source.getLastModified(item);
       if (lm !== cached.notionUpdatedAt) {
@@ -527,11 +527,11 @@ export class CollectionClientImpl<T extends BaseContentItem>
     });
   }
 
-  private async findRaw(slug: string): Promise<T | null> {
+  private async fetchRaw(slug: string): Promise<T | null> {
     const retryOpts = {
       ...this.ctx.retryConfig,
       onRetry: (attempt: number, status: number) => {
-        this.ctx.logger?.warn?.("get() リトライ中", {
+        this.ctx.logger?.warn?.("find() リトライ中", {
           attempt,
           status,
           slug,

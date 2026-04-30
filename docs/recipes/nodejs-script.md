@@ -29,7 +29,7 @@ import { createCMS } from "../generated/nhc";
 
 const cms = createCMS({
   notionToken: process.env.NOTION_TOKEN!,
-  cache: memoryCache(),
+  cache: [memoryCache()],
 });
 
 // 全記事を事前レンダリング (cache.warm)
@@ -62,8 +62,8 @@ import { createCMS } from "../generated/nhc";
 
 const cms = createCMS({
   notionToken: process.env.NOTION_TOKEN!,
-  cache: memoryCache({ maxItems: 1000 }),
-  ttlMs: 10 * 60_000,
+  cache: [memoryCache({ maxItems: 1000 })],
+  swr: { ttlMs: 10 * 60_000 },
 });
 ```
 

@@ -88,14 +88,14 @@ function resolveFields(collection: ResolvedCollection): {
   skippedComments: string[];
 } {
   const { name, config, dbName, properties } = collection;
-  const columnMappings = config.columnMappings ?? {};
+  const fieldMappings = config.fieldMappings ?? {};
 
-  // 事前検証: columnMappings で指定したプロパティが DB に存在するか
-  for (const notionPropName of Object.keys(columnMappings)) {
+  // 事前検証: fieldMappings で指定したプロパティが DB に存在するか
+  for (const notionPropName of Object.keys(fieldMappings)) {
     if (!(notionPropName in properties)) {
       throw new CMSError({
         code: "cli/schema_invalid",
-        message: `[${name}] columnMappings に "${notionPropName}" が指定されていますが、DB "${dbName}" に該当するプロパティが見つかりません。`,
+        message: `[${name}] fieldMappings に "${notionPropName}" が指定されていますが、DB "${dbName}" に該当するプロパティが見つかりません。`,
         context: { operation: "resolveFields", collection: name, dbName },
       });
     }
@@ -115,13 +115,13 @@ function resolveFields(collection: ResolvedCollection): {
     }
 
     let tsName =
-      columnMappings[notionPropName] ?? toTsCamelCase(notionPropName);
+      fieldMappings[notionPropName] ?? toTsCamelCase(notionPropName);
     if (tsName === null) {
       throw new CMSError({
         code: "cli/schema_invalid",
         message:
           `[${name}] プロパティ "${notionPropName}" は TypeScript 識別子に自動変換できません。` +
-          ` columnMappings で明示マッピングを指定してください: { "${notionPropName}": "fieldName" }`,
+          ` fieldMappings で明示マッピングを指定してください: { "${notionPropName}": "fieldName" }`,
         context: {
           operation: "resolveFields",
           collection: name,
@@ -296,12 +296,12 @@ function generateClientBlock(collections: ResolvedCollection[]): string {
 export interface NhcConfig {
 	/** Notion API トークン。 */
 	notionToken: string;
-	/** キャッシュアダプタ (単体または配列)。 */
-	cache?: CacheAdapter | readonly CacheAdapter[];
-	/** SWR の TTL (ミリ秒)。 */
-	ttlMs?: number;
-	/** カスタムレンダラー。\`@notion-headless-cms/renderer\` の \`renderMarkdown\` を渡す。 */
-	renderer: RendererFn;
+	/** キャッシュアダプタ (配列)。 */
+	cache?: readonly CacheAdapter[];
+	/** SWR（Stale-While-Revalidate）設定。 */
+	swr?: SWRConfig;
+	/** カスタムレンダラー。省略時は \`@notion-headless-cms/renderer\` を自動使用。 */
+	renderer?: RendererFn;
 	/** 画像プロキシのベース URL。デフォルト \`/api/images\`。 */
 	imageProxyBase?: string;
 	/** Cloudflare Workers の \`waitUntil\` 相当。 */
@@ -333,17 +333,18 @@ ${nhcMembers.join("\n")}
  *   notionToken: process.env.NOTION_TOKEN!,
  *   renderer: embed.renderer,
  *   blocks: embed.blocks,
- *   cache: memoryCache({ ttlMs: 5 * 60_000 }),
+ *   cache: [memoryCache()],
+ *   swr: { ttlMs: 5 * 60_000 },
  * });
  *
  * await cms.${collectionNames[0] ?? "posts"}.list();
- * const item = await cms.${collectionNames[0] ?? "posts"}.get("hello");
- * await item?.render();
+ * const item = await cms.${collectionNames[0] ?? "posts"}.find("hello");
+ * const html = await item?.html();
  */
 export function createCMS(config: NhcConfig): Nhc {
 	return _createCMS({
 		cache: config.cache,
-		ttlMs: config.ttlMs,
+		swr: config.swr,
 		renderer: config.renderer,
 		imageProxyBase: config.imageProxyBase,
 		waitUntil: config.waitUntil,
@@ -372,6 +373,7 @@ export function generateSchemaFile(collections: ResolvedCollection[]): string {
     "\ttype Logger,",
     "\ttype PropertyMap,",
     "\ttype RendererFn,",
+    "\ttype SWRConfig,",
     '} from "@notion-headless-cms/core";',
     'import { createNotionCollection } from "@notion-headless-cms/notion-orm";',
     'import type { BlockHandler } from "@notion-headless-cms/renderer";',
