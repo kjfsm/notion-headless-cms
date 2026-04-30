@@ -179,7 +179,7 @@ describe("createCMS - publishedStatuses / accessibleStatuses", () => {
     });
 
     // 限定公開は accessibleStatuses に含まれるのでアクセスできる
-    const result = await cms.posts.get("my-post");
+    const result = await cms.posts.find("my-post");
     expect(result).not.toBeNull();
     expect(result?.slug).toBe("my-post");
   });
@@ -210,7 +210,7 @@ describe("createCMS - findByProp の利用", () => {
       renderer: mockRenderer,
     });
 
-    await cms.posts.get("hello");
+    await cms.posts.find("hello");
 
     // findByProp が Notion プロパティ名 "Slug" と値 "hello" で呼ばれることを確認
     expect(findByPropMock).toHaveBeenCalledWith("Slug", "hello");
@@ -240,7 +240,7 @@ describe("createCMS - findByProp の利用", () => {
       renderer: mockRenderer,
     });
 
-    const result = await cms.posts.get("hello");
+    const result = await cms.posts.find("hello");
 
     // findByProp がないので list() で全件取得して線形探索する
     expect(listMock).toHaveBeenCalled();
@@ -277,7 +277,7 @@ describe("createCMS - コレクション間のキャッシュ独立性", () => {
           slugField: "slug",
         },
       },
-      cache: memoryCache(),
+      cache: [memoryCache()],
     });
 
     const posts = await cms.posts.list();
@@ -297,8 +297,8 @@ describe("createCMS - コレクション間のキャッシュ独立性", () => {
   });
 });
 
-describe("createCMS - $invalidate", () => {
-  it("$invalidate 後に list が新データを返す", async () => {
+describe("createCMS - invalidate", () => {
+  it("invalidate 後に list が新データを返す", async () => {
     const staleItem: BaseContentItem = {
       id: "1",
       slug: "post-stale",
@@ -324,29 +324,29 @@ describe("createCMS - $invalidate", () => {
           slugField: "slug",
         },
       },
-      cache: memoryCache(),
+      cache: [memoryCache()],
     });
 
     const first = await cms.posts.list();
     expect(first[0]?.slug).toBe("post-stale");
 
-    await cms.$invalidate();
+    await cms.invalidate();
 
     const second = await cms.posts.list();
-    // $invalidate 後はキャッシュがクリアされ、新しいデータが返される
+    // invalidate 後はキャッシュがクリアされ、新しいデータが返される
     expect(second[0]?.slug).toBe("post-fresh");
     expect(listMock).toHaveBeenCalledTimes(2);
   });
 
-  it("$invalidate を呼んでもエラーが発生しない（キャッシュなしの場合）", async () => {
+  it("invalidate を呼んでもエラーが発生しない（キャッシュなしの場合）", async () => {
     const cms = createCMS({
       renderer: mockRenderer,
       collections: { posts: { source: makeMockSource(), slugField: "slug" } },
     });
-    await expect(cms.$invalidate()).resolves.toBeUndefined();
+    await expect(cms.invalidate()).resolves.toBeUndefined();
   });
 
-  it("$collections にコレクション名が含まれる", () => {
+  it("collections にコレクション名が含まれる", () => {
     const cms = createCMS({
       renderer: mockRenderer,
       collections: {
@@ -354,8 +354,8 @@ describe("createCMS - $invalidate", () => {
         pages: { source: makeMockSource(), slugField: "slug" },
       },
     });
-    expect(cms.$collections).toContain("posts");
-    expect(cms.$collections).toContain("pages");
+    expect(cms.collections).toContain("posts");
+    expect(cms.collections).toContain("pages");
   });
 });
 
@@ -381,7 +381,7 @@ describe("createCMS - logLevel オプション", () => {
     });
 
     // get でキャッシュミスの debug ログが出るはずだが抑制される
-    await cms.posts.get("my-post");
+    await cms.posts.find("my-post");
 
     expect(debugFn).not.toHaveBeenCalled();
   });
@@ -404,7 +404,7 @@ describe("createCMS - logLevel オプション", () => {
       logger: { debug: debugFn },
     });
 
-    await cms.posts.get("my-post");
+    await cms.posts.find("my-post");
 
     expect(debugFn).toHaveBeenCalled();
   });
@@ -450,11 +450,11 @@ describe("createCMS - collections.hooks コレクション固有フック", () =
         },
       },
       renderer: mockRenderer,
-      cache,
+      cache: [cache],
       hooks: { onCacheHit: globalHook },
     });
 
-    await cms.posts.get("my-post");
+    await cms.posts.find("my-post");
 
     // グローバルフックとコレクション固有フックの両方が呼ばれる
     expect(globalHook).toHaveBeenCalledOnce();
@@ -487,11 +487,11 @@ describe("createCMS - collections.hooks コレクション固有フック", () =
         },
       },
       renderer: mockRenderer,
-      cache,
+      cache: [cache],
       hooks: { onCacheHit: globalHook },
     });
 
-    await cms.posts.get("my-post");
+    await cms.posts.find("my-post");
 
     expect(globalHook).toHaveBeenCalledOnce();
   });
@@ -519,7 +519,7 @@ describe("createCMS - beforeCacheMeta / beforeCacheContent フック", () => {
       hooks: { beforeCacheMeta },
     });
 
-    await cms.posts.get("test-post");
+    await cms.posts.find("test-post");
 
     expect(beforeCacheMeta).toHaveBeenCalledOnce();
   });
@@ -545,7 +545,7 @@ describe("createCMS - beforeCacheMeta / beforeCacheContent フック", () => {
       hooks: { beforeCacheContent },
     });
 
-    const result = await cms.posts.get("test-post");
+    const result = await cms.posts.find("test-post");
     // 本文をアクセスして初めて呼ばれる
     expect(beforeCacheContent).not.toHaveBeenCalled();
     await result?.html();
@@ -553,34 +553,36 @@ describe("createCMS - beforeCacheMeta / beforeCacheContent フック", () => {
   });
 });
 
-describe("createCMS - $getCachedImage", () => {
-  it("$getCachedImage が imageCache.get を呼ぶ", async () => {
+describe("createCMS - getCachedImage", () => {
+  it("getCachedImage が imageCache.get を呼ぶ", async () => {
     const getCachedImage = vi.fn().mockResolvedValue(null);
     const cms = createCMS({
       renderer: mockRenderer,
       collections: { posts: { source: makeMockSource(), slugField: "slug" } },
-      cache: {
-        name: "test-image-cache",
-        handles: ["image"],
-        img: {
-          get: getCachedImage,
-          set: vi.fn(),
+      cache: [
+        {
+          name: "test-image-cache",
+          handles: ["image"],
+          img: {
+            get: getCachedImage,
+            set: vi.fn(),
+          },
         },
-      },
+      ],
     });
-    const result = await cms.$getCachedImage("test-hash");
+    const result = await cms.getCachedImage("test-hash");
     expect(getCachedImage).toHaveBeenCalledWith("test-hash");
     expect(result).toBeNull();
   });
 });
 
-describe("createCMS - $handler", () => {
-  it("$handler() がハンドラ関数を返す", () => {
+describe("createCMS - handler", () => {
+  it("handler() がハンドラ関数を返す", () => {
     const cms = createCMS({
       renderer: mockRenderer,
       collections: { posts: { source: makeMockSource(), slugField: "slug" } },
     });
-    const handler = cms.$handler();
+    const handler = cms.handler();
     expect(typeof handler).toBe("function");
   });
 
@@ -595,7 +597,7 @@ describe("createCMS - $handler", () => {
         },
       },
     });
-    const handler = cms.$handler();
+    const handler = cms.handler();
     const req = new Request("http://localhost/api/cms/revalidate/posts", {
       method: "POST",
     });
@@ -611,7 +613,7 @@ describe("createCMS - $handler", () => {
       renderer: mockRenderer,
       collections: { posts: { source: makeMockSource(), slugField: "slug" } },
     });
-    const handler = cms.$handler();
+    const handler = cms.handler();
     const req = new Request("http://localhost/api/cms/revalidate/unknown", {
       method: "POST",
     });
@@ -624,7 +626,7 @@ describe("createCMS - $handler", () => {
       renderer: mockRenderer,
       collections: { posts: { source: makeMockSource(), slugField: "slug" } },
     });
-    const handler = cms.$handler();
+    const handler = cms.handler();
     const req = new Request("http://localhost/api/cms/revalidate/posts", {
       method: "POST",
     });

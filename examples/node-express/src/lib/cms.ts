@@ -16,8 +16,8 @@ const embed = notionEmbed({
 
 export const cms = createCMS({
   notionToken: token,
-  cache: memoryCache(),
-  ttlMs: 5 * 60_000,
+  cache: [memoryCache()],
+  swr: { ttlMs: 5 * 60_000 },
   renderer: embed.renderer,
   blocks: embed.blocks,
 });

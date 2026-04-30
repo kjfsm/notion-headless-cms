@@ -112,11 +112,27 @@ it("TTL 切れでキャッシュを更新する", () => {
 ## パターン 6: CMSError の検証
 
 ```ts
-import { CMSError, isCMSError } from "../errors";
+import { CMSError, isCMSError, matchCMSError } from "../errors";
 
+// 旧来の判定（引き続き使用可）
 await expect(cms.list()).rejects.toSatisfy(
 	(err: unknown) => isCMSError(err) && err.code === "source/fetch_items_failed",
 );
+
+// err.is() による簡潔な判定
+await expect(cms.list()).rejects.toSatisfy(
+	(err: unknown) => isCMSError(err) && err.is("source/fetch_items_failed"),
+);
+
+// matchCMSError によるコードごとの分岐
+try {
+	await cms.posts.find("slug");
+} catch (err) {
+	matchCMSError(err, {
+		"source/fetch_item_failed": (e) => console.error("取得失敗", e),
+		"cache/io_failed": (e) => console.error("キャッシュ I/O 失敗", e),
+	});
+}
 ```
 
 ## パターン 7: 環境変数のスタブ

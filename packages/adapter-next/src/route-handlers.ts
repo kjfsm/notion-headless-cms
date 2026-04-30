@@ -5,15 +5,36 @@ export interface RevalidateHandlerOptions {
   secret: string;
 }
 
+export interface NextHandlerOptions {
+  /** Webhook 検証用シークレット。Authorization ヘッダと照合する。 */
+  webhookSecret?: string;
+}
+
 /**
- * `/app/api/images/[hash]/route.ts` 用の Next.js ルートハンドラを生成する。
- * 内部的に `cms.$getCachedImage()` を呼ぶ。
+ * Next.js App Router 向けの統合ルートハンドラを生成する。
+ * 画像プロキシ (`GET /api/cms/images/[hash]`) と
+ * Webhook による invalidate (`POST /api/cms/...`) を1つのハンドラで処理する。
  *
  * @example
- * // app/api/images/[hash]/route.ts
+ * // app/api/cms/[...path]/route.ts
  * import { cms } from "@/lib/cms";
- * import { createImageRouteHandler } from "@notion-headless-cms/adapter-next";
- * export const GET = createImageRouteHandler(cms);
+ * import { createNextHandler } from "@notion-headless-cms/adapter-next";
+ *
+ * const handler = createNextHandler(cms, { webhookSecret: process.env.WEBHOOK_SECRET });
+ * export const GET = handler;
+ * export const POST = handler;
+ */
+export function createNextHandler(
+  cms: CMSGlobalOps,
+  opts?: NextHandlerOptions,
+): (req: Request) => Promise<Response> {
+  return cms.handler({ webhookSecret: opts?.webhookSecret });
+}
+
+/**
+ * @deprecated `createNextHandler` を使用してください。
+ *
+ * `/app/api/images/[hash]/route.ts` 用の Next.js ルートハンドラを生成する。
  */
 export function createImageRouteHandler(
   cms: CMSGlobalOps,
@@ -23,7 +44,7 @@ export function createImageRouteHandler(
 ) => Promise<Response> {
   return async (_request, context) => {
     const { hash } = await context.params;
-    const object = await cms.$getCachedImage(hash);
+    const object = await cms.getCachedImage(hash);
     if (!object) return new Response("Not Found", { status: 404 });
     const headers = new Headers();
     if (object.contentType) headers.set("content-type", object.contentType);
@@ -33,14 +54,9 @@ export function createImageRouteHandler(
 }
 
 /**
- * `/app/api/revalidate/[collection]/route.ts` 用の Next.js ルートハンドラを生成する。
- * Authorization ヘッダで secret を検証し、`cms.$invalidate({ collection, slug? })` を呼ぶ。
+ * @deprecated `createNextHandler` を使用してください。
  *
- * @example
- * // app/api/revalidate/[collection]/route.ts
- * import { cms } from "@/lib/cms";
- * import { createCollectionRevalidateRouteHandler } from "@notion-headless-cms/adapter-next";
- * export const POST = createCollectionRevalidateRouteHandler(cms, { secret: process.env.REVALIDATE_SECRET! });
+ * `/app/api/revalidate/[collection]/route.ts` 用の Next.js ルートハンドラを生成する。
  */
 export function createCollectionRevalidateRouteHandler(
   cms: CMSGlobalOps,
@@ -81,20 +97,15 @@ export function createCollectionRevalidateRouteHandler(
 
     const scope: InvalidateScope = slug ? { collection, slug } : { collection };
 
-    await cms.$invalidate(scope);
+    await cms.invalidate(scope);
     return Response.json({ ok: true, scope });
   };
 }
 
 /**
- * 全コレクションを一括無効化するルートハンドラを生成する。管理用エンドポイント向け。
- * Authorization ヘッダで secret を検証し、`cms.$invalidate("all")` を呼ぶ。
+ * @deprecated `createNextHandler` を使用してください。
  *
- * @example
- * // app/api/revalidate/route.ts
- * import { cms } from "@/lib/cms";
- * import { createInvalidateAllRouteHandler } from "@notion-headless-cms/adapter-next";
- * export const POST = createInvalidateAllRouteHandler(cms, { secret: process.env.REVALIDATE_SECRET! });
+ * 全コレクションを一括無効化するルートハンドラを生成する。管理用エンドポイント向け。
  */
 export function createInvalidateAllRouteHandler(
   cms: CMSGlobalOps,
@@ -105,7 +116,7 @@ export function createInvalidateAllRouteHandler(
     if (auth !== `Bearer ${opts.secret}`) {
       return new Response("Unauthorized", { status: 401 });
     }
-    await cms.$invalidate("all");
+    await cms.invalidate("all");
     return Response.json({ ok: true, scope: "all" });
   };
 }

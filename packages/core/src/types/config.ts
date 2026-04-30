@@ -41,6 +41,12 @@ export interface ContentConfig {
   rehypePlugins?: RendererPluginList;
 }
 
+/** SWR（Stale-While-Revalidate）設定。 */
+export interface SWRConfig {
+  /** SWR の有効期間 (ミリ秒)。未設定時は TTL なし（失効まで stale を返す）。 */
+  ttlMs?: number;
+}
+
 /** レートリミット・リトライ設定。 */
 export interface RateLimiterConfig {
   /** 同時実行数の上限。デフォルト: 3 */
@@ -98,7 +104,8 @@ export type InferCollectionItem<C> =
  *       publishedStatuses: ["公開済み"],
  *     }
  *   },
- *   cache: memoryCache({ ttlMs: 5 * 60_000 }),
+ *   cache: [memoryCache()],
+ *   swr: { ttlMs: 5 * 60_000 },
  * });
  */
 export interface CreateCMSOptions<
@@ -107,14 +114,14 @@ export interface CreateCMSOptions<
   /** コレクション定義のマップ。 */
   collections: C;
   /**
-   * キャッシュアダプタ (単体または配列)。未指定時はキャッシュなし。
+   * キャッシュアダプタ (配列)。未指定時はキャッシュなし。
    * - `memoryCache()` のように doc + image 両方を担当するもの
    * - `r2Cache()` (image のみ)、`kvCache()` (doc のみ) のように片側のみ担当するもの
-   * - 配列で組み合わせると、各 adapter の `handles` で振り分けられる
+   * - 複数 adapter を配列で組み合わせると、各 adapter の `handles` で振り分けられる
    */
-  cache?: CacheAdapter | readonly CacheAdapter[];
-  /** SWR の有効期間 (ミリ秒)。未設定時は TTL なし (失効まで stale を返す)。 */
-  ttlMs?: number;
+  cache?: readonly CacheAdapter[];
+  /** SWR（Stale-While-Revalidate）設定。 */
+  swr?: SWRConfig;
   /**
    * Markdown→HTML レンダラー。
    * 省略時は `@notion-headless-cms/renderer` の `renderMarkdown` を動的 import で使用する。

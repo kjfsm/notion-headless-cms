@@ -55,9 +55,9 @@ CMS エンジン本体。`createCMS` は**これ一本**で Node.js / Workers / 
 どこでも動く。外部ランタイム依存ゼロ。
 - `createCMS({ collections, cache?, renderer?, ... })` — コレクション別にアクセスできる CMS クライアントを生成
 - `memoryCache({ maxItems? })` — インプロセス LRU キャッシュ
-- `cms.posts.get(slug)` / `cms.posts.list(opts?)` / `params()` / `cms.posts.cache.adjacent()` / `cms.posts.cache.warm()` / `cms.posts.cache.invalidate()`
-- `cms.$collections` / `cms.$invalidate(scope?)` / `cms.$getCachedImage(hash)` / `cms.$handler(opts)`
-- `CMSError` / `isCMSError` / `isCMSErrorInNamespace` — 名前空間付きエラー (`core/*` / `cli/*` / `source/*` / `cache/*` / `renderer/*`)
+- `cms.posts.find(slug)` / `cms.posts.list(opts?)` / `cms.posts.params()` / `cms.posts.cache.adjacent()` / `cms.posts.cache.warm()` / `cms.posts.cache.invalidate()`
+- `cms.collections` / `cms.invalidate(scope?)` / `cms.getCachedImage(hash)` / `cms.handler(opts)`
+- `CMSError` / `isCMSError` / `isCMSErrorInNamespace` / `matchCMSError` — 名前空間付きエラー (`core/*` / `cli/*` / `source/*` / `cache/*` / `renderer/*`)
 - サブパスエクスポート `/errors` · `/hooks` · `/cache/memory` · `/cache/noop` — 必要な型だけをインポート可
 
 #### [`@notion-headless-cms/notion-orm`](./packages/notion-orm)
@@ -122,8 +122,10 @@ Notion DB を introspect して TypeScript スキーマを自動生成する CLI
 
 #### [`@notion-headless-cms/adapter-next`](./packages/adapter-next)
 Next.js App Router 向けルートハンドラー。画像プロキシ配信と Notion Webhook によるキャッシュ再検証を提供する。
-- `createImageRouteHandler(cms)` — `/api/images/[hash]/route.ts` 用
-- `createRevalidateRouteHandler(cms, { secret })` — Webhook 受信用
+- `createNextHandler(cms, opts?)` — 画像プロキシ・Webhook 受信をまとめて処理する統合ハンドラ
+- `createImageRouteHandler(cms)` — **非推奨** (`@deprecated`)。`createNextHandler` を使うこと
+- `createCollectionRevalidateRouteHandler(cms, opts)` — **非推奨** (`@deprecated`)。`createNextHandler` を使うこと
+- `createInvalidateAllRouteHandler(cms, opts)` — **非推奨** (`@deprecated`)。`createNextHandler` を使うこと
 
 ## クイックスタート
 
@@ -149,13 +151,13 @@ import { createCMS } from "./generated/nhc";  // nhc generate が出力するフ
 
 export const cms = createCMS({
   notionToken: process.env.NOTION_TOKEN!,
-  cache: memoryCache(),
-  ttlMs: 5 * 60_000,
+  cache: [memoryCache()],
+  swr: { ttlMs: 5 * 60_000 },
 });
 
 // 使い方
 const posts = await cms.posts.list();
-const post = await cms.posts.get("my-first-post");
+const post = await cms.posts.find("my-first-post");
 if (post) console.log(await post.render());
 ```
 
@@ -188,7 +190,7 @@ export default {
     const cms = createCMS({
       notionToken: env.NOTION_TOKEN,
       cache: cloudflareCache(env),
-      ttlMs: 5 * 60_000,
+      swr: { ttlMs: 5 * 60_000 },
     });
     const posts = await cms.posts.list();
     return Response.json(posts);
@@ -213,6 +215,7 @@ wrangler secret put NOTION_TOKEN
   - [カスタムデータソース](./docs/recipes/custom-source.md)
   - [カスタムキャッシュアダプタ](./docs/recipes/custom-cache.md)
   - [useSWR クライアントサイド連携](./docs/recipes/useswr-integration.md)
+- [v1.0 移行ガイド](./docs/migration/v1.0.md)
 - [v0.2 → v0.3 移行ガイド](./docs/migration/v0.3.md)
 - [v0 → v1 ORM 分離の経緯](./docs/migration/v0-to-v1.md)
 - [開発者ガイド](./docs/development.md)

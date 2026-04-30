@@ -12,7 +12,7 @@ app.get("/posts", async (c) => {
 });
 
 app.get("/posts/:slug", async (c) => {
-  const post = await cms.posts.get(c.req.param("slug"));
+  const post = await cms.posts.find(c.req.param("slug"));
   if (!post) return c.json({ error: "Not Found" }, 404);
   const [renderedHtml, markdown] = await Promise.all([
     post.html(),
@@ -83,7 +83,7 @@ app.get("/ui/posts", async (c) => {
 });
 
 app.get("/ui/posts/:slug", async (c) => {
-  const post = await cms.posts.get(c.req.param("slug"));
+  const post = await cms.posts.find(c.req.param("slug"));
   if (!post)
     return c.html(
       layout("Not Found", "<h1>404 - 記事が見つかりません</h1>"),

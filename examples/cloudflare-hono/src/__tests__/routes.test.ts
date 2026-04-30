@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const fakeCms = {
   posts: {
     list: vi.fn(),
-    get: vi.fn(),
+    find: vi.fn(),
   },
 };
 
@@ -34,7 +34,7 @@ describe("GET /posts/:slug", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("ページ詳細と HTML を返す", async () => {
-    fakeCms.posts.get.mockResolvedValue({
+    fakeCms.posts.find.mockResolvedValue({
       id: "id-1",
       slug: "hello",
       html: vi.fn().mockResolvedValue("<p>内容</p>"),
@@ -47,7 +47,7 @@ describe("GET /posts/:slug", () => {
   });
 
   it("存在しないスラグは 404", async () => {
-    fakeCms.posts.get.mockResolvedValue(null);
+    fakeCms.posts.find.mockResolvedValue(null);
     const res = await app.request("/posts/not-found", {}, fakeEnv);
     expect(res.status).toBe(404);
   });

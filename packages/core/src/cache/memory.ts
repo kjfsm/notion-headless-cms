@@ -208,7 +208,7 @@ class MemoryImageOps implements ImageCacheOps {
  * プロセス再起動でクリアされるため、ローカル開発・SSG ビルド・テスト用途。
  *
  * @example
- * cache: memoryCache({ ttlMs: 5 * 60_000, maxItems: 1000 })
+ * cache: [memoryCache({ maxItems: 1000 })]
  */
 export function memoryCache(options?: MemoryCacheOptions): CacheAdapter {
   return {

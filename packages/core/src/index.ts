@@ -22,7 +22,12 @@ export type {
   CMSErrorCode,
   CMSErrorContext,
 } from "./errors";
-export { CMSError, isCMSError, isCMSErrorInNamespace } from "./errors";
+export {
+  CMSError,
+  isCMSError,
+  isCMSErrorInNamespace,
+  matchCMSError,
+} from "./errors";
 // ── $handler ───────────────────────────────────────────────────────────
 export type { HandlerAdapter, HandlerOptions } from "./handler";
 export { createHandler } from "./handler";
@@ -39,6 +44,7 @@ export type {
   CachedItemContent,
   CachedItemList,
   CachedItemMeta,
+  CheckResult,
   CMSHooks,
   CMSPlugin,
   CMSSchemaProperties,
@@ -50,7 +56,7 @@ export type {
   CreateCMSOptions,
   DataSource,
   DocumentCacheOps,
-  GetOptions,
+  FindOptions,
   ImageCacheOps,
   InferCollectionItem,
   InvalidateKind,
@@ -66,9 +72,9 @@ export type {
   RendererFn,
   RendererPluginList,
   RenderOptions,
-  RevalidateResult,
   SortOption,
   StorageBinary,
+  SWRConfig,
   WarmOptions,
   WarmResult,
   WebhookConfig,

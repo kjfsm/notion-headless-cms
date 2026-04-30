@@ -39,8 +39,8 @@ import { createCMS } from "./generated/nhc";
 
 const cms = createCMS({
   notionToken: process.env.NOTION_TOKEN!,
-  cache: memoryCache(),
-  ttlMs: 5 * 60_000,
+  cache: [memoryCache()],
+  swr: { ttlMs: 5 * 60_000 },
 });
 
 // 各ソースは個別の CollectionClient として推論される
@@ -70,7 +70,7 @@ export default {
     const cms = createCMS({
       notionToken: env.NOTION_TOKEN,
       cache: cloudflareCache(env),
-      ttlMs: 5 * 60_000,
+      swr: { ttlMs: 5 * 60_000 },
     });
 
     const url = new URL(request.url);
@@ -107,7 +107,7 @@ export function createCMS(config: NhcConfig): {
 } { /* ... */ }
 
 // アプリコード
-const cms = createCMS({ notionToken: "...", cache: memoryCache() });
+const cms = createCMS({ notionToken: "...", cache: [memoryCache()] });
 //    ^? { posts: CollectionClient<PostsItem>; news: CollectionClient<NewsItem> }
 
 const posts = await cms.posts.list();
@@ -121,7 +121,7 @@ const posts = await cms.posts.list();
 `nhc.config.ts` の `dataSources` に 1 件だけ登録すれば、そのまま単一 DB 構成としても使える。
 
 ```ts
-const cms = createCMS({ notionToken: "...", cache: memoryCache() });
+const cms = createCMS({ notionToken: "...", cache: [memoryCache()] });
 const posts = await cms.posts.list();
 ```
 

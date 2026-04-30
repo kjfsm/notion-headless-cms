@@ -53,8 +53,8 @@ function makeItems(): BaseContentItem[] {
   ];
 }
 
-describe("CollectionClient — slugs", () => {
-  it("slugs はスラッグ文字列の配列を返す", async () => {
+describe("CollectionClient — params", () => {
+  it("params はスラッグ文字列の配列を返す", async () => {
     const cms = createCMS({
       renderer: mockRenderer,
       collections: {
@@ -68,7 +68,7 @@ describe("CollectionClient — slugs", () => {
         },
       },
     });
-    const result = await cms.posts.slugs();
+    const result = await cms.posts.params();
     expect(result).toEqual(["alpha", "beta", "gamma"]);
   });
 
@@ -79,7 +79,7 @@ describe("CollectionClient — slugs", () => {
         posts: { source: makeMockSource(), slugField: "slug" },
       },
     });
-    expect(await cms.posts.slugs()).toEqual([]);
+    expect(await cms.posts.params()).toEqual([]);
   });
 });
 
@@ -219,7 +219,7 @@ describe("CollectionClient — cache.invalidate / cache.warm", () => {
     const cms = createCMS({
       renderer: mockRenderer,
       collections: { posts: { source, slugField: "slug" } },
-      cache,
+      cache: [cache],
     });
 
     await cms.posts.list();
@@ -243,7 +243,7 @@ describe("CollectionClient — cache.invalidate / cache.warm", () => {
     const cms = createCMS({
       renderer: mockRenderer,
       collections: { posts: { source, slugField: "slug" } },
-      cache,
+      cache: [cache],
     });
 
     await cms.posts.list();
@@ -268,10 +268,10 @@ describe("CollectionClient — cache.invalidate / cache.warm", () => {
     const cms = createCMS({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
-      cache,
+      cache: [cache],
     });
 
-    await cms.posts.get("my-post");
+    await cms.posts.find("my-post");
     const before = await cache.doc?.getMeta("posts", "my-post");
     expect(before).not.toBeNull();
 
@@ -753,11 +753,11 @@ describe("CollectionClient — 並行 get", () => {
     });
 
     const results = await Promise.all([
-      cms.posts.get("concurrent-post"),
-      cms.posts.get("concurrent-post"),
-      cms.posts.get("concurrent-post"),
-      cms.posts.get("concurrent-post"),
-      cms.posts.get("concurrent-post"),
+      cms.posts.find("concurrent-post"),
+      cms.posts.find("concurrent-post"),
+      cms.posts.find("concurrent-post"),
+      cms.posts.find("concurrent-post"),
+      cms.posts.find("concurrent-post"),
     ]);
 
     for (const r of results) {
@@ -782,9 +782,9 @@ describe("CollectionClient — 並行 get", () => {
     });
 
     const results = await Promise.all([
-      cms.posts.get("ghost"),
-      cms.posts.get("ghost"),
-      cms.posts.get("ghost"),
+      cms.posts.find("ghost"),
+      cms.posts.find("ghost"),
+      cms.posts.find("ghost"),
     ]);
 
     for (const r of results) {
@@ -841,7 +841,7 @@ describe("CollectionClient — isArchived フィルタ", () => {
       },
       renderer: mockRenderer,
     });
-    const result = await cms.posts.get("archived-post");
+    const result = await cms.posts.find("archived-post");
     expect(result).toBeNull();
   });
 });
@@ -868,7 +868,7 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
       },
       renderer: mockRenderer,
     });
-    const result = await cms.posts.get("draft-post");
+    const result = await cms.posts.find("draft-post");
     expect(result).toBeNull();
   });
 
@@ -893,7 +893,7 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
       },
       renderer: mockRenderer,
     });
-    const result = await cms.posts.get("public-post");
+    const result = await cms.posts.find("public-post");
     expect(result).not.toBeNull();
   });
 
@@ -917,7 +917,7 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
       },
       renderer: mockRenderer,
     });
-    const result = await cms.posts.get("no-status");
+    const result = await cms.posts.find("no-status");
     expect(result).toBeNull();
   });
 
@@ -942,7 +942,7 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
       },
       renderer: mockRenderer,
     });
-    const result = await cms.posts.get("null-status");
+    const result = await cms.posts.find("null-status");
     expect(result).toBeNull();
   });
 
@@ -981,7 +981,7 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
     expect(result[0]?.slug).toBe("public");
   });
 
-  it("list() と get() で accessibleStatuses フィルタが一致する", async () => {
+  it("list() と find() で accessibleStatuses フィルタが一致する", async () => {
     const items: BaseContentItem[] = [
       {
         id: "1",
@@ -1013,13 +1013,13 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
     const listed = await cms.posts.list();
     const slugsFromList = listed.map((i) => i.slug);
 
-    // list() で返ったスラッグはすべて get() でも取得できる
+    // list() で返ったスラッグはすべて find() でも取得できる
     for (const slug of slugsFromList) {
-      const got = await cms.posts.get(slug);
+      const got = await cms.posts.find(slug);
       expect(got).not.toBeNull();
     }
-    // list() に含まれないスラッグは get() で null になる
-    const excluded = await cms.posts.get("draft");
+    // list() に含まれないスラッグは find() で null になる
+    const excluded = await cms.posts.find("draft");
     expect(excluded).toBeNull();
   });
 });
@@ -1044,7 +1044,7 @@ describe("CollectionClient — コンテンツアクセサ", () => {
       },
       renderer: mockRenderer,
     });
-    const result = await cms.posts.get("post-html");
+    const result = await cms.posts.find("post-html");
     expect(result).not.toBeNull();
     const html = await result?.html();
     expect(typeof html).toBe("string");
@@ -1071,7 +1071,7 @@ describe("CollectionClient — コンテンツアクセサ", () => {
       },
       renderer: mockRenderer,
     });
-    const result = await cms.posts.get("post-with-md");
+    const result = await cms.posts.find("post-with-md");
     expect(result).not.toBeNull();
     const md = await result?.markdown();
     expect(md).toBe("# Hello World");
@@ -1100,7 +1100,7 @@ describe("CollectionClient — コンテンツアクセサ", () => {
       },
       renderer: mockRenderer,
     });
-    const result = await cms.posts.get("post-blocks");
+    const result = await cms.posts.find("post-blocks");
     expect(result).not.toBeNull();
     const blocks = await result?.blocks();
     expect(blocks).toEqual(fakeBlocks);
@@ -1147,7 +1147,7 @@ describe("CollectionClient — コンテンツアクセサ", () => {
       },
       renderer: mockRenderer,
     });
-    const result = await cms.posts.get("post-lazy");
+    const result = await cms.posts.find("post-lazy");
     expect(result).not.toBeNull();
     await result?.html();
     await result?.html();
@@ -1155,7 +1155,7 @@ describe("CollectionClient — コンテンツアクセサ", () => {
   });
 });
 
-describe("CollectionClient — revalidate()", () => {
+describe("CollectionClient — check()", () => {
   it("lastEditedTime が一致するときは { stale: false } を返す", async () => {
     const item: BaseContentItem = {
       id: "1",
@@ -1175,10 +1175,7 @@ describe("CollectionClient — revalidate()", () => {
       },
       renderer: mockRenderer,
     });
-    const result = await cms.posts.revalidate(
-      "my-post",
-      "2024-01-01T00:00:00Z",
-    );
+    const result = await cms.posts.check("my-post", "2024-01-01T00:00:00Z");
     expect(result).toEqual({ stale: false });
   });
 
@@ -1201,7 +1198,7 @@ describe("CollectionClient — revalidate()", () => {
       },
       renderer: mockRenderer,
     });
-    const result = await cms.posts.revalidate(
+    const result = await cms.posts.check(
       "updated-post",
       "2024-01-01T00:00:00Z",
     );
@@ -1234,10 +1231,7 @@ describe("CollectionClient — revalidate()", () => {
       },
       renderer: mockRenderer,
     });
-    const result = await cms.posts.revalidate(
-      "render-post",
-      "2024-01-01T00:00:00Z",
-    );
+    const result = await cms.posts.check("render-post", "2024-01-01T00:00:00Z");
     if (result?.stale) {
       const html = await result.item.html();
       expect(typeof html).toBe("string");
@@ -1252,10 +1246,7 @@ describe("CollectionClient — revalidate()", () => {
         posts: { source: makeMockSource(), slugField: "slug" },
       },
     });
-    const result = await cms.posts.revalidate(
-      "nonexistent",
-      "2024-01-01T00:00:00Z",
-    );
+    const result = await cms.posts.check("nonexistent", "2024-01-01T00:00:00Z");
     expect(result).toBeNull();
   });
 
@@ -1280,10 +1271,7 @@ describe("CollectionClient — revalidate()", () => {
         },
       },
     });
-    const result = await cms.posts.revalidate(
-      "draft-post",
-      "2024-01-01T00:00:00Z",
-    );
+    const result = await cms.posts.check("draft-post", "2024-01-01T00:00:00Z");
     expect(result).toBeNull();
   });
 
@@ -1306,7 +1294,7 @@ describe("CollectionClient — revalidate()", () => {
       },
       renderer: mockRenderer,
     });
-    await cms.posts.revalidate("fp-post", "2024-01-01T00:00:00Z");
+    await cms.posts.check("fp-post", "2024-01-01T00:00:00Z");
     expect(findByProp).toHaveBeenCalledWith("Slug", "fp-post");
   });
 
@@ -1329,7 +1317,7 @@ describe("CollectionClient — revalidate()", () => {
       },
       renderer: mockRenderer,
     });
-    const result = await cms.posts.revalidate(
+    const result = await cms.posts.check(
       "unchanged-post",
       "2024-01-01T00:00:00Z",
     );
@@ -1337,7 +1325,7 @@ describe("CollectionClient — revalidate()", () => {
     expect(findByProp).toHaveBeenCalledTimes(1);
   });
 
-  it("stale のとき後続の get() でメタが更新されている", async () => {
+  it("stale のとき後続の find() でメタが更新されている", async () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "cache-update-post",
@@ -1355,10 +1343,10 @@ describe("CollectionClient — revalidate()", () => {
           slugField: "slug",
         },
       },
-      cache,
+      cache: [cache],
       renderer: mockRenderer,
     });
-    await cms.posts.revalidate("cache-update-post", "2024-01-01T00:00:00Z");
+    await cms.posts.check("cache-update-post", "2024-01-01T00:00:00Z");
     const meta = await cache.doc?.getMeta("posts", "cache-update-post");
     expect(meta?.item.lastEditedTime).toBe("2024-01-02T00:00:00Z");
   });
@@ -1382,12 +1370,12 @@ describe("CollectionClient — revalidate()", () => {
       },
       renderer: mockRenderer,
     });
-    const result = await cms.posts.revalidate("empty-version-post", "");
+    const result = await cms.posts.check("empty-version-post", "");
     expect(result?.stale).toBe(true);
   });
 });
 
-describe("CollectionClient — get() bypassCache", () => {
+describe("CollectionClient — find() bypassCache", () => {
   it("bypassCache: true はキャッシュを無視してソースから取得する", async () => {
     const item: BaseContentItem = {
       id: "1",
@@ -1405,15 +1393,15 @@ describe("CollectionClient — get() bypassCache", () => {
     const cms = createCMS({
       renderer: mockRenderer,
       collections: { posts: { source, slugField: "slug" } },
-      cache,
+      cache: [cache],
     });
 
     // 1回目: キャッシュなし → ソースから取得
-    await cms.posts.get("live-post");
+    await cms.posts.find("live-post");
     const beforeBypass = callCount;
 
     // bypassCache: true → キャッシュがあってもソースから取得
-    const result = await cms.posts.get("live-post", { bypassCache: true });
+    const result = await cms.posts.find("live-post", { bypassCache: true });
     expect(result).not.toBeNull();
     expect(callCount).toBeGreaterThan(beforeBypass);
   });
@@ -1423,7 +1411,7 @@ describe("CollectionClient — get() bypassCache", () => {
       renderer: mockRenderer,
       collections: { posts: { source: makeMockSource(), slugField: "slug" } },
     });
-    const result = await cms.posts.get("nonexistent", { bypassCache: true });
+    const result = await cms.posts.find("nonexistent", { bypassCache: true });
     expect(result).toBeNull();
   });
 });
@@ -1451,7 +1439,7 @@ describe("CollectionClient — slugField + findByProp", () => {
       },
       renderer: mockRenderer,
     });
-    const result = await cms.posts.get("my-post");
+    const result = await cms.posts.find("my-post");
     expect(result).not.toBeNull();
     expect(findByProp).toHaveBeenCalledWith("Slug", "my-post");
   });

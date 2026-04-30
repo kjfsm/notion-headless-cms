@@ -58,12 +58,12 @@ const cms = createCMS({
       publishedStatuses: ["published"],
     },
   },
-  cache: memoryCache(),
-  ttlMs: 5 * 60_000,
+  cache: [memoryCache()],
+  swr: { ttlMs: 5 * 60_000 },
 });
 
 const posts = await cms.posts.list();
-const post = await cms.posts.get("my-post");
+const post = await cms.posts.find("my-post");
 if (post) console.log(await post.render());
 ```
 

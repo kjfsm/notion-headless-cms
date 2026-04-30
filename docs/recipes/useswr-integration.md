@@ -1,6 +1,6 @@
 # useSWR とのクライアントサイド連携
 
-`@notion-headless-cms/core` の `cms.posts.get()` / `cms.posts.list()` は
+`@notion-headless-cms/core` の `cms.posts.find()` / `cms.posts.list()` は
 Server Component / SSR での直接呼び出しを前提とした設計だが、
 サーバ側で API ルートを立てることで [useSWR](https://swr.vercel.app/) などの
 クライアントサイドキャッシュとも自然に連携できる。
@@ -26,7 +26,7 @@ export async function GET(
   { params }: { params: Promise<{ slug: string }> },
 ) {
   const { slug } = await params;
-  const post = await cms.posts.get(slug);
+  const post = await cms.posts.find(slug);
   if (!post) return new Response("Not Found", { status: 404 });
   const html = await post.render();
   return Response.json({ ...post, html });
@@ -106,14 +106,14 @@ export function LiveArticle({ slug }: { slug: string }) {
 
 ## SSR との併用
 
-Server Component では `cms.posts.get(slug)` を引き続き使う。
+Server Component では `cms.posts.find(slug)` を引き続き使う。
 SSR で初期 HTML を返しつつ、クライアントで `useSWR` を起動するパターン:
 
 ```tsx
 // app/posts/[slug]/page.tsx (Server Component)
 export default async function Page({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const post = await cms.posts.get(slug);
+  const post = await cms.posts.find(slug);
   if (!post) notFound();
   const html = await post.render();
 

@@ -261,17 +261,19 @@ export type CMSDataSources = typeof cmsDataSources;
 生成した `cmsDataSources` を `createCMS` にそのまま渡す。
 
 ```ts
-import { createCMS, nodePreset } from "@notion-headless-cms/core";
+import { createCMS } from "@notion-headless-cms/core";
+import { memoryCache } from "@notion-headless-cms/core/cache/memory";
 import { cmsDataSources } from "./generated/nhc-schema";
 
 const cms = createCMS({
-  ...nodePreset({ ttlMs: 5 * 60_000 }),
+  cache: [memoryCache()],
+  swr: { ttlMs: 5 * 60_000 },
   dataSources: cmsDataSources,
 });
 
 // posts は CollectionClient<PostsItem> として推論される
-const posts = await cms.posts.getList();
-const post = await cms.posts.getItem("my-post-slug");
+const posts = await cms.posts.list();
+const post = await cms.posts.find("my-post-slug");
 ```
 
 Cloudflare Workers の場合:

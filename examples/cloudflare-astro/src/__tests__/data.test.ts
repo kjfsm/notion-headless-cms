@@ -5,7 +5,7 @@ function makeFakeCms() {
   return {
     posts: {
       list: vi.fn(),
-      get: vi.fn(),
+      find: vi.fn(),
     },
   };
 }
@@ -25,7 +25,7 @@ describe("getPost()", () => {
 
   it("投稿が存在する場合は post と html を返す", async () => {
     const cms = makeFakeCms();
-    cms.posts.get.mockResolvedValue({
+    cms.posts.find.mockResolvedValue({
       id: "id-1",
       slug: "hello",
       html: vi.fn().mockResolvedValue("<p>内容</p>"),
@@ -38,7 +38,7 @@ describe("getPost()", () => {
 
   it("投稿が存在しない場合は null を返す", async () => {
     const cms = makeFakeCms();
-    cms.posts.get.mockResolvedValue(null);
+    cms.posts.find.mockResolvedValue(null);
     const result = await getPost(cms as never, "not-found");
     expect(result).toBeNull();
   });

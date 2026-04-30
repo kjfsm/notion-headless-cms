@@ -3,8 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const fakeCms = {
   posts: {
     list: vi.fn(),
-    get: vi.fn(),
-    revalidate: vi.fn(),
+    find: vi.fn(),
+    check: vi.fn(),
     cache: {
       warm: vi.fn(),
     },
@@ -43,7 +43,7 @@ describe("post loader()", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("ページ詳細と HTML を返す", async () => {
-    fakeCms.posts.get.mockResolvedValue({
+    fakeCms.posts.find.mockResolvedValue({
       id: "id-1",
       slug: "hello",
       html: vi.fn().mockResolvedValue("<p>内容</p>"),
@@ -56,7 +56,7 @@ describe("post loader()", () => {
   });
 
   it("存在しないスラグは例外を投げる", async () => {
-    fakeCms.posts.get.mockResolvedValue(null);
+    fakeCms.posts.find.mockResolvedValue(null);
     await expect(
       postLoader({
         params: { slug: "not-found" },
@@ -70,7 +70,7 @@ describe("check loader()", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("バージョンが一致するときは stale: false を返す", async () => {
-    fakeCms.posts.revalidate.mockResolvedValue({ stale: false });
+    fakeCms.posts.check.mockResolvedValue({ stale: false });
     const req = new Request(
       "http://localhost/api/posts/hello/check?v=2024-01-01T00%3A00%3A00Z",
     );
@@ -84,7 +84,7 @@ describe("check loader()", () => {
   });
 
   it("バージョンが異なるときは stale: true と html を返す", async () => {
-    fakeCms.posts.revalidate.mockResolvedValue({
+    fakeCms.posts.check.mockResolvedValue({
       stale: true,
       item: {
         updatedAt: "2024-01-02T00:00:00Z",
@@ -106,7 +106,7 @@ describe("check loader()", () => {
   });
 
   it("存在しないスラグは 404 を返す", async () => {
-    fakeCms.posts.revalidate.mockResolvedValue(null);
+    fakeCms.posts.check.mockResolvedValue(null);
     const req = new Request(
       "http://localhost/api/posts/not-found/check?v=2024-01-01T00%3A00%3A00Z",
     );
