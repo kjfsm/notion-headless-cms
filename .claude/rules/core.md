@@ -15,8 +15,8 @@ paths:
 ## SWR（Stale-While-Revalidate）
 
 - まずキャッシュを返し、TTL 切れなら**裏で非同期更新**
-- `CreateCMSOptions.cache.ttlMs` が有効期間
-- `cms.cache.read.list()` / `cms.cache.read.get(slug)` が SWR アクセサ
+- `CreateCMSOptions.swr.ttlMs` が有効期間
+- `cms.posts.list()` / `cms.posts.find(slug)` が SWR アクセサ
 - `cms.cache.manage.prefetchAll()` / `revalidate()` / `sync()` / `checkList()` / `checkItem()` が管理 API
 - `cache.document` / `cache.image` 未設定時は `noopDocumentCache` / `noopImageCache` がデフォルト
 

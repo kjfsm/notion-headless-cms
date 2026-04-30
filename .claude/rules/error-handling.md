@@ -44,6 +44,9 @@ paths:
 
 - `isCMSError(err)`: CMSError かどうか
 - `isCMSErrorInNamespace(err, "source/")`: 名前空間で分岐する時はこちらを使う
+- `err.is(code)`: 特定コードと一致するか（`isCMSError(err) && err.code === code` の糖衣構文）
+- `err.inNamespace(ns)`: 名前空間で分岐する時の糖衣構文（`isCMSErrorInNamespace` 相当）
+- `matchCMSError(err, handlers)`: コードごとにハンドラを分岐する時に使う
 
 ## 追加時の手順
 
