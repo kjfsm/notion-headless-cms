@@ -586,7 +586,7 @@ describe("metadata と content の分離", () => {
     expect(getContentSpy).not.toHaveBeenCalled();
     expect(loadMarkdown).not.toHaveBeenCalled();
 
-    await result?.render();
+    await result?.html();
     expect(getContentSpy).toHaveBeenCalledWith("posts", "lazy-post");
     expect(loadMarkdown).toHaveBeenCalled();
   });

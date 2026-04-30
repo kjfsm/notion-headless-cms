@@ -548,7 +548,7 @@ describe("createCMS - beforeCacheMeta / beforeCacheContent フック", () => {
     const result = await cms.posts.get("test-post");
     // 本文をアクセスして初めて呼ばれる
     expect(beforeCacheContent).not.toHaveBeenCalled();
-    await result?.render();
+    await result?.html();
     expect(beforeCacheContent).toHaveBeenCalledOnce();
   });
 });
