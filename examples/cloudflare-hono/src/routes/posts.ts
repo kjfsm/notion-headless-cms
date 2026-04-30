@@ -13,7 +13,7 @@ posts.get("/", async (c) => {
 posts.get("/:slug", async (c) => {
   const cms = makeCms(c.env);
   const slug = c.req.param("slug");
-  const post = await cms.posts.get(slug);
+  const post = await cms.posts.find(slug);
   if (!post) return c.json({ error: "Not Found" }, 404);
   const html = await post.html();
   return c.json({ html, item: post });

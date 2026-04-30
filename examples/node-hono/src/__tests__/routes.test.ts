@@ -4,7 +4,7 @@ vi.mock("../lib/cms.js", () => ({
   cms: {
     posts: {
       list: vi.fn(),
-      get: vi.fn(),
+      find: vi.fn(),
       adjacent: vi.fn(),
     },
     $handler: vi
@@ -36,7 +36,7 @@ describe("GET /posts/:slug", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("ページ詳細と HTML を返す", async () => {
-    vi.mocked(cms.posts.get).mockResolvedValue({
+    vi.mocked(cms.posts.find).mockResolvedValue({
       id: "id-1",
       slug: "hello",
       status: "公開済み",
@@ -51,7 +51,7 @@ describe("GET /posts/:slug", () => {
   });
 
   it("存在しないスラグは 404", async () => {
-    vi.mocked(cms.posts.get).mockResolvedValue(null);
+    vi.mocked(cms.posts.find).mockResolvedValue(null);
     const res = await app.request("/posts/not-found");
     expect(res.status).toBe(404);
   });
@@ -76,7 +76,7 @@ describe("GET /ui/posts/:slug", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("記事詳細を HTML で返す", async () => {
-    vi.mocked(cms.posts.get).mockResolvedValue({
+    vi.mocked(cms.posts.find).mockResolvedValue({
       id: "id-1",
       slug: "hello",
       status: "公開済み",
@@ -92,7 +92,7 @@ describe("GET /ui/posts/:slug", () => {
   });
 
   it("存在しないスラグは HTML 404 を返す", async () => {
-    vi.mocked(cms.posts.get).mockResolvedValue(null);
+    vi.mocked(cms.posts.find).mockResolvedValue(null);
     const res = await app.request("/ui/posts/not-found");
     expect(res.status).toBe(404);
     expect(res.headers.get("content-type")).toContain("text/html");

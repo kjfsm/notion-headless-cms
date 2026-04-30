@@ -5,7 +5,7 @@ export const revalidate = 300;
 
 export async function generateStaticParams() {
   try {
-    return (await cms.posts.slugs()).map((slug) => ({ slug }));
+    return (await cms.posts.params()).map((slug) => ({ slug }));
   } catch {
     return [];
   }
@@ -17,7 +17,7 @@ export default async function PostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const post = await cms.posts.get(slug);
+  const post = await cms.posts.find(slug);
   if (!post) notFound();
 
   const html = await post.html();

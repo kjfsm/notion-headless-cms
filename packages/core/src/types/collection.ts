@@ -131,10 +131,7 @@ export interface CollectionClient<T extends BaseContentItem = BaseContentItem> {
    * @returns 差分なし: `{ stale: false }`、差分あり: `{ stale: true; item }`、
    *          アイテムが存在しない: `null`
    */
-  check(
-    slug: string,
-    currentVersion: string,
-  ): Promise<CheckResult<T> | null>;
+  check(slug: string, currentVersion: string): Promise<CheckResult<T> | null>;
 
   /** 前後アイテムのナビゲーション (リスト順序ベース)。 */
   adjacent(

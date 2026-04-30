@@ -13,7 +13,7 @@ export default defineConfig({
       publishedStatuses: ["公開済み"],
       accessibleStatuses: ["下書き", "編集中", "公開済み"],
       // 日本語プロパティ名は識別子に自動変換できないため明示マッピングする。
-      columnMappings: {
+      fieldMappings: {
         名前: "name",
         ステータス: "status",
         公開日: "publishedAt",

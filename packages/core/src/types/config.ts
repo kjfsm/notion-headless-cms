@@ -104,7 +104,8 @@ export type InferCollectionItem<C> =
  *       publishedStatuses: ["公開済み"],
  *     }
  *   },
- *   cache: memoryCache({ ttlMs: 5 * 60_000 }),
+ *   cache: [memoryCache()],
+ *   swr: { ttlMs: 5 * 60_000 },
  * });
  */
 export interface CreateCMSOptions<

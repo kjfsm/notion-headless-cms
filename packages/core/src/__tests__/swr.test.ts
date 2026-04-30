@@ -31,7 +31,7 @@ function makeMockSource(
 }
 
 describe("SWR（Stale-While-Revalidate）", () => {
-  it("TTL 設定あり・期限切れの get はブロッキングで最新データを返す", async () => {
+  it("TTL 設定あり・期限切れの find はブロッキングで最新データを返す", async () => {
     const staleItem: BaseContentItem = {
       id: "page-1",
       slug: "my-post",
@@ -77,7 +77,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     expect(waitUntil).not.toHaveBeenCalled();
   });
 
-  it("TTL 設定なしの get はキャッシュを即時返却してバックグラウンドで差分チェックする", async () => {
+  it("TTL 設定なしの find はキャッシュを即時返却してバックグラウンドで差分チェックする", async () => {
     const cachedItem: BaseContentItem = {
       id: "page-1",
       slug: "my-post",
@@ -378,7 +378,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     expect(debugFn).toHaveBeenCalledWith(
       "SWR: 差分を検出、メタを差し替え",
       expect.objectContaining({
-        operation: "get:bg",
+        operation: "find:bg",
         slug: "post-1",
         collection: "posts",
       }),
@@ -428,7 +428,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
     expect(debugFn).toHaveBeenCalledWith(
       "SWR: 差分なし、TTL をリセット",
-      expect.objectContaining({ operation: "get:bg", slug: "post-1" }),
+      expect.objectContaining({ operation: "find:bg", slug: "post-1" }),
     );
     expect(onCacheRevalidated).not.toHaveBeenCalled();
   });
@@ -480,7 +480,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     );
   });
 
-  it("TTL 設定あり・期限内の get はキャッシュを即時返却してバックグラウンド差分チェックする", async () => {
+  it("TTL 設定あり・期限内の find はキャッシュを即時返却してバックグラウンド差分チェックする", async () => {
     const freshItem: BaseContentItem = {
       id: "page-1",
       slug: "my-post",
@@ -554,7 +554,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
 });
 
 describe("metadata と content の分離", () => {
-  it("get は content を読まない（render() アクセス時に初めて読む）", async () => {
+  it("find は content を読まない（render() アクセス時に初めて読む）", async () => {
     const item: BaseContentItem = {
       id: "1",
       slug: "lazy-post",
@@ -635,7 +635,7 @@ describe("リトライ中のロガー", () => {
     );
   });
 
-  it("get() がリトライ中に logger.warn を呼ぶ", async () => {
+  it("find() がリトライ中に logger.warn を呼ぶ", async () => {
     const warnFn = vi.fn();
     const retryableErr = Object.assign(new Error("service unavailable"), {
       status: 503,

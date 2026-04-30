@@ -57,7 +57,9 @@ interface ResolvedCache {
  * - 各 adapter の `handles` を見て先勝ち (最初に見つかったもの) で振り分ける
  * - 未指定なら両方 noop
  */
-function resolveCache(cache: readonly CacheAdapter[] | undefined): ResolvedCache {
+function resolveCache(
+  cache: readonly CacheAdapter[] | undefined,
+): ResolvedCache {
   const adapters = cache ?? [];
 
   let doc: DocumentCacheOps = noopDocOps;

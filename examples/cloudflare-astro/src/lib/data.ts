@@ -7,7 +7,7 @@ export async function getPosts(cms: CmsInstance) {
 }
 
 export async function getPost(cms: CmsInstance, slug: string) {
-  const post = await cms.posts.get(slug);
+  const post = await cms.posts.find(slug);
   if (!post) return null;
   const html = await post.html();
   return { post, html };

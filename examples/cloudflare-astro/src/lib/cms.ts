@@ -14,6 +14,6 @@ export function makeCms(env: Env): Nhc {
   return createCMS({
     notionToken: env.NOTION_TOKEN,
     cache: cloudflareCache(env),
-    ttlMs: 5 * 60_000,
+    swr: { ttlMs: 5 * 60_000 },
   });
 }

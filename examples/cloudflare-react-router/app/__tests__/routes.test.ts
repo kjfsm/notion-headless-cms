@@ -4,7 +4,7 @@ const fakeCms = {
   posts: {
     list: vi.fn(),
     get: vi.fn(),
-    revalidate: vi.fn(),
+    check: vi.fn(),
     cache: {
       warm: vi.fn(),
     },
@@ -70,7 +70,7 @@ describe("check loader()", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("バージョンが一致するときは stale: false を返す", async () => {
-    fakeCms.posts.revalidate.mockResolvedValue({ stale: false });
+    fakeCms.posts.check.mockResolvedValue({ stale: false });
     const req = new Request(
       "http://localhost/api/posts/hello/check?v=2024-01-01T00%3A00%3A00Z",
     );
@@ -84,7 +84,7 @@ describe("check loader()", () => {
   });
 
   it("バージョンが異なるときは stale: true と html を返す", async () => {
-    fakeCms.posts.revalidate.mockResolvedValue({
+    fakeCms.posts.check.mockResolvedValue({
       stale: true,
       item: {
         updatedAt: "2024-01-02T00:00:00Z",
@@ -106,7 +106,7 @@ describe("check loader()", () => {
   });
 
   it("存在しないスラグは 404 を返す", async () => {
-    fakeCms.posts.revalidate.mockResolvedValue(null);
+    fakeCms.posts.check.mockResolvedValue(null);
     const req = new Request(
       "http://localhost/api/posts/not-found/check?v=2024-01-01T00%3A00%3A00Z",
     );

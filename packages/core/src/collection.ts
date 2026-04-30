@@ -404,7 +404,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
         const meta = await this.persistMeta(slug, item);
         await this.invalidateContentEntry(slug);
         this.ctx.logger?.debug?.("SWR: 差分を検出、メタを差し替え", {
-          operation: "get:bg",
+          operation: "find:bg",
           slug,
           collection: this.ctx.collection,
           notionUpdatedAt: cached.notionUpdatedAt,
@@ -418,7 +418,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
           cachedAt: Date.now(),
         });
         this.ctx.logger?.debug?.("SWR: 差分なし、TTL をリセット", {
-          operation: "get:bg",
+          operation: "find:bg",
           slug,
           collection: this.ctx.collection,
         });

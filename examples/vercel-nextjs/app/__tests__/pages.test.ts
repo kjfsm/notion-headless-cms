@@ -10,8 +10,8 @@ vi.mock("../lib/cms", () => ({
   cms: {
     posts: {
       list: vi.fn(),
-      get: vi.fn(),
-      slugs: vi.fn(),
+      find: vi.fn(),
+      params: vi.fn(),
     },
   },
 }));
@@ -37,19 +37,19 @@ describe("PostPage", () => {
 
   it("ページ詳細を取得して html() を呼ぶ", async () => {
     const mockHtml = vi.fn().mockResolvedValue("<p>内容</p>");
-    vi.mocked(cms.posts.get).mockResolvedValue({
+    vi.mocked(cms.posts.find).mockResolvedValue({
       id: "id-1",
       slug: "hello",
       publishedAt: "2024-01-01",
       html: mockHtml,
     } as never);
     await PostPage({ params: Promise.resolve({ slug: "hello" }) });
-    expect(cms.posts.get).toHaveBeenCalledWith("hello");
+    expect(cms.posts.find).toHaveBeenCalledWith("hello");
     expect(mockHtml).toHaveBeenCalled();
   });
 
   it("存在しないスラグは notFound() を呼ぶ", async () => {
-    vi.mocked(cms.posts.get).mockResolvedValue(null);
+    vi.mocked(cms.posts.find).mockResolvedValue(null);
     const { notFound } = await import("next/navigation");
     await expect(
       PostPage({ params: Promise.resolve({ slug: "not-found" }) }),

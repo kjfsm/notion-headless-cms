@@ -9,7 +9,7 @@ app.get("/posts", async (_req, res) => {
 });
 
 app.get("/posts/:slug", async (req, res) => {
-  const post = await cms.posts.get(req.params.slug);
+  const post = await cms.posts.find(req.params.slug);
   if (!post) {
     res.status(404).json({ error: "Not Found" });
     return;

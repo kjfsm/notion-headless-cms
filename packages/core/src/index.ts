@@ -22,7 +22,12 @@ export type {
   CMSErrorCode,
   CMSErrorContext,
 } from "./errors";
-export { CMSError, isCMSError, isCMSErrorInNamespace, matchCMSError } from "./errors";
+export {
+  CMSError,
+  isCMSError,
+  isCMSErrorInNamespace,
+  matchCMSError,
+} from "./errors";
 // ── $handler ───────────────────────────────────────────────────────────
 export type { HandlerAdapter, HandlerOptions } from "./handler";
 export { createHandler } from "./handler";

@@ -1175,10 +1175,7 @@ describe("CollectionClient — check()", () => {
       },
       renderer: mockRenderer,
     });
-    const result = await cms.posts.check(
-      "my-post",
-      "2024-01-01T00:00:00Z",
-    );
+    const result = await cms.posts.check("my-post", "2024-01-01T00:00:00Z");
     expect(result).toEqual({ stale: false });
   });
 
@@ -1234,10 +1231,7 @@ describe("CollectionClient — check()", () => {
       },
       renderer: mockRenderer,
     });
-    const result = await cms.posts.check(
-      "render-post",
-      "2024-01-01T00:00:00Z",
-    );
+    const result = await cms.posts.check("render-post", "2024-01-01T00:00:00Z");
     if (result?.stale) {
       const html = await result.item.html();
       expect(typeof html).toBe("string");
@@ -1252,10 +1246,7 @@ describe("CollectionClient — check()", () => {
         posts: { source: makeMockSource(), slugField: "slug" },
       },
     });
-    const result = await cms.posts.check(
-      "nonexistent",
-      "2024-01-01T00:00:00Z",
-    );
+    const result = await cms.posts.check("nonexistent", "2024-01-01T00:00:00Z");
     expect(result).toBeNull();
   });
 
@@ -1280,10 +1271,7 @@ describe("CollectionClient — check()", () => {
         },
       },
     });
-    const result = await cms.posts.check(
-      "draft-post",
-      "2024-01-01T00:00:00Z",
-    );
+    const result = await cms.posts.check("draft-post", "2024-01-01T00:00:00Z");
     expect(result).toBeNull();
   });
 

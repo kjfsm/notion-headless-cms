@@ -114,8 +114,7 @@ function resolveFields(collection: ResolvedCollection): {
       continue;
     }
 
-    let tsName =
-      fieldMappings[notionPropName] ?? toTsCamelCase(notionPropName);
+    let tsName = fieldMappings[notionPropName] ?? toTsCamelCase(notionPropName);
     if (tsName === null) {
       throw new CMSError({
         code: "cli/schema_invalid",
