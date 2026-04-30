@@ -1338,6 +1338,47 @@ describe("CollectionClient — revalidate()", () => {
   });
 });
 
+describe("CollectionClient — get() bypassCache", () => {
+  it("bypassCache: true はキャッシュを無視してソースから取得する", async () => {
+    const item: BaseContentItem = {
+      id: "1",
+      slug: "live-post",
+      lastEditedTime: "2024-01-01T00:00:00Z",
+    };
+    let callCount = 0;
+    const source = makeMockSource({
+      async list() {
+        callCount++;
+        return [item];
+      },
+    });
+    const cache = memoryCache();
+    const cms = createCMS({
+      renderer: mockRenderer,
+      collections: { posts: { source, slugField: "slug" } },
+      cache,
+    });
+
+    // 1回目: キャッシュなし → ソースから取得
+    await cms.posts.get("live-post");
+    const beforeBypass = callCount;
+
+    // bypassCache: true → キャッシュがあってもソースから取得
+    const result = await cms.posts.get("live-post", { bypassCache: true });
+    expect(result).not.toBeNull();
+    expect(callCount).toBeGreaterThan(beforeBypass);
+  });
+
+  it("bypassCache: true で存在しない slug は null を返す", async () => {
+    const cms = createCMS({
+      renderer: mockRenderer,
+      collections: { posts: { source: makeMockSource(), slugField: "slug" } },
+    });
+    const result = await cms.posts.get("nonexistent", { bypassCache: true });
+    expect(result).toBeNull();
+  });
+});
+
 describe("CollectionClient — slugField + findByProp", () => {
   it("slugField と findByProp が設定されていると効率的なプロパティ検索を使う", async () => {
     const item: BaseContentItem = {
