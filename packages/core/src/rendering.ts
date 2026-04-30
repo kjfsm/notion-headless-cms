@@ -19,7 +19,7 @@ import type {
  */
 async function loadDefaultRenderer(): Promise<RendererFn> {
   try {
-    const mod = await import("@notion-headless-cms/renderer" as string);
+    const mod = await import("@notion-headless-cms/renderer");
     return (mod as { renderMarkdown: RendererFn }).renderMarkdown;
   } catch {
     throw new CMSError({
