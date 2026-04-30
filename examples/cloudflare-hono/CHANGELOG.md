@@ -1,5 +1,14 @@
 # example-cloudflare-hono
 
+## 0.0.28
+
+### Patch Changes
+
+- Updated dependencies [63f5f38]
+  - @notion-headless-cms/core@0.3.14
+  - @notion-headless-cms/cache@0.0.7
+  - @notion-headless-cms/notion-orm@0.1.14
+
 ## 0.0.27
 
 ### Patch Changes
