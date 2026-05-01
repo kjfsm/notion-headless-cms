@@ -1,17 +1,15 @@
 ---
-"@notion-headless-cms/core": major
-"@notion-headless-cms/renderer": major
-"@notion-headless-cms/notion-orm": major
-"@notion-headless-cms/cache": major
-"@notion-headless-cms/adapter-next": major
-"@notion-headless-cms/notion-embed": major
+"@notion-headless-cms/core": patch
+"@notion-headless-cms/renderer": patch
+"@notion-headless-cms/notion-orm": patch
+"@notion-headless-cms/cache": patch
+"@notion-headless-cms/adapter-next": patch
+"@notion-headless-cms/notion-embed": patch
 ---
 
-v1.0.0 正式リリース
+ライブラリ使い勝手改善
 
-0.x で先行導入していた以下の変更を semver 上も v1.0.0 として正式公開する。
-
-### 主な変更点（0.3.x → 1.0.0）
+### 主な変更点
 
 **コレクション API**
 - `get(slug)` → `find(slug)`
