@@ -1,6 +1,6 @@
 {
   "name": "@notion-headless-cms/notion-orm",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "description": "Notion ORM layer for notion-headless-cms — implements DataSource<T>. Consumed via CLI-generated nhc-schema.ts.",
   "keywords": [
     "notion",
