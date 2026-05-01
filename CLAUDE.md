@@ -38,7 +38,7 @@ Notion DB
 
 ### コードスタイル要点
 
-- **Biome**: インデントはタブ、クォートはダブル (`"`)。`pnpm format` で自動修正
+- **Biome**: インデントはスペース 2 幅、クォートはダブル (`"`)。`pnpm format` で自動修正
 - **型インポート**: `import type { ... }` を必ず使う（`verbatimModuleSyntax: true`）
 - **モジュール**: ES Modules のみ。`require()` / CommonJS は禁止
 - **コメント**: 日本語・WHY のみ。コードで自明なことは書かない（詳細: `.claude/rules/coding-style.md`）
