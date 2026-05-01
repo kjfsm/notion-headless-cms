@@ -1,5 +1,56 @@
 # @notion-headless-cms/embeds
 
+## 0.1.5
+
+### Patch Changes
+
+- 71702e6: ライブラリ使い勝手改善
+
+  ### 主な変更点
+
+  **コレクション API**
+
+  - `get(slug)` → `find(slug)`
+  - `slugs()` → `params()`
+  - `revalidate(slug, version)` → `check(slug, version)`
+
+  **グローバル操作**
+
+  - `$collections` → `collections`
+  - `$invalidate()` → `invalidate()`
+  - `$handler()` → `handler()`
+  - `$getCachedImage()` → `getCachedImage()`
+
+  **設定**
+
+  - `cache: adapter` → `cache: [adapter]`（常に配列）
+  - `ttlMs: number` → `swr: { ttlMs: number }`
+
+  **エラー処理**
+
+  - `CMSError` に `is(code)` / `inNamespace(ns)` インスタンスメソッドを追加
+  - `matchCMSError(err, handlers)` ユーティリティを追加
+
+  **adapter-next**
+
+  - `createNextHandler(cms, opts?)` を新設（推奨 API）
+  - 旧 handler は `@deprecated`
+
+  **CLI**
+
+  - `columnMappings` → `fieldMappings`
+
+  **型の改名**
+
+  - `GetOptions` → `FindOptions`
+  - `RevalidateResult` → `CheckResult`
+  - 新設: `SWRConfig`
+
+  移行ガイド: https://github.com/kjfsm/notion-headless-cms/blob/main/docs/migration/v1.0.md
+
+- Updated dependencies [71702e6]
+  - @notion-headless-cms/renderer@0.1.7
+
 ## 0.1.4
 
 ### Patch Changes
