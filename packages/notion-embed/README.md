@@ -1,4 +1,4 @@
-# @notion-headless-cms/embeds
+# @notion-headless-cms/notion-embed
 
 Notion の `embed` / `bookmark` / `video` / `audio` / `pdf` / `link_preview` / `link_to_page` ブロックを HTML に変換し、安全にレンダリングするための拡張パッケージ。
 

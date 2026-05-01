@@ -12,7 +12,7 @@ paths:
 
 Biome の設定（`biome.json`）に従う。
 
-- **インデント**: タブ
+- **インデント**: スペース 2 幅
 - **クォート**: ダブルクォート（`""`）
 - **インポート**: Biome の `organizeImports` で自動整理（手動並び替え不要）
 - **モジュール**: ES Modules（`import` / `export`）のみ。CommonJS (`require`) は使わない

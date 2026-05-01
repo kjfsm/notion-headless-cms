@@ -10,14 +10,19 @@
     "limit": "10 kB"
   },
   {
-    "name": "adapter-node",
-    "path": "packages/adapter-node/dist/index.mjs",
-    "limit": "50 kB"
+    "name": "cache",
+    "path": "packages/cache/dist/index.mjs",
+    "limit": "5 kB"
   },
   {
-    "name": "adapter-cloudflare",
-    "path": "packages/adapter-cloudflare/dist/index.mjs",
-    "limit": "50 kB"
+    "name": "cache/cloudflare",
+    "path": "packages/cache/dist/cloudflare.mjs",
+    "limit": "10 kB"
+  },
+  {
+    "name": "cache/next",
+    "path": "packages/cache/dist/next.mjs",
+    "limit": "5 kB"
   },
   {
     "name": "adapter-next",
@@ -25,23 +30,13 @@
     "limit": "10 kB"
   },
   {
-    "name": "cache-r2",
-    "path": "packages/cache-r2/dist/index.mjs",
-    "limit": "5 kB"
-  },
-  {
-    "name": "cache-kv",
-    "path": "packages/cache-kv/dist/index.mjs",
-    "limit": "5 kB"
-  },
-  {
-    "name": "cache-next",
-    "path": "packages/cache-next/dist/index.mjs",
-    "limit": "5 kB"
+    "name": "notion-embed",
+    "path": "packages/notion-embed/dist/index.mjs",
+    "limit": "20 kB"
   },
   {
     "name": "cli",
-    "path": "packages/cli/dist/index.mjs",
-    "limit": "30 kB"
+    "path": "packages/cli/dist/cli.mjs",
+    "limit": "50 kB"
   }
 ]
