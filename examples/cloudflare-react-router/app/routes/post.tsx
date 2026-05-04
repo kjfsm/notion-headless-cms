@@ -16,14 +16,23 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const notionBlocks =
     ((await post.notionBlocks()) as NotionBlock[] | undefined) ?? [];
   const blocks = await resolveBlockImageUrls(notionBlocks, cms.cacheImage);
-  return { blocks, item: post };
+  // ItemWithContent には html() / blocks() などのメソッドが生えており、
+  // React Router の serializer はそれを転送できないため、必要なフィールドだけ抜き出す。
+  return {
+    blocks,
+    item: {
+      slug: post.slug,
+      title: post.title,
+      publishedAt: post.publishedAt,
+    },
+  };
 }
 
 export default function Post({ loaderData }: Route.ComponentProps) {
   const { blocks, item } = loaderData;
   return (
     <article>
-      <h1>{item.slug}</h1>
+      <h1>{item.title ?? item.slug}</h1>
       {item.publishedAt && <time>{item.publishedAt}</time>}
       <NotionRenderer blocks={blocks} />
     </article>
