@@ -9,7 +9,8 @@
     "build": "tsc",
     "generate": "nhc generate",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:screenshots": "PLAYWRIGHT_HTML_OPEN=never playwright test"
   },
   "dependencies": {
     "@hono/node-server": "^2.0.0",
@@ -22,6 +23,7 @@
   },
   "devDependencies": {
     "@notion-headless-cms/cli": "workspace:*",
+    "@playwright/test": "catalog:",
     "@types/node": "^25.6.0",
     "dotenv": "^17.4.2",
     "tsx": "^4.19.0",

@@ -14,6 +14,7 @@
     "preview": "pnpm run build && vite preview",
     "wrangler:dev": "rm -f .wrangler/deploy/config.json && pnpm run build && wrangler dev",
     "test": "vitest run",
+    "test:screenshots": "PLAYWRIGHT_HTML_OPEN=never playwright test",
     "typecheck": "pnpm run cf-typegen && tsc -b"
   },
   "dependencies": {
@@ -32,6 +33,7 @@
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.33.2",
     "@notion-headless-cms/cli": "workspace:*",
+    "@playwright/test": "catalog:",
     "@react-router/dev": "^7.14.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",

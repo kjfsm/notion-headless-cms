@@ -12,6 +12,11 @@ coverage
 **/generated
 **/.wrangler
 
+# Playwright スクリーンショット・レポート
+screenshots/
+playwright-report/
+test-results/
+
 # Claude Code の個人用設定
 .claude/settings.local.json
 
