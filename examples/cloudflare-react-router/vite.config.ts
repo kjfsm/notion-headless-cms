@@ -1,5 +1,6 @@
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { reactRouter } from "@react-router/dev/vite";
+import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "vite";
 
 // @cloudflare/vite-plugin と @react-router/dev/vite を併用すると、SSR 環境の出力先で衝突する:
@@ -15,5 +16,9 @@ export default defineConfig({
   environments: {
     ssr: { build: { outDir: "build/server" } },
   },
-  plugins: [cloudflare({ viteEnvironment: { name: "ssr" } }), reactRouter()],
+  plugins: [
+    cloudflare({ viteEnvironment: { name: "ssr" } }),
+    reactRouter(),
+    tailwindcss(),
+  ],
 });

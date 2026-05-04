@@ -18,8 +18,9 @@ npm スコープ `@notion-headless-cms/*` で公開。
 
 ```
 Notion DB
-  └─ notion-orm（Notion API 取得・Markdown 変換。ユーザーは直接 import しない）
+  └─ notion-orm（Notion API 取得・Markdown 変換・fetchBlockTree。ユーザーは直接 import しない）
        ├─ renderer（Markdown → HTML、remark/rehype ベース）
+       ├─ react-renderer（BlockObjectResponse → React、shadcn/ui + Tailwind v4）
        └─ core（CMS エンジン・キャッシュ・SWR・フック・nodePreset）
             ├─ cache-r2（Cloudflare R2 + cloudflarePreset）
             ├─ cache-kv（Cloudflare KV）

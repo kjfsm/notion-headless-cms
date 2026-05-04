@@ -10,6 +10,10 @@ export default {
         config: [],
       },
     },
+    "packages/react-renderer": {
+      entry: ["src/index.ts"],
+      project: ["src/**/*.{ts,tsx}"],
+    },
     "packages/cli": {
       entry: ["src/index.ts", "src/cli.ts"],
       project: ["src/**/*.ts"],

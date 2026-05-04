@@ -1,3 +1,6 @@
+import { fetchBlockTree } from "@notion-headless-cms/notion-orm";
+import { NotionRenderer } from "@notion-headless-cms/react-renderer";
+import { Client } from "@notionhq/client";
 import { notFound } from "next/navigation";
 import { cms } from "@/app/lib/cms";
 
@@ -20,7 +23,11 @@ export default async function PostPage({
   const post = await cms.posts.find(slug);
   if (!post) notFound();
 
-  const html = await post.html();
+  // react-renderer は Notion API のブロック木を直接消費するため、HTML 変換ではなく
+  // fetchBlockTree でツリーを取得して React で描画する。
+  const client = new Client({ auth: process.env.NOTION_TOKEN });
+  const blocks = await fetchBlockTree(client, post.id);
+
   return (
     <article className="max-w-2xl mx-auto px-4 py-12">
       <h1 className="text-3xl font-bold mb-4">{post.slug}</h1>
@@ -29,10 +36,7 @@ export default async function PostPage({
           {post.publishedAt}
         </time>
       )}
-      <div className="prose dark:prose-invert">
-        {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Notion レンダリング結果を表示 */}
-        <div dangerouslySetInnerHTML={{ __html: html }} />
-      </div>
+      <NotionRenderer blocks={blocks} />
     </article>
   );
 }

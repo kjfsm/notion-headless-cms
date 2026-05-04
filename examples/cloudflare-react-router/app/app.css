@@ -1,0 +1,4 @@
+@import "tailwindcss";
+
+/* react-renderer のクラスも Tailwind v4 のスキャン対象に含める */
+@source "../node_modules/@notion-headless-cms/react-renderer/dist";

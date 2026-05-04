@@ -10,8 +10,9 @@ paths:
 
 ```
 Notion DB
-  └─ @notion-headless-cms/notion-orm（API 取得 + Notion→Markdown、ユーザーは直接 import しない）
+  └─ @notion-headless-cms/notion-orm（API 取得 + Notion→Markdown + fetchBlockTree、ユーザーは直接 import しない）
        ├─ @notion-headless-cms/renderer（Markdown→HTML）
+       ├─ @notion-headless-cms/react-renderer（BlockObjectResponse→React、shadcn/ui + Tailwind v4）
        └─ @notion-headless-cms/core（CMS 統合・キャッシュ・クエリ・フック・nodePreset）
             ├─ @notion-headless-cms/cache-r2（r2Cache + cloudflarePreset）
             ├─ @notion-headless-cms/cache-kv
