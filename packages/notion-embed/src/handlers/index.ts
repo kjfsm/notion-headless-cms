@@ -9,6 +9,7 @@ import type {
   Heading3BlockObjectResponse,
   ImageBlockObjectResponse,
   LinkPreviewBlockObjectResponse,
+  LinkToPageBlockObjectResponse,
   NumberedListItemBlockObjectResponse,
   ParagraphBlockObjectResponse,
   PdfBlockObjectResponse,
@@ -33,6 +34,7 @@ import {
   renderVideo,
 } from "./embed";
 import { renderLinkPreview } from "./link-preview";
+import { renderLinkToPage } from "./link-to-page";
 import {
   renderBulletedListItem,
   renderHeading1,
@@ -100,6 +102,9 @@ export function createBlockHandlers(
     },
     link_preview: async (block) => {
       return renderLinkPreview(block as LinkPreviewBlockObjectResponse);
+    },
+    link_to_page: async (block) => {
+      return renderLinkToPage(block as LinkToPageBlockObjectResponse, rtOpts);
     },
     embed: async (block) => {
       return renderEmbed(block as EmbedBlockObjectResponse, providers);

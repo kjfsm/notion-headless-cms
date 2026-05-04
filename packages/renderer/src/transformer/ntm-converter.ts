@@ -1,5 +1,6 @@
 import type { Client } from "@notionhq/client";
 import { NotionToMarkdown } from "notion-to-md";
+import type { MdBlock } from "notion-to-md/build/types/index";
 import type { BlockConverter } from "./converter";
 import type { BlockHandler } from "./types";
 
@@ -9,6 +10,9 @@ import type { BlockHandler } from "./types";
  *
  * ⚠️ v3 のカスタムトランスフォーマーはブロックのみ受け取るため、
  *    TransformContext.pageId は空文字列になる。
+ *
+ * ⚠️ toggle ブロックはカスタムトランスフォーマーがある場合に notion-to-md が
+ *    children を取得しないため、pageToMarkdown 後に children を手動注入する。
  */
 export class NtmConverter implements BlockConverter {
   private readonly client: Client;
@@ -36,7 +40,46 @@ export class NtmConverter implements BlockConverter {
     }
 
     const blocks = await ntm.pageToMarkdown(pageId);
+
+    // toggle ブロックはカスタムトランスフォーマーがあると children が取得されないため
+    // pageToMarkdown 後に Notion API から children を取得して注入する
+    if (this.handlers.has("toggle")) {
+      await this.injectToggleChildren(ntm, blocks);
+    }
+
     // ブロックが空のとき toMarkdownString(blocks).parent は undefined になる
     return ntm.toMarkdownString(blocks).parent ?? "";
+  }
+
+  /**
+   * toggle ブロックの children を再帰的に注入する。
+   * notion-to-md のカスタムトランスフォーマーが toggle の children 取得をスキップするため、
+   * pageToMarkdown 後にここで補完する。
+   */
+  private async injectToggleChildren(
+    ntm: NotionToMarkdown,
+    blocks: MdBlock[],
+  ): Promise<void> {
+    for (const block of blocks) {
+      if (
+        block.type === "toggle" &&
+        block.children.length === 0 &&
+        block.blockId
+      ) {
+        const response = await this.client.blocks.children.list({
+          block_id: block.blockId,
+        });
+        if (response.results.length > 0) {
+          await ntm.blocksToMarkdown(
+            response.results as Parameters<typeof ntm.blocksToMarkdown>[0],
+            null,
+            block.children,
+          );
+        }
+      }
+      if (block.children.length > 0) {
+        await this.injectToggleChildren(ntm, block.children);
+      }
+    }
   }
 }
