@@ -149,7 +149,10 @@ describe("createKvOgpCache", () => {
   it("set した OGP を get で取得できる", async () => {
     const { kv } = makeKv();
     const cache = createKvOgpCache(kv);
-    await cache.set("https://example.com/", { title: "Test", description: "d" });
+    await cache.set("https://example.com/", {
+      title: "Test",
+      description: "d",
+    });
     const result = await cache.get("https://example.com/");
     expect(result).toEqual({ title: "Test", description: "d" });
   });
@@ -190,7 +193,10 @@ describe("createR2OgpImageCache", () => {
           value: ArrayBuffer,
           opts?: { httpMetadata?: { contentType?: string } },
         ) {
-          store.set(key, { data: value, contentType: opts?.httpMetadata?.contentType });
+          store.set(key, {
+            data: value,
+            contentType: opts?.httpMetadata?.contentType,
+          });
         },
       },
     };
@@ -216,7 +222,9 @@ describe("createR2OgpImageCache", () => {
 
   it("prefix オプションがキーに付く", async () => {
     const { bucket, store } = makeR2();
-    const binding = createR2OgpImageCache(bucket, "/api/images", { prefix: "custom-ogp/" });
+    const binding = createR2OgpImageCache(bucket, "/api/images", {
+      prefix: "custom-ogp/",
+    });
     await binding.cache.set("hash1", new ArrayBuffer(2), "image/jpeg");
     expect(store.has("custom-ogp/hash1")).toBe(true);
   });

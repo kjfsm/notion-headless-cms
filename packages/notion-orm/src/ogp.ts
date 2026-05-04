@@ -135,9 +135,7 @@ export interface KvOgpStore {
 
 /** `createR2OgpImageCache` に渡す R2 バインディングの最小インターフェース。Cloudflare Workers の `R2Bucket` と構造互換。 */
 export interface R2OgpBucket {
-  get(
-    key: string,
-  ): Promise<{
+  get(key: string): Promise<{
     arrayBuffer(): Promise<ArrayBuffer>;
     httpMetadata?: { contentType?: string };
   } | null>;
