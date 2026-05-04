@@ -1,7 +1,7 @@
 import type { Client } from "@notionhq/client";
 import type { BlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { describe, expect, it, vi } from "vitest";
-import { fetchBlockTree } from "../internal/fetcher/block-tree";
+import { fetchBlockTree } from "../block-tree";
 
 // 最小のブロック生成ヘルパ。型は厳密だが、テストでは id と has_children のみ参照する
 const block = (id: string, hasChildren = false): BlockObjectResponse =>

@@ -3,8 +3,8 @@ export type {
   TransformContext,
   TransformerConfig,
 } from "@notion-headless-cms/renderer";
-export type { NotionBlockTreeNode } from "./internal/fetcher/index.js";
-export { fetchBlockTree } from "./internal/fetcher/index.js";
+export type { NotionBlockTreeNode } from "./block-tree.js";
+export { fetchBlockTree } from "./block-tree.js";
 export { getPlainText, mapItem } from "./mapper";
 export type {
   NotionCollectionDefaultOptions,

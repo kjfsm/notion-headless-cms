@@ -24,6 +24,8 @@ export function YouTubeEmbed({ url }: YouTubeEmbedProps) {
           src={url}
           title="YouTube"
           className="h-full w-full"
+          // 任意の URL が混入し得るフォールバック分岐は sandbox で隔離する
+          sandbox="allow-scripts allow-same-origin allow-popups"
           allowFullScreen
         />
       </AspectRatio>

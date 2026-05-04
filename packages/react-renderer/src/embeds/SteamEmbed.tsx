@@ -34,6 +34,7 @@ export function SteamEmbed({ url }: SteamEmbedProps) {
       title="Steam"
       className="w-full rounded-lg border"
       style={{ height: 190 }}
+      sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
       frameBorder={0}
     />
   );

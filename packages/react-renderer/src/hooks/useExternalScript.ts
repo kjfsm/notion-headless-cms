@@ -13,6 +13,14 @@ function notify(src: string) {
 
 export type ScriptStatus = "idle" | "loading" | "loaded" | "error";
 
+/**
+ * 外部スクリプトを <head> に動的ロードするための内部 hook。
+ *
+ * セキュリティ注意: `src` を `<script>` タグに直接注入する。
+ * **必ずハードコードされた信頼できる URL のみを渡すこと**。
+ * Notion のコンテンツや任意のユーザー入力を渡してはならない (任意コード実行)。
+ * このパッケージ内では TwitterEmbed の widgets.js (固定 URL) のみで使用している。
+ */
 export function useExternalScript(src: string | null): ScriptStatus {
   const [status, setStatus] = useState<ScriptStatus>(() => {
     if (!src) return "idle";

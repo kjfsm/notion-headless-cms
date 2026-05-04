@@ -1,6 +1,6 @@
 import type { Client } from "@notionhq/client";
 import type { BlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
-import { getBlocks } from "./blocks.js";
+import { getBlocks } from "./internal/fetcher/blocks.js";
 
 /**
  * children を再帰的に解決済みのブロック木。

@@ -17,6 +17,7 @@ export function Pdf({ block }: BlockComponentProps<PdfBlockObjectResponse>) {
           src={fileUrl(block.pdf)}
           title="PDF preview"
           className="h-full w-full"
+          sandbox="allow-scripts allow-same-origin"
         />
       </AspectRatio>
       {block.pdf.caption.length > 0 ? (

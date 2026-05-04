@@ -17,6 +17,7 @@ export function VimeoEmbed({ url }: VimeoEmbedProps) {
         title="Vimeo"
         className="h-full w-full"
         allow="autoplay; fullscreen; picture-in-picture"
+        sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
         allowFullScreen
       />
     </AspectRatio>
