@@ -576,6 +576,43 @@ describe("createCMS - getCachedImage", () => {
   });
 });
 
+describe("createCMS - cacheImage", () => {
+  it("画像キャッシュ未設定なら cacheImage は undefined", () => {
+    const cms = createCMS({
+      renderer: mockRenderer,
+      collections: { posts: { source: makeMockSource(), slugField: "slug" } },
+    });
+    expect(cms.cacheImage).toBeUndefined();
+    expect(cms.imageProxyBase).toBe("/api/images");
+  });
+
+  it("画像キャッシュ設定時は cacheImage が /api/images/<sha256> を返す", async () => {
+    const imgGet = vi.fn().mockResolvedValue(null);
+    const imgSet = vi.fn().mockResolvedValue(undefined);
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(new ArrayBuffer(8), {
+        headers: { "content-type": "image/png" },
+      }),
+    );
+    const cms = createCMS({
+      renderer: mockRenderer,
+      collections: { posts: { source: makeMockSource(), slugField: "slug" } },
+      cache: [
+        {
+          name: "test-image-cache",
+          handles: ["image"],
+          img: { get: imgGet, set: imgSet },
+        },
+      ],
+    });
+    expect(typeof cms.cacheImage).toBe("function");
+    const url = await cms.cacheImage?.("https://notion.so/img.png");
+    expect(url).toMatch(/^\/api\/images\/[0-9a-f]{64}$/);
+    expect(imgSet).toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+});
+
 describe("createCMS - handler", () => {
   it("handler() がハンドラ関数を返す", () => {
     const cms = createCMS({

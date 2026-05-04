@@ -335,6 +335,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
       html: async () => (await loadPayload()).html,
       markdown: async () => (await loadPayload()).markdown,
       blocks: async () => (await loadPayload()).blocks,
+      notionBlocks: async () => (await loadPayload()).notionBlocks,
     }) as ItemWithContent<T>;
   }
 

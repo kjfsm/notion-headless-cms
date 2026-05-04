@@ -59,6 +59,13 @@ export type ItemWithContent<T extends BaseContentItem> = T & {
   markdown(): Promise<string>;
   /** コンテンツ AST（ContentBlock 配列）を返す。 */
   blocks(): Promise<ContentBlock[]>;
+  /**
+   * Notion API のブロックツリー（`BlockObjectResponse + children`）を返す。
+   * DataSource が `loadNotionBlocks` を実装している場合のみ非 undefined。
+   * react-renderer 等の Notion 固有 renderer に渡すために使う。
+   * core はゼロ依存ルールに従い `unknown[]` 型として扱う（利用側でキャスト）。
+   */
+  notionBlocks(): Promise<unknown[] | undefined>;
 };
 
 /** `cache.warm()` のオプション。 */

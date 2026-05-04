@@ -106,6 +106,73 @@ describe("buildCachedItemContent", () => {
       const [, opts] = vi.mocked(rendererFn).mock.calls[0] ?? [];
       expect(opts?.cacheImage).toBeUndefined();
     });
+
+    it("loadNotionBlocks があれば結果を notionBlocks フィールドに含める", async () => {
+      const item = makeItem();
+      const tree = [{ id: "b1", type: "paragraph" }];
+      const ctx = makeContext({
+        source: {
+          name: "mock",
+          async list() {
+            return [];
+          },
+          async loadMarkdown() {
+            return "# Hello";
+          },
+          async loadBlocks() {
+            return [];
+          },
+          async loadNotionBlocks() {
+            return tree;
+          },
+          getLastModified(i) {
+            return i.lastEditedTime;
+          },
+          getListVersion() {
+            return "";
+          },
+        },
+      });
+      const result = await buildCachedItemContent(item, ctx);
+      expect(result.notionBlocks).toEqual(tree);
+    });
+
+    it("loadNotionBlocks 未定義時は notionBlocks が undefined になる", async () => {
+      const item = makeItem();
+      const result = await buildCachedItemContent(item, makeContext());
+      expect(result.notionBlocks).toBeUndefined();
+    });
+
+    it("loadNotionBlocks が失敗すると source/load_blocks_failed をスローする", async () => {
+      const item = makeItem();
+      const ctx = makeContext({
+        source: {
+          name: "mock",
+          async list() {
+            return [];
+          },
+          async loadMarkdown() {
+            return "# Hello";
+          },
+          async loadBlocks() {
+            return [];
+          },
+          async loadNotionBlocks() {
+            throw new Error("notion blocks failed");
+          },
+          getLastModified(i) {
+            return i.lastEditedTime;
+          },
+          getListVersion() {
+            return "";
+          },
+        },
+      });
+      await expect(buildCachedItemContent(item, ctx)).rejects.toSatisfy(
+        (err: unknown) =>
+          isCMSError(err) && err.code === "source/load_blocks_failed",
+      );
+    });
   });
 
   describe("renderer フォールバック", () => {

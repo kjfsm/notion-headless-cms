@@ -1,6 +1,8 @@
-import { fetchBlockTree } from "@notion-headless-cms/notion-orm";
-import { NotionRenderer } from "@notion-headless-cms/react-renderer";
-import { Client } from "@notionhq/client";
+import {
+  type NotionBlock,
+  NotionRenderer,
+} from "@notion-headless-cms/react-renderer";
+import { resolveBlockImageUrls } from "@notion-headless-cms/react-renderer/server";
 import { notFound } from "next/navigation";
 import { cms } from "@/app/lib/cms";
 
@@ -23,10 +25,12 @@ export default async function PostPage({
   const post = await cms.posts.find(slug);
   if (!post) notFound();
 
-  // react-renderer は Notion API のブロック木を直接消費するため、HTML 変換ではなく
-  // fetchBlockTree でツリーを取得して React で描画する。
-  const client = new Client({ auth: process.env.NOTION_TOKEN });
-  const blocks = await fetchBlockTree(client, post.id);
+  // notionBlocks() は cms キャッシュ (SWR) 経由で取得されるため、
+  // ページごとに毎回 Notion API を叩かない。画像 URL は cms.cacheImage で
+  // プロキシ URL へ事前解決し、Notion 署名 URL の期限切れを回避する。
+  const notionBlocks =
+    ((await post.notionBlocks()) as NotionBlock[] | undefined) ?? [];
+  const blocks = await resolveBlockImageUrls(notionBlocks, cms.cacheImage);
 
   return (
     <article className="max-w-2xl mx-auto px-4 py-12">
