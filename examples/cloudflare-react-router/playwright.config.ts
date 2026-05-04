@@ -17,9 +17,10 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm exec react-router dev --port 5173",
+    command:
+      "rm -f .wrangler/deploy/config.json && pnpm run build && pnpm exec wrangler dev --port 5173",
     url: "http://localhost:5173",
     reuseExistingServer: true,
-    timeout: 60_000,
+    timeout: 120_000,
   },
 });
