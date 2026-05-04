@@ -15,7 +15,8 @@
     "wrangler:dev": "rm -f .wrangler/deploy/config.json && pnpm run build && wrangler dev",
     "test": "vitest run",
     "test:screenshots": "PLAYWRIGHT_HTML_OPEN=never playwright test",
-    "typecheck": "pnpm run cf-typegen && tsc -b"
+    "typecheck": "pnpm run cf-typegen && tsc -b",
+    "test:e2e": "PLAYWRIGHT_HTML_OPEN=never playwright test e2e/navigation.spec.ts"
   },
   "dependencies": {
     "@notion-headless-cms/cache": "workspace:*",
