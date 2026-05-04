@@ -3,7 +3,13 @@ export type {
   TransformContext,
   TransformerConfig,
 } from "@notion-headless-cms/renderer";
-export type { NotionBlockTreeNode } from "./block-tree.js";
+export type {
+  BookmarkBlockWithOgp,
+  EmbedBlockWithOgp,
+  FetchBlockTreeOgpOptions,
+  FetchBlockTreeOptions,
+  NotionBlockTreeNode,
+} from "./block-tree.js";
 export { fetchBlockTree } from "./block-tree.js";
 export { getPlainText, mapItem } from "./mapper";
 export type {
@@ -13,6 +19,13 @@ export type {
   NotionCollectionSchemaOptions,
 } from "./notion-adapter";
 export { createNotionCollection } from "./notion-adapter";
+export type {
+  OgpData,
+  OgpFetchOptions,
+  OgpImageCacheBinding,
+  OgpJsonCache,
+} from "./ogp.js";
+export { cacheOgImage, createOgpFetcher, fetchOgp } from "./ogp.js";
 export type { NotionFieldType, NotionSchema } from "./schema";
 export { defineMapping, defineSchema } from "./schema";
 export type { NotionPage, NotionRichTextItem } from "./types";
