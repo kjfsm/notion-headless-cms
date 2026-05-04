@@ -1,6 +1,3 @@
-export { DlsiteEmbed } from "./DlsiteEmbed";
-export { GenericIframeEmbed } from "./GenericIframeEmbed";
-export { SteamEmbed } from "./SteamEmbed";
-export { TwitterEmbed } from "./TwitterEmbed";
-export { VimeoEmbed } from "./VimeoEmbed";
+export type { OgCardData, OgCardProps } from "./OgCard";
+export { OgCard } from "./OgCard";
 export { YouTubeEmbed } from "./YouTubeEmbed";

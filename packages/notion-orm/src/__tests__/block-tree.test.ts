@@ -64,4 +64,89 @@ describe("fetchBlockTree", () => {
     const tree = await fetchBlockTree(client, "page1");
     expect(tree[0]?.children?.[0]?.children?.[0]?.id).toBe("l3");
   });
+
+  describe("OGP 付与", () => {
+    const embedBlock = (id: string, url: string): BlockObjectResponse =>
+      ({
+        ...block(id),
+        type: "embed",
+        embed: { url, caption: [] },
+      }) as unknown as BlockObjectResponse;
+    const bookmarkBlock = (id: string, url: string): BlockObjectResponse =>
+      ({
+        ...block(id),
+        type: "bookmark",
+        bookmark: { url, caption: [] },
+      }) as unknown as BlockObjectResponse;
+
+    const OG_HTML = `<meta property="og:title" content="T"><meta property="og:image" content="https://cdn.example.com/i.png">`;
+
+    it("enabled=false なら OGP を付与しない", async () => {
+      const client = makeClient({
+        page1: [embedBlock("e1", "https://example.com/")],
+      });
+      const fetchSpy = vi.spyOn(globalThis, "fetch");
+      const tree = await fetchBlockTree(client, "page1");
+      expect(tree[0]).not.toHaveProperty("ogp");
+      expect(fetchSpy).not.toHaveBeenCalled();
+    });
+
+    it("embed/bookmark に ogp を付与する", async () => {
+      const client = makeClient({
+        page1: [
+          embedBlock("e1", "https://example.com/a"),
+          bookmarkBlock("b1", "https://example.com/b"),
+        ],
+      });
+      vi.spyOn(globalThis, "fetch").mockImplementation(
+        async () => new Response(OG_HTML, { status: 200 }),
+      );
+      const tree = await fetchBlockTree(client, "page1", {
+        ogp: { enabled: true },
+      });
+      expect((tree[0] as { ogp?: unknown }).ogp).toMatchObject({ title: "T" });
+      expect((tree[1] as { ogp?: unknown }).ogp).toMatchObject({ title: "T" });
+    });
+
+    it("imageCache 指定時は OG 画像をキャッシュしてプロキシ URL に書き換える", async () => {
+      const client = makeClient({
+        page1: [embedBlock("e1", "https://example.com/a")],
+      });
+      const calls: string[] = [];
+      vi.spyOn(globalThis, "fetch").mockImplementation(
+        async (input: unknown) => {
+          const url = String(input);
+          calls.push(url);
+          if (url.endsWith("i.png")) {
+            return new Response(new ArrayBuffer(4), {
+              status: 200,
+              headers: { "content-type": "image/png" },
+            });
+          }
+          return new Response(OG_HTML, { status: 200 });
+        },
+      );
+      const store = new Map<string, ArrayBuffer>();
+      const tree = await fetchBlockTree(client, "page1", {
+        ogp: {
+          enabled: true,
+          imageCache: {
+            cache: {
+              async get(hash) {
+                const buf = store.get(hash);
+                return buf ? { data: buf, contentType: "image/png" } : null;
+              },
+              async set(hash, data) {
+                store.set(hash, data);
+              },
+            },
+            imageProxyBase: "/cms-image",
+          },
+        },
+      });
+      const ogp = (tree[0] as { ogp?: { image?: string } }).ogp;
+      expect(ogp?.image?.startsWith("/cms-image/")).toBe(true);
+      expect(store.size).toBe(1);
+    });
+  });
 });
