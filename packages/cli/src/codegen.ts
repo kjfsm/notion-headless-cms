@@ -279,6 +279,7 @@ function generateClientBlock(collections: ResolvedCollection[]): string {
 					token: config.notionToken,
 					dataSourceId: ${c.name}DataSourceId,
 					properties: ${c.name}Properties,
+					ogp: config.ogp ?? { enabled: true },
 					...(config.blocks ? { blocks: config.blocks } : {}),
 				}),
 				slugField: ${JSON.stringify(slugField)},
@@ -311,6 +312,8 @@ export interface NhcConfig {
 	logger?: Logger;
 	/** ライフサイクルフック (onCacheHit / onCacheMiss 等)。 */
 	hooks?: CMSHooks;
+	/** embed / bookmark ブロックの OGP 取得設定。省略時は \`{ enabled: true }\` で有効。 */
+	ogp?: FetchBlockTreeOgpOptions;
 }
 
 /** 生成された CMS クライアントの型。 */
@@ -374,7 +377,7 @@ export function generateSchemaFile(collections: ResolvedCollection[]): string {
     "\ttype RendererFn,",
     "\ttype SWRConfig,",
     '} from "@notion-headless-cms/core";',
-    'import { createNotionCollection } from "@notion-headless-cms/notion-orm";',
+    'import { createNotionCollection, type FetchBlockTreeOgpOptions } from "@notion-headless-cms/notion-orm";',
     'import type { BlockHandler } from "@notion-headless-cms/renderer";',
     "",
   ].join("\n");
