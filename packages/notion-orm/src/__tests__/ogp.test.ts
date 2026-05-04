@@ -1,5 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cacheOgImage, createOgpFetcher, fetchOgp } from "../ogp";
+import {
+  cacheOgImage,
+  createKvOgpCache,
+  createOgpFetcher,
+  createR2OgpImageCache,
+  fetchOgp,
+} from "../ogp";
 
 const HTML = `
 <html>
@@ -121,5 +127,97 @@ describe("cacheOgImage", () => {
       imageProxyBase: "/cms-image",
     });
     expect(url).toBe("https://cdn.example.com/missing.png");
+  });
+});
+
+describe("createKvOgpCache", () => {
+  const makeKv = () => {
+    const store = new Map<string, string>();
+    return {
+      store,
+      kv: {
+        async get(key: string, _type: "text") {
+          return store.get(key) ?? null;
+        },
+        async put(key: string, value: string) {
+          store.set(key, value);
+        },
+      },
+    };
+  };
+
+  it("set した OGP を get で取得できる", async () => {
+    const { kv } = makeKv();
+    const cache = createKvOgpCache(kv);
+    await cache.set("https://example.com/", { title: "Test", description: "d" });
+    const result = await cache.get("https://example.com/");
+    expect(result).toEqual({ title: "Test", description: "d" });
+  });
+
+  it("存在しないキーは null を返す", async () => {
+    const { kv } = makeKv();
+    const cache = createKvOgpCache(kv);
+    expect(await cache.get("https://missing.example/")).toBeNull();
+  });
+
+  it("prefix オプションがキーに付く", async () => {
+    const { kv, store } = makeKv();
+    const cache = createKvOgpCache(kv, { prefix: "custom:" });
+    await cache.set("https://example.com/", { title: "T" });
+    expect(store.has("custom:https://example.com/")).toBe(true);
+  });
+});
+
+describe("createR2OgpImageCache", () => {
+  const makeR2 = () => {
+    const store = new Map<
+      string,
+      { data: ArrayBuffer; contentType?: string }
+    >();
+    return {
+      store,
+      bucket: {
+        async get(key: string) {
+          const entry = store.get(key);
+          if (!entry) return null;
+          return {
+            arrayBuffer: async () => entry.data,
+            httpMetadata: { contentType: entry.contentType },
+          };
+        },
+        async put(
+          key: string,
+          value: ArrayBuffer,
+          opts?: { httpMetadata?: { contentType?: string } },
+        ) {
+          store.set(key, { data: value, contentType: opts?.httpMetadata?.contentType });
+        },
+      },
+    };
+  };
+
+  it("R2 バケットを OgpImageCacheBinding に変換する", async () => {
+    const { bucket } = makeR2();
+    const binding = createR2OgpImageCache(bucket, "/api/images");
+    expect(binding.imageProxyBase).toBe("/api/images");
+    expect(binding.cacheName).toBe("r2-ogp");
+  });
+
+  it("cache.set / cache.get が R2 に書き込む", async () => {
+    const { bucket, store } = makeR2();
+    const binding = createR2OgpImageCache(bucket, "/api/images");
+    const buf = new ArrayBuffer(4);
+    await binding.cache.set("abc123", buf, "image/png");
+    expect(store.has("ogp-images/abc123")).toBe(true);
+    const got = await binding.cache.get("abc123");
+    expect(got).not.toBeNull();
+    expect(got?.contentType).toBe("image/png");
+  });
+
+  it("prefix オプションがキーに付く", async () => {
+    const { bucket, store } = makeR2();
+    const binding = createR2OgpImageCache(bucket, "/api/images", { prefix: "custom-ogp/" });
+    await binding.cache.set("hash1", new ArrayBuffer(2), "image/jpeg");
+    expect(store.has("custom-ogp/hash1")).toBe(true);
   });
 });
