@@ -12,7 +12,8 @@
     "lint": "next lint",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "start": "next start",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:screenshots": "PLAYWRIGHT_HTML_OPEN=never playwright test"
   },
   "dependencies": {
     "@notion-headless-cms/adapter-next": "workspace:*",
@@ -28,6 +29,7 @@
   },
   "devDependencies": {
     "@notion-headless-cms/cli": "workspace:*",
+    "@playwright/test": "catalog:",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^25.6.0",
     "@types/react": "^19.0.0",

@@ -17,6 +17,7 @@
     "verify:ci": "turbo run build typecheck test:coverage publint attw --filter=\"./packages/*\" && turbo run test --filter=\"./examples/*\"",
     "generate": "turbo run generate --filter=\"./examples/*\"",
     "test:examples": "turbo run test --filter=\"./examples/*\"",
+    "screenshots": "turbo run test:screenshots --filter=\"./examples/*\"",
     "format": "biome check --write",
     "lint": "biome ci",
     "knip": "knip",
