@@ -3,17 +3,14 @@
 import type { FileBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { FileIcon } from "lucide-react";
 import { Card, CardContent } from "../components/ui/card";
-import { RichText } from "../rich-text/RichText";
+import { getFileUrl } from "../lib/notion-file";
+import { Caption } from "../rich-text/Caption";
 import type { BlockComponentProps } from "../types";
-
-function fileUrl(file: FileBlockObjectResponse["file"]): string {
-  return file.type === "external" ? file.external.url : file.file.url;
-}
 
 function fileName(block: FileBlockObjectResponse): string {
   if (block.file.name) return block.file.name;
   try {
-    const u = new URL(fileUrl(block.file));
+    const u = new URL(getFileUrl(block.file));
     return u.pathname.split("/").pop() ?? u.pathname;
   } catch {
     return "file";
@@ -29,7 +26,7 @@ export function File({ block }: BlockComponentProps<FileBlockObjectResponse>) {
           aria-hidden
         />
         <a
-          href={fileUrl(block.file)}
+          href={getFileUrl(block.file)}
           target="_blank"
           rel="noopener noreferrer"
           className="text-primary underline-offset-2 hover:underline"
@@ -38,8 +35,8 @@ export function File({ block }: BlockComponentProps<FileBlockObjectResponse>) {
         </a>
       </CardContent>
       {block.file.caption.length > 0 ? (
-        <CardContent className="pt-0 text-sm text-muted-foreground">
-          <RichText value={block.file.caption} />
+        <CardContent className="pt-0">
+          <Caption value={block.file.caption} variant="block" />
         </CardContent>
       ) : null}
     </Card>

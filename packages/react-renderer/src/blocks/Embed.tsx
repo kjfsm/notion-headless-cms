@@ -9,7 +9,7 @@ import { TwitterEmbed } from "../embeds/TwitterEmbed";
 import { VimeoEmbed } from "../embeds/VimeoEmbed";
 import { YouTubeEmbed } from "../embeds/YouTubeEmbed";
 import { detectEmbedKind } from "../lib/url-matchers";
-import { RichText } from "../rich-text/RichText";
+import { Caption } from "../rich-text/Caption";
 import type { BlockComponentProps } from "../types";
 
 export function Embed({
@@ -17,7 +17,6 @@ export function Embed({
 }: BlockComponentProps<EmbedBlockObjectResponse>) {
   const url = block.embed.url;
   const kind = detectEmbedKind(url);
-  const caption = block.embed.caption;
 
   let inner: ReactNode;
   switch (kind) {
@@ -43,11 +42,7 @@ export function Embed({
   return (
     <figure className="my-4">
       {inner}
-      {caption.length > 0 ? (
-        <figcaption className="mt-1 text-center text-sm text-muted-foreground">
-          <RichText value={caption} />
-        </figcaption>
-      ) : null}
+      <Caption value={block.embed.caption} />
     </figure>
   );
 }

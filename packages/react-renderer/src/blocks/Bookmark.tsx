@@ -2,7 +2,7 @@
 
 import type { BookmarkBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { Card, CardContent } from "../components/ui/card";
-import { RichText } from "../rich-text/RichText";
+import { Caption } from "../rich-text/Caption";
 import type { BlockComponentProps } from "../types";
 
 function hostname(url: string): string {
@@ -27,11 +27,7 @@ export function Bookmark({
           </CardContent>
         </Card>
       </a>
-      {block.bookmark.caption.length > 0 ? (
-        <p className="mt-1 text-sm text-muted-foreground">
-          <RichText value={block.bookmark.caption} />
-        </p>
-      ) : null}
+      <Caption value={block.bookmark.caption} variant="block" />
     </div>
   );
 }
