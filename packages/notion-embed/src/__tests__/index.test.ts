@@ -240,6 +240,7 @@ describe("notionEmbed()", () => {
           ctx,
         ),
       ).toContain("nhc-callout");
+      // toggle ハンドラーは summary のテキストのみ返す (<details> は notion-to-md が生成)
       expect(
         await getHandler(blocks, "toggle")(
           asBlock({
@@ -249,7 +250,7 @@ describe("notionEmbed()", () => {
           }),
           ctx,
         ),
-      ).toContain("<details");
+      ).toContain("t");
     });
 
     it("link_preview / embed", async () => {

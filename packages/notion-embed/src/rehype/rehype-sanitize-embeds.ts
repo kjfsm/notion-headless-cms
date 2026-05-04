@@ -32,7 +32,56 @@ export async function embedRehypePlugins(
     defaultSchema,
   );
 
-  return [rehypeRaw, [rehypeSanitize, schema]];
+  return [rehypeRaw, rehypeAddToggleClasses, [rehypeSanitize, schema]];
+}
+
+/**
+ * notion-to-md が生成する <details><summary> にCSSクラスを付与するプラグイン。
+ * rehype-sanitize より前に実行し、className が sanitize を通過できるようにする。
+ */
+function rehypeAddToggleClasses() {
+  return visitDetails;
+}
+
+type HastNode = {
+  type: string;
+  children?: HastNode[];
+  tagName?: string;
+  properties?: Record<string, unknown>;
+};
+
+function visitDetails(node: HastNode): void {
+  if (!node.children) return;
+  for (const child of node.children) {
+    if (child.type !== "element") continue;
+    if (child.tagName === "details") {
+      child.properties = child.properties ?? {};
+      const existing = child.properties["className"];
+      if (!Array.isArray(existing) || !existing.includes("nhc-toggle")) {
+        child.properties["className"] = Array.isArray(existing)
+          ? ["nhc-toggle", ...existing]
+          : ["nhc-toggle"];
+      }
+      // details の直接の子 summary にクラスを付与
+      if (child.children) {
+        for (const grandchild of child.children) {
+          if (
+            grandchild.type === "element" &&
+            grandchild.tagName === "summary"
+          ) {
+            grandchild.properties = grandchild.properties ?? {};
+            const gc = grandchild.properties["className"];
+            if (!Array.isArray(gc) || !gc.includes("nhc-toggle__summary")) {
+              grandchild.properties["className"] = Array.isArray(gc)
+                ? ["nhc-toggle__summary", ...gc]
+                : ["nhc-toggle__summary"];
+            }
+          }
+        }
+      }
+    }
+    visitDetails(child);
+  }
 }
 
 function buildSchema(
@@ -106,6 +155,9 @@ function notionEmbedBaseSchema(): Schema {
     ],
     attributes: {
       a: ["className", "href", "target", "rel"],
+      // defaultSchema は code: [['className', /^language-./]] で language-* のみ許可するため
+      // 先頭に無制限な "className" を追加して nhc-inline-code 等を通す
+      code: ["className"],
       img: [
         "className",
         "src",

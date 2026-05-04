@@ -19,7 +19,7 @@ app.get("/posts/:slug", async (req, res) => {
 });
 
 app.get("/api/images/:hash", async (req, res) => {
-  const binary = await cms.$getCachedImage(req.params.hash);
+  const binary = await cms.getCachedImage(req.params.hash);
   if (!binary) {
     res.status(404).send("Not Found");
     return;

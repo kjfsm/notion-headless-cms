@@ -137,7 +137,8 @@ export async function renderAudio(
   const fileUrl = extractFileUrl(block.audio);
   if (!fileUrl) return "";
   const url = normalizeUrl(fileUrl);
-  return `<audio class="nhc-audio" src="${escapeAttr(url)}" controls></audio>`;
+  // 外側を <div> で包むことで remark が <p> でラップしないようにする
+  return `<div class="nhc-audio-block"><audio class="nhc-audio" src="${escapeAttr(url)}" controls></audio></div>`;
 }
 
 /** pdf ブロックを HTML にレンダリングする。 */

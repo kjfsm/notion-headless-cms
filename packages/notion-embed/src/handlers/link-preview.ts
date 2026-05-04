@@ -14,10 +14,13 @@ export function renderLinkPreview(
   const url = normalizeUrl(block.link_preview.url);
   const label = escapeHtml(url.replace(/^https?:\/\//, ""));
 
+  // 外側を <div> で包むことで remark が <p> でラップしないようにする
   return (
+    `<div class="nhc-link-preview-block">` +
     `<a class="nhc-link-preview" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">` +
     `<span class="nhc-link-preview__icon" aria-hidden="true">🔗</span>` +
     `<span class="nhc-link-preview__label">${label}</span>` +
-    `</a>`
+    `</a>` +
+    `</div>`
   );
 }

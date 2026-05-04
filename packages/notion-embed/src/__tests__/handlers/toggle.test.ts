@@ -16,7 +16,7 @@ const blockBase = {
 };
 
 describe("renderToggle", () => {
-  it("<details><summary> を出す", async () => {
+  it("サマリーの rich text HTML を返す（<details> は含まない）", async () => {
     const block: ToggleBlockObjectResponse = {
       ...blockBase,
       type: "toggle",
@@ -41,9 +41,39 @@ describe("renderToggle", () => {
       },
     };
     const html = await renderToggle(block);
-    expect(html).toContain('<details class="nhc-toggle">');
-    expect(html).toContain('class="nhc-toggle__summary"');
+    // notion-to-md が md.toggle(summary, children) で <details> を生成するため
+    // ハンドラーは summary 部分のみを返す
+    expect(html).not.toContain("<details");
+    expect(html).not.toContain("</details>");
     expect(html).toContain("詳細");
-    expect(html).toContain("</details>");
+  });
+
+  it("bold アノテーションが <strong> として出力される", async () => {
+    const block: ToggleBlockObjectResponse = {
+      ...blockBase,
+      type: "toggle",
+      toggle: {
+        color: "default",
+        rich_text: [
+          {
+            type: "text",
+            text: { content: "太字", link: null },
+            annotations: {
+              bold: true,
+              italic: false,
+              strikethrough: false,
+              underline: false,
+              code: false,
+              color: "default",
+            },
+            plain_text: "太字",
+            href: null,
+          },
+        ],
+      },
+    };
+    const html = await renderToggle(block);
+    expect(html).toContain("<strong>");
+    expect(html).toContain("太字");
   });
 });
