@@ -67,7 +67,6 @@
     "clsx": "^2.1.1",
     "katex": "^0.16.11",
     "lucide-react": "^0.468.0",
-    "shiki": "^1.24.0",
     "tailwind-merge": "^2.6.0"
   },
   "devDependencies": {
