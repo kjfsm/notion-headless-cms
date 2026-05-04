@@ -38,6 +38,31 @@ export default function Page() {
 }
 ```
 
+### `@notion-headless-cms/core` と組み合わせて使う (推奨)
+
+`createCMS` 経由で取得すると、ブロックツリーが SWR キャッシュに乗り、画像 URL も
+`cms.cacheImage` 経由で永続プロキシ URL に書き換えられる (Notion 署名 URL の失効対策)。
+
+```tsx
+import {
+  type NotionBlock,
+  NotionRenderer,
+} from "@notion-headless-cms/react-renderer";
+// "use client" を含まないサーバーサイド専用エントリ
+import { resolveBlockImageUrls } from "@notion-headless-cms/react-renderer/server";
+
+const post = await cms.posts.find(slug);
+const notionBlocks =
+  ((await post?.notionBlocks()) as NotionBlock[] | undefined) ?? [];
+const blocks = await resolveBlockImageUrls(notionBlocks, cms.cacheImage);
+
+return <NotionRenderer blocks={blocks} />;
+```
+
+- `cms.posts.find(slug).notionBlocks()` — ブロックツリーをキャッシュ経由で取得 (`DataSource.loadNotionBlocks` を実装している場合のみ。`@notion-headless-cms/notion-orm` は対応済み)
+- `resolveBlockImageUrls(blocks, cacheImage)` — `image` / `video` / `audio` / `file` / `pdf` の `file` 型 URL を `cacheImage(url)` で書き換えた**新しい**ツリーを返す。`cacheImage` が `undefined` のときは入力をそのまま返す。`external` 型は触らない。children も再帰的に処理する
+- このサブパスは React Server Component やサーバーローダから呼び出すために `"use client"` を含めていない
+
 ### コンポーネント差し替え
 
 ```tsx

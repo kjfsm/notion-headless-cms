@@ -29,6 +29,8 @@ cms.collections
 cms.invalidate(scope?)
 cms.getCachedImage(hash)
 cms.handler(opts?)
+cms.cacheImage         // (url) => Promise<string> | undefined
+cms.imageProxyBase     // string (デフォルト "/api/images")
 ```
 
 ## `BaseContentItem` — 自動フィールド
@@ -53,12 +55,16 @@ CLI 生成の `createCMS` ラッパーで返されるすべてのアイテムに
 const post = await cms.posts.find("hello-world");
 if (post) {
   console.log(post.slug, post.status);              // item のプロパティ
-  console.log(await post.render());                 // HTML（遅延）
-  console.log(await post.render({ format: "markdown" })); // Markdown（遅延）
+  console.log(await post.html());                   // HTML（遅延）
+  console.log(await post.markdown());               // Markdown（遅延）
+  console.log(await post.blocks());                 // ContentBlock[]（遅延）
+  console.log(await post.notionBlocks());           // Notion API ブロックツリー（遅延、DataSource が対応している場合のみ）
 }
 ```
 
 返り値: `Promise<ItemWithContent<T> | null>`
+
+`notionBlocks()` は `DataSource.loadNotionBlocks` を実装している場合のみ非 `undefined` を返す（`@notion-headless-cms/notion-orm` は対応済み）。`@notion-headless-cms/react-renderer` の `<NotionRenderer blocks={...} />` に渡すブロックツリーをキャッシュ経由で取得するために使う。型は `unknown[]` なので利用側で `NotionBlock[]` へキャストする。
 
 `opts.fresh === true` を渡すと TTL に関わらずブロッキングで再取得し、本文キャッシュも破棄する。
 
@@ -177,6 +183,21 @@ const { ok, failed } = await cms.posts.cache.warm({
 | `cms.invalidate(scope?)` | 全体・コレクション単位・slug 単位のキャッシュ無効化 |
 | `cms.getCachedImage(hash)` | 画像キャッシュから `{ data, contentType }` を取得 |
 | `cms.handler(opts?)` | Web Standard な `(req: Request) => Promise<Response>` を返す |
+| `cms.cacheImage` | `(url: string) => Promise<string>` または `undefined`。Notion 画像 URL を `{imageProxyBase}/{sha256}` 形式へ変換しキャッシュへ書き込む。画像キャッシュ未設定 (noop) の場合は `undefined` |
+| `cms.imageProxyBase` | 画像プロキシのベース URL (`createCMS({ imageProxyBase })`、デフォルト `/api/images`) |
+
+### `cms.cacheImage` の利用例
+
+`@notion-headless-cms/react-renderer` で Notion 画像をプロキシ URL 経由で配信する場合、サーバー側で URL を事前に書き換える:
+
+```ts
+import { resolveBlockImageUrls } from "@notion-headless-cms/react-renderer/server";
+
+const post = await cms.posts.find(slug);
+const notionBlocks = await post.notionBlocks();
+const blocks = await resolveBlockImageUrls(notionBlocks, cms.cacheImage);
+// <NotionRenderer blocks={blocks} /> へ渡す
+```
 
 ### `handler` のルート
 
