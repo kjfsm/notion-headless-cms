@@ -161,8 +161,8 @@ describe("notionEmbed 基本スキーマ", () => {
 // 実際の HTML パイプラインを通じて rehype-raw + rehype-sanitize の挙動を検証
 async function processRawHtml(html: string): Promise<string> {
   const plugins = await embedRehypePlugins();
-  // unified の use() に PluggableList を直接渡す
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // unified の use() に PluggableList を直接渡す際、型推論が複雑になるため
+  // biome-ignore lint/suspicious/noExplicitAny: unified のチェーン型を回避
   const processor = (unified() as any)
     .use(remarkParse)
     .use(remarkRehype, { allowDangerousHtml: true })
