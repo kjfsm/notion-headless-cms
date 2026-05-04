@@ -28,10 +28,13 @@ export async function renderLinkToPage(
       ? `<span class="nhc-link-to-page__icon" aria-hidden="true">🗄️</span>`
       : `<span class="nhc-link-to-page__icon" aria-hidden="true">📋</span>`;
 
+  // 外側を <div> で包むことで remark が <p> でラップしないようにする
   return (
+    `<div class="nhc-link-to-page-block">` +
     `<a class="nhc-link-to-page" href="#">` +
     icon +
     `<span class="nhc-link-to-page__title">${escapeHtml(title)}</span>` +
-    `</a>`
+    `</a>` +
+    `</div>`
   );
 }
