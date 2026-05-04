@@ -47,7 +47,7 @@
     "generate": {
       "dependsOn": ["@notion-headless-cms/cli#build"],
       "inputs": ["nhc.config.ts", ".env", ".dev.vars"],
-      "outputs": ["src/generated/**", "app/generated/**"],
+      "outputs": ["src/generated/nhc.ts", "app/generated/nhc.ts"],
       "env": ["NOTION_DATA_SOURCE_ID", "DB_NAME"],
       "passThroughEnv": ["NOTION_TOKEN"]
     }

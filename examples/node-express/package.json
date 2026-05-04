@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "start": "node dist/index.js",
+    "start": "node --env-file-if-exists=.env dist/index.js",
     "build": "tsc",
     "generate": "nhc generate",
     "seed": "tsx scripts/seed-test-page.ts",

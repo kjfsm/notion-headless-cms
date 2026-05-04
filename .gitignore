@@ -9,7 +9,6 @@ coverage
 .dev.vars
 *.tsbuildinfo
 
-**/generated
 **/.wrangler
 
 # Playwright スクリーンショット・レポート
