@@ -41,6 +41,7 @@
       "outputs": ["screenshots/**"]
     },
     "test:e2e": {
+      "dependsOn": ["build"],
       "cache": false
     },
     "generate": {
