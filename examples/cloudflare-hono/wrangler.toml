@@ -7,14 +7,8 @@ compatibility_flags = ["nodejs_compat"]
 [observability]
 enabled = true
 
-# Cloudflare GitHub App（Workers Builds）連携時に実行されるビルドコマンド。
-# モノリポルートで依存インストール → ワークスペースパッケージのビルド →
-# nhc generate → 各 example の build スクリプトの順に実行する。
-# Hono は src/index.ts を wrangler が直接バンドルするため framework build は不要で
-# pnpm build は no-op スクリプトを叩くだけだが、4 example で同じコマンドに揃えるために含める。
-# - NOTION_TOKEN は Dashboard > Settings > Variables and Secrets の "Build variables" に追加。
 [build]
-command = "pnpm --dir=../.. install --frozen-lockfile && pnpm --dir=../.. --filter='@notion-headless-cms/*' build && pnpm generate && pnpm build"
+command = "pnpm build"
 
 [[kv_namespaces]]
 binding = "DOC_CACHE"

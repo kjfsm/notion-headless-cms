@@ -13,7 +13,7 @@ test("詳細ページに遷移できる", async ({ page }) => {
     test.skip();
     return;
   }
-  await firstLink.click();
+  await Promise.all([page.waitForURL(/\/posts\//), firstLink.click()]);
   await expect(page.locator("article")).toBeVisible();
   expect(page.url()).toContain("/posts/");
 });

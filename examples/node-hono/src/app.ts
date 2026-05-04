@@ -30,7 +30,7 @@ app.get("/posts/:slug/adjacent", async (c) => {
   return c.json({ prev, next });
 });
 
-const handler = cms.$handler({ basePath: "/api/cms" });
+const handler = cms.handler({ basePath: "/api/cms" });
 app.all("/api/cms/*", (c) => handler(c.req.raw));
 
 // --- HTML UI ---
@@ -63,7 +63,7 @@ function layout(title: string, body: string) {
 app.get("/", (c) => c.redirect("/ui"));
 
 app.get("/ui", (c) => {
-  const links = cms.$collections
+  const links = cms.collections
     .map((col: string) => `<li><a href="/ui/${col}">${col}</a></li>`)
     .join("");
   return c.html(

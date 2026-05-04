@@ -19,8 +19,8 @@ export default defineConfig({
   webServer: {
     // wrangler が src/index.ts を直接バンドルするため build は不要
     command: "pnpm exec wrangler dev --port 8787",
-    url: "http://localhost:8787",
+    url: "http://localhost:8787/posts",
     reuseExistingServer: true,
-    timeout: 60_000,
+    timeout: 120_000,
   },
 });
