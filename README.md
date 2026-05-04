@@ -11,6 +11,7 @@
 [![npm:cli](https://img.shields.io/npm/v/@notion-headless-cms/cli?label=cli)](https://www.npmjs.com/package/@notion-headless-cms/cli)
 [![npm:notion-orm](https://img.shields.io/npm/v/@notion-headless-cms/notion-orm?label=notion-orm)](https://www.npmjs.com/package/@notion-headless-cms/notion-orm)
 [![npm:renderer](https://img.shields.io/npm/v/@notion-headless-cms/renderer?label=renderer)](https://www.npmjs.com/package/@notion-headless-cms/renderer)
+[![npm:react-renderer](https://img.shields.io/npm/v/@notion-headless-cms/react-renderer?label=react-renderer)](https://www.npmjs.com/package/@notion-headless-cms/react-renderer)
 [![npm:cache](https://img.shields.io/npm/v/@notion-headless-cms/cache?label=cache)](https://www.npmjs.com/package/@notion-headless-cms/cache)
 [![npm:adapter-next](https://img.shields.io/npm/v/@notion-headless-cms/adapter-next?label=adapter-next)](https://www.npmjs.com/package/@notion-headless-cms/adapter-next)
 
@@ -69,6 +70,23 @@ npm には公開されるが、**ユーザーは直接 import しない**（CLI 
 Markdown → HTML レンダラー。remark / rehype パイプラインで変換し、GFM と画像 URL のプロキシ書き換えをサポート。
 - `renderMarkdown(markdown, options?)` — `RendererFn` として core に注入可能 (または core が動的 import)
 - `unified` / `remark-*` / `rehype-*` は `peerDependencies`
+
+#### [`@notion-headless-cms/react-renderer`](./packages/react-renderer)
+Notion ブロックを **React コンポーネントとして直接描画**するレンダラ。Markdown 経由を行わず、`BlockObjectResponse` を 1:1 で React ツリーに変換する。shadcn/ui (`new-york`) + Tailwind v4 + lucide-react ベース。
+- `<NotionRenderer blocks={...} components={...} />` — トップレベル
+- `fetchBlockTree(client, pageId)` (`@notion-headless-cms/notion-orm` 提供) で取得した children 解決済みツリーを入力にする
+- 全 block type 対応 (paragraph / heading / list / to_do / toggle / callout / quote / code (shiki) / equation (katex) / table / column_list / synced_block / embed (YouTube facade / Twitter widgets / Vimeo / DLsite / Steam) など)
+- React 利用者向け。SSR-only / 非 React フレームワーク (Astro / Hono / Express) では `notion-embed` の HTML 出力を使う
+```tsx
+import { Client } from "@notionhq/client";
+import { fetchBlockTree } from "@notion-headless-cms/notion-orm";
+import { NotionRenderer } from "@notion-headless-cms/react-renderer";
+
+const client = new Client({ auth: process.env.NOTION_TOKEN });
+const blocks = await fetchBlockTree(client, pageId);
+
+<NotionRenderer blocks={blocks} />;
+```
 
 #### [`@notion-headless-cms/notion-embed`](./packages/notion-embed)
 Notion ブロックを Notion 風 HTML にレンダリングする拡張パッケージ。`notionEmbed()` を `createCMS()` の引数に差し込むだけで有効化できる。

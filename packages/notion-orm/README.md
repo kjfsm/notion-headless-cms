@@ -29,6 +29,19 @@ Notion API を叩いて `@notion-headless-cms/core` の `DataSource<T>` を
 
 CLI が生成する `nhc-schema.ts` はこれらを透過的に呼び出す。
 
+## ユーザーが直接呼ぶ公開 API
+
+- `fetchBlockTree(client, pageId): Promise<NotionBlockTreeNode[]>` — ページ配下の全ブロックを `has_children` を再帰展開した木として返す。`@notion-headless-cms/react-renderer` の `<NotionRenderer blocks={...} />` の入力に使う
+- `NotionBlockTreeNode` — `BlockObjectResponse & { children?: NotionBlockTreeNode[] }`
+
+```ts
+import { Client } from "@notionhq/client";
+import { fetchBlockTree } from "@notion-headless-cms/notion-orm";
+
+const client = new Client({ auth: process.env.NOTION_TOKEN });
+const blocks = await fetchBlockTree(client, pageId);
+```
+
 ## なぜ「直接 import しない」設計か
 
 - ユーザーが直接 ORM レイヤーを触る必要はない (CLI が隠蔽する)
