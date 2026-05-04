@@ -56,6 +56,12 @@ export interface CachedItemContent {
   html: string;
   markdown: string;
   blocks: ContentBlock[];
+  /**
+   * Notion API 由来のブロックツリー（`BlockObjectResponse + children`）。
+   * react-renderer など Notion 固有形式を消費する利用側のために保持する。
+   * core はゼロ依存ルールに従い `@notionhq/client` の型を import しないため `unknown[]` で扱う。
+   */
+  notionBlocks?: unknown[];
   /** メタデータ整合性検証用に同じ値を保持する。 */
   notionUpdatedAt: string;
   cachedAt: number;
@@ -69,6 +75,7 @@ export interface ItemContentPayload {
   html: string;
   markdown: string;
   blocks: ContentBlock[];
+  notionBlocks?: unknown[];
   notionUpdatedAt: string;
 }
 

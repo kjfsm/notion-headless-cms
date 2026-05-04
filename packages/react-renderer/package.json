@@ -27,6 +27,10 @@
     ".": {
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
+    },
+    "./server": {
+      "types": "./dist/server.d.mts",
+      "import": "./dist/server.mjs"
     }
   },
   "files": [
@@ -36,7 +40,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "tsdown src/index.ts --format esm --dts --sourcemap --out-dir dist",
+    "build": "tsdown src/index.ts src/server.ts --format esm --dts --sourcemap --out-dir dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",

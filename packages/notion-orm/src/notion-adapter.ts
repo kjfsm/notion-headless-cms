@@ -9,6 +9,7 @@ import { CMSError, isCMSError } from "@notion-headless-cms/core";
 import type { BlockHandler } from "@notion-headless-cms/renderer";
 import { Transformer } from "@notion-headless-cms/renderer";
 import type { DataSourceObjectResponse } from "@notionhq/client";
+import { fetchBlockTree, type NotionBlockTreeNode } from "./block-tree";
 import {
   createClient,
   queryAllPages,
@@ -257,6 +258,24 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
   async loadBlocks(item: T): Promise<ContentBlock[]> {
     const markdown = await this.loadMarkdown(item);
     return markdownToBlocks(markdown);
+  }
+
+  async loadNotionBlocks(item: T): Promise<NotionBlockTreeNode[]> {
+    try {
+      return await fetchBlockTree(this.client, item.id);
+    } catch (err) {
+      if (isCMSError(err)) throw err;
+      throw new CMSError({
+        code: "source/load_blocks_failed",
+        message: "Failed to load Notion block tree.",
+        cause: err,
+        context: {
+          operation: "NotionCollection.loadNotionBlocks",
+          pageId: item.id,
+          slug: item.slug,
+        },
+      });
+    }
   }
 
   getLastModified(item: T): string {

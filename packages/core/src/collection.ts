@@ -282,7 +282,20 @@ export class CollectionClientImpl<T extends BaseContentItem>
       this.ctx.collection,
       slug,
     );
-    if (cached && cached.notionUpdatedAt === expected) return cached;
+    // notionBlocks 対応より前のキャッシュは notionBlocks を持たないため、
+    // source が loadNotionBlocks を実装していて cached に欠けている場合は
+    // 再生成して埋める (後方互換のための lazy backfill)。
+    const needsNotionBlocksBackfill =
+      this.ctx.source.loadNotionBlocks !== undefined &&
+      cached !== null &&
+      cached.notionBlocks === undefined;
+    if (
+      cached &&
+      cached.notionUpdatedAt === expected &&
+      !needsNotionBlocksBackfill
+    ) {
+      return cached;
+    }
 
     const fresh = await buildCachedItemContent(item, this.ctx.render);
     await this.ctx.docCache.setContent(this.ctx.collection, slug, fresh);
@@ -335,6 +348,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
       html: async () => (await loadPayload()).html,
       markdown: async () => (await loadPayload()).markdown,
       blocks: async () => (await loadPayload()).blocks,
+      notionBlocks: async () => (await loadPayload()).notionBlocks,
     }) as ItemWithContent<T>;
   }
 

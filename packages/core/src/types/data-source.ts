@@ -83,6 +83,14 @@ export interface DataSource<T extends BaseContentItem = BaseContentItem> {
   /** アイテム本文を Markdown 文字列で返す (html() 生成の元ソース)。 */
   loadMarkdown(item: T): Promise<string>;
 
+  /**
+   * Notion API のブロックツリー（`BlockObjectResponse + children`）を返す。
+   * 実装している場合のみ core がコンテンツキャッシュへ保存し、
+   * react-renderer など Notion 固有形式を消費する利用側で再利用できるようにする。
+   * core はゼロ依存ルールに従い `unknown[]` 型として扱う。
+   */
+  loadNotionBlocks?(item: T): Promise<unknown[]>;
+
   // --- キャッシュ整合性 ---
   /** SWR 鮮度判定用。item の最終更新タイムスタンプ。 */
   getLastModified(item: T): string;

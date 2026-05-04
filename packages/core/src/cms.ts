@@ -3,6 +3,7 @@ import { CollectionClientImpl, type CollectionContext } from "./collection";
 import { CMSError } from "./errors";
 import { createHandler, type HandlerOptions } from "./handler";
 import { mergeHooks, mergeLoggers } from "./hooks";
+import { buildCacheImageFn } from "./image";
 import type { RenderContext } from "./rendering";
 import type { RetryConfig } from "./retry";
 import { DEFAULT_RETRY_CONFIG } from "./retry";
@@ -41,6 +42,17 @@ export interface CMSGlobalOps {
   handler(opts?: HandlerOptions): (req: Request) => Promise<Response>;
   /** ハッシュキーでキャッシュ画像を取得する。 */
   getCachedImage(hash: string): Promise<StorageBinary | null>;
+  /**
+   * Notion 画像 URL を `{imageProxyBase}/{sha256}` 形式へ変換しキャッシュへ書き込む関数。
+   * 画像キャッシュが未設定 (noop) の場合は `undefined`。react-renderer の
+   * `resolveBlockImageUrls` などサーバー側で URL 書き換えに使う。
+   */
+  readonly cacheImage: ((url: string) => Promise<string>) | undefined;
+  /**
+   * 画像プロキシのベース URL (`createCMS({ imageProxyBase })`)。
+   * デフォルト `/api/images`。
+   */
+  readonly imageProxyBase: string;
 }
 
 interface ResolvedCache {
@@ -224,8 +236,14 @@ export function createCMS<C extends CollectionsConfig>(
     collections[name] = new CollectionClientImpl(ctx);
   }
 
+  const cacheImage = cacheRes.hasImg
+    ? buildCacheImageFn(cacheRes.img, cacheRes.imgName, imageProxyBase, logger)
+    : undefined;
+
   const globalOps: CMSGlobalOps = {
     collections: collectionNames,
+    cacheImage,
+    imageProxyBase,
     async invalidate(scope?: InvalidateScope): Promise<void> {
       logger?.debug?.("グローバルキャッシュを無効化", {
         operation: "invalidate",

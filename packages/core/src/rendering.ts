@@ -108,6 +108,27 @@ export async function buildCachedItemContent<T extends BaseContentItem>(
     });
   }
 
+  // react-renderer など Notion 形式を直接消費する利用側のため、
+  // DataSource が対応していれば BlockObjectResponse ツリーも取得・キャッシュする。
+  let notionBlocks: unknown[] | undefined;
+  if (ctx.source.loadNotionBlocks) {
+    try {
+      notionBlocks = await ctx.source.loadNotionBlocks(item);
+    } catch (err) {
+      if (isCMSError(err)) throw err;
+      throw new CMSError({
+        code: "source/load_blocks_failed",
+        message: "Failed to load Notion blocks from source.",
+        cause: err,
+        context: {
+          operation: "buildCachedItemContent:loadNotionBlocks",
+          pageId: item.id,
+          slug: item.slug,
+        },
+      });
+    }
+  }
+
   const cacheImage = ctx.hasImageCache
     ? buildCacheImageFn(
         ctx.imgCache,
@@ -149,6 +170,7 @@ export async function buildCachedItemContent<T extends BaseContentItem>(
     html,
     blocks,
     markdown,
+    notionBlocks,
     notionUpdatedAt: ctx.source.getLastModified(item),
     cachedAt: Date.now(),
   };

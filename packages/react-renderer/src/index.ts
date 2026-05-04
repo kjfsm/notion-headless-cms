@@ -7,6 +7,8 @@ export { BlockSwitch } from "./BlockSwitch";
 export * as Blocks from "./blocks";
 export * as Embeds from "./embeds";
 export { NotionRenderer } from "./NotionRenderer";
+export type { CacheImageFn } from "./resolve-image-urls";
+export { resolveBlockImageUrls } from "./resolve-image-urls";
 export { Caption } from "./rich-text/Caption";
 export { RichText } from "./rich-text/RichText";
 export type {
