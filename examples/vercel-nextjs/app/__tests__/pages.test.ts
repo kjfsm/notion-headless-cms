@@ -16,6 +16,16 @@ vi.mock("../lib/cms", () => ({
   },
 }));
 
+// PostPage は Notion クライアントとブロック木フェッチを直接呼ぶため、ネットワークを切る。
+vi.mock("@notionhq/client", () => ({
+  Client: class FakeClient {},
+}));
+vi.mock("@notion-headless-cms/notion-orm", () => ({
+  fetchBlockTree: vi
+    .fn()
+    .mockResolvedValue([{ object: "block", id: "b1", type: "paragraph" }]),
+}));
+
 const { cms } = await import("../lib/cms");
 const HomePage = (await import("../page")).default;
 const PostPage = (await import("../posts/[slug]/page")).default;
@@ -35,17 +45,14 @@ describe("HomePage", () => {
 describe("PostPage", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("ページ詳細を取得して html() を呼ぶ", async () => {
-    const mockHtml = vi.fn().mockResolvedValue("<p>内容</p>");
+  it("ページ詳細を取得し、ブロック木で React 描画する", async () => {
     vi.mocked(cms.posts.find).mockResolvedValue({
       id: "id-1",
       slug: "hello",
       publishedAt: "2024-01-01",
-      html: mockHtml,
     } as never);
     await PostPage({ params: Promise.resolve({ slug: "hello" }) });
     expect(cms.posts.find).toHaveBeenCalledWith("hello");
-    expect(mockHtml).toHaveBeenCalled();
   });
 
   it("存在しないスラグは notFound() を呼ぶ", async () => {

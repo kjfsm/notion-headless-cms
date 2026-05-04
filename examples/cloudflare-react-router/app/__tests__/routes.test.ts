@@ -15,6 +15,17 @@ vi.mock("../lib/cms.js", () => ({
   makeCms: vi.fn().mockReturnValue(fakeCms),
 }));
 
+// post loader は Notion クライアントとブロック木フェッチを直接使う。
+// 実 HTTP は飛ばさず、固定のブロック配列を返すようにモック。
+vi.mock("@notionhq/client", () => ({
+  Client: class FakeClient {},
+}));
+vi.mock("@notion-headless-cms/notion-orm", () => ({
+  fetchBlockTree: vi
+    .fn()
+    .mockResolvedValue([{ object: "block", id: "b1", type: "paragraph" }]),
+}));
+
 const { loader: homeLoader } = await import("../routes/home.js");
 const { loader: postLoader } = await import("../routes/post.js");
 const { loader: checkLoader } = await import("../routes/check.js");
@@ -42,17 +53,16 @@ describe("home loader()", () => {
 describe("post loader()", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("ページ詳細と HTML を返す", async () => {
+  it("ページ詳細とブロック木を返す", async () => {
     fakeCms.posts.find.mockResolvedValue({
       id: "id-1",
       slug: "hello",
-      html: vi.fn().mockResolvedValue("<p>内容</p>"),
     });
     const result = await postLoader({
       params: { slug: "hello" },
       context: fakeContext,
     } as never);
-    expect((result as { html: string }).html).toBe("<p>内容</p>");
+    expect((result as { blocks: unknown[] }).blocks).toHaveLength(1);
   });
 
   it("存在しないスラグは例外を投げる", async () => {
