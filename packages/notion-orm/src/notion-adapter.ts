@@ -9,7 +9,11 @@ import { CMSError, isCMSError } from "@notion-headless-cms/core";
 import type { BlockHandler } from "@notion-headless-cms/renderer";
 import { Transformer } from "@notion-headless-cms/renderer";
 import type { DataSourceObjectResponse } from "@notionhq/client";
-import { fetchBlockTree, type NotionBlockTreeNode } from "./block-tree";
+import {
+  type FetchBlockTreeOgpOptions,
+  fetchBlockTree,
+  type NotionBlockTreeNode,
+} from "./block-tree";
 import {
   createClient,
   queryAllPages,
@@ -41,6 +45,8 @@ interface NotionCollectionCommonOptions {
   dbName?: string;
   /** カスタムブロックハンドラーのマップ。 */
   blocks?: Record<string, BlockHandler>;
+  /** ブックマーク/埋め込みブロックの OGP 取得設定。省略時は OGP 非取得。 */
+  ogp?: FetchBlockTreeOgpOptions;
 }
 
 /** デフォルトマッパー利用時 (T = BaseContentItem) の入力。 */
@@ -93,6 +99,7 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
   private resolvingDataSourceId: Promise<string> | undefined;
   private readonly itemMapper: (page: NotionPage) => T;
   private readonly blocksConfig: Record<string, BlockHandler> | undefined;
+  private readonly ogpOptions?: FetchBlockTreeOgpOptions;
 
   constructor(opts: NotionCollectionOptions<T>) {
     if (!opts.dataSourceId && !opts.dbName) {
@@ -107,6 +114,7 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
     this.resolvedDataSourceId = opts.dataSourceId;
     this.dbName = opts.dbName;
     this.blocksConfig = opts.blocks;
+    this.ogpOptions = opts.ogp;
 
     if ("schema" in opts && opts.schema) {
       this.itemMapper = opts.schema.mapItem;
@@ -262,7 +270,9 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
 
   async loadNotionBlocks(item: T): Promise<NotionBlockTreeNode[]> {
     try {
-      return await fetchBlockTree(this.client, item.id);
+      return await fetchBlockTree(this.client, item.id, {
+        ogp: this.ogpOptions,
+      });
     } catch (err) {
       if (isCMSError(err)) throw err;
       throw new CMSError({
