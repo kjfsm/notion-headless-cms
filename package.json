@@ -18,6 +18,7 @@
     "generate": "turbo run generate --filter=\"./examples/*\"",
     "test:examples": "turbo run test --filter=\"./examples/*\"",
     "screenshots": "turbo run test:screenshots --filter=\"./examples/*\"",
+    "test:e2e": "turbo run test:e2e --filter=\"./examples/*\"",
     "format": "biome check --write",
     "lint": "biome ci",
     "knip": "knip",

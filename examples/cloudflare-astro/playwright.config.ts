@@ -17,9 +17,9 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: "pnpm exec astro dev --port 4321",
+    command: "pnpm exec astro build && pnpm exec wrangler dev --port 4321",
     url: "http://localhost:4321",
     reuseExistingServer: true,
-    timeout: 60_000,
+    timeout: 120_000,
   },
 });

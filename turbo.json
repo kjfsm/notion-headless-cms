@@ -40,6 +40,10 @@
       "cache": false,
       "outputs": ["screenshots/**"]
     },
+    "test:e2e": {
+      "dependsOn": ["build"],
+      "cache": false
+    },
     "generate": {
       "dependsOn": ["@notion-headless-cms/cli#build"],
       "inputs": ["nhc.config.ts", ".env", ".dev.vars"],
