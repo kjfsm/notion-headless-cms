@@ -125,6 +125,89 @@ export interface OgpImageCacheBinding {
   cacheName?: string;
 }
 
+// ── KV / R2 ファクトリ ──────────────────────────────────────────────────────
+
+/** `createKvOgpCache` に渡す KV バインディングの最小インターフェース。Cloudflare Workers の `KVNamespace` と構造互換。 */
+export interface KvOgpStore {
+  get(key: string, type: "text"): Promise<string | null>;
+  put(key: string, value: string): Promise<void>;
+}
+
+/** `createR2OgpImageCache` に渡す R2 バインディングの最小インターフェース。Cloudflare Workers の `R2Bucket` と構造互換。 */
+export interface R2OgpBucket {
+  get(key: string): Promise<{
+    arrayBuffer(): Promise<ArrayBuffer>;
+    httpMetadata?: { contentType?: string };
+  } | null>;
+  put(
+    key: string,
+    value: ArrayBuffer,
+    opts?: { httpMetadata?: { contentType?: string } },
+  ): Promise<unknown>;
+}
+
+/**
+ * Cloudflare KV を `OgpJsonCache` として使うファクトリ。
+ * OGP メタデータ (JSON) を KV に永続化する。
+ *
+ * @example
+ * ogp: { enabled: true, jsonCache: createKvOgpCache(env.OGP_CACHE) }
+ */
+export function createKvOgpCache(
+  kv: KvOgpStore,
+  opts: { prefix?: string } = {},
+): OgpJsonCache {
+  const prefix = opts.prefix ?? "ogp:";
+  return {
+    async get(url) {
+      const raw = await kv.get(`${prefix}${url}`, "text");
+      return raw ? (JSON.parse(raw) as OgpData) : null;
+    },
+    async set(url, data) {
+      await kv.put(`${prefix}${url}`, JSON.stringify(data));
+    },
+  };
+}
+
+/**
+ * Cloudflare R2 を `OgpImageCacheBinding` として使うファクトリ。
+ * OG 画像を R2 に保存し、プロキシ経由で配信する。
+ *
+ * @example
+ * ogp: {
+ *   enabled: true,
+ *   imageCache: createR2OgpImageCache(env.IMG_BUCKET, "/api/images"),
+ * }
+ */
+export function createR2OgpImageCache(
+  bucket: R2OgpBucket,
+  imageProxyBase: string,
+  opts: { prefix?: string; logger?: Logger; cacheName?: string } = {},
+): OgpImageCacheBinding {
+  const prefix = opts.prefix ?? "ogp-images/";
+  const cache: ImageCacheOps = {
+    async get(hash) {
+      const obj = await bucket.get(`${prefix}${hash}`);
+      if (!obj) return null;
+      return {
+        data: await obj.arrayBuffer(),
+        contentType: obj.httpMetadata?.contentType,
+      };
+    },
+    async set(hash, data, contentType) {
+      await bucket.put(`${prefix}${hash}`, data, {
+        httpMetadata: { contentType },
+      });
+    },
+  };
+  return {
+    cache,
+    imageProxyBase,
+    logger: opts.logger,
+    cacheName: opts.cacheName ?? "r2-ogp",
+  };
+}
+
 /**
  * OG 画像 URL を fetch して ImageCache に保存し、プロキシ URL を返す。
  * 既存キャッシュがあれば再 fetch しない。失敗時は元 URL を返してフォールバック。
