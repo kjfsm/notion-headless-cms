@@ -14,13 +14,13 @@
     "test:e2e": "PLAYWRIGHT_HTML_OPEN=never playwright test e2e/navigation.spec.ts"
   },
   "dependencies": {
-    "@hono/node-server": "^2.0.0",
+    "@hono/node-server": "^2.0.1",
     "@notion-headless-cms/cache": "workspace:*",
     "@notion-headless-cms/core": "workspace:*",
     "@notion-headless-cms/notion-orm": "workspace:*",
     "@notion-headless-cms/renderer": "workspace:*",
-    "hono": "^4.12.15",
-    "zod": "^4.1.12"
+    "hono": "^4.12.16",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@notion-headless-cms/cli": "workspace:*",
