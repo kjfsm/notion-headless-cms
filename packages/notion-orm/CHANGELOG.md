@@ -1,5 +1,11 @@
 # @notion-headless-cms/source-notion
 
+## 0.1.19
+
+### Patch Changes
+
+- de43db9: `createNotionCollection` に `ogp` オプションを追加し、ブックマーク/埋め込みブロックの OGP 取得を有効化できるようにした。これにより `react-renderer` の `OgCard` で外部サイトの OG 画像が表示されるようになる。
+
 ## 0.1.18
 
 ### Patch Changes
