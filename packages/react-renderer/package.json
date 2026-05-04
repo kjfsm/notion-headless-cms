@@ -1,6 +1,6 @@
 {
   "name": "@notion-headless-cms/react-renderer",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "Notion ブロックを React コンポーネントとして直接描画するレンダラ。shadcn/ui + Tailwind v4 ベース。",
   "keywords": [
     "notion",
