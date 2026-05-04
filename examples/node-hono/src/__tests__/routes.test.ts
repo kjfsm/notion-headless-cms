@@ -7,10 +7,8 @@ vi.mock("../lib/cms.js", () => ({
       find: vi.fn(),
       adjacent: vi.fn(),
     },
-    $handler: vi
-      .fn()
-      .mockReturnValue(() => new Response("{}", { status: 200 })),
-    $collections: ["posts"],
+    handler: vi.fn().mockReturnValue(() => new Response("{}", { status: 200 })),
+    collections: ["posts"],
   },
 }));
 
