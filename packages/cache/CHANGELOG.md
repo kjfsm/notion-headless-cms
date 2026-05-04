@@ -1,5 +1,11 @@
 # @notion-headless-cms/cache
 
+## 0.0.9
+
+### Patch Changes
+
+- @notion-headless-cms/core@0.3.16
+
 ## 0.0.8
 
 ### Patch Changes
