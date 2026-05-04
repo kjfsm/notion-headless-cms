@@ -57,6 +57,9 @@ describe("post loader()", () => {
     fakeCms.posts.find.mockResolvedValue({
       id: "id-1",
       slug: "hello",
+      notionBlocks: async () => [
+        { object: "block", id: "b1", type: "paragraph" },
+      ],
     });
     const result = await postLoader({
       params: { slug: "hello" },
