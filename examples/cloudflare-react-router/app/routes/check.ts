@@ -15,6 +15,6 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
   return Response.json({
     stale: true,
     html,
-    version: result.item.updatedAt,
+    version: result.item.lastEditedTime,
   });
 }

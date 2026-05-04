@@ -56,9 +56,9 @@ function visitDetails(node: HastNode): void {
     if (child.type !== "element") continue;
     if (child.tagName === "details") {
       child.properties = child.properties ?? {};
-      const existing = child.properties["className"];
+      const existing = child.properties.className;
       if (!Array.isArray(existing) || !existing.includes("nhc-toggle")) {
-        child.properties["className"] = Array.isArray(existing)
+        child.properties.className = Array.isArray(existing)
           ? ["nhc-toggle", ...existing]
           : ["nhc-toggle"];
       }
@@ -70,9 +70,9 @@ function visitDetails(node: HastNode): void {
             grandchild.tagName === "summary"
           ) {
             grandchild.properties = grandchild.properties ?? {};
-            const gc = grandchild.properties["className"];
+            const gc = grandchild.properties.className;
             if (!Array.isArray(gc) || !gc.includes("nhc-toggle__summary")) {
-              grandchild.properties["className"] = Array.isArray(gc)
+              grandchild.properties.className = Array.isArray(gc)
                 ? ["nhc-toggle__summary", ...gc]
                 : ["nhc-toggle__summary"];
             }

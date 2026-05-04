@@ -20,7 +20,10 @@ export function makeCms(env: Env): Nhc {
 
   return createCMS({
     notionToken: env.NOTION_TOKEN,
-    cache: cloudflareCache(env),
+    cache: cloudflareCache({
+      docCache: env.DOC_CACHE,
+      imgBucket: env.IMG_BUCKET,
+    }),
     renderer: embed.renderer,
     blocks: embed.blocks,
   });

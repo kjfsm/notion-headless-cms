@@ -8,7 +8,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const post = await cms.posts.find(params.slug ?? "");
   if (!post) throw data("Not Found", { status: 404 });
   const html = await post.html();
-  return { html, item: post, version: post.updatedAt };
+  return { html, item: post, version: post.lastEditedTime };
 }
 
 export default function Post({ loaderData }: Route.ComponentProps) {
@@ -19,8 +19,9 @@ export default function Post({ loaderData }: Route.ComponentProps) {
   useEffect(() => {
     fetch(`/api/posts/${item.slug}/check?v=${encodeURIComponent(version)}`)
       .then((res) => (res.ok ? res.json() : null))
-      .then((result: { stale: boolean; html?: string } | null) => {
-        if (result?.stale && result.html) setHtml(result.html);
+      .then((result: unknown) => {
+        const r = result as { stale: boolean; html?: string } | null;
+        if (r?.stale && r.html) setHtml(r.html);
       })
       .catch((err: unknown) => {
         console.warn("更新チェックに失敗しました:", err);

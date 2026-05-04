@@ -87,7 +87,7 @@ describe("check loader()", () => {
     fakeCms.posts.check.mockResolvedValue({
       stale: true,
       item: {
-        updatedAt: "2024-01-02T00:00:00Z",
+        lastEditedTime: "2024-01-02T00:00:00Z",
         html: vi.fn().mockResolvedValue("<p>新しい内容</p>"),
       },
     });
@@ -99,7 +99,11 @@ describe("check loader()", () => {
       request: req,
       context: fakeContext,
     } as never);
-    const json = await (result as Response).json();
+    const json = (await (result as Response).json()) as {
+      stale: boolean;
+      html: string;
+      version: string;
+    };
     expect(json.stale).toBe(true);
     expect(json.html).toBe("<p>新しい内容</p>");
     expect(json.version).toBe("2024-01-02T00:00:00Z");
@@ -135,7 +139,7 @@ describe("warm action()", () => {
       failed: [{ slug: "bad-slug", error: new Error("fetch failed") }],
     });
     const result = await warmAction({ context: fakeContext } as never);
-    const json = await (result as Response).json();
+    const json = (await (result as Response).json()) as { failed: unknown[] };
     expect(json.failed).toHaveLength(1);
   });
 });

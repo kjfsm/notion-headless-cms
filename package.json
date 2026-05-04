@@ -32,7 +32,6 @@
     "@arethetypeswrong/cli": "^0.18.2",
     "@biomejs/biome": "2.4.13",
     "@changesets/cli": "^2.31.0",
-    "@playwright/cli": "^0.1.11",
     "@size-limit/preset-small-lib": "^12.1.0",
     "@vitest/coverage-v8": "^4.1.5",
     "knip": "^6.7.0",
