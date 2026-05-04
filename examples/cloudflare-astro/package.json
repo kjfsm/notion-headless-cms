@@ -21,18 +21,18 @@
     "@notion-headless-cms/core": "workspace:*",
     "@notion-headless-cms/notion-orm": "workspace:*",
     "@notion-headless-cms/renderer": "workspace:*",
-    "astro": "^6.1.9",
-    "zod": "^4.3.6"
+    "astro": "^6.2.1",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.8",
-    "@astrojs/cloudflare": "^13.2.1",
+    "@astrojs/check": "^0.9.9",
+    "@astrojs/cloudflare": "^13.3.0",
     "@notion-headless-cms/cli": "workspace:*",
     "@playwright/test": "catalog:",
     "@types/node": "^25.6.0",
     "dotenv": "^17.4.2",
     "typescript": "^6.0.3",
     "vitest": "^3.2.0",
-    "wrangler": "^4.85.0"
+    "wrangler": "^4.87.0"
   }
 }
