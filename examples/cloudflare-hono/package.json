@@ -19,8 +19,8 @@
     "@notion-headless-cms/core": "workspace:*",
     "@notion-headless-cms/notion-orm": "workspace:*",
     "@notion-headless-cms/renderer": "workspace:*",
-    "hono": "^4.12.15",
-    "zod": "^4.3.6"
+    "hono": "^4.12.16",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@notion-headless-cms/cli": "workspace:*",
@@ -28,6 +28,6 @@
     "dotenv": "^17.4.2",
     "typescript": "^6.0.3",
     "vitest": "^3.2.0",
-    "wrangler": "^4.85.0"
+    "wrangler": "^4.87.0"
   }
 }
