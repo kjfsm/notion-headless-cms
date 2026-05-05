@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { CMSError } from "@notion-headless-cms/core";
 import type { CollectionGenConfig } from "./index.js";
 import type { DataSourceObjectResponse } from "./notion-client.js";
@@ -364,7 +365,7 @@ ${innerCollections.join("\n")}
 export function generateSchemaFile(collections: ResolvedCollection[]): string {
   const header = [
     "// このファイルは nhc generate により自動生成されました。手動編集は nhc generate で上書きされます。",
-    `// Generated: ${new Date().toISOString()}`,
+    `// Config SHA: ${createHash("sha256").update(JSON.stringify(collections)).digest("hex").slice(0, 8)}`,
     "",
     "import {",
     "\tcreateCMS as _createCMS,",
