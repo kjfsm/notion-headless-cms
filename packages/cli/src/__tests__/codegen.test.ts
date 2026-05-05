@@ -91,25 +91,25 @@ describe("Notion API datasource プロパティ型マッピング", () => {
     const code = generateSchemaFile([collection]);
 
     // title (slugField) は null 非許容の string
-    expect(code).toContain("\tslug: string;");
-    expect(code).not.toContain("\tslug: string | null;");
+    expect(code).toContain("  slug: string;");
+    expect(code).not.toContain("  slug: string | null;");
     // rich_text
-    expect(code).toContain("\tbody: string | null;");
+    expect(code).toContain("  body: string | null;");
     // select は literal union にせず string | null
-    expect(code).toContain("\tcategory: string | null;");
+    expect(code).toContain("  category: string | null;");
     expect(code).not.toContain('"Tech"');
     // status は literal union
     expect(code).toContain('"公開済み" | "下書き" | null');
     // multi_select
-    expect(code).toContain("\ttags: string[];");
+    expect(code).toContain("  tags: string[];");
     // date (camelCase: "Published At" → publishedAt)
-    expect(code).toContain("\tpublishedAt: string | null;");
+    expect(code).toContain("  publishedAt: string | null;");
     // number
-    expect(code).toContain("\tviews: number | null;");
+    expect(code).toContain("  views: number | null;");
     // checkbox
-    expect(code).toContain("\tfeatured: boolean;");
+    expect(code).toContain("  featured: boolean;");
     // url (camelCase: "Source URL" → sourceURL)
-    expect(code).toContain("\tsourceURL: string | null;");
+    expect(code).toContain("  sourceURL: string | null;");
   });
 
   it("サポート済みプロパティ型が PropertyMap の type 値に正しく変換される", () => {
@@ -226,17 +226,17 @@ describe("Notion API datasource プロパティ型マッピング", () => {
     }
 
     // 未サポート型のフィールドは TypeScript インターフェースに含まれない
-    expect(code).not.toContain("\tformula:");
-    expect(code).not.toContain("\trelated:");
-    expect(code).not.toContain("\trollup:");
-    expect(code).not.toContain("\tuniqueId:");
-    expect(code).not.toContain("\tpeople:");
-    expect(code).not.toContain("\tfiles:");
-    expect(code).not.toContain("\temail:");
-    expect(code).not.toContain("\tphone:");
-    expect(code).not.toContain("\tcreatedBy:");
-    expect(code).not.toContain("\tcreatedTime:");
-    expect(code).not.toContain("\tlastEditedBy:");
+    expect(code).not.toContain("  formula:");
+    expect(code).not.toContain("  related:");
+    expect(code).not.toContain("  rollup:");
+    expect(code).not.toContain("  uniqueId:");
+    expect(code).not.toContain("  people:");
+    expect(code).not.toContain("  files:");
+    expect(code).not.toContain("  email:");
+    expect(code).not.toContain("  phone:");
+    expect(code).not.toContain("  createdBy:");
+    expect(code).not.toContain("  createdTime:");
+    expect(code).not.toContain("  lastEditedBy:");
   });
 });
 
@@ -287,8 +287,8 @@ describe("generateSchemaFile", () => {
       },
     });
     const code = generateSchemaFile([collection]);
-    expect(code).toContain("\tmySlug: string;");
-    expect(code).not.toContain("\tmySlug: string | null;");
+    expect(code).toContain("  mySlug: string;");
+    expect(code).not.toContain("  mySlug: string | null;");
   });
 
   it("公開ステータス値を createCMS 内に埋め込む", () => {

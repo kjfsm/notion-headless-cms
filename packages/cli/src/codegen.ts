@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { CMSError } from "@notion-headless-cms/core";
 import type { CollectionGenConfig } from "./index.js";
 import type { DataSourceObjectResponse } from "./notion-client.js";
@@ -362,9 +363,14 @@ ${innerCollections.join("\n")}
 
 /** nhc.ts 全体のコードを生成する。 */
 export function generateSchemaFile(collections: ResolvedCollection[]): string {
+  const sha = createHash("sha256")
+    .update(JSON.stringify(collections))
+    .digest("hex");
+
+  // Biome の import 整形に合わせて notion-orm は複数行形式にする
   const header = [
     "// このファイルは nhc generate により自動生成されました。手動編集は nhc generate で上書きされます。",
-    `// Generated: ${new Date().toISOString()}`,
+    `// Config SHA: ${sha}`,
     "",
     "import {",
     "\tcreateCMS as _createCMS,",
@@ -377,9 +383,11 @@ export function generateSchemaFile(collections: ResolvedCollection[]): string {
     "\ttype RendererFn,",
     "\ttype SWRConfig,",
     '} from "@notion-headless-cms/core";',
-    'import { createNotionCollection, type FetchBlockTreeOgpOptions } from "@notion-headless-cms/notion-orm";',
+    "import {",
+    "\tcreateNotionCollection,",
+    "\ttype FetchBlockTreeOgpOptions,",
+    '} from "@notion-headless-cms/notion-orm";',
     'import type { BlockHandler } from "@notion-headless-cms/renderer";',
-    "",
   ].join("\n");
 
   const blocks = collections.map((c) =>
@@ -388,5 +396,7 @@ export function generateSchemaFile(collections: ResolvedCollection[]): string {
 
   const client = generateClientBlock(collections);
 
-  return [header, ...blocks, client, ""].join("\n\n");
+  // タブをスペースに変換し、末尾の余分な改行を正規化して Biome の lint を通す
+  const raw = [header, ...blocks, client].join("\n\n").replace(/\t/g, "  ");
+  return `${raw.trimEnd()}\n`;
 }

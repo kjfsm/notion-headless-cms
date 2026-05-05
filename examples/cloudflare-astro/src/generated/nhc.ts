@@ -1,5 +1,5 @@
 // このファイルは nhc generate により自動生成されました。手動編集は nhc generate で上書きされます。
-// Generated: 2026-05-04T07:19:10.536Z
+// Config SHA: b7e098bfa29d44d9f5d8965203317ff4816275e9452d7d767362d0321b94614d
 
 import {
   createCMS as _createCMS,
@@ -12,7 +12,10 @@ import {
   type RendererFn,
   type SWRConfig,
 } from "@notion-headless-cms/core";
-import { createNotionCollection } from "@notion-headless-cms/notion-orm";
+import {
+  createNotionCollection,
+  type FetchBlockTreeOgpOptions,
+} from "@notion-headless-cms/notion-orm";
 import type { BlockHandler } from "@notion-headless-cms/renderer";
 
 // ===========================================================
@@ -83,6 +86,8 @@ export interface NhcConfig {
   logger?: Logger;
   /** ライフサイクルフック (onCacheHit / onCacheMiss 等)。 */
   hooks?: CMSHooks;
+  /** embed / bookmark ブロックの OGP 取得設定。省略時は `{ enabled: true }` で有効。 */
+  ogp?: FetchBlockTreeOgpOptions;
 }
 
 /** 生成された CMS クライアントの型。 */
@@ -127,6 +132,7 @@ export function createCMS(config: NhcConfig): Nhc {
           token: config.notionToken,
           dataSourceId: postsDataSourceId,
           properties: postsProperties,
+          ogp: config.ogp ?? { enabled: true },
           ...(config.blocks ? { blocks: config.blocks } : {}),
         }),
         slugField: "slug",
