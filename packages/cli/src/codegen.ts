@@ -363,7 +363,15 @@ ${innerCollections.join("\n")}
 
 /** nhc.ts 全体のコードを生成する。 */
 export function generateSchemaFile(collections: ResolvedCollection[]): string {
-  const imports = [
+  const sha = createHash("sha256")
+    .update(JSON.stringify(collections))
+    .digest("hex");
+
+  // Biome の import 整形に合わせて notion-orm は複数行形式にする
+  const header = [
+    "// このファイルは nhc generate により自動生成されました。手動編集は nhc generate で上書きされます。",
+    `// Config SHA: ${sha}`,
+    "",
     "import {",
     "\tcreateCMS as _createCMS,",
     "\ttype CacheAdapter,",
@@ -375,7 +383,10 @@ export function generateSchemaFile(collections: ResolvedCollection[]): string {
     "\ttype RendererFn,",
     "\ttype SWRConfig,",
     '} from "@notion-headless-cms/core";',
-    'import { createNotionCollection, type FetchBlockTreeOgpOptions } from "@notion-headless-cms/notion-orm";',
+    "import {",
+    "\tcreateNotionCollection,",
+    "\ttype FetchBlockTreeOgpOptions,",
+    '} from "@notion-headless-cms/notion-orm";',
     'import type { BlockHandler } from "@notion-headless-cms/renderer";',
   ].join("\n");
 
@@ -385,13 +396,7 @@ export function generateSchemaFile(collections: ResolvedCollection[]): string {
 
   const client = generateClientBlock(collections);
 
-  // ヘッダー 2 行を除いた本文でSHAを計算することで、同じ設定なら再生成しても差分が出ない
-  const body = [imports, ...blocks, client, ""].join("\n\n");
-  const sha = createHash("sha256").update(body).digest("hex");
-
-  const header =
-    "// このファイルは nhc generate により自動生成されました。手動編集は nhc generate で上書きされます。\n" +
-    `// Config SHA: ${sha}`;
-
-  return `${header}\n\n${body}`;
+  // タブをスペースに変換し、末尾の余分な改行を正規化して Biome の lint を通す
+  const raw = [header, ...blocks, client].join("\n\n").replace(/\t/g, "  ");
+  return `${raw.trimEnd()}\n`;
 }
