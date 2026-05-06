@@ -1,5 +1,5 @@
 // このファイルは nhc generate により自動生成されました。手動編集は nhc generate で上書きされます。
-// Config SHA: b7e098bfa29d44d9f5d8965203317ff4816275e9452d7d767362d0321b94614d
+// Config SHA: 4487dfa0a225e4961a9d8e64d5f68f269f9b1f933210cc0fc5e70fa0d9656f4e
 
 import {
   createCMS as _createCMS,
@@ -86,7 +86,7 @@ export interface NhcConfig {
   logger?: Logger;
   /** ライフサイクルフック (onCacheHit / onCacheMiss 等)。 */
   hooks?: CMSHooks;
-  /** embed / bookmark / link_preview ブロックの OGP 取得設定。省略時は `{ enabled: true }` で有効。 */
+  /** embed / bookmark / link_preview ブロックの OGP 取得設定。省略時は OGP 非取得。 */
   ogp?: FetchBlockTreeOgpOptions;
 }
 
@@ -132,7 +132,7 @@ export function createCMS(config: NhcConfig): Nhc {
           token: config.notionToken,
           dataSourceId: postsDataSourceId,
           properties: postsProperties,
-          ogp: config.ogp ?? { enabled: true },
+          ogp: config.ogp,
           ...(config.blocks ? { blocks: config.blocks } : {}),
         }),
         slugField: "slug",
