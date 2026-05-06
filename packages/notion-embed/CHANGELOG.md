@@ -1,5 +1,11 @@
 # @notion-headless-cms/embeds
 
+## 0.1.9
+
+### Patch Changes
+
+- 1be8726: bookmark カードの見た目を整理。OGP 画像を右端に揃え、`aspect-video` + `object-contain` で見切れを防止し、`w-40 sm:w-56` の最小幅を確保して小さくなりすぎないようにした。
+
 ## 0.1.8
 
 ### Patch Changes
