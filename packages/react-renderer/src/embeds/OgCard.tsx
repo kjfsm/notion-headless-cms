@@ -57,13 +57,13 @@ export function OgCard({ url, ogp }: OgCardProps) {
           </div>
         </div>
         {image ? (
-          <div className="ml-auto aspect-video w-40 shrink-0 self-stretch bg-muted sm:w-56">
+          <div className="ml-auto w-40 shrink-0 self-stretch bg-muted sm:w-56">
             <img
               src={image}
               alt=""
               loading="lazy"
               referrerPolicy="no-referrer"
-              className="m-0 h-full w-full object-contain"
+              className="not-prose m-0 h-full w-full object-cover"
             />
           </div>
         ) : null}
