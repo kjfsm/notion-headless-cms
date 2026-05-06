@@ -57,13 +57,13 @@ export function OgCard({ url, ogp }: OgCardProps) {
           </div>
         </div>
         {image ? (
-          <div className="relative flex-[1_1_180px]">
+          <div className="relative flex-[1_1_180px] bg-muted">
             <img
               src={image}
               alt=""
               loading="lazy"
               referrerPolicy="no-referrer"
-              className="absolute inset-0 h-full w-full object-cover"
+              className="absolute inset-0 m-0 h-full w-full object-contain"
             />
           </div>
         ) : null}
