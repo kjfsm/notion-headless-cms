@@ -2,8 +2,6 @@
 
 import type { EmbedBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { OgCard, type OgCardData } from "../embeds/OgCard";
-import { YouTubeEmbed } from "../embeds/YouTubeEmbed";
-import { isYouTubeUrl } from "../lib/url-matchers";
 import { Caption } from "../rich-text/Caption";
 import type { BlockComponentProps } from "../types";
 
@@ -21,11 +19,7 @@ export function Embed({
 
   return (
     <figure className="my-4">
-      {isYouTubeUrl(url) ? (
-        <YouTubeEmbed url={url} />
-      ) : (
-        <OgCard url={url} ogp={ogp} />
-      )}
+      <OgCard url={url} ogp={ogp} />
       <Caption value={block.embed.caption} />
     </figure>
   );

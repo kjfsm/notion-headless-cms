@@ -1,9 +1,8 @@
 "use client";
 
 import type { VideoBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
-import { YouTubeEmbed } from "../embeds/YouTubeEmbed";
+import { AspectRatio } from "../components/ui/aspect-ratio";
 import { getFileUrl } from "../lib/notion-file";
-import { isYouTubeUrl } from "../lib/url-matchers";
 import { Caption } from "../rich-text/Caption";
 import type { BlockComponentProps } from "../types";
 
@@ -13,10 +12,21 @@ export function Video({
   const src = getFileUrl(block.video);
   const caption = <Caption value={block.video.caption} />;
 
-  if (isYouTubeUrl(src)) {
+  if (block.video.type === "external") {
     return (
       <figure className="my-4">
-        <YouTubeEmbed url={src} />
+        <AspectRatio
+          ratio={16 / 9}
+          className="overflow-hidden rounded-lg border"
+        >
+          <iframe
+            src={src}
+            title="Video"
+            className="h-full w-full"
+            sandbox="allow-scripts allow-same-origin allow-popups"
+            allowFullScreen
+          />
+        </AspectRatio>
         {caption}
       </figure>
     );
