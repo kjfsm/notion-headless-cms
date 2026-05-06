@@ -1,5 +1,11 @@
 # @notion-headless-cms/react-renderer
 
+## 0.0.7
+
+### Patch Changes
+
+- c2e4f03: fix(react-renderer): ブックマークサムネイルの画像が見切れる問題を修正
+
 ## 0.0.6
 
 ### Patch Changes
