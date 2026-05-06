@@ -1,5 +1,12 @@
 # example-node-express
 
+## 0.0.37
+
+### Patch Changes
+
+- Updated dependencies [d6e7f57]
+  - @notion-headless-cms/notion-embed@0.1.10
+
 ## 0.0.36
 
 ### Patch Changes
