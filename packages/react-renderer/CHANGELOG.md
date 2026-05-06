@@ -1,5 +1,22 @@
 # @notion-headless-cms/react-renderer
 
+## 0.0.5
+
+### Patch Changes
+
+- 0a5c883: link_preview ブロックに OGP カード表示を追加
+
+  - `fetchBlockTree` の OGP enrichment 対象に `link_preview` を追加（`LinkPreviewBlockWithOgp` 型を export）
+  - `renderLinkPreview` が OGP 取得に対応。成功時は bookmark と同形状のカードを出力、失敗時はシンプルリンクにフォールバック。OG 画像は `loading="lazy"` でブラウザ側取得（ミラーリングなし）
+  - `LinkPreview` React コンポーネントが `ogp` フィールドを持つ場合に `OgCard` を使用
+
+- 9c3777b: embed/video ブロックの URL 判定を廃止
+
+  - `Embed` コンポーネントの YouTube 専用分岐を削除。すべての embed URL を `OgCard` で統一描画
+  - `Video` コンポーネントの YouTube 専用分岐を削除。`block.video.type` で `"file"` は `<video>` タグ、`"external"` は `<iframe>` を使用
+  - 公開 API `Embeds.YouTubeEmbed` を削除
+  - 内部ユーティリティ `isYouTubeUrl` / `extractYouTubeId` を削除
+
 ## 0.0.4
 
 ### Patch Changes

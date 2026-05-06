@@ -1,5 +1,11 @@
 # @notion-headless-cms/cli
 
+## 1.0.24
+
+### Patch Changes
+
+- a186757: nhc generate で生成されるファイルのヘッダーコメントをタイムスタンプから SHA256（config のハッシュ）に変更し、インデントを統一
+
 ## 1.0.23
 
 ### Patch Changes
