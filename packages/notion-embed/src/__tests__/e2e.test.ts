@@ -1,6 +1,5 @@
 /**
- * DLsite アフィリエイト + Steam ウィジェットが
- * allowDangerousHtml + embedRehypePlugins を通して正しく出力されることを検証する。
+ * embedRehypePlugins を通して provider の HTML が正しく出力されることを検証する。
  */
 
 import rehypeStringify from "rehype-stringify";
@@ -8,12 +7,14 @@ import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
 import { unified } from "unified";
 import { describe, expect, it } from "vitest";
-import { dlsiteProvider } from "../providers/dlsite";
-import { steamProvider } from "../providers/steam";
+import { genericIframeProvider } from "../providers/generic-iframe";
 import { embedRehypePlugins } from "../rehype/rehype-sanitize-embeds";
+import type { EmbedProvider } from "../types";
 
-async function renderWithPlugins(markdown: string): Promise<string> {
-  const providers = [dlsiteProvider(), steamProvider()];
+async function renderWithPlugins(
+  markdown: string,
+  providers: readonly EmbedProvider[] = [],
+): Promise<string> {
   const rehypePlugins = await embedRehypePlugins({ providers });
 
   const processor = unified()
@@ -27,45 +28,24 @@ async function renderWithPlugins(markdown: string): Promise<string> {
   return String(result);
 }
 
-describe("DLsite アフィリエイト HTML の通過", () => {
-  const dlsiteHtml = `<a rel="noopener sponsored" href="https://dlaf.jp/sample" target="_blank"><img itemprop="image" src="https://img.dlsite.jp/sample.jpg" alt="" border="0" /></a>`;
-
-  it("DLsite の <a> タグが出力に残る", async () => {
-    const result = await renderWithPlugins(dlsiteHtml);
-    expect(result).toContain("<a");
-    expect(result).toContain("dlaf.jp/sample");
+describe("genericIframeProvider の iframe 通過", () => {
+  const provider = genericIframeProvider({
+    allowedHosts: ["trusted.example"],
+    width: 640,
+    height: 360,
   });
+  const iframeHtml = `<iframe src="https://trusted.example/embed" width="640" height="360" frameborder="0"></iframe>`;
 
-  it("DLsite の <img> タグが出力に残る", async () => {
-    const result = await renderWithPlugins(dlsiteHtml);
-    expect(result).toContain("<img");
-    expect(result).toContain("img.dlsite.jp/sample.jpg");
-  });
-
-  it("rel=noopener sponsored が出力に含まれる", async () => {
-    const result = await renderWithPlugins(dlsiteHtml);
-    expect(result).toContain("noopener");
-  });
-});
-
-describe("Steam ウィジェット <iframe> の通過", () => {
-  const steamHtml = `<iframe src="https://store.steampowered.com/widget/2516990/" frameborder="0" width="646" height="190"></iframe>`;
-
-  it("Steam の <iframe> タグが出力に残る", async () => {
-    const result = await renderWithPlugins(steamHtml);
+  it("許可ホストの <iframe> が出力に残る", async () => {
+    const result = await renderWithPlugins(iframeHtml, [provider]);
     expect(result).toContain("<iframe");
-    expect(result).toContain("store.steampowered.com/widget/2516990/");
+    expect(result).toContain("trusted.example/embed");
   });
 
   it("width / height 属性が保持される", async () => {
-    const result = await renderWithPlugins(steamHtml);
-    expect(result).toContain('width="646"');
-    expect(result).toContain('height="190"');
-  });
-
-  it("frameborder 属性が保持される", async () => {
-    const result = await renderWithPlugins(steamHtml);
-    expect(result).toContain('frameborder="0"');
+    const result = await renderWithPlugins(iframeHtml, [provider]);
+    expect(result).toContain('width="640"');
+    expect(result).toContain('height="360"');
   });
 });
 

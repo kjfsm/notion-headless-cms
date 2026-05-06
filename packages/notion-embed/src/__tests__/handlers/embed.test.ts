@@ -5,7 +5,7 @@ import type {
   PdfBlockObjectResponse,
   VideoBlockObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   renderAudio,
   renderEmbed,
@@ -13,7 +13,6 @@ import {
   renderPdf,
   renderVideo,
 } from "../../handlers/embed";
-import { steamProvider } from "../../providers/steam";
 
 const blockBase = {
   object: "block" as const,
@@ -36,20 +35,121 @@ describe("renderEmbed", () => {
   });
 
   it("マッチする provider があればそれを使う", async () => {
-    const html = await renderEmbed(
-      make("https://store.steampowered.com/widget/123/"),
-      [steamProvider()],
-    );
+    const provider = {
+      id: "test",
+      match: (u: string) => u.includes("example.com"),
+      render: () => ({ kind: "html" as const, html: "<custom/>" }),
+    };
+    const html = await renderEmbed(make("https://example.com/"), [provider]);
     expect(html).toContain('class="nhc-embed"');
-    expect(html).toContain("<iframe");
-    expect(html).toContain("steampowered.com/widget/123");
+    expect(html).toContain("<custom/>");
   });
 
-  it("provider が無ければ汎用 iframe にフォールバックする", async () => {
-    const html = await renderEmbed(make("https://example.com/anything"), []);
-    expect(html).toContain('class="nhc-embed"');
-    expect(html).toContain("<iframe");
-    expect(html).toContain('src="https://example.com/anything"');
+  it("provider なし・OGP あり → OGP カードを出す", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        `<html><head>
+          <meta property="og:title" content="サンプルページ" />
+          <meta property="og:description" content="説明文" />
+          <meta property="og:image" content="https://example.com/og.png" />
+        </head></html>`,
+        { headers: { "content-type": "text/html" } },
+      ),
+    );
+    try {
+      const html = await renderEmbed(make("https://example.com/page"), []);
+      expect(html).toContain('class="nhc-embed"');
+      expect(html).toContain("nhc-bookmark");
+      expect(html).toContain("サンプルページ");
+      expect(html).toContain("説明文");
+      expect(html).toContain("og.png");
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("provider なし・OGP 取得失敗 → 汎用 iframe にフォールバック", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new Error("network error"));
+    try {
+      const html = await renderEmbed(make("https://example.com/anything"), []);
+      expect(html).toContain('class="nhc-embed"');
+      expect(html).toContain("<iframe");
+      expect(html).toContain('src="https://example.com/anything"');
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("OGP データなし (空レスポンス) → 汎用 iframe にフォールバック", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response("<html><body>no og tags</body></html>", {
+        headers: { "content-type": "text/html" },
+      }),
+    );
+    try {
+      const html = await renderEmbed(make("https://example.com/anything"), []);
+      expect(html).toContain("<iframe");
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("ogpOptions: false → OGP 取得せず即 iframe", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(new Response(""));
+    try {
+      const html = await renderEmbed(
+        make("https://example.com/anything"),
+        [],
+        false,
+      );
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(html).toContain("<iframe");
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("OGP title のみ (description/siteName/image なし) → カード出力、ホスト名は使わない", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response(
+          `<html><head><meta property="og:title" content="タイトルのみ" /></head></html>`,
+          { headers: { "content-type": "text/html" } },
+        ),
+      );
+    try {
+      const html = await renderEmbed(make("https://example.com/page"), []);
+      expect(html).toContain("nhc-bookmark");
+      expect(html).toContain("タイトルのみ");
+      expect(html).not.toContain("nhc-bookmark__description");
+      expect(html).not.toContain("nhc-bookmark__site");
+      expect(html).not.toContain("nhc-bookmark__cover");
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("OGP title なし → URL のホスト名をタイトルとして使う", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(
+        new Response(
+          `<html><head><meta property="og:description" content="説明のみ" /></head></html>`,
+          { headers: { "content-type": "text/html" } },
+        ),
+      );
+    try {
+      const html = await renderEmbed(make("https://example.com/page"), []);
+      expect(html).toContain("nhc-bookmark");
+      expect(html).toContain("example.com");
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 
   it("provider が skip を返したら空文字列", async () => {
@@ -63,32 +163,39 @@ describe("renderEmbed", () => {
   });
 
   it("caption があれば nhc-embed__caption を付ける", async () => {
-    const block: EmbedBlockObjectResponse = {
-      ...blockBase,
-      type: "embed",
-      embed: {
-        url: "https://example.com",
-        caption: [
-          {
-            type: "text",
-            text: { content: "キャプション", link: null },
-            annotations: {
-              bold: false,
-              italic: false,
-              strikethrough: false,
-              underline: false,
-              code: false,
-              color: "default",
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new Error("network error"));
+    try {
+      const block: EmbedBlockObjectResponse = {
+        ...blockBase,
+        type: "embed",
+        embed: {
+          url: "https://example.com",
+          caption: [
+            {
+              type: "text",
+              text: { content: "キャプション", link: null },
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: "default",
+              },
+              plain_text: "キャプション",
+              href: null,
             },
-            plain_text: "キャプション",
-            href: null,
-          },
-        ],
-      },
-    };
-    const html = await renderEmbed(block, []);
-    expect(html).toContain('class="nhc-embed__caption"');
-    expect(html).toContain("キャプション");
+          ],
+        },
+      };
+      const html = await renderEmbed(block, []);
+      expect(html).toContain('class="nhc-embed__caption"');
+      expect(html).toContain("キャプション");
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 });
 

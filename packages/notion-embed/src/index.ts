@@ -7,12 +7,9 @@ import type {
 } from "./types";
 
 export { createOgpFetcher, fetchOgp } from "./ogp";
-export { dlsiteProvider } from "./providers/dlsite";
 export { genericIframeProvider } from "./providers/generic-iframe";
 export { defineEmbedProvider, matchProvider } from "./providers/index";
-export { steamProvider } from "./providers/steam";
 export { twitterProvider } from "./providers/twitter";
-export { vimeoProvider } from "./providers/vimeo";
 export { youtubeProvider } from "./providers/youtube";
 export { embedRehypePlugins } from "./rehype/rehype-sanitize-embeds";
 export { renderRichText } from "./render-rich-text";
@@ -37,7 +34,7 @@ export {
  *
  * @example
  * ```ts
- * const embed = notionEmbed({ providers: [steamProvider()] });
+ * const embed = notionEmbed({ providers: [youtubeProvider()] });
  *
  * export const cms = createCMS({
  *   ...nodePreset({ renderer: embed.renderer }),
