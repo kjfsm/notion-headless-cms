@@ -1,5 +1,11 @@
 # @notion-headless-cms/react-renderer
 
+## 0.0.10
+
+### Patch Changes
+
+- 2948a65: Image / Embed ブロックの上下マージン（my-4）を除去
+
 ## 0.0.9
 
 ### Patch Changes
