@@ -9,10 +9,11 @@ import { unified } from "unified";
 import { describe, expect, it } from "vitest";
 import { genericIframeProvider } from "../providers/generic-iframe";
 import { embedRehypePlugins } from "../rehype/rehype-sanitize-embeds";
+import type { EmbedProvider } from "../types";
 
 async function renderWithPlugins(
   markdown: string,
-  providers = [] as Parameters<typeof embedRehypePlugins>[0]["providers"],
+  providers: readonly EmbedProvider[] = [],
 ): Promise<string> {
   const rehypePlugins = await embedRehypePlugins({ providers });
 
