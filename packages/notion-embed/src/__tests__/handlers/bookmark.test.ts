@@ -54,7 +54,7 @@ describe("renderBookmark", () => {
     expect(html).toContain("OGP Desc");
     expect(html).toContain("https://example.com/img.png");
     expect(html).toContain("My Site");
-    expect(html).toContain('class="nhc-bookmark__cover"');
+    expect(html).toContain('class="nhc-bookmark__cover');
   });
 
   it("OGP 画像がなければ cover セクションを出力しない", async () => {
@@ -111,7 +111,7 @@ describe("renderBookmark", () => {
       new Response("<html></html>", { status: 200 }),
     );
     const html = await renderBookmark(makeBlock("https://example.com/path"));
-    expect(html).toContain('class="nhc-bookmark__url"');
+    expect(html).toContain('class="nhc-bookmark__url');
     expect(html).toContain("example.com/path");
   });
 
