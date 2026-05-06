@@ -9,7 +9,7 @@ export function Image({
   block,
 }: BlockComponentProps<ImageBlockObjectResponse>) {
   return (
-    <figure className="my-4">
+    <figure>
       <img
         src={getFileUrl(block.image)}
         alt={block.image.caption.map((rt) => rt.plain_text).join("") || ""}

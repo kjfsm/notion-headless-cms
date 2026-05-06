@@ -34,7 +34,7 @@ export function Embed({
   const size = resolveEmbedSize(url);
 
   return (
-    <figure className="my-4">
+    <figure>
       <iframe
         src={url}
         title="Embed"
