@@ -1,5 +1,5 @@
 ---
-"@notion-headless-cms/notion-embed": minor
+"@notion-headless-cms/notion-embed": patch
 ---
 
 Steam・Vimeo・DLsite の組み込み provider を削除し、embed ブロックの汎用フォールバックに OGP カード表示を追加
