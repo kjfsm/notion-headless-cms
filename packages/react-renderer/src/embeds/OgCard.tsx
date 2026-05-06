@@ -44,8 +44,8 @@ export function OgCard({ url, ogp }: OgCardProps) {
       rel="noopener noreferrer"
       className="block no-underline"
     >
-      <Card className="flex flex-row overflow-hidden p-0 transition-colors hover:bg-muted/40">
-        <div className="flex min-w-0 flex-[4_1_180px] flex-col gap-1 p-4">
+      <Card className="flex flex-row items-stretch overflow-hidden p-0 transition-colors hover:bg-muted/40">
+        <div className="flex min-w-0 flex-1 flex-col gap-1 p-4">
           <div className="truncate font-medium">{title}</div>
           {description ? (
             <div className="line-clamp-2 text-xs text-muted-foreground">
@@ -57,13 +57,13 @@ export function OgCard({ url, ogp }: OgCardProps) {
           </div>
         </div>
         {image ? (
-          <div className="relative flex-[1_1_180px] bg-muted">
+          <div className="ml-auto aspect-video w-40 shrink-0 self-stretch bg-muted sm:w-56">
             <img
               src={image}
               alt=""
               loading="lazy"
               referrerPolicy="no-referrer"
-              className="absolute inset-0 m-0 h-full w-full object-contain"
+              className="m-0 h-full w-full object-contain"
             />
           </div>
         ) : null}

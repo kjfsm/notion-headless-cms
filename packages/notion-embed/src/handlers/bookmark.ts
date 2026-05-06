@@ -52,38 +52,42 @@ export async function renderBookmark(
       })(),
   );
   const description = ogp.description
-    ? `<p class="nhc-bookmark__description">${escapeHtml(ogp.description)}</p>`
+    ? `<p class="nhc-bookmark__description line-clamp-2 text-xs text-gray-500">${escapeHtml(ogp.description)}</p>`
     : "";
   const siteName = ogp.siteName
-    ? `<p class="nhc-bookmark__site">${escapeHtml(ogp.siteName)}</p>`
+    ? `<p class="nhc-bookmark__site truncate text-xs text-gray-500">${escapeHtml(ogp.siteName)}</p>`
     : "";
   const displayUrl = escapeHtml(url.replace(/^https?:\/\//, "").slice(0, 60));
+  // 画像コンテナで aspect-video + object-contain を使い、見切れずに最後まで表示する。
+  // shrink-0 + ml-auto + w-40/sm:w-56 で右端に揃え、テキスト側に潰されて小さくなりすぎないようにする。
   const imageHtml = ogp.image
-    ? `<img class="nhc-bookmark__image" src="${escapeAttr(ogp.image)}" alt="" loading="lazy" />`
+    ? `<img class="nhc-bookmark__image m-0 h-full w-full object-contain" src="${escapeAttr(ogp.image)}" alt="" loading="lazy" />`
     : "";
 
   const captionSection = captionHtml
-    ? `<p class="nhc-bookmark__caption">${captionHtml}</p>`
+    ? `<p class="nhc-bookmark__caption mt-2 text-xs text-gray-500">${captionHtml}</p>`
     : "";
 
   // OGP 取得失敗時は nhc-bookmark--no-ogp を付与し CSS 側でスタイルを切り替えられるようにする。
   const bookmarkClass = hasOgp
-    ? "nhc-bookmark"
-    : "nhc-bookmark nhc-bookmark--no-ogp";
+    ? "nhc-bookmark flex flex-row items-stretch overflow-hidden rounded-lg border border-gray-200 no-underline transition-colors hover:bg-gray-50"
+    : "nhc-bookmark nhc-bookmark--no-ogp flex flex-row items-stretch overflow-hidden rounded-lg border border-gray-200 no-underline transition-colors hover:bg-gray-50";
 
   // 外側を <div> で包むことで markdown がこのブロックを「block-level raw HTML」として
   // 扱い、<p> でラップしないようにする。<p><a><div></div></a></p> という構造は HTML5
   // パーサが <div> を <p> 外へ吐き出してリンクを破壊するため、ラッパが必要。
   return (
-    `<div class="nhc-bookmark-block">` +
+    `<div class="nhc-bookmark-block my-3">` +
     `<a class="${bookmarkClass}" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">` +
-    `<div class="nhc-bookmark__main">` +
+    `<div class="nhc-bookmark__main flex min-w-0 flex-1 flex-col gap-1 p-4">` +
     siteName +
-    `<p class="nhc-bookmark__title">${title}</p>` +
+    `<p class="nhc-bookmark__title truncate font-medium">${title}</p>` +
     description +
-    `<p class="nhc-bookmark__url">${displayUrl}</p>` +
+    `<p class="nhc-bookmark__url mt-1 truncate text-xs text-gray-500">${displayUrl}</p>` +
     `</div>` +
-    (imageHtml ? `<div class="nhc-bookmark__cover">${imageHtml}</div>` : "") +
+    (imageHtml
+      ? `<div class="nhc-bookmark__cover ml-auto aspect-video w-40 shrink-0 self-stretch bg-gray-100 sm:w-56">${imageHtml}</div>`
+      : "") +
     `</a>` +
     captionSection +
     `</div>`
