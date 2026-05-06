@@ -3,6 +3,7 @@ import type {
   BlockObjectResponse,
   BookmarkBlockObjectResponse,
   EmbedBlockObjectResponse,
+  LinkPreviewBlockObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
 import { getBlocks } from "./internal/fetcher/blocks.js";
 import {
@@ -20,19 +21,26 @@ export type EmbedBlockWithOgp = EmbedBlockObjectResponse & { ogp?: OgpData };
 export type BookmarkBlockWithOgp = BookmarkBlockObjectResponse & {
   ogp?: OgpData;
 };
+/** OGP メタデータを付与した link_preview ブロック。 */
+export type LinkPreviewBlockWithOgp = LinkPreviewBlockObjectResponse & {
+  ogp?: OgpData;
+};
 
 /**
  * children を再帰的に解決済みのブロック木。
  * react-renderer など「ページ全体を 1 ツリーで受け取りたい」描画側が消費する。
- * embed / bookmark は OGP オプションを有効化すると `ogp` フィールドが付く。
+ * embed / bookmark / link_preview は OGP オプションを有効化すると `ogp` フィールドが付く。
  */
 export type NotionBlockTreeNode = (
   | Exclude<
       BlockObjectResponse,
-      EmbedBlockObjectResponse | BookmarkBlockObjectResponse
+      | EmbedBlockObjectResponse
+      | BookmarkBlockObjectResponse
+      | LinkPreviewBlockObjectResponse
     >
   | EmbedBlockWithOgp
   | BookmarkBlockWithOgp
+  | LinkPreviewBlockWithOgp
 ) & {
   children?: NotionBlockTreeNode[];
 };
@@ -90,7 +98,9 @@ async function enrichWithOgp(
   tree: NotionBlockTreeNode[],
   ogp: FetchBlockTreeOgpOptions,
 ): Promise<void> {
-  const targets: Array<EmbedBlockWithOgp | BookmarkBlockWithOgp> = [];
+  const targets: Array<
+    EmbedBlockWithOgp | BookmarkBlockWithOgp | LinkPreviewBlockWithOgp
+  > = [];
   collectOgpTargets(tree, targets);
   if (targets.length === 0) return;
 
@@ -98,7 +108,12 @@ async function enrichWithOgp(
 
   await Promise.all(
     targets.map(async (block) => {
-      const url = block.type === "embed" ? block.embed.url : block.bookmark.url;
+      const url =
+        block.type === "embed"
+          ? block.embed.url
+          : block.type === "bookmark"
+            ? block.bookmark.url
+            : block.link_preview.url;
       if (!url) return;
       try {
         const data = await loadOgp(url, ogp, memo);
@@ -132,13 +147,17 @@ async function loadOgp(
 
 function collectOgpTargets(
   nodes: NotionBlockTreeNode[],
-  out: Array<EmbedBlockWithOgp | BookmarkBlockWithOgp>,
+  out: Array<
+    EmbedBlockWithOgp | BookmarkBlockWithOgp | LinkPreviewBlockWithOgp
+  >,
 ): void {
   for (const node of nodes) {
     if (node.type === "embed") {
       out.push(node as EmbedBlockWithOgp);
     } else if (node.type === "bookmark") {
       out.push(node as BookmarkBlockWithOgp);
+    } else if (node.type === "link_preview") {
+      out.push(node as LinkPreviewBlockWithOgp);
     }
     if (node.children?.length) collectOgpTargets(node.children, out);
   }

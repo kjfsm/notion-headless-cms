@@ -101,7 +101,10 @@ export function createBlockHandlers(
       return renderBookmark(block as BookmarkBlockObjectResponse, ogpOpts);
     },
     link_preview: async (block) => {
-      return renderLinkPreview(block as LinkPreviewBlockObjectResponse);
+      return renderLinkPreview(
+        block as LinkPreviewBlockObjectResponse,
+        ogpOpts,
+      );
     },
     link_to_page: async (block) => {
       return renderLinkToPage(block as LinkToPageBlockObjectResponse, rtOpts);
