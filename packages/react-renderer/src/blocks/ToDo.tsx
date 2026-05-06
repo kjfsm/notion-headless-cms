@@ -8,10 +8,11 @@ import type { BlockComponentProps } from "../types";
 export function ToDo({
   block,
   renderChildren,
+  className,
 }: BlockComponentProps<ToDoBlockObjectResponse>) {
   const checked = block.to_do.checked;
   return (
-    <div className="my-1">
+    <div className={cn("my-1", className)}>
       <label className="flex items-baseline gap-2">
         <input
           type="checkbox"

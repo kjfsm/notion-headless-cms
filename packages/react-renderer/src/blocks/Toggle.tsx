@@ -6,15 +6,17 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "../components/ui/collapsible";
+import { cn } from "../lib/utils";
 import { RichText } from "../rich-text/RichText";
 import type { BlockComponentProps } from "../types";
 
 export function Toggle({
   block,
   renderChildren,
+  className,
 }: BlockComponentProps<ToggleBlockObjectResponse>) {
   return (
-    <Collapsible className="my-2">
+    <Collapsible className={cn("my-2", className)}>
       <CollapsibleTrigger className="group flex items-baseline gap-2 text-left">
         <span
           aria-hidden

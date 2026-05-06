@@ -4,6 +4,7 @@ import type { LinkPreviewBlockObjectResponse } from "@notionhq/client/build/src/
 import { Link as LinkIcon } from "lucide-react";
 import { Card, CardContent } from "../components/ui/card";
 import { OgCard, type OgCardData } from "../embeds/OgCard";
+import { cn } from "../lib/utils";
 import type { BlockComponentProps } from "../types";
 
 type LinkPreviewBlockMaybeWithOgp = LinkPreviewBlockObjectResponse & {
@@ -12,13 +13,14 @@ type LinkPreviewBlockMaybeWithOgp = LinkPreviewBlockObjectResponse & {
 
 export function LinkPreview({
   block,
+  className,
 }: BlockComponentProps<LinkPreviewBlockObjectResponse>) {
   const url = block.link_preview.url;
   const ogp = (block as LinkPreviewBlockMaybeWithOgp).ogp;
 
   if (ogp) {
     return (
-      <div className="my-3">
+      <div className={cn("my-3", className)}>
         <OgCard url={url} ogp={ogp} />
       </div>
     );
@@ -29,7 +31,7 @@ export function LinkPreview({
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className="my-3 block"
+      className={cn("my-3 block", className)}
     >
       <Card className="transition-colors hover:bg-muted/40">
         <CardContent className="flex items-center gap-2 p-3 text-sm">

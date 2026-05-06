@@ -4,6 +4,7 @@ import type { FileBlockObjectResponse } from "@notionhq/client/build/src/api-end
 import { FileIcon } from "lucide-react";
 import { Card, CardContent } from "../components/ui/card";
 import { getFileUrl } from "../lib/notion-file";
+import { cn } from "../lib/utils";
 import { Caption } from "../rich-text/Caption";
 import type { BlockComponentProps } from "../types";
 
@@ -17,9 +18,12 @@ function fileName(block: FileBlockObjectResponse): string {
   }
 }
 
-export function File({ block }: BlockComponentProps<FileBlockObjectResponse>) {
+export function File({
+  block,
+  className,
+}: BlockComponentProps<FileBlockObjectResponse>) {
   return (
-    <Card className="my-3">
+    <Card className={cn("my-3", className)}>
       <CardContent className="flex items-center gap-3 p-3">
         <FileIcon
           className="size-5 shrink-0 text-muted-foreground"

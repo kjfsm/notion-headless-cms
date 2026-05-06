@@ -2,13 +2,15 @@
 
 import type { ChildPageBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { FileText } from "lucide-react";
+import { cn } from "../lib/utils";
 import type { BlockComponentProps } from "../types";
 
 export function ChildPage({
   block,
+  className,
 }: BlockComponentProps<ChildPageBlockObjectResponse>) {
   return (
-    <div className="my-2 flex items-baseline gap-2">
+    <div className={cn("my-2 flex items-baseline gap-2", className)}>
       <FileText
         className="size-4 self-center text-muted-foreground"
         aria-hidden
