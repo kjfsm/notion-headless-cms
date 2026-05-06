@@ -16,6 +16,12 @@ command = "pnpm build"
 binding = "DOC_CACHE"
 id = "d949487218794cbe8e8d3cdaee119790"
 
+# @astrojs/cloudflare 13.3.x がセッション KV を自動追加するため、
+# 先に宣言して id なし（wrangler が自動プロビジョニング）にする。
+# こうすることで生成 wrangler.json での DOC_CACHE 重複バグを回避できる。
+[[kv_namespaces]]
+binding = "SESSION"
+
 [[r2_buckets]]
 binding = "IMG_BUCKET"
 bucket_name = "nhc-example-cache"
