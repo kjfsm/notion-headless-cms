@@ -1,5 +1,11 @@
 # @notion-headless-cms/react-renderer
 
+## 0.0.11
+
+### Patch Changes
+
+- d6e7f57: Refactor OG image handling to use object-cover and remove aspect-video
+
 ## 0.0.10
 
 ### Patch Changes

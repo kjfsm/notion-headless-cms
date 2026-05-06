@@ -1,5 +1,11 @@
 # @notion-headless-cms/embeds
 
+## 0.1.10
+
+### Patch Changes
+
+- d6e7f57: Refactor OG image handling to use object-cover and remove aspect-video
+
 ## 0.1.9
 
 ### Patch Changes
