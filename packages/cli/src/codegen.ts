@@ -280,7 +280,7 @@ function generateClientBlock(collections: ResolvedCollection[]): string {
 					token: config.notionToken,
 					dataSourceId: ${c.name}DataSourceId,
 					properties: ${c.name}Properties,
-					ogp: config.ogp ?? { enabled: true },
+					ogp: config.ogp,
 					...(config.blocks ? { blocks: config.blocks } : {}),
 				}),
 				slugField: ${JSON.stringify(slugField)},
@@ -313,7 +313,7 @@ export interface NhcConfig {
 	logger?: Logger;
 	/** ライフサイクルフック (onCacheHit / onCacheMiss 等)。 */
 	hooks?: CMSHooks;
-	/** embed / bookmark / link_preview ブロックの OGP 取得設定。省略時は \`{ enabled: true }\` で有効。 */
+	/** embed / bookmark / link_preview ブロックの OGP 取得設定。省略時は OGP 非取得。 */
 	ogp?: FetchBlockTreeOgpOptions;
 }
 
