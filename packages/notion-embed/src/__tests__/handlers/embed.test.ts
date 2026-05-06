@@ -1,6 +1,7 @@
 import type {
   AudioBlockObjectResponse,
   EmbedBlockObjectResponse,
+  FileBlockObjectResponse,
   ImageBlockObjectResponse,
   PdfBlockObjectResponse,
   VideoBlockObjectResponse,
@@ -9,6 +10,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   renderAudio,
   renderEmbed,
+  renderFile,
   renderImage,
   renderPdf,
   renderVideo,
@@ -252,6 +254,21 @@ describe("renderVideo", () => {
   });
 });
 
+const richTextLink = (text: string, url: string) => ({
+  type: "text" as const,
+  text: { content: text, link: { url } },
+  annotations: {
+    bold: false,
+    italic: false,
+    strikethrough: false,
+    underline: false,
+    code: false,
+    color: "default" as const,
+  },
+  plain_text: text,
+  href: url,
+});
+
 describe("renderAudio", () => {
   it("audio タグを出力する", async () => {
     const block = {
@@ -260,6 +277,7 @@ describe("renderAudio", () => {
       audio: {
         type: "external",
         external: { url: "https://example.com/x.mp3" },
+        caption: [],
       },
     } as AudioBlockObjectResponse;
     const html = await renderAudio(block);
@@ -268,14 +286,34 @@ describe("renderAudio", () => {
     expect(html).toContain("controls");
   });
 
-  it("URL が抽出できなければ空文字", async () => {
+  it("caption があれば nhc-audio__caption を出す", async () => {
     const block = {
       ...blockBase,
       type: "audio",
-      audio: { type: "unknown" },
-    } as unknown as AudioBlockObjectResponse;
+      audio: {
+        type: "external",
+        external: { url: "https://example.com/x.mp3" },
+        caption: [richTextLink("出典", "https://example.com/")],
+      },
+    } as AudioBlockObjectResponse;
     const html = await renderAudio(block);
-    expect(html).toBe("");
+    expect(html).toContain('class="nhc-audio__caption"');
+    expect(html).toContain('<a href="https://example.com/"');
+    expect(html).toContain("出典");
+  });
+
+  it("Notion ホスト file URL にも対応する", async () => {
+    const block = {
+      ...blockBase,
+      type: "audio",
+      audio: {
+        type: "file",
+        file: { url: "https://files.notion.so/x.mp3", expiry_time: "" },
+        caption: [],
+      },
+    } as AudioBlockObjectResponse;
+    const html = await renderAudio(block);
+    expect(html).toContain('src="https://files.notion.so/x.mp3"');
   });
 });
 
@@ -284,20 +322,31 @@ describe("renderPdf", () => {
     const block = {
       ...blockBase,
       type: "pdf",
-      pdf: { type: "external", external: { url: "https://example.com/x.pdf" } },
+      pdf: {
+        type: "external",
+        external: { url: "https://example.com/x.pdf" },
+        caption: [],
+      },
     } as PdfBlockObjectResponse;
     const html = await renderPdf(block);
     expect(html).toContain('class="nhc-pdf"');
     expect(html).toContain("<iframe");
   });
 
-  it("URL なしは空文字", async () => {
+  it("caption があれば nhc-pdf__caption を出す", async () => {
     const block = {
       ...blockBase,
       type: "pdf",
-      pdf: { type: "unknown" },
-    } as unknown as PdfBlockObjectResponse;
-    expect(await renderPdf(block)).toBe("");
+      pdf: {
+        type: "external",
+        external: { url: "https://example.com/x.pdf" },
+        caption: [richTextLink("資料", "https://example.com/ref")],
+      },
+    } as PdfBlockObjectResponse;
+    const html = await renderPdf(block);
+    expect(html).toContain('class="nhc-pdf__caption"');
+    expect(html).toContain('<a href="https://example.com/ref"');
+    expect(html).toContain("資料");
   });
 });
 
@@ -388,5 +437,58 @@ describe("renderImage", () => {
       image: { type: "unknown" },
     } as unknown as ImageBlockObjectResponse;
     expect(await renderImage(block)).toBe("");
+  });
+});
+
+describe("renderFile", () => {
+  it("external URL をダウンロードリンクで出力する", async () => {
+    const block: FileBlockObjectResponse = {
+      ...blockBase,
+      type: "file",
+      file: {
+        type: "external",
+        external: { url: "https://example.com/doc.pdf" },
+        caption: [],
+        name: "doc.pdf",
+      },
+    };
+    const html = await renderFile(block);
+    expect(html).toContain('class="nhc-file"');
+    expect(html).toContain('href="https://example.com/doc.pdf"');
+    expect(html).toContain("doc.pdf");
+    expect(html).toContain('target="_blank"');
+  });
+
+  it("Notion ホスト file URL に対応する", async () => {
+    const block: FileBlockObjectResponse = {
+      ...blockBase,
+      type: "file",
+      file: {
+        type: "file",
+        file: { url: "https://files.notion.so/x.zip", expiry_time: "" },
+        caption: [],
+        name: "x.zip",
+      },
+    };
+    const html = await renderFile(block);
+    expect(html).toContain('href="https://files.notion.so/x.zip"');
+    expect(html).toContain("x.zip");
+  });
+
+  it("caption にリンクがあれば nhc-file__caption と <a> を出力する", async () => {
+    const block: FileBlockObjectResponse = {
+      ...blockBase,
+      type: "file",
+      file: {
+        type: "external",
+        external: { url: "https://example.com/doc.pdf" },
+        caption: [richTextLink("詳細はこちら", "https://example.com/detail")],
+        name: "doc.pdf",
+      },
+    };
+    const html = await renderFile(block);
+    expect(html).toContain('class="nhc-file__caption"');
+    expect(html).toContain('<a href="https://example.com/detail"');
+    expect(html).toContain("詳細はこちら");
   });
 });

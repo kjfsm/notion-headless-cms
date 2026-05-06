@@ -118,4 +118,22 @@ describe("renderCallout", () => {
     expect(html).toContain("noicon");
     expect(html).not.toContain("nhc-callout__icon");
   });
+
+  it('外部 icon URL に " が含まれても src 属性が壊れない', async () => {
+    const block = {
+      ...blockBase,
+      type: "callout",
+      callout: {
+        rich_text: [text("test")],
+        color: "default",
+        icon: {
+          type: "external",
+          external: { url: 'https://example.com/icon.png?a="1"' },
+        },
+      },
+    } as CalloutBlockObjectResponse;
+    const html = await renderCallout(block);
+    expect(html).not.toContain('src="https://example.com/icon.png?a="1""');
+    expect(html).toContain("&quot;");
+  });
 });

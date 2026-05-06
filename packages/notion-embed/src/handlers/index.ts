@@ -4,6 +4,7 @@ import type {
   BulletedListItemBlockObjectResponse,
   CalloutBlockObjectResponse,
   EmbedBlockObjectResponse,
+  FileBlockObjectResponse,
   Heading1BlockObjectResponse,
   Heading2BlockObjectResponse,
   Heading3BlockObjectResponse,
@@ -29,6 +30,7 @@ import { renderCallout } from "./callout";
 import {
   renderAudio,
   renderEmbed,
+  renderFile,
   renderImage,
   renderPdf,
   renderVideo,
@@ -123,6 +125,9 @@ export function createBlockHandlers(
     },
     image: async (block) => {
       return renderImage(block as ImageBlockObjectResponse);
+    },
+    file: async (block) => {
+      return renderFile(block as FileBlockObjectResponse);
     },
   };
 }
