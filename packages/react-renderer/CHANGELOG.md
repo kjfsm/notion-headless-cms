@@ -1,5 +1,11 @@
 # @notion-headless-cms/react-renderer
 
+## 0.0.6
+
+### Patch Changes
+
+- 13ad21c: embed ブロックを OGP カードではなく iframe で描画するよう修正し、ホスト別の推奨サイズを適用する（Steam widget は 646x190、その他は aspect-video）。
+
 ## 0.0.5
 
 ### Patch Changes
