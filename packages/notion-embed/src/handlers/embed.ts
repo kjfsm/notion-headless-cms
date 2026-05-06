@@ -5,9 +5,10 @@ import type {
   PdfBlockObjectResponse,
   VideoBlockObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
+import { fetchOgp } from "../ogp";
 import { escapeAttr, escapeHtml, renderIframe } from "../providers/_internal";
 import { renderRichText } from "../render-rich-text";
-import type { EmbedProvider } from "../types";
+import type { EmbedProvider, OgpData, OgpFetchOptions } from "../types";
 import { normalizeUrl } from "../url-normalize";
 
 function extractFileUrl(
@@ -33,11 +34,13 @@ function extractFileUrl(
 
 /**
  * embed ブロックを HTML にレンダリングする。
- * 登録済み provider がある場合は provider の出力を使い、なければ汎用 iframe を出力する。
+ * 登録済み provider がある場合は provider の出力を使い、
+ * なければ OGP カードを試み、取得できなければ汎用 iframe を出力する。
  */
 export async function renderEmbed(
   block: EmbedBlockObjectResponse,
   providers: readonly EmbedProvider[],
+  ogpOptions?: false | OgpFetchOptions,
 ): Promise<string> {
   const rawUrl = block.embed.url;
   const url = normalizeUrl(rawUrl);
@@ -63,11 +66,60 @@ export async function renderEmbed(
       ? `<p class="nhc-embed__caption">${await renderRichText(caption)}</p>`
       : "";
 
+  if (ogpOptions !== false) {
+    const fetchOpts: OgpFetchOptions | undefined =
+      ogpOptions == null ? undefined : ogpOptions;
+    const ogp = await fetchOgp(url, fetchOpts).catch((): OgpData => ({}));
+    if (ogp.title ?? ogp.description ?? ogp.image ?? ogp.siteName) {
+      return (
+        `<div class="nhc-embed">` +
+        renderEmbedOgpCard(url, ogp) +
+        captionHtml +
+        `</div>`
+      );
+    }
+  }
+
   return (
     `<div class="nhc-embed">` +
     renderIframe({ src: url, frameborder: 0 }) +
     captionHtml +
     `</div>`
+  );
+}
+
+function renderEmbedOgpCard(url: string, ogp: OgpData): string {
+  const title = escapeHtml(
+    ogp.title ??
+      (() => {
+        try {
+          return new URL(url).hostname;
+        } catch {
+          return url;
+        }
+      })(),
+  );
+  const description = ogp.description
+    ? `<p class="nhc-bookmark__description">${escapeHtml(ogp.description)}</p>`
+    : "";
+  const siteName = ogp.siteName
+    ? `<p class="nhc-bookmark__site">${escapeHtml(ogp.siteName)}</p>`
+    : "";
+  const displayUrl = escapeHtml(url.replace(/^https?:\/\//, "").slice(0, 60));
+  const imageHtml = ogp.image
+    ? `<img class="nhc-bookmark__image" src="${escapeAttr(ogp.image)}" alt="" loading="lazy" />`
+    : "";
+
+  return (
+    `<a class="nhc-bookmark" href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">` +
+    `<div class="nhc-bookmark__main">` +
+    siteName +
+    `<p class="nhc-bookmark__title">${title}</p>` +
+    description +
+    `<p class="nhc-bookmark__url">${displayUrl}</p>` +
+    `</div>` +
+    (imageHtml ? `<div class="nhc-bookmark__cover">${imageHtml}</div>` : "") +
+    `</a>`
   );
 }
 

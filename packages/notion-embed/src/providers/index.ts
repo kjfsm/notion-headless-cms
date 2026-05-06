@@ -24,9 +24,6 @@ export function matchProvider(
   return undefined;
 }
 
-export { dlsiteProvider } from "./dlsite";
 export { genericIframeProvider } from "./generic-iframe";
-export { steamProvider } from "./steam";
 export { twitterProvider } from "./twitter";
-export { vimeoProvider } from "./vimeo";
 export { youtubeProvider } from "./youtube";

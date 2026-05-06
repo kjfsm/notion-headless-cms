@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { notionEmbed } from "../index";
-import { steamProvider } from "../providers/steam";
+import { youtubeProvider } from "../providers/youtube";
 import type { BlockHandler, BlockObjectResponse } from "../types";
 
 vi.mock("@notion-headless-cms/renderer", () => ({
@@ -91,7 +91,7 @@ describe("notionEmbed()", () => {
   });
 
   it("renderer は allowDangerousHtml: true で renderMarkdown を呼ぶ", async () => {
-    const { renderer } = notionEmbed({ providers: [steamProvider()] });
+    const { renderer } = notionEmbed({ providers: [youtubeProvider()] });
     const html = await renderer("# Hello");
     expect(html).toContain("[allowDangerousHtml=true]");
   });

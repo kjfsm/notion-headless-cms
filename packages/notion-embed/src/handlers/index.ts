@@ -110,7 +110,7 @@ export function createBlockHandlers(
       return renderLinkToPage(block as LinkToPageBlockObjectResponse, rtOpts);
     },
     embed: async (block) => {
-      return renderEmbed(block as EmbedBlockObjectResponse, providers);
+      return renderEmbed(block as EmbedBlockObjectResponse, providers, ogpOpts);
     },
     video: async (block) => {
       return renderVideo(block as VideoBlockObjectResponse, providers);

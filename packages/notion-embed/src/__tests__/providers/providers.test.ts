@@ -4,12 +4,9 @@ import {
   escapeHtml,
   renderIframe,
 } from "../../providers/_internal";
-import { dlsiteProvider } from "../../providers/dlsite";
 import { genericIframeProvider } from "../../providers/generic-iframe";
 import { defineEmbedProvider, matchProvider } from "../../providers/index";
-import { steamProvider } from "../../providers/steam";
 import { twitterProvider } from "../../providers/twitter";
-import { vimeoProvider } from "../../providers/vimeo";
 import { youtubeProvider } from "../../providers/youtube";
 import type { BlockObjectResponse } from "../../types";
 
@@ -81,58 +78,6 @@ describe("defineEmbedProvider / matchProvider", () => {
 
   it("provider 配列が空でも undefined", async () => {
     expect(matchProvider([], "https://x")).toBeUndefined();
-  });
-});
-
-describe("steamProvider", () => {
-  const provider = steamProvider();
-
-  it("widget URL にマッチする", async () => {
-    expect(
-      provider.match("https://store.steampowered.com/widget/2516990/"),
-    ).toBe(true);
-  });
-
-  it("非 Steam URL にマッチしない", async () => {
-    expect(provider.match("https://example.com")).toBe(false);
-  });
-
-  it("iframe を返す (デフォルト 646x190)", async () => {
-    const out = await provider.render({
-      block: dummyBlock,
-      url: "https://store.steampowered.com/widget/2516990/",
-    });
-    expect(out.kind).toBe("html");
-    if (out.kind === "html") {
-      expect(out.html).toContain("<iframe");
-      expect(out.html).toContain('width="646"');
-      expect(out.html).toContain('height="190"');
-    }
-  });
-
-  it("オプションで width/height を上書きできる", async () => {
-    const p = steamProvider({ width: 800, height: 200 });
-    const out = await p.render({
-      block: dummyBlock,
-      url: "https://store.steampowered.com/widget/1/",
-    });
-    if (out.kind === "html") {
-      expect(out.html).toContain('width="800"');
-      expect(out.html).toContain('height="200"');
-    }
-  });
-
-  it("ctx の width/height がさらに上書きする", async () => {
-    const out = await provider.render({
-      block: dummyBlock,
-      url: "https://store.steampowered.com/widget/1/",
-      width: 999,
-      height: 333,
-    });
-    if (out.kind === "html") {
-      expect(out.html).toContain('width="999"');
-      expect(out.html).toContain('height="333"');
-    }
   });
 });
 
@@ -276,87 +221,6 @@ describe("youtubeProvider", () => {
   });
 });
 
-describe("vimeoProvider", () => {
-  const provider = vimeoProvider();
-
-  it("vimeo.com/<id> にマッチ", async () => {
-    expect(provider.match("https://vimeo.com/123456")).toBe(true);
-  });
-
-  it("非 Vimeo URL にマッチしない", async () => {
-    expect(provider.match("https://example.com")).toBe(false);
-  });
-
-  it("無効な URL 文字列はマッチしない", async () => {
-    expect(provider.match("not-a-url")).toBe(false);
-  });
-
-  it("oEmbed から embed src を取得して iframe を返す", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          html: '<iframe src="https://player.vimeo.com/video/123456?h=abc"></iframe>',
-        }),
-        { headers: { "content-type": "application/json" } },
-      ),
-    );
-    try {
-      const out = await provider.render({
-        block: dummyBlock,
-        url: "https://vimeo.com/123456",
-      });
-      if (out.kind === "html") {
-        expect(out.html).toContain("player.vimeo.com/video/123456");
-        expect(out.html).toContain("<iframe");
-      }
-    } finally {
-      fetchSpy.mockRestore();
-    }
-  });
-
-  it("ctx の width/height で上書きできる", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(
-        JSON.stringify({
-          html: '<iframe src="https://player.vimeo.com/video/1"></iframe>',
-        }),
-        { headers: { "content-type": "application/json" } },
-      ),
-    );
-    try {
-      const out = await provider.render({
-        block: dummyBlock,
-        url: "https://vimeo.com/1",
-        width: 100,
-        height: 50,
-      });
-      if (out.kind === "html") {
-        expect(out.html).toContain('width="100"');
-        expect(out.html).toContain('height="50"');
-      }
-    } finally {
-      fetchSpy.mockRestore();
-    }
-  });
-
-  it("oEmbed が html を返さなければ skip", async () => {
-    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(JSON.stringify({}), {
-        headers: { "content-type": "application/json" },
-      }),
-    );
-    try {
-      const out = await provider.render({
-        block: dummyBlock,
-        url: "https://vimeo.com/",
-      });
-      expect(out.kind).toBe("skip");
-    } finally {
-      fetchSpy.mockRestore();
-    }
-  });
-});
-
 describe("twitterProvider", () => {
   const provider = twitterProvider();
 
@@ -377,52 +241,6 @@ describe("twitterProvider", () => {
       expect(out.html).toContain("x.com/foo/status/12345");
       expect(out.html).toContain("twitter-tweet");
       expect(out.html).toContain("platform.x.com/widgets.js");
-    }
-  });
-});
-
-describe("dlsiteProvider", () => {
-  const provider = dlsiteProvider();
-
-  it("dlaf.jp にマッチ", async () => {
-    expect(provider.match("https://dlaf.jp/sample")).toBe(true);
-  });
-
-  it("img.dlsite.jp にマッチ", async () => {
-    expect(provider.match("https://img.dlsite.jp/foo.jpg")).toBe(true);
-  });
-
-  it("非 DLsite は false", async () => {
-    expect(provider.match("https://example.com")).toBe(false);
-  });
-
-  it('dlaf.jp は rel="noopener sponsored" を付ける', async () => {
-    const out = await provider.render({
-      block: dummyBlock,
-      url: "https://dlaf.jp/x",
-    });
-    if (out.kind === "html") {
-      expect(out.html).toContain('rel="noopener sponsored"');
-    }
-  });
-
-  it('img.dlsite.jp は rel="noopener noreferrer"', async () => {
-    const out = await provider.render({
-      block: dummyBlock,
-      url: "https://img.dlsite.jp/foo.jpg",
-    });
-    if (out.kind === "html") {
-      expect(out.html).toContain('rel="noopener noreferrer"');
-    }
-  });
-
-  it("URL が壊れていたら normalizeUrl で復元する", async () => {
-    const out = await provider.render({
-      block: dummyBlock,
-      url: "[//img.dlsite.jp/x.jpg](https://img.dlsite.jp/x.jpg)",
-    });
-    if (out.kind === "html") {
-      expect(out.html).toContain('href="https://img.dlsite.jp/x.jpg"');
     }
   });
 });
