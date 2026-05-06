@@ -86,7 +86,7 @@ export interface NhcConfig {
   logger?: Logger;
   /** ライフサイクルフック (onCacheHit / onCacheMiss 等)。 */
   hooks?: CMSHooks;
-  /** embed / bookmark ブロックの OGP 取得設定。省略時は `{ enabled: true }` で有効。 */
+  /** embed / bookmark / link_preview ブロックの OGP 取得設定。省略時は `{ enabled: true }` で有効。 */
   ogp?: FetchBlockTreeOgpOptions;
 }
 

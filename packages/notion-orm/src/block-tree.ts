@@ -92,7 +92,7 @@ async function expandChildren(
 }
 
 /**
- * ツリー全体を走査して embed / bookmark ブロックの URL を集め、並列に OGP fetch して付与する。
+ * ツリー全体を走査して embed / bookmark / link_preview ブロックの URL を集め、並列に OGP fetch して付与する。
  */
 async function enrichWithOgp(
   tree: NotionBlockTreeNode[],
