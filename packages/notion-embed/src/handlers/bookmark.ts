@@ -58,10 +58,8 @@ export async function renderBookmark(
     ? `<p class="nhc-bookmark__site truncate text-xs text-gray-500">${escapeHtml(ogp.siteName)}</p>`
     : "";
   const displayUrl = escapeHtml(url.replace(/^https?:\/\//, "").slice(0, 60));
-  // 画像コンテナで aspect-video + object-contain を使い、見切れずに最後まで表示する。
-  // shrink-0 + ml-auto + w-40/sm:w-56 で右端に揃え、テキスト側に潰されて小さくなりすぎないようにする。
   const imageHtml = ogp.image
-    ? `<img class="nhc-bookmark__image m-0 h-full w-full object-contain" src="${escapeAttr(ogp.image)}" alt="" loading="lazy" />`
+    ? `<img class="nhc-bookmark__image m-0 h-full w-full object-cover" src="${escapeAttr(ogp.image)}" alt="" loading="lazy" />`
     : "";
 
   const captionSection = captionHtml
@@ -86,7 +84,7 @@ export async function renderBookmark(
     `<p class="nhc-bookmark__url mt-1 truncate text-xs text-gray-500">${displayUrl}</p>` +
     `</div>` +
     (imageHtml
-      ? `<div class="nhc-bookmark__cover ml-auto aspect-video w-40 shrink-0 self-stretch bg-gray-100 sm:w-56">${imageHtml}</div>`
+      ? `<div class="nhc-bookmark__cover ml-auto w-40 shrink-0 self-stretch bg-gray-100 sm:w-56">${imageHtml}</div>`
       : "") +
     `</a>` +
     captionSection +
