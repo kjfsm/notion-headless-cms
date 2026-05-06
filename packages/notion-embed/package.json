@@ -79,5 +79,8 @@
     "remark-parse": "catalog:",
     "remark-rehype": "catalog:",
     "unified": "catalog:"
+  },
+  "dependencies": {
+    "linkedom": "^0.18.12"
   }
 }

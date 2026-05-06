@@ -5,6 +5,7 @@ import { BlockSwitch } from "./BlockSwitch";
 import { groupListItems } from "./lib/group-list-items";
 import { cn } from "./lib/utils";
 import type {
+  BlockClassNames,
   ComponentOverrides,
   NotionBlock,
   NotionRendererProps,
@@ -14,10 +15,11 @@ export function NotionRenderer({
   blocks,
   components,
   className,
+  classNames,
 }: NotionRendererProps) {
   return (
     <div className={cn("notion-renderer", className)}>
-      {renderBlocks(blocks, components)}
+      {renderBlocks(blocks, components, classNames)}
     </div>
   );
 }
@@ -29,6 +31,7 @@ export function NotionRenderer({
 function renderBlocks(
   blocks: NotionBlock[],
   components?: ComponentOverrides,
+  classNames?: BlockClassNames,
 ): ReactNode {
   const groups = groupListItems(blocks);
   return groups.map((group, idx) => {
@@ -41,7 +44,8 @@ function renderBlocks(
               key={item.id}
               block={item}
               components={components}
-              renderChildren={(c) => renderBlocks(c, components)}
+              classNames={classNames}
+              renderChildren={(c) => renderBlocks(c, components, classNames)}
             />
           ))}
         </ul>
@@ -56,7 +60,8 @@ function renderBlocks(
               key={item.id}
               block={item}
               components={components}
-              renderChildren={(c) => renderBlocks(c, components)}
+              classNames={classNames}
+              renderChildren={(c) => renderBlocks(c, components, classNames)}
             />
           ))}
         </ol>
@@ -67,7 +72,8 @@ function renderBlocks(
         key={group.block.id}
         block={group.block}
         components={components}
-        renderChildren={(c) => renderBlocks(c, components)}
+        classNames={classNames}
+        renderChildren={(c) => renderBlocks(c, components, classNames)}
       />
     );
   });

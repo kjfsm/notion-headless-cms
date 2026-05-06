@@ -12,6 +12,7 @@ import {
   TableRow,
   Table as UiTable,
 } from "../components/ui/table";
+import { cn } from "../lib/utils";
 import { RichText } from "../rich-text/RichText";
 import type { BlockComponentProps, NotionBlock } from "../types";
 
@@ -21,6 +22,7 @@ function isTableRow(b: NotionBlock): b is TableRowBlockObjectResponse {
 
 export function Table({
   block,
+  className,
 }: BlockComponentProps<TableBlockObjectResponse>) {
   const rows = (block.children ?? []).filter(isTableRow);
   const hasHeaderRow = block.table.has_column_header && rows.length > 0;
@@ -28,7 +30,7 @@ export function Table({
   const bodyRows = hasHeaderRow ? rows.slice(1) : rows;
 
   return (
-    <UiTable className="my-3">
+    <UiTable className={cn("my-3", className)}>
       {hasHeaderRow ? (
         <TableHeader>
           <TableRow>

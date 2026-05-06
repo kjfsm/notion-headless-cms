@@ -7,9 +7,10 @@ import type { BlockComponentProps } from "../types";
 
 export function Image({
   block,
+  className,
 }: BlockComponentProps<ImageBlockObjectResponse>) {
   return (
-    <figure>
+    <figure className={className}>
       <img
         src={getFileUrl(block.image)}
         alt={block.image.caption.map((rt) => rt.plain_text).join("") || ""}

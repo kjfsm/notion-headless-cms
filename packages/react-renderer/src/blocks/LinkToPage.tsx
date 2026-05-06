@@ -2,10 +2,12 @@
 
 import type { LinkToPageBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { ExternalLink } from "lucide-react";
+import { cn } from "../lib/utils";
 import type { BlockComponentProps } from "../types";
 
 export function LinkToPage({
   block,
+  className,
 }: BlockComponentProps<LinkToPageBlockObjectResponse>) {
   const target = block.link_to_page;
   // Notion 内部リンクなのでルーティングは利用側に委ねる。最低限「リンクである」見た目で出力。
@@ -18,7 +20,10 @@ export function LinkToPage({
   return (
     <a
       href={`#${id}`}
-      className="my-2 inline-flex items-baseline gap-1 text-primary hover:underline"
+      className={cn(
+        "my-2 inline-flex items-baseline gap-1 text-primary hover:underline",
+        className,
+      )}
     >
       <ExternalLink className="size-3.5 self-center" aria-hidden />
       {id}

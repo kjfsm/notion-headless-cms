@@ -1,9 +1,9 @@
 // 埋め込み URL から OGP メタデータを抽出するユーティリティ。
-// notion-embed パッケージの ogp.ts から移植。Cloudflare Workers でも動かすため
-// regex + native fetch のみで実装し、追加依存ライブラリを持ち込まない。
+// HTML パースには linkedom を使う（Cloudflare Workers / Node 互換、軽量）。
 
 import type { ImageCacheOps, Logger } from "@notion-headless-cms/core";
 import { sha256Hex } from "@notion-headless-cms/core";
+import { parseHTML } from "linkedom";
 
 const DEFAULT_TTL_MS = 5 * 60_000;
 const DEFAULT_UA =
@@ -25,40 +25,31 @@ export interface OgpFetchOptions {
   userAgent?: string;
 }
 
-const OG_TITLE =
-  /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i;
-const OG_TITLE_B =
-  /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:title["']/i;
-const OG_DESC =
-  /<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i;
-const OG_DESC_B =
-  /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:description["']/i;
-const OG_IMAGE =
-  /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i;
-const OG_IMAGE_B =
-  /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i;
-const OG_SITE =
-  /<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']+)["']/i;
-const OG_SITE_B =
-  /<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:site_name["']/i;
-const TAG_TITLE = /<title[^>]*>([^<]+)<\/title>/i;
-
-function matchAny(html: string, ...patterns: RegExp[]): string | undefined {
-  for (const p of patterns) {
-    const m = html.match(p);
-    if (m?.[1]) return decodeHtmlEntities(m[1].trim());
-  }
-  return undefined;
-}
-
-function decodeHtmlEntities(str: string): string {
-  return str
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)));
+function parseOgp(html: string): OgpData {
+  const { document } = parseHTML(html);
+  const meta = (...selectors: string[]): string | undefined => {
+    for (const sel of selectors) {
+      const el = document.querySelector(sel);
+      const value = el?.getAttribute("content")?.trim();
+      if (value) return value;
+    }
+    return undefined;
+  };
+  return {
+    title:
+      meta('meta[property="og:title"]', 'meta[name="og:title"]') ??
+      document.querySelector("title")?.textContent?.trim() ??
+      undefined,
+    description: meta(
+      'meta[property="og:description"]',
+      'meta[name="og:description"]',
+    ),
+    image: meta('meta[property="og:image"]', 'meta[name="og:image"]'),
+    siteName: meta(
+      'meta[property="og:site_name"]',
+      'meta[name="og:site_name"]',
+    ),
+  };
 }
 
 /**
@@ -79,12 +70,7 @@ export async function fetchOgp(
     );
   }
   const html = await res.text();
-  return {
-    title: matchAny(html, OG_TITLE, OG_TITLE_B, TAG_TITLE),
-    description: matchAny(html, OG_DESC, OG_DESC_B),
-    image: matchAny(html, OG_IMAGE, OG_IMAGE_B),
-    siteName: matchAny(html, OG_SITE, OG_SITE_B),
-  };
+  return parseOgp(html);
 }
 
 /**

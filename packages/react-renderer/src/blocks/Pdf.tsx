@@ -3,12 +3,16 @@
 import type { PdfBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { AspectRatio } from "../components/ui/aspect-ratio";
 import { getFileUrl } from "../lib/notion-file";
+import { cn } from "../lib/utils";
 import { Caption } from "../rich-text/Caption";
 import type { BlockComponentProps } from "../types";
 
-export function Pdf({ block }: BlockComponentProps<PdfBlockObjectResponse>) {
+export function Pdf({
+  block,
+  className,
+}: BlockComponentProps<PdfBlockObjectResponse>) {
   return (
-    <figure className="my-4">
+    <figure className={cn("my-4", className)}>
       <AspectRatio ratio={4 / 3} className="overflow-hidden rounded-lg border">
         <iframe
           src={getFileUrl(block.pdf)}

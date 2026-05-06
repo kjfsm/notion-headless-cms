@@ -29,12 +29,13 @@ function resolveEmbedSize(url: string): {
 
 export function Embed({
   block,
+  className,
 }: BlockComponentProps<EmbedBlockObjectResponse>) {
   const url = block.embed.url;
   const size = resolveEmbedSize(url);
 
   return (
-    <figure>
+    <figure className={className}>
       <iframe
         src={url}
         title="Embed"

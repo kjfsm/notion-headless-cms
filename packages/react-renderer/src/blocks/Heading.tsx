@@ -11,6 +11,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "../components/ui/collapsible";
+import { cn } from "../lib/utils";
 import { RichText } from "../rich-text/RichText";
 import type { BlockComponentProps } from "../types";
 
@@ -60,8 +61,10 @@ function meta(block: HeadingBlock): HeadingMeta {
 export function Heading({
   block,
   renderChildren,
+  className: extraClassName,
 }: BlockComponentProps<HeadingBlock>) {
   const { Tag, className, payload } = meta(block);
+  const merged = cn(className, extraClassName);
   const inner = <RichText value={payload.rich_text} />;
 
   if (payload.is_toggleable && block.children && renderChildren) {
@@ -69,7 +72,7 @@ export function Heading({
       <Collapsible className="my-2">
         <CollapsibleTrigger className="flex items-baseline gap-2 text-left">
           <span aria-hidden>▸</span>
-          <Tag className={className}>{inner}</Tag>
+          <Tag className={merged}>{inner}</Tag>
         </CollapsibleTrigger>
         <CollapsibleContent className="ml-6">
           {renderChildren(block.children)}
@@ -78,5 +81,5 @@ export function Heading({
     );
   }
 
-  return <Tag className={className}>{inner}</Tag>;
+  return <Tag className={merged}>{inner}</Tag>;
 }

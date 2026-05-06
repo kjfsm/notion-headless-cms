@@ -3,10 +3,12 @@
 import type { EquationBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import katex from "katex";
 import { useMemo } from "react";
+import { cn } from "../lib/utils";
 import type { BlockComponentProps } from "../types";
 
 export function Equation({
   block,
+  className,
 }: BlockComponentProps<EquationBlockObjectResponse>) {
   const html = useMemo(() => {
     try {
@@ -21,7 +23,12 @@ export function Equation({
 
   if (!html) {
     return (
-      <pre className="my-3 overflow-x-auto rounded-lg bg-muted p-4 font-mono text-sm">
+      <pre
+        className={cn(
+          "my-3 overflow-x-auto rounded-lg bg-muted p-4 font-mono text-sm",
+          className,
+        )}
+      >
         {block.equation.expression}
       </pre>
     );
@@ -29,7 +36,7 @@ export function Equation({
 
   return (
     <div
-      className="my-3 overflow-x-auto"
+      className={cn("my-3 overflow-x-auto", className)}
       // biome-ignore lint/security/noDangerouslySetInnerHtml: katex 出力は信頼できる
       dangerouslySetInnerHTML={{ __html: html }}
     />
