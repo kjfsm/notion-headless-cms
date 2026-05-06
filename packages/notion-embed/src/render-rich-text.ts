@@ -124,14 +124,17 @@ async function renderMention(
 
   if (m.type === "user") {
     const u = m.user;
-    const name = "name" in u && u.name ? u.name : "id" in u ? u.id : "unknown";
+    // PartialUserObjectResponse は `type` フィールドを持たないため、
+    // `type` の有無で full / partial を識別する
+    const name = "type" in u ? (u.name ?? u.id) : u.id;
     return `<span class="nhc-mention nhc-mention--user">@${escapeHtml(name)}</span>`;
   }
 
   if (m.type === "custom_emoji") {
     const emoji = m.custom_emoji;
-    if ("url" in emoji && emoji.url) {
-      return `<img class="nhc-mention nhc-mention--emoji" src="${escapeAttr(String(emoji.url))}" alt="${escapeAttr("name" in emoji ? String(emoji.name) : "")}" />`;
+    // CustomEmojiObject は `url` / `name` を必須として持つ
+    if (emoji.url) {
+      return `<img class="nhc-mention nhc-mention--emoji" src="${escapeAttr(emoji.url)}" alt="${escapeAttr(emoji.name)}" />`;
     }
     return escapeHtml(plainText);
   }

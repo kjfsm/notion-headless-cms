@@ -3,6 +3,7 @@ import type {
   Heading1BlockObjectResponse,
   Heading2BlockObjectResponse,
   Heading3BlockObjectResponse,
+  Heading4BlockObjectResponse,
   NumberedListItemBlockObjectResponse,
   ParagraphBlockObjectResponse,
   QuoteBlockObjectResponse,
@@ -52,6 +53,15 @@ export async function renderHeading3(
 ): Promise<string> {
   const html = await renderRichText(block.heading_3.rich_text, opts);
   return `<h3>${html}</h3>`;
+}
+
+/** heading_4 ブロックを HTML に変換する。Notion API 2026-03-11 で導入された。 */
+export async function renderHeading4(
+  block: Heading4BlockObjectResponse,
+  opts?: RichTextRenderOptions,
+): Promise<string> {
+  const html = await renderRichText(block.heading_4.rich_text, opts);
+  return `<h4>${html}</h4>`;
 }
 
 /** bulleted_list_item ブロックを HTML に変換する。 */

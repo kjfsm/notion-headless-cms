@@ -25,9 +25,8 @@ export async function renderCallout(
     } else if (icon.type === "external" && icon.external?.url) {
       iconHtml = `<img class="nhc-callout__icon" src="${escapeAttr(icon.external.url)}" alt="" loading="lazy" />`;
     } else if (icon.type === "file") {
-      const url = "file" in icon && icon.file?.url ? icon.file.url : null;
-      if (url) {
-        iconHtml = `<img class="nhc-callout__icon" src="${escapeAttr(url)}" alt="" loading="lazy" />`;
+      if (icon.file?.url) {
+        iconHtml = `<img class="nhc-callout__icon" src="${escapeAttr(icon.file.url)}" alt="" loading="lazy" />`;
       }
     }
   }

@@ -4,6 +4,7 @@ import type {
   Heading1BlockObjectResponse,
   Heading2BlockObjectResponse,
   Heading3BlockObjectResponse,
+  Heading4BlockObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
 import {
   Collapsible,
@@ -16,12 +17,13 @@ import type { BlockComponentProps } from "../types";
 type HeadingBlock =
   | Heading1BlockObjectResponse
   | Heading2BlockObjectResponse
-  | Heading3BlockObjectResponse;
+  | Heading3BlockObjectResponse
+  | Heading4BlockObjectResponse;
 
 type HeadingMeta = {
   className: string;
-  Tag: "h1" | "h2" | "h3";
-  payload: Heading1BlockObjectResponse["heading_1"]; // shape は heading_1/2/3 共通
+  Tag: "h1" | "h2" | "h3" | "h4";
+  payload: Heading1BlockObjectResponse["heading_1"]; // shape は heading_1/2/3/4 共通
 };
 
 // 各 heading_N の payload は別キー名なので type narrowing で取り出す。
@@ -45,6 +47,12 @@ function meta(block: HeadingBlock): HeadingMeta {
         Tag: "h3",
         className: "scroll-m-20 text-xl font-semibold tracking-tight mt-4 mb-2",
         payload: block.heading_3,
+      };
+    case "heading_4":
+      return {
+        Tag: "h4",
+        className: "scroll-m-20 text-lg font-semibold tracking-tight mt-3 mb-2",
+        payload: block.heading_4,
       };
   }
 }

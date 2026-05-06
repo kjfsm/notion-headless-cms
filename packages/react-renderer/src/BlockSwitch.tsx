@@ -1,5 +1,6 @@
 "use client";
 
+import type { BlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import type { ComponentType, ReactNode } from "react";
 import * as Defaults from "./blocks";
 import type {
@@ -15,7 +16,7 @@ export interface BlockSwitchProps {
 }
 
 // 各ブロック型ごとに固有プロップ型を持つコンポーネントを単一の Switch で扱うため、
-// 型整合は switch 文 (block.type による narrowing) で保証し、
+// 型整合は block.type による narrowing で保証し、
 // React 要素を作る側ではプロップを共通形にキャストする。
 type AnyBlockComponent = ComponentType<BlockComponentProps>;
 
@@ -29,70 +30,56 @@ export function BlockSwitch({
   return <C block={block} renderChildren={renderChildren} />;
 }
 
-// ComponentOverrides の各エントリは BlockComponentProps<具体型> を期待するため、
-// 戻り値の型は緩めの unknown にして呼び出し側でキャストする。
-// switch の各 case は block.type で narrowing されているので実行時には正しく型整合する。
+// `satisfies Record<BlockObjectResponse["type"], unknown>` により、
+// `@notionhq/client` 側で BlockObjectResponse union に新しい block type が
+// 追加された場合は型エラーになる (= ライブラリ更新検知)。
+// 自前の type-test ファイルを置かずに、@notionhq/client の型を直接用いて
+// 網羅性を保証する仕組み。
 function pickComponent(block: NotionBlock, o?: ComponentOverrides): unknown {
-  switch (block.type) {
-    case "paragraph":
-      return o?.Paragraph ?? Defaults.Paragraph;
-    case "heading_1":
-    case "heading_2":
-    case "heading_3":
-      return o?.Heading ?? Defaults.Heading;
-    case "bulleted_list_item":
-      return o?.BulletedListItem ?? Defaults.BulletedListItem;
-    case "numbered_list_item":
-      return o?.NumberedListItem ?? Defaults.NumberedListItem;
-    case "to_do":
-      return o?.ToDo ?? Defaults.ToDo;
-    case "toggle":
-      return o?.Toggle ?? Defaults.Toggle;
-    case "callout":
-      return o?.Callout ?? Defaults.Callout;
-    case "quote":
-      return o?.Quote ?? Defaults.Quote;
-    case "code":
-      return o?.Code ?? Defaults.Code;
-    case "equation":
-      return o?.Equation ?? Defaults.Equation;
-    case "divider":
-      return o?.Divider ?? Defaults.Divider;
-    case "image":
-      return o?.Image ?? Defaults.Image;
-    case "video":
-      return o?.Video ?? Defaults.Video;
-    case "audio":
-      return o?.Audio ?? Defaults.Audio;
-    case "file":
-      return o?.File ?? Defaults.File;
-    case "pdf":
-      return o?.Pdf ?? Defaults.Pdf;
-    case "bookmark":
-      return o?.Bookmark ?? Defaults.Bookmark;
-    case "link_preview":
-      return o?.LinkPreview ?? Defaults.LinkPreview;
-    case "link_to_page":
-      return o?.LinkToPage ?? Defaults.LinkToPage;
-    case "child_page":
-      return o?.ChildPage ?? Defaults.ChildPage;
-    case "child_database":
-      return o?.ChildDatabase ?? Defaults.ChildDatabase;
-    case "embed":
-      return o?.Embed ?? Defaults.Embed;
-    case "table":
-      return o?.Table ?? Defaults.Table;
-    case "column_list":
-      return o?.ColumnList ?? Defaults.ColumnList;
-    case "column":
-      return o?.Column ?? Defaults.Column;
-    case "synced_block":
-      return o?.SyncedBlock ?? Defaults.SyncedBlock;
-    case "breadcrumb":
-      return o?.Breadcrumb ?? Defaults.Breadcrumb;
-    case "table_of_contents":
-      return o?.TableOfContents ?? Defaults.TableOfContents;
-    default:
-      return o?.Unsupported ?? Defaults.Unsupported;
-  }
+  const map = {
+    paragraph: o?.Paragraph ?? Defaults.Paragraph,
+    heading_1: o?.Heading ?? Defaults.Heading,
+    heading_2: o?.Heading ?? Defaults.Heading,
+    heading_3: o?.Heading ?? Defaults.Heading,
+    heading_4: o?.Heading ?? Defaults.Heading,
+    bulleted_list_item: o?.BulletedListItem ?? Defaults.BulletedListItem,
+    numbered_list_item: o?.NumberedListItem ?? Defaults.NumberedListItem,
+    to_do: o?.ToDo ?? Defaults.ToDo,
+    toggle: o?.Toggle ?? Defaults.Toggle,
+    callout: o?.Callout ?? Defaults.Callout,
+    quote: o?.Quote ?? Defaults.Quote,
+    code: o?.Code ?? Defaults.Code,
+    equation: o?.Equation ?? Defaults.Equation,
+    divider: o?.Divider ?? Defaults.Divider,
+    image: o?.Image ?? Defaults.Image,
+    video: o?.Video ?? Defaults.Video,
+    audio: o?.Audio ?? Defaults.Audio,
+    file: o?.File ?? Defaults.File,
+    pdf: o?.Pdf ?? Defaults.Pdf,
+    bookmark: o?.Bookmark ?? Defaults.Bookmark,
+    link_preview: o?.LinkPreview ?? Defaults.LinkPreview,
+    link_to_page: o?.LinkToPage ?? Defaults.LinkToPage,
+    child_page: o?.ChildPage ?? Defaults.ChildPage,
+    child_database: o?.ChildDatabase ?? Defaults.ChildDatabase,
+    embed: o?.Embed ?? Defaults.Embed,
+    table: o?.Table ?? Defaults.Table,
+    table_row: o?.TableRow ?? Defaults.Unsupported,
+    column_list: o?.ColumnList ?? Defaults.ColumnList,
+    column: o?.Column ?? Defaults.Column,
+    synced_block: o?.SyncedBlock ?? Defaults.SyncedBlock,
+    breadcrumb: o?.Breadcrumb ?? Defaults.Breadcrumb,
+    table_of_contents: o?.TableOfContents ?? Defaults.TableOfContents,
+    tab: o?.Tab ?? Defaults.Unsupported,
+    template: o?.Template ?? Defaults.Unsupported,
+    meeting_notes: o?.MeetingNotes ?? Defaults.Unsupported,
+    transcription: o?.Transcription ?? Defaults.Unsupported,
+    unsupported: o?.Unsupported ?? Defaults.Unsupported,
+  } satisfies Record<BlockObjectResponse["type"], unknown>;
+  // 実行時に未知の type (型では現れないがランタイムで Notion API が返した新 type) は
+  // Unsupported にフォールバック。型チェックは satisfies で別途網羅性を保証している。
+  return (
+    (map as Record<string, unknown>)[block.type] ??
+    o?.Unsupported ??
+    Defaults.Unsupported
+  );
 }
