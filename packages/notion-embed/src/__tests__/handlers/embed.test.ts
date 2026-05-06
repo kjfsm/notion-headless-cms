@@ -408,7 +408,10 @@ describe("renderImage", () => {
         caption: [
           {
             type: "text",
-            text: { content: "元サイト", link: { url: "https://example.com/" } },
+            text: {
+              content: "元サイト",
+              link: { url: "https://example.com/" },
+            },
             annotations: {
               bold: false,
               italic: false,
