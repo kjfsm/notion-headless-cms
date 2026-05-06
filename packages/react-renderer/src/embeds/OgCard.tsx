@@ -46,13 +46,11 @@ export function OgCard({ url, ogp }: OgCardProps) {
     >
       <Card className="flex flex-row items-stretch overflow-hidden p-0 transition-colors hover:bg-muted/40">
         <div className="flex min-w-0 flex-1 flex-col gap-1 p-4">
-          <div className="truncate font-medium">{title}</div>
+          <div className="font-medium leading-snug">{title}</div>
           {description ? (
-            <div className="line-clamp-2 text-xs text-muted-foreground">
-              {description}
-            </div>
+            <div className="text-xs text-muted-foreground">{description}</div>
           ) : null}
-          <div className="mt-1 truncate text-xs text-muted-foreground">
+          <div className="mt-auto truncate pt-2 text-xs text-muted-foreground/60">
             {siteName} · {url}
           </div>
         </div>
