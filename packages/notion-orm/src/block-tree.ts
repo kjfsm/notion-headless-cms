@@ -62,7 +62,7 @@ export interface FetchBlockTreeOptions {
 
 /**
  * ページ ID 配下の全ブロックを再帰的に取得し、children をネストした木として返す。
- * `opts.ogp.enabled` が true の場合、embed / bookmark ブロックに OGP メタデータを付与する。
+ * `opts.ogp.enabled` が true の場合、embed / bookmark / link_preview ブロックに OGP メタデータを付与する。
  */
 export async function fetchBlockTree(
   client: Client,
