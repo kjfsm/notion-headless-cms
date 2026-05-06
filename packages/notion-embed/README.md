@@ -1,6 +1,6 @@
 # @notion-headless-cms/notion-embed
 
-Notion の `embed` / `bookmark` / `video` / `audio` / `pdf` / `link_preview` / `link_to_page` ブロックを HTML に変換し、安全にレンダリングするための拡張パッケージ。
+Notion の `embed` / `bookmark` / `video` / `audio` / `pdf` / `file` / `image` / `link_preview` / `link_to_page` ブロックを HTML に変換し、安全にレンダリングするための拡張パッケージ。
 
 - **embed ブロック** → provider が一致すればその出力を使い、なければ `<iframe>` で直接表示
 - **bookmark ブロック** → OGP カード（in-memory TTL キャッシュ付き）

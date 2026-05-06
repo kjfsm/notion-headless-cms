@@ -1,5 +1,5 @@
 import type { CalloutBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
-import { escapeHtml } from "../providers/_internal";
+import { escapeAttr, escapeHtml } from "../providers/_internal";
 import type { RichTextRenderOptions } from "../render-rich-text";
 import { renderRichText } from "../render-rich-text";
 
@@ -23,11 +23,11 @@ export async function renderCallout(
     if (icon.type === "emoji") {
       iconHtml = `<span class="nhc-callout__icon" aria-hidden="true">${escapeHtml(icon.emoji)}</span>`;
     } else if (icon.type === "external" && icon.external?.url) {
-      iconHtml = `<img class="nhc-callout__icon" src="${escapeHtml(icon.external.url)}" alt="" loading="lazy" />`;
+      iconHtml = `<img class="nhc-callout__icon" src="${escapeAttr(icon.external.url)}" alt="" loading="lazy" />`;
     } else if (icon.type === "file") {
       const url = "file" in icon && icon.file?.url ? icon.file.url : null;
       if (url) {
-        iconHtml = `<img class="nhc-callout__icon" src="${escapeHtml(url)}" alt="" loading="lazy" />`;
+        iconHtml = `<img class="nhc-callout__icon" src="${escapeAttr(url)}" alt="" loading="lazy" />`;
       }
     }
   }
