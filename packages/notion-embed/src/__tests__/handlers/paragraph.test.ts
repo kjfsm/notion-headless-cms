@@ -24,33 +24,35 @@ import {
   renderToDo,
 } from "../../handlers/paragraph";
 
+// 公式型の共通フィールドだけを satisfies で固定し、各ブロックの type 別 payload は spread で足す
 const blockBase = {
-  object: "block" as const,
+  object: "block",
   id: "id",
-  parent: { type: "page_id" as const, page_id: "p" },
+  parent: { type: "page_id", page_id: "p" },
   created_time: "",
   last_edited_time: "",
-  created_by: { object: "user" as const, id: "u" },
-  last_edited_by: { object: "user" as const, id: "u" },
+  created_by: { object: "user", id: "u" },
+  last_edited_by: { object: "user", id: "u" },
   has_children: false,
   archived: false,
   in_trash: false,
-};
+} satisfies Omit<ParagraphBlockObjectResponse, "type" | "paragraph">;
 
-const text = (s: string): RichTextItemResponse => ({
-  type: "text",
-  text: { content: s, link: null },
-  annotations: {
-    bold: false,
-    italic: false,
-    strikethrough: false,
-    underline: false,
-    code: false,
-    color: "default",
-  },
-  plain_text: s,
-  href: null,
-});
+const text = (s: string) =>
+  ({
+    type: "text",
+    text: { content: s, link: null },
+    annotations: {
+      bold: false,
+      italic: false,
+      strikethrough: false,
+      underline: false,
+      code: false,
+      color: "default",
+    },
+    plain_text: s,
+    href: null,
+  }) satisfies RichTextItemResponse;
 
 describe("renderParagraph", () => {
   it("シンプルな <p> を出す", async () => {

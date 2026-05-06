@@ -13,7 +13,9 @@ type NotionFetch = typeof globalThis.fetch;
 
 let capturedClientOptions: { auth?: string; fetch?: NotionFetch } | undefined;
 
-// 公式 SDK のエラークラス・型ガードはそのまま使うため、Client のみ差し替える
+// 公式 SDK のエラークラス・型ガードはそのまま使うため、Client のみ差し替える。
+// `as unknown as typeof import("@notionhq/client")` で公式モジュール shape との
+// 互換性を最低限ながら型レベルで担保し、export 漏れに気付けるようにする
 vi.mock("@notionhq/client", async () => {
   const actual =
     await vi.importActual<typeof import("@notionhq/client")>(
@@ -28,7 +30,7 @@ vi.mock("@notionhq/client", async () => {
       search = searchMock;
       dataSources = { retrieve: retrieveMock };
     },
-  };
+  } as unknown as typeof import("@notionhq/client");
 });
 
 function makeDataSource(id: string, title: string) {
