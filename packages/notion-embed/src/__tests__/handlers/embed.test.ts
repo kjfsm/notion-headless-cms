@@ -113,6 +113,41 @@ describe("renderEmbed", () => {
     }
   });
 
+  it("OGP title のみ (description/siteName/image なし) → カード出力、ホスト名は使わない", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        `<html><head><meta property="og:title" content="タイトルのみ" /></head></html>`,
+        { headers: { "content-type": "text/html" } },
+      ),
+    );
+    try {
+      const html = await renderEmbed(make("https://example.com/page"), []);
+      expect(html).toContain("nhc-bookmark");
+      expect(html).toContain("タイトルのみ");
+      expect(html).not.toContain("nhc-bookmark__description");
+      expect(html).not.toContain("nhc-bookmark__site");
+      expect(html).not.toContain("nhc-bookmark__cover");
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
+  it("OGP title なし → URL のホスト名をタイトルとして使う", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        `<html><head><meta property="og:description" content="説明のみ" /></head></html>`,
+        { headers: { "content-type": "text/html" } },
+      ),
+    );
+    try {
+      const html = await renderEmbed(make("https://example.com/page"), []);
+      expect(html).toContain("nhc-bookmark");
+      expect(html).toContain("example.com");
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  });
+
   it("provider が skip を返したら空文字列", async () => {
     const skipProvider = {
       id: "skip",
