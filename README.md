@@ -91,7 +91,8 @@ const blocks = await fetchBlockTree(client, pageId);
 #### [`@notion-headless-cms/notion-embed`](./packages/notion-embed)
 Notion ブロックを Notion 風 HTML にレンダリングする拡張パッケージ。`notionEmbed()` を `createCMS()` の引数に差し込むだけで有効化できる。
 - bookmark ブロック → OGP カード（in-memory TTL キャッシュ付き）
-- embed / video / audio / pdf / image → Steam・YouTube・Vimeo・Twitter・DLsite 等のプロバイダー対応
+- embed ブロック → provider が一致すれば provider の HTML、なければ `<iframe>` で直接表示
+- video / audio / pdf / image → YouTube・Twitter 等のプロバイダー対応
 - callout / toggle / paragraph / heading / list / quote / to_do → Notion 風 HTML
 - rich_text の mention（link_mention / page / database / date / user / custom_emoji）と全アノテーション対応
 - `embedRehypePlugins()` — rehype-raw + rehype-sanitize を XSS セーフに設定して返す

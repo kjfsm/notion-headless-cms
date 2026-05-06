@@ -2,55 +2,62 @@
 
 Notion の `embed` / `bookmark` / `video` / `audio` / `pdf` / `link_preview` / `link_to_page` ブロックを HTML に変換し、安全にレンダリングするための拡張パッケージ。
 
-- **BlockHandler** を `@notion-headless-cms/notion-orm` の `blocks` オプションに渡せる
-- **Provider レジストリ** で URL ごとに任意の HTML（`<iframe>` / `<a>` / OGP カード等）を生成
+- **embed ブロック** → provider が一致すればその出力を使い、なければ `<iframe>` で直接表示
+- **bookmark ブロック** → OGP カード（in-memory TTL キャッシュ付き）
+- **Provider レジストリ** で URL ごとに任意の HTML（`<iframe>` / `<a>` 等）を生成
 - **rehype プラグイン** で `rehype-raw` + `rehype-sanitize` をスキーマ拡張付きでまとめて適用
 - 各 provider が `sanitizeSchema` を持つため、**provider 追加 = sanitize 拡張 = レンダー可能**
 
 ## インストール
 
 ```bash
-pnpm add @notion-headless-cms/embeds rehype-raw rehype-sanitize hast-util-sanitize
+pnpm add @notion-headless-cms/notion-embed
 ```
 
 ## 使い方
 
 ```ts
 import { createCMS, nodePreset } from "@notion-headless-cms/core";
-import { renderMarkdown } from "@notion-headless-cms/renderer";
 import {
-  createEmbedHandlers,
-  embedRehypePlugins,
-  steamProvider,
-  dlsiteProvider,
+  notionEmbed,
   youtubeProvider,
-} from "@notion-headless-cms/embeds";
+} from "@notion-headless-cms/notion-embed";
 
-const providers = [steamProvider(), dlsiteProvider(), youtubeProvider()];
-const handlers = createEmbedHandlers({ providers });
+const embed = notionEmbed({
+  providers: [youtubeProvider({ display: "card" })],
+});
 
 export const cms = createCMS({
-  ...nodePreset({
-    renderer: (md, opts) =>
-      renderMarkdown(md, {
-        ...opts,
-        allowDangerousHtml: true,
-        rehypePlugins: embedRehypePlugins({ providers }),
-      }),
-  }),
+  ...nodePreset({ renderer: embed.renderer }),
   dataSources: {
     posts: notionCollection({
       // ... CLI 生成の properties
-      blocks: handlers,
+      blocks: embed.blocks,
     }),
   },
 });
 ```
 
+`notionEmbed()` は `renderer` と `blocks` を返すので、そのまま `createCMS` に渡すだけで有効化できる。
+
+### embed ブロックの挙動
+
+1. 登録済み provider が URL に一致 → provider が返す HTML を使う
+2. 一致しない → URL を `src` に持つ `<iframe>` を直接出力
+
+```html
+<!-- 例: https://store.steampowered.com/widget/2868840/ -->
+<div class="nhc-embed">
+  <iframe src="https://store.steampowered.com/widget/2868840/" frameborder="0" loading="lazy"></iframe>
+</div>
+```
+
+OGP カードにしたい場合は bookmark ブロックを使うこと。
+
 ## カスタム provider
 
 ```ts
-import { defineEmbedProvider } from "@notion-headless-cms/embeds/providers";
+import { defineEmbedProvider } from "@notion-headless-cms/notion-embed";
 
 export const myProvider = defineEmbedProvider({
   id: "my-widget",
@@ -66,13 +73,6 @@ export const myProvider = defineEmbedProvider({
   },
 });
 ```
-
-## エラー
-
-| コード | 用途 |
-|---|---|
-| `embeds/render_failed` | provider.render が throw した |
-| `embeds/provider_not_matched` | strict モードで未マッチ URL を検知 |
 
 ## ライセンス
 
