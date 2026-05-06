@@ -63,7 +63,7 @@ export function OgCard({ url, ogp }: OgCardProps) {
               alt=""
               loading="lazy"
               referrerPolicy="no-referrer"
-              className="m-0 h-full w-full object-contain"
+              className="m-0 h-full w-full object-cover"
             />
           </div>
         ) : null}
