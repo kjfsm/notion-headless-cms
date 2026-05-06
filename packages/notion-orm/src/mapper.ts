@@ -139,8 +139,11 @@ function extractPropertyValue(
       return prop.type === "checkbox" ? prop.checkbox : false;
     case "url":
       return prop.type === "url" ? prop.url : null;
-    default:
-      return null;
+    default: {
+      // PropertyDef.type に新しい種別が増えた際にコンパイルエラーで気付くための網羅性ガード
+      const _exhaustive: never = type;
+      return _exhaustive;
+    }
   }
 }
 

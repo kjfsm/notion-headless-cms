@@ -1,4 +1,4 @@
-import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
+import type { RichTextItemResponse } from "@notionhq/client";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { RichText } from "../rich-text/RichText";
@@ -7,7 +7,7 @@ const text = (
   content: string,
   overrides: Partial<RichTextItemResponse["annotations"]> = {},
   href: string | null = null,
-): RichTextItemResponse =>
+) =>
   ({
     type: "text",
     plain_text: content,
@@ -22,7 +22,7 @@ const text = (
       color: "default",
       ...overrides,
     },
-  }) as unknown as RichTextItemResponse;
+  }) satisfies RichTextItemResponse;
 
 describe("RichText", () => {
   it("プレーンテキストを描画する", () => {

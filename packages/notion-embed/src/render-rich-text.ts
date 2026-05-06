@@ -1,9 +1,9 @@
-import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints/common";
+import { isFullUser, type RichTextItemResponse } from "@notionhq/client";
 import { escapeAttr, escapeHtml } from "./providers/_internal";
 import { normalizeUrl } from "./url-normalize";
 
-// AnnotationResponse は @notionhq/client からエクスポートされていないため
-// RichTextItemResponse から取得する
+// AnnotationResponse 単体では公式から再公開されていないため、
+// RichTextItemResponse の indexed access で型を導出する。
 type Annotations = RichTextItemResponse["annotations"];
 
 export interface RichTextRenderOptions {
@@ -124,9 +124,8 @@ async function renderMention(
 
   if (m.type === "user") {
     const u = m.user;
-    // PartialUserObjectResponse は `type` フィールドを持たないため、
-    // `type` の有無で full / partial を識別する
-    const name = "type" in u ? (u.name ?? u.id) : u.id;
+    // 公式の type guard で full / partial を識別する。partial の場合は name が無いので id を表示
+    const name = isFullUser(u) ? (u.name ?? u.id) : u.id;
     return `<span class="nhc-mention nhc-mention--user">@${escapeHtml(name)}</span>`;
   }
 
