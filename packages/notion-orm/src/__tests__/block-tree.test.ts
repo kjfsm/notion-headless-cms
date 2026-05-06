@@ -1,10 +1,9 @@
-import type { Client } from "@notionhq/client";
-import type { BlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import type { BlockObjectResponse, Client } from "@notionhq/client";
 import { describe, expect, it, vi } from "vitest";
 import { fetchBlockTree } from "../block-tree";
 
-// 最小のブロック生成ヘルパ。型は厳密だが、テストでは id と has_children のみ参照する
-const block = (id: string, hasChildren = false): BlockObjectResponse =>
+// 最小のブロック生成ヘルパ。`satisfies` で公式型と整合させ、API 仕様変更時に型エラーで気付ける
+const block = (id: string, hasChildren = false) =>
   ({
     object: "block",
     id,
@@ -17,8 +16,8 @@ const block = (id: string, hasChildren = false): BlockObjectResponse =>
     archived: false,
     in_trash: false,
     type: "paragraph",
-    paragraph: { rich_text: [], color: "default" },
-  }) as unknown as BlockObjectResponse;
+    paragraph: { rich_text: [], color: "default", icon: null },
+  }) satisfies BlockObjectResponse;
 
 const makeClient = (
   childrenByParent: Record<string, BlockObjectResponse[]>,
@@ -53,6 +52,21 @@ describe("fetchBlockTree", () => {
     expect(tree[0]?.id).toBe("toggle");
     expect(tree[0]?.children).toHaveLength(1);
     expect(tree[0]?.children?.[0]?.id).toBe("nested");
+  });
+
+  it("has_more=true のページネーションを最後まで辿る（公式 collectPaginatedAPI 経由）", async () => {
+    const page1 = [block("a"), block("b")];
+    const page2 = [block("c")];
+    const list = vi.fn(
+      async ({ start_cursor }: { block_id: string; start_cursor?: string }) =>
+        start_cursor === "cursor-1"
+          ? { results: page2, has_more: false, next_cursor: null }
+          : { results: page1, has_more: true, next_cursor: "cursor-1" },
+    );
+    const client = { blocks: { children: { list } } } as unknown as Client;
+    const tree = await fetchBlockTree(client, "page1");
+    expect(tree.map((b) => b.id)).toEqual(["a", "b", "c"]);
+    expect(list).toHaveBeenCalledTimes(2);
   });
 
   it("多段ネストが深さ優先で解決される", async () => {

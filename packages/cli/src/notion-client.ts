@@ -1,6 +1,11 @@
 import { CMSError } from "@notion-headless-cms/core";
-import type { DataSourceObjectResponse } from "@notionhq/client";
-import { Client } from "@notionhq/client";
+import {
+  APIErrorCode,
+  Client,
+  ClientErrorCode,
+  type DataSourceObjectResponse,
+  isNotionClientError,
+} from "@notionhq/client";
 
 export type { DataSourceObjectResponse };
 
@@ -11,7 +16,18 @@ export interface NotionCLIClient {
   retrieveDataSource(id: string): Promise<DataSourceObjectResponse>;
 }
 
-const RETRY_STATUSES = new Set([429, 502, 503, 504]);
+// 公式 SDK が分類する一時的な失敗コード一覧。
+// SDK が `isNotionClientError` で識別するすべてのエラーから、これに該当するものをリトライする。
+const RETRIABLE_NOTION_CODES = new Set<string>([
+  APIErrorCode.RateLimited,
+  APIErrorCode.InternalServerError,
+  APIErrorCode.ServiceUnavailable,
+  APIErrorCode.GatewayTimeout,
+  ClientErrorCode.RequestTimeout,
+  ClientErrorCode.ResponseError,
+]);
+// SDK 経由ではなく fetch 直下で発生する素のネットワークエラー。
+// SDK の retry が及ばないケースの保険として最小限だけ識別する。
 const RETRIABLE_NETWORK_CODES = new Set([
   "ECONNRESET",
   "ECONNREFUSED",
@@ -23,41 +39,28 @@ const RETRIABLE_NETWORK_CODES = new Set([
 const MAX_RETRIES = 4;
 const BASE_DELAY_MS = 1000;
 
-/** エラーオブジェクトから OS/ネットワークレベルの `code` を取り出す。 */
-function getErrorCode(err: unknown): string | undefined {
-  if (typeof err !== "object" || err === null) return undefined;
-  const record = err as { code?: unknown; cause?: { code?: unknown } };
+/** ネットワーク層エラーを cause チェーンも含めて検出する。 */
+function isRawNetworkError(err: unknown): boolean {
+  if (err instanceof Error && err.message === "fetch failed") return true;
+  const record = err as { code?: unknown; cause?: { code?: unknown } } | null;
+  if (record === null || typeof record !== "object") return false;
   const direct = typeof record.code === "string" ? record.code : undefined;
   const nested =
     typeof record.cause?.code === "string" ? record.cause.code : undefined;
-  return nested ?? direct;
-}
-
-/** HTTP レスポンスを持つエラーの status を取り出す。 */
-function getHttpStatus(err: unknown): number | undefined {
-  if (typeof err !== "object" || err === null) return undefined;
-  const status = (err as { status?: unknown }).status;
-  return typeof status === "number" ? status : undefined;
-}
-
-/** ネットワーク起因のエラー（fetch failed / ECONN* など）かどうか判定する。 */
-function isRetriableNetworkError(err: unknown): boolean {
-  if (err instanceof Error && err.message === "fetch failed") return true;
-  const code = getErrorCode(err);
+  const code = nested ?? direct;
   return code !== undefined && RETRIABLE_NETWORK_CODES.has(code);
 }
 
-/** Notion API の一時的な失敗（429 / 5xx / ネットワークエラー）を指数バックオフでリトライする。 */
+/** Notion API の一時的な失敗を指数バックオフでリトライする。 */
 async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
   let lastError: unknown;
   for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
     try {
       return await fn();
     } catch (err) {
-      const status = getHttpStatus(err);
       const isRetriable =
-        (status !== undefined && RETRY_STATUSES.has(status)) ||
-        isRetriableNetworkError(err);
+        (isNotionClientError(err) && RETRIABLE_NOTION_CODES.has(err.code)) ||
+        isRawNetworkError(err);
       if (!isRetriable) throw err;
       lastError = err;
       if (attempt < MAX_RETRIES) {

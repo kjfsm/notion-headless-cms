@@ -1,22 +1,20 @@
-import type { Client, PageObjectResponse } from "@notionhq/client";
-import { paginate } from "./pagination.js";
+import {
+  type Client,
+  collectPaginatedAPI,
+  isFullPage,
+  type PageObjectResponse,
+} from "@notionhq/client";
 
 /** Notionデータソースをカーソルページネーションで最後まで取得する。 */
 export async function queryAllPages(
   client: Client,
   dataSourceId: string,
 ): Promise<PageObjectResponse[]> {
-  return paginate<PageObjectResponse>(async (cursor) => {
-    const response = await client.dataSources.query({
-      data_source_id: dataSourceId,
-      start_cursor: cursor,
-    });
-    return {
-      results: response.results as PageObjectResponse[],
-      has_more: response.has_more,
-      next_cursor: response.next_cursor,
-    };
+  // 公式ヘルパーで全ページ収集後、partial ページ（権限不足等で薄いレスポンス）を除外する
+  const results = await collectPaginatedAPI(client.dataSources.query, {
+    data_source_id: dataSourceId,
   });
+  return results.filter(isFullPage);
 }
 
 /**
@@ -36,5 +34,5 @@ export async function queryPageByProp(
     filter,
   });
 
-  return (res.results[0] as PageObjectResponse | undefined) ?? null;
+  return res.results.find(isFullPage) ?? null;
 }
