@@ -325,12 +325,60 @@ describe("renderImage", () => {
       image: {
         type: "external",
         external: { url: "https://example.com/x.png" },
-        caption: [{ plain_text: "猫" }],
+        caption: [
+          {
+            type: "text",
+            text: { content: "猫", link: null },
+            annotations: {
+              bold: false,
+              italic: false,
+              strikethrough: false,
+              underline: false,
+              code: false,
+              color: "default",
+            },
+            plain_text: "猫",
+            href: null,
+          },
+        ],
       },
     } as ImageBlockObjectResponse;
     const html = await renderImage(block);
     expect(html).toContain('alt="猫"');
     expect(html).toContain('class="nhc-image__caption"');
+    expect(html).toContain("猫");
+  });
+
+  it("caption にリンクがあれば <a> タグを出力する", async () => {
+    const block = {
+      ...blockBase,
+      type: "image",
+      image: {
+        type: "external",
+        external: { url: "https://example.com/x.png" },
+        caption: [
+          {
+            type: "text",
+            text: { content: "元サイト", link: { url: "https://example.com/" } },
+            annotations: {
+              bold: false,
+              italic: false,
+              strikethrough: false,
+              underline: false,
+              code: false,
+              color: "default",
+            },
+            plain_text: "元サイト",
+            href: "https://example.com/",
+          },
+        ],
+      },
+    } as ImageBlockObjectResponse;
+    const html = await renderImage(block);
+    expect(html).toContain('alt="元サイト"');
+    expect(html).toContain('class="nhc-image__caption"');
+    expect(html).toContain('<a href="https://example.com/"');
+    expect(html).toContain("元サイト");
   });
 
   it("URL なしは空文字", async () => {

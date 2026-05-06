@@ -5,7 +5,7 @@ import type {
   PdfBlockObjectResponse,
   VideoBlockObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
-import { escapeAttr, escapeHtml, renderIframe } from "../providers/_internal";
+import { escapeAttr, renderIframe } from "../providers/_internal";
 import { renderRichText } from "../render-rich-text";
 import type { EmbedProvider } from "../types";
 import { normalizeUrl } from "../url-normalize";
@@ -160,18 +160,11 @@ export async function renderImage(
   const fileUrl = extractFileUrl(block.image);
   if (!fileUrl) return "";
   const url = normalizeUrl(fileUrl);
-  const caption =
-    "caption" in block.image
-      ? (block.image as Record<string, unknown>).caption
-      : [];
-  const alt = Array.isArray(caption)
-    ? caption
-        .map((t: unknown) => (t as { plain_text?: string }).plain_text ?? "")
-        .join("")
-    : "";
+  const caption = block.image.caption ?? [];
+  const alt = caption.map((t) => t.plain_text).join("");
   const captionHtml =
-    Array.isArray(caption) && caption.length > 0
-      ? `<figcaption class="nhc-image__caption">${escapeHtml(alt)}</figcaption>`
+    caption.length > 0
+      ? `<figcaption class="nhc-image__caption">${await renderRichText(caption)}</figcaption>`
       : "";
 
   return (
