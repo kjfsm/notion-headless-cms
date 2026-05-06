@@ -152,9 +152,5 @@ export async function runGenerate(opts: GenerateOptions): Promise<void> {
     console.log(
       '次のステップ: import { createCMS } from "./generated/nhc"; を呼び出して CMS クライアントを構築してください。',
     );
-
-    const relPath = path.relative(process.cwd(), outputPath);
-    console.log(`\n⚠  生成ファイルには Notion DB の ID が含まれています。`);
-    console.log(`   .gitignore への追加を検討してください: ${relPath}`);
   }
 }
