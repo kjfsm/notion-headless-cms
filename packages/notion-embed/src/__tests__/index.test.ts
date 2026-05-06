@@ -63,26 +63,49 @@ describe("notionEmbed()", () => {
     expect(typeof result.blocks).toBe("object");
   });
 
-  it("blocks に主要なハンドラが登録されている", () => {
+  it("blocks に @notionhq/client の BlockObjectResponse 全 type が登録されている", () => {
     const { blocks } = notionEmbed();
+    // BlockObjectResponse union の全 type。
+    // ここを明示列挙することで「ライブラリ更新で新 type が増えた」場合に
+    // typecheck (createBlockHandlers の Record 型) と本テストの両方で気付ける。
     const expected = [
       "paragraph",
       "heading_1",
       "heading_2",
       "heading_3",
+      "heading_4",
       "bulleted_list_item",
       "numbered_list_item",
       "quote",
       "to_do",
-      "callout",
       "toggle",
-      "bookmark",
-      "link_preview",
+      "callout",
+      "code",
+      "equation",
+      "divider",
+      "breadcrumb",
+      "table_of_contents",
+      "tab",
+      "column_list",
+      "column",
+      "synced_block",
+      "template",
+      "child_page",
+      "child_database",
+      "link_to_page",
+      "table",
+      "table_row",
+      "meeting_notes",
+      "transcription",
       "embed",
-      "video",
-      "audio",
-      "pdf",
+      "bookmark",
       "image",
+      "video",
+      "pdf",
+      "file",
+      "audio",
+      "link_preview",
+      "unsupported",
     ];
     for (const key of expected) {
       expect(blocks[key]).toBeDefined();

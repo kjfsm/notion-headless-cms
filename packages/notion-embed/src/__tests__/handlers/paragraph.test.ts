@@ -3,6 +3,7 @@ import type {
   Heading1BlockObjectResponse,
   Heading2BlockObjectResponse,
   Heading3BlockObjectResponse,
+  Heading4BlockObjectResponse,
   NumberedListItemBlockObjectResponse,
   ParagraphBlockObjectResponse,
   QuoteBlockObjectResponse,
@@ -16,6 +17,7 @@ import {
   renderHeading1,
   renderHeading2,
   renderHeading3,
+  renderHeading4,
   renderNumberedListItem,
   renderParagraph,
   renderQuote,
@@ -75,7 +77,7 @@ describe("renderParagraph", () => {
   });
 });
 
-describe("renderHeading1/2/3", () => {
+describe("renderHeading1/2/3/4", () => {
   it("h1 を出す", async () => {
     const block: Heading1BlockObjectResponse = {
       ...blockBase,
@@ -113,6 +115,19 @@ describe("renderHeading1/2/3", () => {
       },
     };
     expect(await renderHeading3(block)).toBe("<h3>H3</h3>");
+  });
+
+  it("h4 を出す", async () => {
+    const block: Heading4BlockObjectResponse = {
+      ...blockBase,
+      type: "heading_4",
+      heading_4: {
+        rich_text: [text("H4")],
+        color: "default",
+        is_toggleable: false,
+      },
+    };
+    expect(await renderHeading4(block)).toBe("<h4>H4</h4>");
   });
 });
 
