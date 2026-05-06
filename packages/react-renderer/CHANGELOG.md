@@ -1,5 +1,11 @@
 # @notion-headless-cms/react-renderer
 
+## 0.0.8
+
+### Patch Changes
+
+- e0b4579: 依存パッケージのメジャーバージョンアップ: lucide-react 1.14.0、tailwind-merge 3.5.0
+
 ## 0.0.7
 
 ### Patch Changes

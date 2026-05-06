@@ -1,5 +1,12 @@
 # example-vercel-nextjs
 
+## 0.0.37
+
+### Patch Changes
+
+- Updated dependencies [e0b4579]
+  - @notion-headless-cms/react-renderer@0.0.8
+
 ## 0.0.36
 
 ### Patch Changes
