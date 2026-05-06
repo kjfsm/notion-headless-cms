@@ -296,9 +296,10 @@ describe("generateSchemaFile", () => {
     expect(code).toContain('publishedStatuses: ["公開済み"] as const');
   });
 
-  it("OGP はデフォルトで enabled: true で渡され、NhcConfig に ogp フィールドが含まれる", () => {
+  it("OGP は省略時に非取得、NhcConfig に ogp フィールドが含まれる", () => {
     const code = generateSchemaFile([makeCollection()]);
-    expect(code).toContain("ogp: config.ogp ?? { enabled: true }");
+    expect(code).toContain("ogp: config.ogp,");
+    expect(code).not.toContain("ogp: config.ogp ?? { enabled: true }");
     expect(code).toContain("ogp?: FetchBlockTreeOgpOptions");
     expect(code).toContain("FetchBlockTreeOgpOptions");
   });

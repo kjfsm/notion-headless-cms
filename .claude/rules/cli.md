@@ -30,7 +30,8 @@ paths:
 ## 生成物のルール
 
 - 出力ディレクトリは `nhc.config.ts` で指定（`output` フィールド必須）
-- 生成物（`generated/` など）は `.gitignore` に追加
+- 生成物（`generated/` など）は **Git にコミットする**（`.gitignore` に追加しない）
+- `nhc generate` を実行したら生成物を `git add` してコミットする
 - **Claude は生成物を直接編集しない**（PreToolUse hook で block）
 
 ## データベース解決
