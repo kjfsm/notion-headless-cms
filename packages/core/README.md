@@ -30,7 +30,6 @@ const cms = createClient({
     }),
   },
   cache: [memoryCache()],
-  swr: { ttlMs: 5 * 60_000 },
 });
 
 const posts = await cms.posts.list();
@@ -47,7 +46,7 @@ if (post) console.log(await post.render());
 | `sources` | データソースアダプターのマップ（`{ notion: notionSource(...) }` 等）。複数ソースの `collections` は自動マージされる |
 | `collections` | 直接 `CollectionDef` を渡す低レベル API（通常は `sources` を使う） |
 | `cache` | `readonly CacheAdapter[]` — `memoryCache()` / `cloudflareCache(env)` 等を配列で指定 |
-| `swr` | `{ ttlMs?: number }` — SWR (Stale-While-Revalidate) TTL |
+| `swr` | `{ ttlMs?: number }` — SWR の TTL。未指定だとキャッシュは期限なしで永続し、Notion の `lastEditedTime` 差分があれば bg で差し替え。指定するとブロッキング再取得が走る |
 | `renderer` | `RendererFn` — 未指定なら `@notion-headless-cms/renderer` を動的ロード |
 | `imageProxyBase` | 画像プロキシのベース URL（デフォルト `/api/images`） |
 | `waitUntil` | Cloudflare Workers の `ctx.waitUntil` 相当 |
@@ -103,7 +102,7 @@ CLI 生成物の各アイテム型は `BaseContentItem` を拡張する:
 
 - `memoryCache({ maxItems? })` — インプロセス LRU
 - `noopDocOps` / `noopImgOps` — キャッシュ無効化用
-- 別パッケージ: `@notion-headless-cms/cache/cloudflare` の `cloudflareCache(env)` / `r2Cache()` / `kvCache()`、`@notion-headless-cms/cache/next` の `nextCache()`
+- 別パッケージ: `@notion-headless-cms/cache/cloudflare` の `cloudflarePreset({ env, ctx })` / `cloudflareCache(...)` / `r2Cache()` / `kvCache()`、`@notion-headless-cms/cache/next` の `nextCache()`
 
 ### エラー
 
@@ -124,6 +123,7 @@ import { memoryCache } from "@notion-headless-cms/core/cache/memory";
 | `@notion-headless-cms/core/hooks` | `mergeHooks` / `mergeLoggers` |
 | `@notion-headless-cms/core/cache/memory` | `memoryCache` |
 | `@notion-headless-cms/core/cache/noop` | `noopDocOps` / `noopImgOps` |
+| `@notion-headless-cms/core/html` | `notionRevalidatorScript` (Astro / Hono / Express など素 HTML 向け) |
 
 ## ランタイム別レシピ
 

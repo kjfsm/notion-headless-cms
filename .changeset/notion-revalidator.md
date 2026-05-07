@@ -1,6 +1,6 @@
 ---
-"@notion-headless-cms/react-renderer": minor
-"@notion-headless-cms/core": minor
+"@notion-headless-cms/react-renderer": patch
+"@notion-headless-cms/core": patch
 ---
 
 Notion 更新の表示反映を 1 行で書ける再検証ヘルパを追加。

@@ -145,6 +145,58 @@ import { NotionRenderer } from "@notion-headless-cms/react-renderer";
 <NotionRenderer blocks={blocks} components={{ Equation }} />;
 ```
 
+## Notion 更新の表示反映 (`/router`, `/next`)
+
+Notion のページを編集したあと、開いている画面を**静かに最新化**するためのフックとコンポーネント。クエリ無し・別 API への fetch 無しで、フレームワーク本来の再評価機構（loader / RSC）だけを使う。
+
+### React Router v7
+
+```tsx
+import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
+
+export default function Post() {
+  return (
+    <article>
+      <NotionRevalidator />
+      {/* ... */}
+    </article>
+  );
+}
+```
+
+内部で `useRevalidator()` を呼び loader を再走させる。サーバ側で `cloudflarePreset({ env, ctx })` 等により `waitUntil` が配線されていれば、前回訪問時の SWR bg 更新で KV が最新化されており、再呼び出しで新内容が返って画面が差し替わる。
+
+### Next.js App Router
+
+```tsx
+import { NotionRevalidator } from "@notion-headless-cms/react-renderer/next";
+
+export default async function Page({ params }) {
+  // ...
+  return (
+    <article>
+      <NotionRevalidator />
+      {/* ... */}
+    </article>
+  );
+}
+```
+
+内部で `useRouter().refresh()` を呼び、Server Component を再評価して RSC ストリーム差分で UI を更新する。
+
+### オプション
+
+| プロップ / オプション | 既定値 | 説明 |
+|---|---|---|
+| `on` | `"mount"` | 発火タイミング。`"mount"` / `"visibility"` / 配列で複数指定可 |
+
+```tsx
+<NotionRevalidator on={["mount", "visibility"]} />
+// マウント時 + タブが visible に戻った時の両方で再評価
+```
+
+フック版 `useNotionRevalidate(opts)` も同じシグネチャで提供。React 非依存の素 HTML 向けには `@notion-headless-cms/core/html` の `notionRevalidatorScript()` を使う。
+
 ## 対応ブロック
 
 paragraph / heading_1-3 / bulleted_list_item / numbered_list_item / to_do / toggle / callout /

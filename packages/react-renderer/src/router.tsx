@@ -10,27 +10,17 @@
 // させずに loader を再走させ、サーバ側 SWR で差し替えられた最新データへ画面が
 // 静かに切り替わる。
 
-import { useEffect } from "react";
+import { useCallback } from "react";
 import { useRevalidator } from "react-router";
+import {
+  type UseNotionRevalidateOptions,
+  useRevalidateEffect,
+} from "./internal/revalidate.js";
 
-/**
- * 再検証のトリガー。
- * - "mount": ハイドレーション直後に 1 度だけ実行
- * - "visibility": タブ可視化 (`visibilitychange` で hidden→visible) の度に実行
- */
-export type NotionRevalidateTrigger = "mount" | "visibility";
-
-export interface UseNotionRevalidateOptions {
-  /** 既定値: "mount"。複数指定可。 */
-  on?: NotionRevalidateTrigger | NotionRevalidateTrigger[];
-}
-
-const toTriggerList = (
-  on: NotionRevalidateTrigger | NotionRevalidateTrigger[] | undefined,
-): NotionRevalidateTrigger[] => {
-  if (!on) return ["mount"];
-  return Array.isArray(on) ? on : [on];
-};
+export type {
+  NotionRevalidateTrigger,
+  UseNotionRevalidateOptions,
+} from "./internal/revalidate.js";
 
 /**
  * React Router の `useRevalidator` を内部で呼ぶフック。
@@ -40,21 +30,12 @@ export function useNotionRevalidate(
   opts: UseNotionRevalidateOptions = {},
 ): void {
   const { revalidate } = useRevalidator();
-  // 配列を直接 deps に渡すと毎レンダリング再実行されるため、
-  // 安定したキー文字列にしてから effect 内で再展開する。
-  const triggerKey = toTriggerList(opts.on).join(",");
-
-  useEffect(() => {
-    const triggers = triggerKey.split(",") as NotionRevalidateTrigger[];
-    if (triggers.includes("mount")) revalidate();
-    if (triggers.includes("visibility")) {
-      const handler = () => {
-        if (document.visibilityState === "visible") revalidate();
-      };
-      document.addEventListener("visibilitychange", handler);
-      return () => document.removeEventListener("visibilitychange", handler);
-    }
-  }, [revalidate, triggerKey]);
+  // useRevalidator が返す `revalidate` は再描画ごとに新インスタンスのことがあるため
+  // useCallback で安定化させ、内部 effect の deps を確定させる。
+  const stable = useCallback(() => {
+    revalidate();
+  }, [revalidate]);
+  useRevalidateEffect(stable, opts);
 }
 
 /**

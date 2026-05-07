@@ -1,9 +1,11 @@
 # useSWR とのクライアントサイド連携
 
+> **先に検討する**: 単純な「ページを開いたら最新化したい」「タブに戻ったら最新化したい」だけなら、`@notion-headless-cms/react-renderer/router` の `<NotionRevalidator />`（React Router）か `@notion-headless-cms/react-renderer/next`（Next.js App Router）の方が短く済む。フレームワークの loader / RSC の再評価機構をそのまま使うため、別 API ルートを立てなくてよい。useSWR との連携は **クライアント側で独立したクエリキャッシュを持ちたい** / **`mutate` で局所的に再取得したい** といったケース向け。
+
 `@notion-headless-cms/core` の `cms.posts.find()` / `cms.posts.list()` は
 Server Component / SSR での直接呼び出しを前提とした設計だが、
 サーバ側で API ルートを立てることで [useSWR](https://swr.vercel.app/) などの
-クライアントサイドキャッシュとも自然に連携できる。
+クライアントサイドキャッシュとも連携できる。
 
 ## サーバ側 API ルート（Next.js）
 

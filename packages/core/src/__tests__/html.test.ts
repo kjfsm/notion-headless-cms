@@ -23,6 +23,21 @@ describe("notionRevalidatorScript", () => {
     expect(out).toMatch(/^<script nonce="abc123">/);
   });
 
+  it("base64 / base64url 文字を nonce として受け入れる", () => {
+    const out = notionRevalidatorScript({ nonce: "aB3+/=_-" });
+    expect(out).toMatch(/^<script nonce="aB3\+\/=_-">/);
+  });
+
+  it("不正な nonce (引用符を含む) は throw する", () => {
+    expect(() =>
+      notionRevalidatorScript({ nonce: 'x"><script>alert(1)</script>' }),
+    ).toThrow(/不正な文字/);
+  });
+
+  it("空文字の nonce は throw する", () => {
+    expect(() => notionRevalidatorScript({ nonce: "" })).toThrow(/不正な文字/);
+  });
+
   it("外部入力を埋め込まないので XSS の余地が無い（純粋に静的）", () => {
     const out = notionRevalidatorScript();
     expect(out).not.toContain("undefined");

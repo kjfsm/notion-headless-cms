@@ -10,26 +10,16 @@
 // 発生しないため、URL は変わらず、UI も chatter なく書き換わる。
 
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useCallback } from "react";
+import {
+  type UseNotionRevalidateOptions,
+  useRevalidateEffect,
+} from "./internal/revalidate.js";
 
-/**
- * 再検証のトリガー。
- * - "mount": ハイドレーション直後に 1 度だけ実行
- * - "visibility": タブ可視化の度に実行
- */
-export type NotionRevalidateTrigger = "mount" | "visibility";
-
-export interface UseNotionRevalidateOptions {
-  /** 既定値: "mount"。複数指定可。 */
-  on?: NotionRevalidateTrigger | NotionRevalidateTrigger[];
-}
-
-const toTriggerList = (
-  on: NotionRevalidateTrigger | NotionRevalidateTrigger[] | undefined,
-): NotionRevalidateTrigger[] => {
-  if (!on) return ["mount"];
-  return Array.isArray(on) ? on : [on];
-};
+export type {
+  NotionRevalidateTrigger,
+  UseNotionRevalidateOptions,
+} from "./internal/revalidate.js";
 
 /**
  * Next.js App Router の `router.refresh()` を内部で呼ぶフック。
@@ -38,19 +28,10 @@ export function useNotionRevalidate(
   opts: UseNotionRevalidateOptions = {},
 ): void {
   const router = useRouter();
-  const triggerKey = toTriggerList(opts.on).join(",");
-
-  useEffect(() => {
-    const triggers = triggerKey.split(",") as NotionRevalidateTrigger[];
-    if (triggers.includes("mount")) router.refresh();
-    if (triggers.includes("visibility")) {
-      const handler = () => {
-        if (document.visibilityState === "visible") router.refresh();
-      };
-      document.addEventListener("visibilitychange", handler);
-      return () => document.removeEventListener("visibilitychange", handler);
-    }
-  }, [router, triggerKey]);
+  const stable = useCallback(() => {
+    router.refresh();
+  }, [router]);
+  useRevalidateEffect(stable, opts);
 }
 
 /** `useNotionRevalidate` を呼ぶだけのレンダー無しコンポーネント。 */
