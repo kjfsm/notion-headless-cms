@@ -60,7 +60,7 @@ export interface CollectionContext<T extends BaseContentItem> {
   slugField: string;
 }
 
-/** CollectionClient の実装。ユーザーは `createCMS` 経由でインスタンスを受け取る。 */
+/** CollectionClient の実装。ユーザーは `createClient` 経由でインスタンスを受け取る。 */
 export class CollectionClientImpl<T extends BaseContentItem>
   implements CollectionClient<T>
 {

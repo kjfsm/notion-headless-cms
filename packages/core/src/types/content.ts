@@ -9,7 +9,7 @@ import type { ContentBlock } from "../content/blocks";
  *   title: string;
  *   author: string;
  * }
- * createCMS<Post>({ source: createNotionCollection({ ... }) })
+ * createClient<Post>({ source: createNotionCollection({ ... }) })
  */
 export interface BaseContentItem {
   /** ページ ID（変更検知に必須）。 */

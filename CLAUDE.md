@@ -21,6 +21,7 @@ Notion DB
   └─ notion-orm（Notion API 取得・Markdown 変換・fetchBlockTree。ユーザーは直接 import しない）
        ├─ renderer（Markdown → HTML、remark/rehype ベース）
        ├─ react-renderer（BlockObjectResponse → React、shadcn/ui + Tailwind v4）
+       ├─ notion-source（CMSAdapter 実装。`createClient({ sources: { notion: notionSource(...) } })` で組み込む）
        └─ core（CMS エンジン・キャッシュ・SWR・フック・nodePreset）
             ├─ cache-r2（Cloudflare R2 + cloudflarePreset）
             ├─ cache-kv（Cloudflare KV）
@@ -33,7 +34,8 @@ Notion DB
 ### 核心設計原則
 
 - **core を Notion 固有知識から隔離**: `DataSourceAdapter` インターフェースのみ定義し、実装は `notion-orm` 側に置く。将来の Contentful 等への差し替えを可能にするため
-- **preset パターン（v0.3.0〜）**: `nodePreset()` (core) / `cloudflarePreset({ env })` (cache-r2) で `createCMS` 一本に統一。廃止されたアダプタ（`adapter-node` / `adapter-cloudflare`）は参照しない
+- **preset パターン（v0.3.0〜）**: `nodePreset()` (core) / `cloudflarePreset({ env })` (cache-r2) で `createClient` 一本に統一。廃止されたアダプタ（`adapter-node` / `adapter-cloudflare`）は参照しない
+- **拡張可能な sources（module augmentation）**: core は空の `CMSSources` インターフェースを公開し、`@notion-headless-cms/notion-source` などのアダプターパッケージが `declare module "@notion-headless-cms/core" { interface CMSSources { notion?: CMSAdapter } }` で宣言マージしてキーを追加する（Fastify プラグインと同じパターン）。CLI は DB 構造（`schema`）のみを生成し、ランタイム設定は `createClient({ sources: { notion: notionSource({ schema, token, publishOptions }) } })` で組み立てる
 - **構造型による抽象化**: `R2BucketLike` など、型だけ定義してランタイムパッケージへの直接依存を排除（テスト容易性向上）
 - **`internal/` は非公開**: `packages/*/src/internal/**` を他パッケージから import 禁止。公開したければ `src/index.ts` で re-export する
 

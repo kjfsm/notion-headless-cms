@@ -70,7 +70,7 @@ export type ItemWithContent<T extends BaseContentItem> = T & {
 
 /** `cache.warm()` のオプション。 */
 export interface WarmOptions {
-  /** 並列度。デフォルトは createCMS の rateLimiter.maxConcurrent。 */
+  /** 並列度。デフォルトは createClient の rateLimiter.maxConcurrent。 */
   concurrency?: number;
   /** 進捗コールバック。 */
   onProgress?: (done: number, total: number) => void;

@@ -4,6 +4,7 @@ import type { DataSource } from "./data-source";
 import type { CMSHooks } from "./hooks";
 import type { Logger } from "./logger";
 import type { CMSPlugin } from "./plugin";
+import type { CMSSources } from "./sources";
 
 /** `Logger` の出力を絞り込むログレベル。指定したレベル未満のログを抑制する。 */
 export type LogLevel = "debug" | "info" | "warn" | "error";
@@ -60,7 +61,7 @@ export interface RateLimiterConfig {
 }
 
 /**
- * コレクション 1 件の定義。CLI が生成する `nhc.ts` から `createCMS` に渡される。
+ * コレクション 1 件の定義。CLI が生成する `nhc.ts` から `createClient` に渡される。
  *
  * `source` は notion-orm 等の DataSource 実装。
  * `slugField` / `statusField` は TS フィールド名 (DataSource の `properties` キーと一致)。
@@ -81,7 +82,7 @@ export interface CollectionDef<T extends BaseContentItem = BaseContentItem> {
 }
 
 /**
- * `createCMS({ collections })` の map 型。
+ * `createClient({ collections })` の map 型。
  * キーがコレクション名、値が `CollectionDef<T>`。
  */
 export type CollectionsConfig = Record<string, CollectionDef<BaseContentItem>>;
@@ -91,11 +92,11 @@ export type InferCollectionItem<C> =
   C extends CollectionDef<infer T> ? T : BaseContentItem;
 
 /**
- * `createCMS()` の入力。
- * 通常は CLI が生成した `nhc.ts` の `createCMS` がこの型をラップする。
+ * `createClient()` の入力。
+ * 通常は CLI が生成した `nhc.ts` の `createClient` がこの型をラップする。
  *
  * @example
- * createCMS({
+ * createClient({
  *   collections: {
  *     posts: {
  *       source: createNotionCollection({ token, dataSourceId, properties }),
@@ -108,11 +109,17 @@ export type InferCollectionItem<C> =
  *   swr: { ttlMs: 5 * 60_000 },
  * });
  */
-export interface CreateCMSOptions<
+export interface CreateClientOptions<
   C extends CollectionsConfig = CollectionsConfig,
+  S extends CMSSources = CMSSources,
 > {
-  /** コレクション定義のマップ。 */
-  collections: C;
+  /**
+   * データソースアダプター (`@notion-headless-cms/notion-source` 等) のマップ。
+   * `sources` を指定する場合 `collections` は不要。両方指定された場合は `sources` が優先される。
+   */
+  sources?: S;
+  /** コレクション定義のマップ。`sources` を使う場合は不要。 */
+  collections?: C;
   /**
    * キャッシュアダプタ (配列)。未指定時はキャッシュなし。
    * - `memoryCache()` のように doc + image 両方を担当するもの

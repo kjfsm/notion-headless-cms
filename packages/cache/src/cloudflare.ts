@@ -362,7 +362,7 @@ export interface CloudflareCacheBindings {
  * binding が未設定の場合は対応するアダプタを省略する。
  *
  * @example
- * createCMS({
+ * createClient({
  *   collections: { posts: ... },
  *   cache: cloudflareCache({ docCache: env.DOC_CACHE, imgBucket: env.IMG_BUCKET }),
  * });

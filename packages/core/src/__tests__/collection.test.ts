@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { memoryCache } from "../cache/memory";
-import { createCMS } from "../cms";
+import { createClient } from "../cms";
 import { isCMSError } from "../errors";
 import type { RendererFn } from "../types/config";
 import type { BaseContentItem } from "../types/content";
@@ -55,7 +55,7 @@ function makeItems(): BaseContentItem[] {
 
 describe("CollectionClient — params", () => {
   it("params はスラッグ文字列の配列を返す", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -73,7 +73,7 @@ describe("CollectionClient — params", () => {
   });
 
   it("アイテムがない場合は空配列を返す", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: { source: makeMockSource(), slugField: "slug" },
@@ -85,7 +85,7 @@ describe("CollectionClient — params", () => {
 
 describe("CollectionClient — adjacent", () => {
   it("中間要素の前後両方を返す", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -105,7 +105,7 @@ describe("CollectionClient — adjacent", () => {
   });
 
   it("先頭要素(最新)の prev は null", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -125,7 +125,7 @@ describe("CollectionClient — adjacent", () => {
   });
 
   it("末尾要素(最古)の next は null", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -145,7 +145,7 @@ describe("CollectionClient — adjacent", () => {
   });
 
   it("存在しない slug の場合は { prev: null, next: null } を返す", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -169,7 +169,7 @@ describe("CollectionClient — adjacent", () => {
       { id: "2", slug: "b", lastEditedTime: "2024-01-01T00:00:00Z" },
       { id: "3", slug: "c", lastEditedTime: "2024-01-02T00:00:00Z" },
     ];
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -192,7 +192,7 @@ describe("CollectionClient — adjacent", () => {
 
 describe("CollectionClient — cache.invalidate / cache.warm", () => {
   it("キャッシュなしでも cache.invalidate / cache.invalidateItem がエラーにならない", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: { posts: { source: makeMockSource(), slugField: "slug" } },
     });
@@ -216,7 +216,7 @@ describe("CollectionClient — cache.invalidate / cache.warm", () => {
       },
     });
     const cache = memoryCache();
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: { posts: { source, slugField: "slug" } },
       cache: [cache],
@@ -240,7 +240,7 @@ describe("CollectionClient — cache.invalidate / cache.warm", () => {
       },
     });
     const cache = memoryCache();
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: { posts: { source, slugField: "slug" } },
       cache: [cache],
@@ -265,7 +265,7 @@ describe("CollectionClient — cache.invalidate / cache.warm", () => {
       },
     });
     const cache = memoryCache();
-    const cms = createCMS({
+    const cms = createClient({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
       cache: [cache],
@@ -283,7 +283,7 @@ describe("CollectionClient — cache.invalidate / cache.warm", () => {
 
 describe("CollectionClient — cache.warm", () => {
   it("全アイテムをレンダリングしてキャッシュに保存する", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -309,7 +309,7 @@ describe("CollectionClient — cache.warm", () => {
       .mockRejectedValueOnce(new Error("fail"))
       .mockResolvedValueOnce("");
 
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -331,7 +331,7 @@ describe("CollectionClient — cache.warm", () => {
 
   it("onProgress コールバックが呼ばれる", async () => {
     const onProgress = vi.fn();
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -351,7 +351,7 @@ describe("CollectionClient — cache.warm", () => {
   });
 
   it("アイテムがない場合は { ok: 0, failed: 0 } を返す", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: { source: makeMockSource(), slugField: "slug" },
       },
@@ -364,7 +364,7 @@ describe("CollectionClient — cache.warm", () => {
 
 describe("CollectionClient — list フィルタ・ソート・ページング", () => {
   it("statuses フィルタで指定ステータスのみ返す", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -404,7 +404,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
         tags: ["tech", "life"],
       },
     ];
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -424,7 +424,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   });
 
   it("where フィルタで id が一致するアイテムのみ返す", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -443,7 +443,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   });
 
   it("sort: asc で lastEditedTime 昇順になる", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -463,7 +463,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   });
 
   it("sort: desc で lastEditedTime 降順になる", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -483,7 +483,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   });
 
   it("skip と limit でページングできる", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -502,7 +502,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   });
 
   it("limit のみ指定すると先頭から N 件を返す", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -522,7 +522,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   });
 
   it("skip のみ指定すると N 件スキップして残りを返す", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -542,7 +542,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   });
 
   it("オプションなしで全件返す", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -580,7 +580,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
         publishedAt: "2024-01-02",
       },
     ];
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -613,7 +613,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
         publishedAt: "2024-01-01",
       },
     ];
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -631,7 +631,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   });
 
   it("where に配列を渡すと OR 一致でフィルタする", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -651,7 +651,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   });
 
   it("filter 関数で任意条件でフィルタできる", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -672,7 +672,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   });
 
   it("sort.compare カスタム comparator でソートできる", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -715,7 +715,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
         return items as BaseContentItem[];
       },
     });
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: { posts: { source, slugField: "slug" } },
     });
@@ -737,7 +737,7 @@ describe("CollectionClient — 並行 get", () => {
       slug: "concurrent-post",
       lastEditedTime: "2024-01-01T00:00:00Z",
     };
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -767,7 +767,7 @@ describe("CollectionClient — 並行 get", () => {
   });
 
   it("存在しない slug への並行 get が全て null を返す", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -804,7 +804,7 @@ describe("CollectionClient — isArchived フィルタ", () => {
         isArchived: true,
       },
     ];
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -828,7 +828,7 @@ describe("CollectionClient — isArchived フィルタ", () => {
       lastEditedTime: "2024-01-01T00:00:00Z",
       isArchived: true,
     };
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -854,7 +854,7 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
       lastEditedTime: "2024-01-01T00:00:00Z",
       status: "下書き",
     };
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -879,7 +879,7 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
       lastEditedTime: "2024-01-01T00:00:00Z",
       status: "公開",
     };
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -903,7 +903,7 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
       slug: "no-status",
       lastEditedTime: "2024-01-01T00:00:00Z",
     };
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -928,7 +928,7 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
       lastEditedTime: "2024-01-01T00:00:00Z",
       status: null,
     };
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -962,7 +962,7 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
       },
       { id: "3", slug: "no-status", lastEditedTime: "2024-01-01T00:00:00Z" },
     ];
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -996,7 +996,7 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
         status: "下書き",
       },
     ];
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -1031,7 +1031,7 @@ describe("CollectionClient — コンテンツアクセサ", () => {
       slug: "post-html",
       lastEditedTime: "2024-01-01T00:00:00Z",
     };
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -1057,7 +1057,7 @@ describe("CollectionClient — コンテンツアクセサ", () => {
       lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const loadMarkdown = vi.fn().mockResolvedValue("# Hello World");
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -1084,7 +1084,7 @@ describe("CollectionClient — コンテンツアクセサ", () => {
       lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const fakeBlocks = [{ type: "paragraph", content: [] }];
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -1107,7 +1107,7 @@ describe("CollectionClient — コンテンツアクセサ", () => {
   });
 
   it("statuses を単一文字列で指定すると一致するアイテムだけ返す", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -1133,7 +1133,7 @@ describe("CollectionClient — コンテンツアクセサ", () => {
       lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const loadMarkdown = vi.fn().mockResolvedValue("# Lazy");
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -1162,7 +1162,7 @@ describe("CollectionClient — check()", () => {
       slug: "my-post",
       lastEditedTime: "2024-01-01T00:00:00Z",
     };
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -1185,7 +1185,7 @@ describe("CollectionClient — check()", () => {
       slug: "updated-post",
       lastEditedTime: "2024-01-02T00:00:00Z",
     };
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -1217,7 +1217,7 @@ describe("CollectionClient — check()", () => {
       slug: "render-post",
       lastEditedTime: "2024-01-02T00:00:00Z",
     };
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -1240,7 +1240,7 @@ describe("CollectionClient — check()", () => {
   });
 
   it("存在しない slug は null を返す", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: { source: makeMockSource(), slugField: "slug" },
@@ -1257,7 +1257,7 @@ describe("CollectionClient — check()", () => {
       lastEditedTime: "2024-01-01T00:00:00Z",
       status: "下書き",
     };
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: {
         posts: {
@@ -1282,7 +1282,7 @@ describe("CollectionClient — check()", () => {
       lastEditedTime: "2024-01-02T00:00:00Z",
     };
     const findByProp = vi.fn().mockResolvedValue(item);
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -1305,7 +1305,7 @@ describe("CollectionClient — check()", () => {
       lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const findByProp = vi.fn().mockResolvedValue(item);
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -1332,7 +1332,7 @@ describe("CollectionClient — check()", () => {
       lastEditedTime: "2024-01-02T00:00:00Z",
     };
     const cache = memoryCache();
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -1357,7 +1357,7 @@ describe("CollectionClient — check()", () => {
       slug: "empty-version-post",
       lastEditedTime: "2024-01-01T00:00:00Z",
     };
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -1390,7 +1390,7 @@ describe("CollectionClient — find() bypassCache", () => {
       },
     });
     const cache = memoryCache();
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: { posts: { source, slugField: "slug" } },
       cache: [cache],
@@ -1407,7 +1407,7 @@ describe("CollectionClient — find() bypassCache", () => {
   });
 
   it("bypassCache: true で存在しない slug は null を返す", async () => {
-    const cms = createCMS({
+    const cms = createClient({
       renderer: mockRenderer,
       collections: { posts: { source: makeMockSource(), slugField: "slug" } },
     });
@@ -1425,7 +1425,7 @@ describe("CollectionClient — slugField + findByProp", () => {
       status: "公開",
     };
     const findByProp = vi.fn().mockResolvedValue(item);
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({

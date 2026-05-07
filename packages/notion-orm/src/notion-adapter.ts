@@ -77,7 +77,7 @@ export interface NotionCollectionSchemaOptions<T extends BaseContentItem>
 /**
  * CLI が生成した `*Properties` オブジェクトを使うオプション。
  * ページ構成の知識（slug/status の意味）を持たない型付きNotionクライアント。
- * slug/status/publishedStatuses は `createCMS({ collections })` で指定する。
+ * slug/status/publishedStatuses は `createClient({ collections })` で指定する。
  */
 export interface NotionCollectionPropertiesOptions
   extends NotionCollectionCommonOptions {
@@ -131,7 +131,7 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
     } else if ("properties" in opts && opts.properties && !("fields" in opts)) {
       // CLI 生成の PropertyMap を使う新形式。
       // slug/status/publishedStatuses はページ構成の知識を持たないため設定しない。
-      // createCMS({ collections }) で指定する。
+      // createClient({ collections }) で指定する。
       const propMap = opts.properties as PropertyMap;
       this.properties = propMap;
       this.itemMapper = ((page: NotionPage) =>
@@ -324,7 +324,7 @@ export function createNotionCollection<T extends BaseContentItem>(
 /**
  * CLI 生成の `*Properties` オブジェクトを使う新形式。
  * ページ構成の知識（slug/status/publishedStatuses の意味）を持たず、
- * すべての設定は `createCMS({ collections })` で行う。
+ * すべての設定は `createClient({ collections })` で行う。
  */
 export function createNotionCollection(
   opts: NotionCollectionPropertiesOptions,

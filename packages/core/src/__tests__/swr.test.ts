@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { memoryCache } from "../cache/memory";
-import { createCMS } from "../cms";
+import { createClient } from "../cms";
 import type { RendererFn } from "../types/config";
 import type { BaseContentItem } from "../types/content";
 import type { DataSource } from "../types/data-source";
@@ -59,7 +59,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
     });
 
-    const cms = createCMS({
+    const cms = createClient({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
       cache: [cache],
@@ -108,7 +108,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     });
 
     // TTL 未設定（永続キャッシュ）
-    const cms = createCMS({
+    const cms = createClient({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
       cache: [cache],
@@ -164,7 +164,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     });
 
     // TTL 未設定（永続キャッシュ）
-    const cms = createCMS({
+    const cms = createClient({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
       cache: [cache],
@@ -207,7 +207,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
     });
 
-    const cms = createCMS({
+    const cms = createClient({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
       cache: [cache],
@@ -234,7 +234,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
     });
 
-    const cms = createCMS({
+    const cms = createClient({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
       cache: [memoryCache()],
@@ -267,7 +267,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
       cachedAt: Date.now(),
     });
 
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -314,7 +314,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
         return [item];
       },
     });
-    const cms = createCMS({
+    const cms = createClient({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
       cache: [cache],
@@ -363,7 +363,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
     });
 
-    const cms = createCMS({
+    const cms = createClient({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
       cache: [cache],
@@ -413,7 +413,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
     });
 
-    const cms = createCMS({
+    const cms = createClient({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
       cache: [cache],
@@ -460,7 +460,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
     });
 
-    const cms = createCMS({
+    const cms = createClient({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
       cache: [cache],
@@ -506,7 +506,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
     });
 
-    const cms = createCMS({
+    const cms = createClient({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
       cache: [cache],
@@ -537,7 +537,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
     });
 
-    const cms = createCMS({
+    const cms = createClient({
       collections: { posts: { source, slugField: "slug" } },
       renderer: mockRenderer,
       // ttlMs を設定するとリスト差分なし時に cachedAt がリセットされる
@@ -566,7 +566,7 @@ describe("metadata と content の分離", () => {
     if (!cache.doc) return;
     const getContentSpy = vi.spyOn(cache.doc, "getContent");
 
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -611,7 +611,7 @@ describe("リトライ中のロガー", () => {
       status: 503,
     });
     let callCount = 0;
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({
@@ -646,7 +646,7 @@ describe("リトライ中のロガー", () => {
       lastEditedTime: "2024-01-01T00:00:00Z",
     };
     let callCount = 0;
-    const cms = createCMS({
+    const cms = createClient({
       collections: {
         posts: {
           source: makeMockSource({

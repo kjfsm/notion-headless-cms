@@ -252,151 +252,53 @@ function generateCollectionBlock(
   return lines.join("\n");
 }
 
-/** `createCMS` ファクトリと `Nhc` 型を生成する。 */
-function generateClientBlock(collections: ResolvedCollection[]): string {
-  const collectionNames = collections.map((c) => c.name);
-  const itemTypes = collections.map((c) => pascal(c.name).replace(/s$/, ""));
-
-  // Nhc 型: 各コレクションが CollectionClient<Item>
-  const nhcMembers = collections.map((c, i) => {
-    return `\t${c.name}: CollectionClient<${itemTypes[i]}>;`;
-  });
-
-  // createCMS 内部で構築する collections オブジェクト
-  const innerCollections = collections.map((c) => {
+/** schema 集約ブロックを生成する。`notionSource()` が消費する。 */
+function generateSchemaAggregateBlock(
+  collections: ResolvedCollection[],
+): string {
+  const entries = collections.map((c) => {
     const slugField = c.config.slugField ?? "slug";
     const statusField = c.config.statusField ?? "status";
-    const published = c.config.publishedStatuses
-      ? `[${c.config.publishedStatuses.map((s) => JSON.stringify(s)).join(", ")}] as const`
-      : "[] as const";
-    const accessible = c.config.accessibleStatuses
-      ? `[${c.config.accessibleStatuses.map((s) => JSON.stringify(s)).join(", ")}] as const`
-      : undefined;
-    const accessibleLine = accessible
-      ? `\n\t\t\t\taccessibleStatuses: ${accessible},`
-      : "";
-    return `\t\t\t${c.name}: {
-				source: createNotionCollection({
-					token: config.notionToken,
-					dataSourceId: ${c.name}DataSourceId,
-					properties: ${c.name}Properties,
-					ogp: config.ogp,
-					...(config.blocks ? { blocks: config.blocks } : {}),
-				}),
-				slugField: ${JSON.stringify(slugField)},
-				statusField: ${JSON.stringify(statusField)},
-				publishedStatuses: ${published},${accessibleLine}
-			},`;
+    return `\t${c.name}: {
+\t\tdataSourceId: ${c.name}DataSourceId,
+\t\tproperties: ${c.name}Properties,
+\t\tslugField: ${JSON.stringify(slugField)},
+\t\tstatusField: ${JSON.stringify(statusField)},
+\t},`;
   });
 
   return `// =${"=".repeat(60)}
-// CMS factory
+// Schema 集約 (notionSource() に渡す)
 // =${"=".repeat(60)}
 
-/** \`createCMS()\` に渡すランタイム設定。Notion トークンとキャッシュ等を指定する。 */
-export interface NhcConfig {
-	/** Notion API トークン。 */
-	notionToken: string;
-	/** キャッシュアダプタ (配列)。 */
-	cache?: readonly CacheAdapter[];
-	/** SWR（Stale-While-Revalidate）設定。 */
-	swr?: SWRConfig;
-	/** カスタムレンダラー。省略時は \`@notion-headless-cms/renderer\` を自動使用。 */
-	renderer?: RendererFn;
-	/** 画像プロキシのベース URL。デフォルト \`/api/images\`。 */
-	imageProxyBase?: string;
-	/** Cloudflare Workers の \`waitUntil\` 相当。 */
-	waitUntil?: (p: Promise<unknown>) => void;
-	/** embed / video 等の Notion ブロックをカスタム処理するハンドラマップ。 */
-	blocks?: Record<string, BlockHandler>;
-	/** ロガー。キャッシュイベントや内部処理のログを受け取る。 */
-	logger?: Logger;
-	/** ライフサイクルフック (onCacheHit / onCacheMiss 等)。 */
-	hooks?: CMSHooks;
-	/** embed / bookmark / link_preview ブロックの OGP 取得設定。省略時は OGP 非取得。 */
-	ogp?: FetchBlockTreeOgpOptions;
-}
-
-/** 生成された CMS クライアントの型。 */
-export interface Nhc extends CMSGlobalOps {
-${nhcMembers.join("\n")}
-}
-
-/**
- * Nhc クライアントを構築する。コレクションごとの DB ID とプロパティマップは生成時に固定済み。
- *
- * @example
- * import { createCMS } from "./generated/nhc";
- * import { memoryCache } from "@notion-headless-cms/cache";
- * import { notionEmbed, youtubeProvider } from "@notion-headless-cms/notion-embed";
- *
- * const embed = notionEmbed({ providers: [youtubeProvider({ display: "card" })] });
- *
- * export const cms = createCMS({
- *   notionToken: process.env.NOTION_TOKEN!,
- *   renderer: embed.renderer,
- *   blocks: embed.blocks,
- *   cache: [memoryCache()],
- *   swr: { ttlMs: 5 * 60_000 },
- * });
- *
- * await cms.${collectionNames[0] ?? "posts"}.list();
- * const item = await cms.${collectionNames[0] ?? "posts"}.find("hello");
- * const html = await item?.html();
- */
-export function createCMS(config: NhcConfig): Nhc {
-	return _createCMS({
-		cache: config.cache,
-		swr: config.swr,
-		renderer: config.renderer,
-		imageProxyBase: config.imageProxyBase,
-		waitUntil: config.waitUntil,
-		logger: config.logger,
-		hooks: config.hooks,
-		collections: {
-${innerCollections.join("\n")}
-		},
-	}) as unknown as Nhc;
-}
+/** 全コレクションのスキーマ集約。\`notionSource({ schema })\` に渡す。 */
+export const schema = {
+${entries.join("\n")}
+} as const satisfies SchemaMap;
 `;
 }
 
-/** nhc.ts 全体のコードを生成する。 */
+/** nhc.schema.ts 全体のコードを生成する。 */
 export function generateSchemaFile(collections: ResolvedCollection[]): string {
   const sha = createHash("sha256")
     .update(JSON.stringify(collections))
     .digest("hex");
 
-  // Biome の import 整形に合わせて notion-orm は複数行形式にする
   const header = [
     "// このファイルは nhc generate により自動生成されました。手動編集は nhc generate で上書きされます。",
     `// Config SHA: ${sha}`,
     "",
-    "import {",
-    "\tcreateCMS as _createCMS,",
-    "\ttype CacheAdapter,",
-    "\ttype CMSGlobalOps,",
-    "\ttype CMSHooks,",
-    "\ttype CollectionClient,",
-    "\ttype Logger,",
-    "\ttype PropertyMap,",
-    "\ttype RendererFn,",
-    "\ttype SWRConfig,",
-    '} from "@notion-headless-cms/core";',
-    "import {",
-    "\tcreateNotionCollection,",
-    "\ttype FetchBlockTreeOgpOptions,",
-    '} from "@notion-headless-cms/notion-orm";',
-    'import type { BlockHandler } from "@notion-headless-cms/renderer";',
+    'import type { PropertyMap } from "@notion-headless-cms/core";',
+    'import type { SchemaMap } from "@notion-headless-cms/notion-source";',
   ].join("\n");
 
   const blocks = collections.map((c) =>
     generateCollectionBlock(c, resolveFields(c)),
   );
 
-  const client = generateClientBlock(collections);
+  const aggregate = generateSchemaAggregateBlock(collections);
 
   // タブをスペースに変換し、末尾の余分な改行を正規化して Biome の lint を通す
-  const raw = [header, ...blocks, client].join("\n\n").replace(/\t/g, "  ");
+  const raw = [header, ...blocks, aggregate].join("\n\n").replace(/\t/g, "  ");
   return `${raw.trimEnd()}\n`;
 }

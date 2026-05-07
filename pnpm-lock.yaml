@@ -543,6 +543,28 @@ importers:
         specifier: 'catalog:'
         version: 4.3.6
 
+  packages/notion-source:
+    dependencies:
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../core
+      '@notion-headless-cms/notion-orm':
+        specifier: workspace:*
+        version: link:../notion-orm
+      '@notion-headless-cms/renderer':
+        specifier: workspace:*
+        version: link:../renderer
+    devDependencies:
+      '@notionhq/client':
+        specifier: 'catalog:'
+        version: 5.20.0
+      notion-to-md:
+        specifier: 'catalog:'
+        version: 3.1.9
+      zod:
+        specifier: 'catalog:'
+        version: 4.3.6
+
   packages/react-renderer:
     dependencies:
       '@radix-ui/react-aspect-ratio':

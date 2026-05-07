@@ -241,12 +241,19 @@ describe("Notion API datasource プロパティ型マッピング", () => {
 });
 
 describe("generateSchemaFile", () => {
-  it("コレクション 1 件分の properties / 型 / createCMS を出力する", () => {
+  it("コレクション 1 件分の properties / 型 / schema 集約を出力する", () => {
     const code = generateSchemaFile([makeCollection()]);
     expect(code).toContain('export const postsDataSourceId = "abc-123"');
     expect(code).toContain("export const postsProperties");
     expect(code).toContain("export interface Post");
-    expect(code).toContain("export function createCMS(config: NhcConfig)");
+    expect(code).toContain("export const schema =");
+    expect(code).toContain("satisfies SchemaMap");
+    expect(code).toContain("dataSourceId: postsDataSourceId");
+    expect(code).toContain("properties: postsProperties");
+    // 旧 API の痕跡が残っていないこと
+    expect(code).not.toContain("export function createClient");
+    expect(code).not.toContain("NhcConfig");
+    expect(code).not.toContain("publishedStatuses");
     // status 型の literal union が出力される
     expect(code).toContain('"公開済み" | "下書き" | null');
   });
@@ -291,17 +298,27 @@ describe("generateSchemaFile", () => {
     expect(code).not.toContain("  mySlug: string | null;");
   });
 
-  it("公開ステータス値を createCMS 内に埋め込む", () => {
+  it("schema 集約に slugField / statusField のみが含まれる (publishedStatuses は notionSource() 側で指定)", () => {
     const code = generateSchemaFile([makeCollection()]);
-    expect(code).toContain('publishedStatuses: ["公開済み"] as const');
+    expect(code).toContain('slugField: "slug"');
+    expect(code).toContain('statusField: "status"');
+    // publishedStatuses / accessibleStatuses は schema には含めない
+    expect(code).not.toContain("publishedStatuses:");
+    expect(code).not.toContain("accessibleStatuses:");
   });
 
-  it("OGP は省略時に非取得、NhcConfig に ogp フィールドが含まれる", () => {
+  it("notion-source / core から型を import する", () => {
     const code = generateSchemaFile([makeCollection()]);
-    expect(code).toContain("ogp: config.ogp,");
-    expect(code).not.toContain("ogp: config.ogp ?? { enabled: true }");
-    expect(code).toContain("ogp?: FetchBlockTreeOgpOptions");
-    expect(code).toContain("FetchBlockTreeOgpOptions");
+    expect(code).toContain(
+      'import type { PropertyMap } from "@notion-headless-cms/core"',
+    );
+    expect(code).toContain(
+      'import type { SchemaMap } from "@notion-headless-cms/notion-source"',
+    );
+    // 旧 import の痕跡なし
+    expect(code).not.toContain("createNotionCollection");
+    expect(code).not.toContain("FetchBlockTreeOgpOptions");
+    expect(code).not.toContain("BlockHandler");
   });
 
   it("対応していないプロパティ型はコメント化される", () => {

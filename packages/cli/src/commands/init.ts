@@ -15,8 +15,8 @@ import { defineConfig, env } from "@notion-headless-cms/cli";
 export default defineConfig({
 	// Notion インテグレーションのシークレット (環境変数 NOTION_TOKEN から読み込む)
 	notionToken: env("NOTION_TOKEN"),
-	// 生成ファイルの出力先
-	output: "src/generated/nhc.ts",
+	// 生成ファイルの出力先 (スキーマ定義のみ。ランタイム設定は createClient() 側で指定する)
+	output: "src/generated/nhc.schema.ts",
 	// コレクション定義 (cms.posts → "posts")
 	collections: {
 		posts: {
@@ -39,14 +39,23 @@ export default defineConfig({
 });
 
 // ── 使い方 ──────────────────────────────────────────────────────────────
-// 生成ファイルから createCMS をインポートし、ランタイム設定だけ渡します。
+// 生成された schema を notionSource() に渡して createClient() に組み込みます。
 //
-// import { createCMS } from "./generated/nhc";
-// import { memoryCache } from "@notion-headless-cms/cache";
+// import { createClient, memoryCache } from "@notion-headless-cms/core";
+// import { notionSource } from "@notion-headless-cms/notion-source";
+// import { schema } from "./generated/nhc.schema";
 //
-// export const cms = createCMS({
-//   notionToken: process.env.NOTION_TOKEN!,
-//   cache: memoryCache({ ttlMs: 5 * 60_000 }),
+// export const cms = createClient({
+//   sources: {
+//     notion: notionSource({
+//       schema,
+//       token: process.env.NOTION_TOKEN!,
+//       publishOptions: {
+//         posts: { publishedStatuses: ["公開済み"] },
+//       },
+//     }),
+//   },
+//   cache: [memoryCache()],
 // });
 //
 // const posts = await cms.posts.list({ limit: 10 });

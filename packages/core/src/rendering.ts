@@ -26,7 +26,7 @@ async function loadDefaultRenderer(): Promise<RendererFn> {
       code: "core/config_invalid",
       message:
         "renderer が未指定で、@notion-headless-cms/renderer のロードにも失敗しました。" +
-        " createCMS の renderer オプションを指定するか、@notion-headless-cms/renderer をインストールしてください。",
+        " createClient の renderer オプションを指定するか、@notion-headless-cms/renderer をインストールしてください。",
       context: { operation: "loadDefaultRenderer" },
     });
   }

@@ -5,7 +5,7 @@ export { memoryCache } from "./cache/memory";
 export { noopDocOps, noopImgOps } from "./cache/noop";
 // ── メイン API ──────────────────────────────────────────────────────────
 export type { CMSClient, CMSGlobalOps } from "./cms";
-export { createCMS } from "./cms";
+export { createClient } from "./cms";
 // ── コレクション ─────────────────────────────────────────────────────────
 export type { CollectionContext } from "./collection";
 export { CollectionClientImpl, collectionKey } from "./collection";
@@ -53,7 +53,7 @@ export type {
   CollectionDef,
   CollectionsConfig,
   ContentConfig,
-  CreateCMSOptions,
+  CreateClientOptions,
   DataSource,
   DocumentCacheOps,
   FindOptions,
@@ -80,3 +80,9 @@ export type {
   WebhookConfig,
 } from "./types/index";
 export { definePlugin } from "./types/plugin";
+// ── データソース拡張ポイント ────────────────────────────────────────────
+export type {
+  CMSAdapter,
+  CMSSources,
+  MergeSourceCollections,
+} from "./types/sources";

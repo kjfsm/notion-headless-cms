@@ -30,13 +30,13 @@ export {
 } from "./url-normalize";
 
 /**
- * createCMS の引数に差し込んで Notion ブロックを Notion 風 HTML にレンダリングする。
+ * createClient の引数に差し込んで Notion ブロックを Notion 風 HTML にレンダリングする。
  *
  * @example
  * ```ts
  * const embed = notionEmbed({ providers: [youtubeProvider()] });
  *
- * export const cms = createCMS({
+ * export const cms = createClient({
  *   ...nodePreset({ renderer: embed.renderer }),
  *   dataSources: {
  *     posts: postsCollection({ blocks: embed.blocks }),
