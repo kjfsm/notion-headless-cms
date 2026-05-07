@@ -1,9 +1,10 @@
 ---
 import { env } from "cloudflare:workers";
+import { notionRevalidatorScript } from "@notion-headless-cms/core/html";
 import { type Env, makeCms } from "../lib/cms";
 import { getPosts } from "../lib/data";
 
-const cms = makeCms(env as Env);
+const cms = makeCms(env as Env, Astro.locals.cfContext);
 const items = await getPosts(cms);
 ---
 
@@ -26,5 +27,6 @@ const items = await getPosts(cms);
         ))}
       </ul>
     </main>
+    <Fragment set:html={notionRevalidatorScript()} />
   </body>
 </html>

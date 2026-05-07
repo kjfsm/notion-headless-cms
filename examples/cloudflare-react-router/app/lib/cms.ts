@@ -14,7 +14,12 @@ export interface Env {
   IMG_BUCKET?: R2Bucket;
 }
 
-export function makeCms(env: Env, ctx?: ExecutionContext) {
+// ctx は `waitUntil` だけ要求する構造型で受ける。
+// React Router / Hono / Astro 等で型が微妙に違っても通る。
+export function makeCms(
+  env: Env,
+  ctx?: { waitUntil(p: Promise<unknown>): void },
+) {
   const embed = notionEmbed({
     providers: [youtubeProvider({ display: "card" })],
   });

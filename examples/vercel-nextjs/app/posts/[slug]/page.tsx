@@ -9,6 +9,7 @@ import {
 // 直接 import でもルート単位で自動コードスプリットされるため、katex は post ページの
 // チャンクにだけ含まれる。
 import { Equation } from "@notion-headless-cms/react-renderer/equation";
+import { NotionRevalidator } from "@notion-headless-cms/react-renderer/next";
 import { resolveBlockImageUrls } from "@notion-headless-cms/react-renderer/server";
 import { notFound } from "next/navigation";
 import { cms } from "@/app/lib/cms";
@@ -44,6 +45,10 @@ export default async function PostPage({
 
   return (
     <article className="max-w-2xl mx-auto px-4 py-12">
+      {/* ハイドレーション後に router.refresh() を呼び、Server Component を再評価
+          させる。サーバ側 SWR で差し替えられた最新内容を、クエリ無し・別 API
+          fetch 無しで RSC ストリームとして取り込む。 */}
+      <NotionRevalidator />
       <h1 className="text-3xl font-bold mb-4">{post.slug}</h1>
       {post.publishedAt && (
         <time className="block text-sm text-gray-500 mb-8">

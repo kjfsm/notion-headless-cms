@@ -2,9 +2,9 @@ import {
   type NotionBlock,
   NotionRenderer,
 } from "@notion-headless-cms/react-renderer";
+import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
 import { resolveBlockImageUrls } from "@notion-headless-cms/react-renderer/server";
-import { useEffect } from "react";
-import { data, useRevalidator } from "react-router";
+import { data } from "react-router";
 import { makeCms } from "../lib/cms";
 import type { Route } from "./+types/post";
 
@@ -30,19 +30,12 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 }
 
 export default function Post({ loaderData }: Route.ComponentProps) {
-  const { revalidate } = useRevalidator();
-  // ハイドレーション後に 1 度だけ loader を再走させる。
-  // 初回応答ではサーバ loader が SWR で古いキャッシュを即返却しつつ
-  // waitUntil で Notion との差分を取り込み、KV を最新化する。
-  // この再呼び出しで更新済みデータが返り、画面が静かに切り替わる。
-  // クエリパラメータも別 API fetch も使わず、loader 直呼び出しだけで完結する。
-  useEffect(() => {
-    revalidate();
-  }, [revalidate]);
-
   const { blocks, item } = loaderData;
   return (
     <article>
+      {/* ハイドレーション後に loader を 1 度再走させる。サーバ側 SWR で差し替え
+          られた最新データを、クエリ無し・別 API fetch 無しで取り込む。 */}
+      <NotionRevalidator />
       <h1>{item.title ?? item.slug}</h1>
       {item.publishedAt && <time>{item.publishedAt}</time>}
       <NotionRenderer blocks={blocks} />

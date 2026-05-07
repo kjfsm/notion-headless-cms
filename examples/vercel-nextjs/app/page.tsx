@@ -1,3 +1,4 @@
+import { NotionRevalidator } from "@notion-headless-cms/react-renderer/next";
 import Link from "next/link";
 import { cms } from "@/app/lib/cms";
 
@@ -7,6 +8,9 @@ export default async function HomePage() {
   const items = await cms.posts.list().catch(() => []);
   return (
     <main className="max-w-2xl mx-auto px-4 py-12">
+      {/* ハイドレーション後に router.refresh() を呼び、SWR で差し替わった
+          最新の一覧を RSC ストリーム経由で静かに取り込む。 */}
+      <NotionRevalidator />
       <h1 className="text-3xl font-bold mb-8">記事一覧</h1>
       <ul className="space-y-4">
         {items.map((post) => (
