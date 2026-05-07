@@ -451,6 +451,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../core
       '@notionhq/client':
         specifier: 'catalog:'
         version: 5.20.0
@@ -464,9 +467,6 @@ importers:
         specifier: ^2.7.0
         version: 2.7.0
     devDependencies:
-      '@notion-headless-cms/core':
-        specifier: workspace:*
-        version: link:../core
       '@types/node':
         specifier: 'catalog:'
         version: 25.6.0
