@@ -17,28 +17,33 @@ pnpm add @notion-headless-cms/notion-embed
 ## 使い方
 
 ```ts
-import { createCMS, nodePreset } from "@notion-headless-cms/core";
+import { memoryCache } from "@notion-headless-cms/cache";
+import { createClient } from "@notion-headless-cms/core";
 import {
   notionEmbed,
   youtubeProvider,
 } from "@notion-headless-cms/notion-embed";
+import { notionSource } from "@notion-headless-cms/notion-source";
+import { schema } from "./generated/nhc.schema";
 
 const embed = notionEmbed({
   providers: [youtubeProvider({ display: "card" })],
 });
 
-export const cms = createCMS({
-  ...nodePreset({ renderer: embed.renderer }),
-  dataSources: {
-    posts: notionCollection({
-      // ... CLI 生成の properties
+export const cms = createClient({
+  sources: {
+    notion: notionSource({
+      schema,
+      token: process.env.NOTION_TOKEN!,
       blocks: embed.blocks,
     }),
   },
+  renderer: embed.renderer,
+  cache: [memoryCache()],
 });
 ```
 
-`notionEmbed()` は `renderer` と `blocks` を返すので、そのまま `createCMS` に渡すだけで有効化できる。
+`notionEmbed()` は `renderer` と `blocks` を返す。`renderer` は `createClient` 直下に、`blocks` は `notionSource` の `blocks` オプションに渡す。
 
 ### embed ブロックの挙動
 

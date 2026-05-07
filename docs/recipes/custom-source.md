@@ -1,7 +1,7 @@
 # カスタムデータソースの実装
 
 `DataSource<T>` インターフェースを実装することで、Notion 以外のバックエンドを利用できる。
-CLI 生成の `createCMS` ラッパーではなく、core の `createCMS` を直接呼ぶ。
+独自の `DataSource<T>` 実装を `CMSAdapter` でラップして `createClient({ sources })` に渡す（または `collections` に直接渡す）。
 
 ## インターフェース
 
@@ -41,15 +41,14 @@ class MyCustomSource implements DataSource<MyItem> {
 }
 ```
 
-## createCMS で利用
+## createClient で利用
 
-core の `createCMS` に `collections` として渡す。`slugField` と `statusField` も指定する。
+### 方法 1: `collections` に直接渡す（最も低レベル）
 
 ```ts
-import { createCMS } from "@notion-headless-cms/core";
-import { memoryCache } from "@notion-headless-cms/cache";
+import { createClient, memoryCache } from "@notion-headless-cms/core";
 
-const cms = createCMS({
+const cms = createClient({
   collections: {
     posts: {
       source: new MyCustomSource(),
@@ -66,6 +65,57 @@ const posts = await cms.posts.list();
 const post = await cms.posts.find("my-post");
 if (post) console.log(await post.render());
 ```
+
+### 方法 2: `CMSAdapter` パッケージを作って `sources` に渡す（推奨）
+
+`@notion-headless-cms/notion-source` と同じパターンで、宣言マージ（module augmentation）により `sources.<key>` を補完候補に追加できる。
+
+```ts
+// packages/my-source/src/index.ts
+import type { CMSAdapter, CollectionDef } from "@notion-headless-cms/core";
+
+declare module "@notion-headless-cms/core" {
+  interface CMSSources {
+    myStore?: CMSAdapter;
+  }
+}
+
+export interface MySourceConfig {
+  apiUrl: string;
+  apiKey: string;
+}
+
+export function mySource(opts: MySourceConfig): CMSAdapter {
+  return {
+    collections: {
+      posts: {
+        source: new MyCustomSource(opts),
+        slugField: "slug",
+        statusField: "status",
+        publishedStatuses: ["published"],
+      } satisfies CollectionDef,
+    },
+  };
+}
+```
+
+利用側:
+
+```ts
+import { createClient, memoryCache } from "@notion-headless-cms/core";
+import { mySource } from "@example/my-source";
+
+const cms = createClient({
+  sources: {
+    myStore: mySource({ apiUrl: "...", apiKey: "..." }),
+  },
+  cache: [memoryCache()],
+});
+
+await cms.posts.list();
+```
+
+`import { mySource } from "@example/my-source"` した時点で `sources.myStore` キーが補完候補として現れる（Fastify プラグインと同じパターン）。Notion 用ソースと混在させる場合は[マルチソースレシピ](./multi-source.md)を参照。
 
 ## エラー処理
 

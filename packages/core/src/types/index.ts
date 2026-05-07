@@ -20,7 +20,7 @@ export type {
   CollectionDef,
   CollectionsConfig,
   ContentConfig,
-  CreateCMSOptions,
+  CreateClientOptions,
   InferCollectionItem,
   LogLevel,
   RateLimiterConfig,

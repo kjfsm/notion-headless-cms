@@ -1,7 +1,6 @@
 # CLI ツール（nhc）
 
-`@notion-headless-cms/cli` は Notion データベースを introspect して TypeScript スキーマファイルを自動生成する CLI ツール。
-Prisma の `prisma db pull` に相当するワークフローを Notion に対して実現する。
+`@notion-headless-cms/cli` は Notion データベースを introspect して TypeScript スキーマファイルを自動生成する CLI ツール。Prisma の `prisma db pull` に相当するワークフローを Notion に対して実現する。
 
 ## インストール
 
@@ -14,9 +13,9 @@ pnpm add -D @notion-headless-cms/cli
 ```
 nhc init          →  nhc.config.ts テンプレートを生成
 ↓ （DB 名 / ID を設定）
-nhc generate      →  Notion DB を introspect して nhc-schema.ts を生成（編集不要）
+nhc generate      →  Notion DB を introspect して nhc.schema.ts を生成（DB 構造のみ）
 ↓
-createCMS({ ...nodePreset() | ...cloudflarePreset({ env }), dataSources: cmsDataSources })
+createClient({ sources: { notion: notionSource({ schema, token, publishOptions }) }, cache, ... })
 ```
 
 ## `nhc init` — 設定ファイルの生成
@@ -42,24 +41,23 @@ import { defineConfig, env } from "@notion-headless-cms/cli";
 
 export default defineConfig({
   notionToken: env("NOTION_TOKEN"),
-  dataSources: [
-    {
-      name: "posts",
-      // dbName で Notion DB を検索して ID を自動解決します（完全一致のみ）
+  output: "src/generated/nhc.schema.ts",
+  collections: {
+    posts: {
+      // dbName で Notion DB を検索して ID を自動解決します
       dbName: "ブログ記事DB",
-      // id を直接指定することもできます（id が優先されます）
-      // id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-      fields: {
-        // slug に使う Notion プロパティ名（省略時: title 型プロパティを自動検出）
-        // slug: "Slug",
-      },
+      // databaseId を直接指定することもできます (databaseId が優先されます)
+      // databaseId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+      publishedStatuses: ["公開済み"],
+      // accessibleStatuses: ["下書き", "公開済み"],
+      // slugField: "slug",     // デフォルト
+      // statusField: "status", // デフォルト
+      // 日本語など ASCII 変換できないプロパティ名は明示マッピング必須
+      // fieldMappings: { "タイトル": "title", "カテゴリ": "category" },
     },
-  ],
-  output: "./app/generated/nhc-schema.ts",
+  },
 });
 ```
-
-先頭の `import "dotenv/config";` は `.env` ファイルから `NOTION_TOKEN` 等を読み込むためのもの。`.env` を使わない場合（シェル側で export する / CI / Cloudflare の `wrangler secret`）は削除してよい。
 
 ## `nhc generate` — スキーマの生成
 
@@ -83,47 +81,23 @@ Notion インテグレーショントークンの取得: [Notion Developers](htt
 
 ## `nhc.config.ts` の設定
 
-### `DataSourceConfig`
-
-データソースは2種類の指定方法がある。
-
-#### DB 名で解決（推奨）
+### `CollectionGenConfig`
 
 ```ts
-{
-  name: "posts",           // コード上の識別子
-  dbName: "ブログ記事DB",  // Notion の DB 名（完全一致のみ。一致しないと generate が失敗）
-}
-```
-
-#### ID で直接指定
-
-```ts
-{
-  name: "posts",
-  id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-  dbName: "ブログ記事DB", // 任意（生成ファイルのコメント用）
-}
-```
-
-`id` を指定した場合は `dbName` での検索をスキップするため、同名の DB が複数存在する場合や DB 名変更に強い。
-
-### `fields` — フィールドのマッピング指定
-
-```ts
-fields: {
-  slug: "Slug",          // slug に使うプロパティ名
-  status: "Status",      // status に使うプロパティ名
-  publishedAt: "公開日", // publishedAt に使うプロパティ名
-  // 日本語など ASCII 変換できないプロパティ名は必須指定
-  properties: {
-    "タイトル": "title",
-    "カテゴリ": "category",
+collections: {
+  posts: {
+    dbName: "ブログ記事DB",            // Notion DB 名（完全一致）
+    // databaseId: "xxx-yyy-zzz",     // dbName の代わりに直接指定可
+    publishedStatuses: ["公開済み"],   // 備忘録（生成物には埋め込まれない）
+    accessibleStatuses: ["下書き", "公開済み"],
+    slugField: "slug",                // デフォルト "slug"
+    statusField: "status",            // デフォルト "status"
+    fieldMappings: { "タイトル": "title" }, // 日本語プロパティの明示マッピング
   },
 }
 ```
 
-`fields` を省略した場合は自動検出ルールが適用される（後述）。
+> **重要**: `publishedStatuses` / `accessibleStatuses` を `nhc.config.ts` に書いても、生成ファイルには埋め込まれない（DB 構造のみが出力される）。実際の公開ステータスは `notionSource({ publishOptions })` で指定する。
 
 ### `notionToken` / `env()`
 
@@ -134,8 +108,8 @@ import { defineConfig, env } from "@notion-headless-cms/cli";
 
 export default defineConfig({
   notionToken: env("NOTION_TOKEN"),
-  dataSources: [/* ... */],
-  output: "./app/generated/nhc-schema.ts",
+  collections: { /* ... */ },
+  output: "src/generated/nhc.schema.ts",
 });
 ```
 
@@ -149,22 +123,18 @@ import { defineConfig, env } from "@notion-headless-cms/cli";
 
 export default defineConfig({
   notionToken: env("NOTION_TOKEN"),
-  dataSources: [
-    { name: "posts", dbName: "ブログ記事DB" },
-    {
-      name: "news",
-      id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-      fields: { slug: "Title", status: "公開状態" },
+  output: "src/generated/nhc.schema.ts",
+  collections: {
+    posts: { dbName: "ブログ記事DB", publishedStatuses: ["公開済み"] },
+    news: {
+      databaseId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+      publishedStatuses: ["公開済み"],
     },
-    {
-      name: "members",
+    members: {
       dbName: "メンバーDB",
-      fields: {
-        properties: { "氏名": "fullName", "所属": "department" },
-      },
+      fieldMappings: { 氏名: "fullName", 所属: "department" },
     },
-  ],
-  output: "./src/generated/nhc-schema.ts",
+  },
 });
 ```
 
@@ -172,10 +142,10 @@ export default defineConfig({
 
 | Notion プロパティ型 | TypeScript 型 | フィールド型 |
 |---|---|---|
-| `title` | `string \| null` | `"title"` |
+| `title` | `string \| null`（`slugField` 指定時は `string`） | `"title"` |
 | `rich_text` | `string \| null` | `"richText"` |
 | `select` | `string \| null` | `"select"` |
-| `status` | `string \| null` | `"status"` |
+| `status` | `"値1" \| "値2" \| ... \| null`（literal union） | `"status"` |
 | `multi_select` | `string[]` | `"multiSelect"` |
 | `date` | `string \| null` | `"date"` |
 | `number` | `number \| null` | `"number"` |
@@ -183,95 +153,91 @@ export default defineConfig({
 | `url` | `string \| null` | `"url"` |
 | それ以外 | — | スキップ（コメント付きで記録） |
 
-### 自動検出ルール
-
-`fields.*` の明示指定がない場合:
-
-| フィールド | 検出条件 |
-|---|---|
-| `slug` | `title` 型のプロパティ（最初に見つかったもの） |
-| `status` | 名前が `Status` / `状態` / `state` の `select` または `status` 型 |
-| `publishedAt` | 名前が `PublishedAt` / `CreatedAt` / `公開日` 等の `date` 型 |
+> `select` 型はユーザーが自由に選択肢を追加できるため `string | null` のままにする。`status` 型（ワークフロー状態）のみ literal union を生成する。
 
 ### 日本語プロパティ名の扱い
 
-ASCII に変換できないプロパティ名（日本語など）は `fields.properties` で TypeScript フィールド名を明示する必要がある。未指定の場合はエラーになる。
+ASCII に変換できないプロパティ名（日本語など）は `fieldMappings` で TypeScript フィールド名を明示する必要がある。未指定の場合はエラーになる。
 
 ```ts
-fields: {
-  properties: {
-    "タイトル": "title",
-    "カテゴリ": "category",
-    "公開日時": "publishedAt",
-  },
+fieldMappings: {
+  "タイトル": "title",
+  "カテゴリ": "category",
+  "公開日時": "publishedAt",
 }
-```
-
-自動変換できないプロパティに `fields.properties` の指定がない場合:
-
-```
-CMSError [cli/schema_invalid]: [posts] プロパティ "タイトル" は TypeScript 識別子に自動変換できません。
-  → nhc.config.ts の fields.properties に追加してください:
-     properties: { "タイトル": "フィールド名" }
 ```
 
 ## 生成ファイルの構造
 
-`nhc generate` が生成する `nhc-schema.ts` は以下の構造になる（概要）。
+`nhc generate` が生成する `nhc.schema.ts` は以下の構造になる。
 
 ```ts
 // このファイルは nhc generate により自動生成されました。手動編集は nhc generate で上書きされます。
-import { z } from "zod";
-import {
-  createNotionCollection,
-  defineMapping,
-  defineSchema,
-} from "@notion-headless-cms/notion-orm";
-import type { BaseContentItem } from "@notion-headless-cms/core";
-import { env } from "@notion-headless-cms/cli";
+import type { PropertyMap } from "@notion-headless-cms/core";
+import type { SchemaMap } from "@notion-headless-cms/notion-source";
 
-// -------------------------------------
+// =============================================================
 // posts  (ブログ記事DB)
-// -------------------------------------
-export interface PostsItem extends BaseContentItem { /* ... */ }
-export const postsSchema = defineSchema(/* ... */);
-export const postsSourceId = "abc-123-def-456";
+// Notion DB ID: abc-123-def-456
+// =============================================================
 
-// -------------------------------------
-// CMS DataSources
-// -------------------------------------
-export const cmsDataSources = {
-  posts: createNotionCollection({
-    token: env("NOTION_TOKEN"),
-    dataSourceId: postsSourceId,
-    schema: postsSchema,
-  }),
-} as const;
-export type CMSDataSources = typeof cmsDataSources;
+export const postsDataSourceId = "abc-123-def-456";
+
+export const postsProperties = {
+  slug: { type: "richText" as const, notion: "URL" },
+  status: { type: "status" as const, notion: "ステータス" },
+  // ...
+} as const satisfies PropertyMap;
+
+export interface Post {
+  id: string;
+  lastEditedTime: string;
+  slug: string;
+  status: "公開済み" | "下書き" | null;
+  // ...
+}
+
+// =============================================================
+// Schema 集約 (notionSource() に渡す)
+// =============================================================
+export const schema = {
+  posts: {
+    dataSourceId: postsDataSourceId,
+    properties: postsProperties,
+    slugField: "slug",
+    statusField: "status",
+  },
+} as const satisfies SchemaMap;
 ```
 
 ### 生成ファイルは編集不要
 
-生成した `nhc-schema.ts` は **触らなくてよい**。`published` / `accessible` は
-`createCMS` のコレクションレベルオプションではなく、`nhc.config.ts` の
-`fields` + 生成された schema で定義される。
+生成した `nhc.schema.ts` は **触らなくてよい**。ランタイム設定（トークン・公開ステータス・キャッシュ等）はすべて `createClient` 側で組み立てる。
 
 ## CMS クライアントでの利用
 
-生成した `cmsDataSources` を `createCMS` にそのまま渡す。
+生成した `schema` を `notionSource()` に渡し、`createClient({ sources })` で組み込む。
 
 ```ts
-import { createCMS } from "@notion-headless-cms/core";
-import { memoryCache } from "@notion-headless-cms/core/cache/memory";
-import { cmsDataSources } from "./generated/nhc-schema";
+import { createClient, memoryCache } from "@notion-headless-cms/core";
+import { notionSource } from "@notion-headless-cms/notion-source";
+import { schema } from "./generated/nhc.schema";
 
-const cms = createCMS({
+const cms = createClient({
+  sources: {
+    notion: notionSource({
+      schema,
+      token: process.env.NOTION_TOKEN!,
+      publishOptions: {
+        posts: { publishedStatuses: ["公開済み"] },
+      },
+    }),
+  },
   cache: [memoryCache()],
   swr: { ttlMs: 5 * 60_000 },
-  dataSources: cmsDataSources,
 });
 
-// posts は CollectionClient<PostsItem> として推論される
+// posts は CollectionClient<Post> として推論される
 const posts = await cms.posts.list();
 const post = await cms.posts.find("my-post-slug");
 ```
@@ -279,14 +245,26 @@ const post = await cms.posts.find("my-post-slug");
 Cloudflare Workers の場合:
 
 ```ts
-import { createCMS } from "@notion-headless-cms/core";
-import { cloudflarePreset } from "@notion-headless-cms/cache-r2";
-import { cmsDataSources } from "./generated/nhc-schema";
+import { cloudflareCache } from "@notion-headless-cms/cache/cloudflare";
+import { createClient } from "@notion-headless-cms/core";
+import { notionSource } from "@notion-headless-cms/notion-source";
+import { schema } from "./generated/nhc.schema";
 
-const cms = createCMS({
-  ...cloudflarePreset({ env }),
-  dataSources: cmsDataSources,
-});
+export default {
+  async fetch(req: Request, env: Env): Promise<Response> {
+    const cms = createClient({
+      sources: {
+        notion: notionSource({
+          schema,
+          token: env.NOTION_TOKEN,
+          publishOptions: { posts: { publishedStatuses: ["公開済み"] } },
+        }),
+      },
+      cache: cloudflareCache(env),
+    });
+    return Response.json(await cms.posts.list());
+  },
+};
 ```
 
 詳細は [マルチソースレシピ](./recipes/multi-source.md) と [Cloudflare Workers レシピ](./recipes/cloudflare-workers.md) を参照。
@@ -305,7 +283,7 @@ CLI が throw するエラーは `CMSError` の `cli/*` 名前空間で分類さ
 
 - `cli/config_invalid` — `nhc.config.ts` の内容不整合
 - `cli/config_load_failed` — 設定ファイル読み込み失敗
-- `cli/schema_invalid` — スキーマ/マッピング不整合 (生成時の検証エラー)
+- `cli/schema_invalid` — スキーマ/マッピング不整合（生成時の検証エラー）
 - `cli/generate_failed` — `nhc generate` の処理失敗
 - `cli/init_failed` — `nhc init` の処理失敗
 - `cli/notion_api_failed` — Notion API 呼び出し失敗

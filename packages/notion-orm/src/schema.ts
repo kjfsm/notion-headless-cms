@@ -47,7 +47,7 @@ export interface NotionSchema<T> {
 
 /**
  * Zod スキーマとマッピングを結合して NotionSchema を生成する。
- * 公開条件（publishedStatuses）は createCMS({ collections }) で設定する。
+ * 公開条件（publishedStatuses）は createClient({ collections }) で設定する。
  *
  * @example
  * const PostSchema = z.object({ slug: z.string(), status: z.string() })

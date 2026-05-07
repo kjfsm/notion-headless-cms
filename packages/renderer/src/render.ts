@@ -53,7 +53,7 @@ function buildProcessor(
 
 /**
  * processor キャッシュキーを引き当てる。
- * `imgCtx` を WeakMap キーにすると、同一 cacheImage 関数 (createCMS 内で 1 回生成) なら
+ * `imgCtx` を WeakMap キーにすると、同一 cacheImage 関数 (createClient 内で 1 回生成) なら
  * processor をプロセス全体で 1 つ使い回せる。
  */
 function getProcessor(
@@ -76,7 +76,7 @@ function getProcessor(
     return proc;
   }
 
-  // それ以外は cacheImage 関数を WeakMap キーにする (createCMS のライフサイクルに同期)
+  // それ以外は cacheImage 関数を WeakMap キーにする (createClient のライフサイクルに同期)
   const key = imgCtx.cacheImage ?? imgCtx;
   const keyObj = key as object;
   const cached = PROCESSOR_CACHE.get(keyObj);

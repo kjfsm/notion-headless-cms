@@ -82,9 +82,9 @@ export type RendererFn = (
   },
 ) => Promise<string>;
 
-/** notionEmbed() が返す値。createCMS の引数に差し込む。 */
+/** notionEmbed() が返す値。createClient の引数に差し込む。 */
 export interface NotionEmbedResult {
-  /** createCMS({ renderer }) または nodePreset({ renderer }) に渡す。 */
+  /** createClient({ renderer }) または nodePreset({ renderer }) に渡す。 */
   renderer: RendererFn;
   /** notionCollection({ blocks }) に渡す。 */
   blocks: Record<string, BlockHandler>;

@@ -13,7 +13,7 @@ import type {
   CMSHooks,
   CollectionClient,
   CollectionsConfig,
-  CreateCMSOptions,
+  CreateClientOptions,
   DataSource,
   DocumentCacheOps,
   ImageCacheOps,
@@ -24,6 +24,11 @@ import type {
   RendererFn,
   StorageBinary,
 } from "./types/index";
+import type {
+  CMSAdapter,
+  CMSSources,
+  MergeSourceCollections,
+} from "./types/sources";
 
 const DEFAULT_IMAGE_PROXY_BASE = "/api/images";
 
@@ -49,7 +54,7 @@ export interface CMSGlobalOps {
    */
   readonly cacheImage: ((url: string) => Promise<string>) | undefined;
   /**
-   * 画像プロキシのベース URL (`createCMS({ imageProxyBase })`)。
+   * 画像プロキシのベース URL (`createClient({ imageProxyBase })`)。
    * デフォルト `/api/images`。
    */
   readonly imageProxyBase: string;
@@ -123,11 +128,11 @@ function applyLogLevel(
 /**
  * 複数の `CollectionDef` を束ねた CMS クライアントを生成する。
  *
- * 通常はユーザーが直接呼ぶことはなく、CLI 生成の `nhc.ts` の `createCMS`
+ * 通常はユーザーが直接呼ぶことはなく、CLI 生成の `nhc.ts` の `createClient`
  * (低レベルのこの関数をラップしたもの) を経由する。
  *
  * @example
- * createCMS({
+ * createClient({
  *   collections: {
  *     posts: {
  *       source: createNotionCollection({ token, dataSourceId, properties }),
@@ -140,31 +145,51 @@ function applyLogLevel(
  *   swr: { ttlMs: 5 * 60_000 },
  * });
  */
-export function createCMS<C extends CollectionsConfig>(
-  opts: CreateCMSOptions<C>,
-): CMSClient<C> {
-  if (!opts.collections || Object.keys(opts.collections).length === 0) {
+export function createClient<
+  C extends CollectionsConfig = CollectionsConfig,
+  S extends CMSSources = CMSSources,
+>(
+  opts: CreateClientOptions<C, S>,
+): CMSClient<
+  MergeSourceCollections<S> extends CollectionsConfig
+    ? MergeSourceCollections<S>
+    : C
+> {
+  // sources が指定されていれば各 adapter の collections をマージする (後勝ち)
+  let mergedFromSources: CollectionsConfig | undefined;
+  if (opts.sources) {
+    mergedFromSources = {};
+    for (const adapter of Object.values(
+      opts.sources as unknown as Record<string, CMSAdapter | undefined>,
+    )) {
+      if (adapter) Object.assign(mergedFromSources, adapter.collections);
+    }
+  }
+  const collectionsInput: CollectionsConfig | undefined =
+    mergedFromSources ?? opts.collections;
+
+  if (!collectionsInput || Object.keys(collectionsInput).length === 0) {
     throw new CMSError({
       code: "core/config_invalid",
       message:
-        "createCMS: collections に少なくとも 1 つのコレクションを指定してください。",
-      context: { operation: "createCMS" },
+        "createClient: sources または collections に少なくとも 1 つのコレクションを指定してください。",
+      context: { operation: "createClient" },
     });
   }
 
-  for (const [name, def] of Object.entries(opts.collections)) {
+  for (const [name, def] of Object.entries(collectionsInput)) {
     if (!def.source) {
       throw new CMSError({
         code: "core/config_invalid",
-        message: `createCMS: コレクション "${name}" の source は必須です。`,
-        context: { operation: "createCMS", collection: name },
+        message: `createClient: コレクション "${name}" の source は必須です。`,
+        context: { operation: "createClient", collection: name },
       });
     }
     if (!def.slugField) {
       throw new CMSError({
         code: "core/config_invalid",
-        message: `createCMS: コレクション "${name}" の slugField は必須です。`,
-        context: { operation: "createCMS", collection: name },
+        message: `createClient: コレクション "${name}" の slugField は必須です。`,
+        context: { operation: "createClient", collection: name },
       });
     }
   }
@@ -195,7 +220,7 @@ export function createCMS<C extends CollectionsConfig>(
 
   const collectionNames: (keyof C & string)[] = [];
   const collections: Record<string, CollectionClient<BaseContentItem>> = {};
-  for (const [name, def] of Object.entries(opts.collections)) {
+  for (const [name, def] of Object.entries(collectionsInput)) {
     collectionNames.push(name as keyof C & string);
     const source = def.source as DataSource<BaseContentItem>;
     const colHooks = def.hooks as CMSHooks<BaseContentItem> | undefined;
@@ -256,7 +281,7 @@ export function createCMS<C extends CollectionsConfig>(
         {
           imageCache: cacheRes.img,
           async parseWebhookFor(collection, req, webhookSecret) {
-            const def = opts.collections[collection];
+            const def = collectionsInput[collection];
             if (!def) {
               throw new CMSError({
                 code: "webhook/unknown_collection",
@@ -288,5 +313,9 @@ export function createCMS<C extends CollectionsConfig>(
     Object.create(null) as object,
     collections,
     globalOps,
-  ) as CMSClient<C>;
+  ) as CMSClient<
+    MergeSourceCollections<S> extends CollectionsConfig
+      ? MergeSourceCollections<S>
+      : C
+  >;
 }

@@ -1,33 +1,27 @@
 # @notion-headless-cms/notion-orm
 
 > **内部利用向けパッケージ** — npm に公開されるが、ユーザーは直接 import しない。
-> `nhc generate` が生成する `nhc-schema.ts` から参照される ORM 層。
-> 利用側プロジェクトは依存として本パッケージをインストールするだけで、
-> import は生成物経由になる。
+> `@notion-headless-cms/notion-source` の `dependencies` として同梱されるため、利用側で明示インストールする必要もない。
 
-Notion API を叩いて `@notion-headless-cms/core` の `DataSource<T>` を
-返す ORM 層。`createNotionCollection()` でページ取得・Markdown 変換を行う。
+Notion API を叩いて `@notion-headless-cms/core` の `DataSource<T>` を返す ORM 層。`createNotionCollection()` でページ取得・Markdown 変換を行う。
 
 ## 位置付け
 
 ```
 ユーザーコード
-    └─ createCMS({ dataSources: cmsDataSources })   ← core
-         └─ cmsDataSources (nhc-schema.ts に自動生成)
-              └─ createNotionCollection({ token, dataSourceId, schema })   ← notion-orm
+    └─ createClient({ sources: { notion: notionSource(...) } })   ← core
+         └─ notionSource({ schema, token })   ← notion-source
+              └─ createNotionCollection({ token, dataSourceId, properties })   ← notion-orm
                    └─ @notionhq/client / zod / 内部 fetcher / transformer
 ```
 
-ユーザー空間からは `cmsDataSources` (CLI 生成物) しか見えず、
-`@notion-headless-cms/notion-orm` を直接 import する必要はない。
+ユーザー空間からは `notionSource()` (`notion-source` パッケージ) しか見えず、`@notion-headless-cms/notion-orm` を直接 import する必要はない。
 
-## 公開 API (CLI 生成物のみから呼ばれる)
+## 公開 API (notion-source からのみ呼ばれる)
 
 - `createNotionCollection(opts)` — `DataSource<T>` を返す
 - `defineSchema(zodSchema, mapping)` — 宣言的スキーマを構築
 - `defineMapping(mapping)` — プロパティ名マッピング
-
-CLI が生成する `nhc-schema.ts` はこれらを透過的に呼び出す。
 
 ## ユーザーが直接呼ぶ公開 API
 
@@ -54,5 +48,6 @@ npm には公開されるので、別リポジトリから
 
 ## 関連
 
-- `@notion-headless-cms/core` — `createCMS` / `DataSource` 型
-- `@notion-headless-cms/cli` — `nhc generate` が `cmsDataSources` を生成
+- [`@notion-headless-cms/core`](../core) — `createClient` / `DataSource` 型
+- [`@notion-headless-cms/notion-source`](../notion-source) — `notionSource()` で本パッケージをラップする
+- [`@notion-headless-cms/cli`](../cli) — `nhc generate` が `schema` を生成

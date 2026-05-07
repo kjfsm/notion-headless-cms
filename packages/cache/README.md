@@ -39,35 +39,40 @@ pnpm add @notion-headless-cms/cache @notion-headless-cms/core next
 ### メモリキャッシュ（Node.js など）
 
 ```ts
-import { createCMS, nodePreset } from "@notion-headless-cms/core";
 import { memoryCache } from "@notion-headless-cms/cache";
-import { cmsDataSources } from "./generated/nhc-schema";
+import { createClient } from "@notion-headless-cms/core";
+import { notionSource } from "@notion-headless-cms/notion-source";
+import { schema } from "./generated/nhc.schema";
 
-export const cms = createCMS({
-  ...nodePreset(),
-  dataSources: cmsDataSources,
+export const cms = createClient({
+  sources: {
+    notion: notionSource({ schema, token: process.env.NOTION_TOKEN! }),
+  },
+  cache: [memoryCache()],
 });
 ```
 
-`nodePreset()` はデフォルトで `memoryCache` を使用するため、明示的な指定は不要。
-カスタム設定が必要な場合のみ `memoryCache({ maxSize: 200 })` を渡す。
+カスタム設定が必要な場合は `memoryCache({ maxSize: 200 })` を渡す。
 
 ### Cloudflare Workers（KV + R2）
 
 ```ts
 // src/index.ts
-import { createCMS } from "@notion-headless-cms/core";
 import { cloudflareCache } from "@notion-headless-cms/cache/cloudflare";
-import { cmsDataSources } from "./generated/nhc-schema";
+import { createClient } from "@notion-headless-cms/core";
+import { notionSource } from "@notion-headless-cms/notion-source";
+import { schema } from "./generated/nhc.schema";
 
 export default {
   async fetch(request: Request, env: Env) {
-    const cms = createCMS({
+    const cms = createClient({
+      sources: {
+        notion: notionSource({ schema, token: env.NOTION_TOKEN }),
+      },
       cache: cloudflareCache({
         docCache: env.DOC_CACHE,   // KV namespace
         imgBucket: env.IMG_BUCKET, // R2 bucket
       }),
-      dataSources: cmsDataSources,
     });
     // ...
   },
@@ -79,12 +84,12 @@ KV と R2 を個別に設定する場合:
 ```ts
 import { kvCache, r2Cache } from "@notion-headless-cms/cache/cloudflare";
 
-createCMS({
+createClient({
+  sources: { notion: notionSource({ schema, token: env.NOTION_TOKEN }) },
   cache: [
     kvCache({ namespace: env.DOC_CACHE }),
     r2Cache({ bucket: env.IMG_BUCKET }),
   ],
-  // ...
 });
 ```
 
@@ -92,17 +97,17 @@ createCMS({
 
 ```ts
 // app/lib/cms.ts
-import { createCMS, nodePreset } from "@notion-headless-cms/core";
+import { memoryCache } from "@notion-headless-cms/cache";
 import { nextCache } from "@notion-headless-cms/cache/next";
-import { cmsDataSources } from "../generated/nhc-schema";
+import { createClient } from "@notion-headless-cms/core";
+import { notionSource } from "@notion-headless-cms/notion-source";
+import { schema } from "@/app/generated/nhc.schema";
 
-export const cms = createCMS({
-  ...nodePreset({
-    cache: {
-      document: nextCache({ tags: ["posts"] }),
-    },
-  }),
-  dataSources: cmsDataSources,
+export const cms = createClient({
+  sources: {
+    notion: notionSource({ schema, token: process.env.NOTION_TOKEN! }),
+  },
+  cache: [nextCache({ tags: ["posts"] }), memoryCache()],
 });
 ```
 

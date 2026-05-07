@@ -63,7 +63,7 @@ const noopImg: ImageCacheOps = {
 };
 
 /**
- * 何もキャッシュしないアダプタ。`createCMS({ cache })` 未指定時の内部デフォルト。
+ * 何もキャッシュしないアダプタ。`createClient({ cache })` 未指定時の内部デフォルト。
  * テストでも使える。
  */
 export const noopDocOps: DocumentCacheOps = noopDoc;

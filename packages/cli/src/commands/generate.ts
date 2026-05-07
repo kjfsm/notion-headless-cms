@@ -150,7 +150,7 @@ export async function runGenerate(opts: GenerateOptions): Promise<void> {
   if (!silent) {
     console.log(`\n生成完了: ${outputPath}`);
     console.log(
-      '次のステップ: import { createCMS } from "./generated/nhc"; を呼び出して CMS クライアントを構築してください。',
+      '次のステップ: import { schema } from "./generated/nhc.schema"; を notionSource({ schema }) に渡し、createClient({ sources: { notion: ... } }) で CMS クライアントを構築してください。',
     );
   }
 }

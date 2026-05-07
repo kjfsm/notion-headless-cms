@@ -3,8 +3,8 @@
 ## インストール
 
 ```bash
-pnpm add @notion-headless-cms/core @notion-headless-cms/notion-orm \
-  @notion-headless-cms/renderer @notion-headless-cms/cache \
+pnpm add @notion-headless-cms/core @notion-headless-cms/notion-source \
+  @notion-headless-cms/cache \
   @notionhq/client zod \
   unified remark-parse remark-gfm remark-rehype rehype-stringify
 pnpm add -D @notion-headless-cms/cli
@@ -20,7 +20,7 @@ npx nhc init
 NOTION_TOKEN=secret_xxx npx nhc generate
 ```
 
-生成された `nhc.ts` を Workers から読み込む。
+生成された `nhc.schema.ts` を Workers から読み込む。
 
 ## wrangler.toml の設定
 
@@ -46,7 +46,9 @@ wrangler secret put NOTION_TOKEN
 
 ```ts
 import { cloudflareCache } from "@notion-headless-cms/cache/cloudflare";
-import { createCMS } from "./generated/nhc";
+import { createClient } from "@notion-headless-cms/core";
+import { notionSource } from "@notion-headless-cms/notion-source";
+import { schema } from "./generated/nhc.schema";
 
 interface Env {
   NOTION_TOKEN: string;
@@ -56,10 +58,17 @@ interface Env {
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    const cms = createCMS({
-      notionToken: env.NOTION_TOKEN,
+    const cms = createClient({
+      sources: {
+        notion: notionSource({
+          schema,
+          token: env.NOTION_TOKEN,
+          publishOptions: { posts: { publishedStatuses: ["公開済み"] } },
+        }),
+      },
       cache: cloudflareCache(env),
       swr: { ttlMs: 5 * 60_000 },
+      waitUntil: ctx.waitUntil.bind(ctx),
     });
 
     const url = new URL(request.url);
@@ -96,8 +105,8 @@ export default {
 ```ts
 import { cloudflareCache } from "@notion-headless-cms/cache/cloudflare";
 
-const cms = createCMS({
-  notionToken: env.NOTION_TOKEN,
+const cms = createClient({
+  sources: { notion: notionSource({ schema, token: env.NOTION_TOKEN }) },
   cache: cloudflareCache(env, {
     bindings: { docCache: "MY_KV", imgBucket: "MY_R2" },
   }),
@@ -116,24 +125,7 @@ NOTION_TOKEN=secret_xxx
 
 ## SWR 裏更新の非同期化 (waitUntil)
 
-SWR キャッシュのバックグラウンド書き戻しを Workers のライフサイクルに
-載せるには `ctx.waitUntil` を低レベル API に渡す。
-
-```ts
-import { createCMS } from "@notion-headless-cms/core";
-import { cloudflareCache } from "@notion-headless-cms/cache/cloudflare";
-
-// 低レベル createCMS を使う場合
-const cms = createCMS({
-  collections: { /* ... */ },
-  cache: cloudflareCache(env),
-  swr: { ttlMs: 5 * 60_000 },
-  waitUntil: ctx.waitUntil.bind(ctx),
-});
-```
-
-CLI 生成ラッパーの `createCMS` は `waitUntil` オプションをサポートしていないため、
-Workers ライフサイクルに乗せる必要がある場合は core の `createCMS` を直接使う。
+SWR キャッシュのバックグラウンド書き戻しを Workers のライフサイクルに載せるには `ctx.waitUntil` を `createClient` に渡す（上記の例のとおり）。`fetch` ハンドラ外で `cms` を構築すると `ctx` が取れないため、リクエストごとに `cms` を生成するパターンが推奨。
 
 ## Webhook によるキャッシュ invalidate
 
@@ -168,7 +160,10 @@ app.get("/api/posts/:slug/check", async (c) => {
   const { slug } = c.req.param();
   const clientVersion = c.req.query("v") ?? "";
 
-  const cms = createCMS({ ... });
+  const cms = createClient({
+    sources: { notion: notionSource({ schema, token: c.env.NOTION_TOKEN }) },
+    cache: cloudflareCache(c.env),
+  });
   const result = await cms.posts.check(slug, clientVersion);
 
   if (result === null) return c.notFound();

@@ -53,7 +53,7 @@ export interface ImageCacheOps {
  * 統一キャッシュアダプタ。`handles` で担当領域を申告し、
  * `doc` / `img` のいずれか（または両方）を実装する。
  *
- * `createCMS({ cache })` には `CacheAdapter | CacheAdapter[]` を渡せる。
+ * `createClient({ cache })` には `CacheAdapter | CacheAdapter[]` を渡せる。
  * 配列で渡された場合、core は `handles` を見て document / image をそれぞれ別アダプタに振り分ける。
  *
  * @example

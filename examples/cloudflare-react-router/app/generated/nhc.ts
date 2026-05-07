@@ -1,23 +1,8 @@
 // このファイルは nhc generate により自動生成されました。手動編集は nhc generate で上書きされます。
 // Config SHA: 4487dfa0a225e4961a9d8e64d5f68f269f9b1f933210cc0fc5e70fa0d9656f4e
 
-import {
-  createCMS as _createCMS,
-  type CacheAdapter,
-  type CMSGlobalOps,
-  type CMSHooks,
-  type CollectionClient,
-  type Logger,
-  type PropertyMap,
-  type RendererFn,
-  type SWRConfig,
-} from "@notion-headless-cms/core";
-import {
-  type BlockEnricher,
-  createNotionCollection,
-  type FetchBlockTreeOgpOptions,
-} from "@notion-headless-cms/notion-orm";
-import type { BlockHandler } from "@notion-headless-cms/renderer";
+import type { PropertyMap } from "@notion-headless-cms/core";
+import type { SchemaMap } from "@notion-headless-cms/notion-source";
 
 // ===========================================================
 // posts  (ブログ記事DB)
@@ -64,88 +49,15 @@ export interface Post {
 }
 
 // =============================================================
-// CMS factory
+// Schema 集約 (notionSource() に渡す)
 // =============================================================
 
-/** `createCMS()` に渡すランタイム設定。Notion トークンとキャッシュ等を指定する。 */
-export interface NhcConfig {
-  /** Notion API トークン。 */
-  notionToken: string;
-  /** キャッシュアダプタ (配列)。 */
-  cache?: readonly CacheAdapter[];
-  /** SWR（Stale-While-Revalidate）設定。 */
-  swr?: SWRConfig;
-  /** カスタムレンダラー。省略時は `@notion-headless-cms/renderer` を自動使用。 */
-  renderer?: RendererFn;
-  /** 画像プロキシのベース URL。デフォルト `/api/images`。 */
-  imageProxyBase?: string;
-  /** Cloudflare Workers の `waitUntil` 相当。 */
-  waitUntil?: (p: Promise<unknown>) => void;
-  /** embed / video 等の Notion ブロックをカスタム処理するハンドラマップ。 */
-  blocks?: Record<string, BlockHandler>;
-  /** ロガー。キャッシュイベントや内部処理のログを受け取る。 */
-  logger?: Logger;
-  /** ライフサイクルフック (onCacheHit / onCacheMiss 等)。 */
-  hooks?: CMSHooks;
-  /** embed / bookmark / link_preview ブロックの OGP 取得設定。省略時は OGP 非取得。 */
-  ogp?: FetchBlockTreeOgpOptions;
-  /** `loadNotionBlocks()` 時にブロック木へ追加情報を付与する enricher のリスト。 */
-  enrichers?: readonly BlockEnricher[];
-}
-
-/** 生成された CMS クライアントの型。 */
-export interface Nhc extends CMSGlobalOps {
-  posts: CollectionClient<Post>;
-}
-
-/**
- * Nhc クライアントを構築する。コレクションごとの DB ID とプロパティマップは生成時に固定済み。
- *
- * @example
- * import { createCMS } from "./generated/nhc";
- * import { memoryCache } from "@notion-headless-cms/cache";
- * import { notionEmbed, youtubeProvider } from "@notion-headless-cms/notion-embed";
- * import { notionKatex } from "@notion-headless-cms/notion-katex";
- *
- * const embed = notionEmbed({ providers: [youtubeProvider({ display: "card" })] });
- *
- * export const cms = createCMS({
- *   notionToken: process.env.NOTION_TOKEN!,
- *   renderer: embed.renderer,
- *   blocks: embed.blocks,
- *   enrichers: [notionKatex()],
- *   cache: [memoryCache()],
- *   swr: { ttlMs: 5 * 60_000 },
- * });
- *
- * await cms.posts.list();
- * const item = await cms.posts.find("hello");
- * const html = await item?.html();
- */
-export function createCMS(config: NhcConfig): Nhc {
-  return _createCMS({
-    cache: config.cache,
-    swr: config.swr,
-    renderer: config.renderer,
-    imageProxyBase: config.imageProxyBase,
-    waitUntil: config.waitUntil,
-    logger: config.logger,
-    hooks: config.hooks,
-    collections: {
-      posts: {
-        source: createNotionCollection({
-          token: config.notionToken,
-          dataSourceId: postsDataSourceId,
-          properties: postsProperties,
-          ogp: config.ogp,
-          ...(config.blocks ? { blocks: config.blocks } : {}),
-          ...(config.enrichers ? { enrichers: config.enrichers } : {}),
-        }),
-        slugField: "slug",
-        statusField: "status",
-        publishedStatuses: ["公開済み"] as const,
-        accessibleStatuses: ["下書き", "編集中", "公開済み"] as const,
-      },
-    },
-  }) as unknown as Nhc;
-}
+/** 全コレクションのスキーマ集約。`notionSource({ schema })` に渡す。 */
+export const schema = {
+  posts: {
+    dataSourceId: postsDataSourceId,
+    properties: postsProperties,
+    slugField: "slug",
+    statusField: "status",
+  },
+} as const satisfies SchemaMap;
