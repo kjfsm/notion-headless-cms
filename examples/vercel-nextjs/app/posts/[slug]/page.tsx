@@ -1,10 +1,24 @@
 import {
+  type BlockComponentProps,
   type NotionBlock,
   NotionRenderer,
 } from "@notion-headless-cms/react-renderer";
 import { resolveBlockImageUrls } from "@notion-headless-cms/react-renderer/server";
+import dynamic from "next/dynamic";
 import { notFound } from "next/navigation";
+import type { ComponentType } from "react";
 import { cms } from "@/app/lib/cms";
+
+// 数式ブロックを KaTeX で整形描画したい場合のみ `./equation` サブパスから注入する。
+// next/dynamic で別チャンクにすることで、数式を含むページでだけ katex が読み込まれる。
+// ComponentOverrides は broad な BlockObjectResponse 型を取るため、narrow な
+// `EquationBlockObjectResponse` を受ける Equation はキャストして渡す。
+// （DX 改善は kjfsm/notion-headless-cms#217 で追跡）
+const Equation = dynamic(() =>
+  import("@notion-headless-cms/react-renderer/equation").then(
+    (m) => m.Equation as unknown as ComponentType<BlockComponentProps>,
+  ),
+);
 
 export const revalidate = 300;
 
@@ -40,7 +54,7 @@ export default async function PostPage({
           {post.publishedAt}
         </time>
       )}
-      <NotionRenderer blocks={blocks} />
+      <NotionRenderer blocks={blocks} components={{ Equation }} />
     </article>
   );
 }
