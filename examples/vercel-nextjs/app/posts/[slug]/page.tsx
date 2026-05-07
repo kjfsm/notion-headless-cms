@@ -9,16 +9,13 @@ import {
 // "Functions cannot be passed to Client Components" エラーが発生するため避ける。
 // 直接 import でもルート単位で自動コードスプリットされるため、katex は post ページの
 // チャンクにだけ含まれる。
-import { Equation as KatexEquation } from "@notion-headless-cms/react-renderer/equation";
+import { Equation } from "@notion-headless-cms/react-renderer/equation";
 import { resolveBlockImageUrls } from "@notion-headless-cms/react-renderer/server";
 import { notFound } from "next/navigation";
-import type { ComponentType } from "react";
 import { cms } from "@/app/lib/cms";
 
-// ComponentOverrides は broad な BlockObjectResponse 型を取るため、narrow な
-// `EquationBlockObjectResponse` を受ける KatexEquation はキャストして渡す。
-// （DX 改善は kjfsm/notion-headless-cms#217 で追跡）
-const Equation = KatexEquation as unknown as ComponentType<BlockComponentProps>;
+// ComponentOverrides.Equation が narrow 型（EquationBlockObjectResponse）に変わったため、
+// ./equation の Equation をキャストなしで直接渡せる（#217）。
 
 export const revalidate = 300;
 
