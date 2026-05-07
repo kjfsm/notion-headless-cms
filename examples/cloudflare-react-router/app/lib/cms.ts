@@ -6,9 +6,7 @@ import {
 } from "@notion-headless-cms/notion-embed";
 import { notionKatex } from "@notion-headless-cms/notion-katex";
 import { notionSource } from "@notion-headless-cms/notion-source";
-import { type Post, schema } from "../generated/nhc";
-
-export type { Post as BlogPost };
+import { schema } from "../generated/nhc";
 
 export interface Env {
   NOTION_TOKEN: string;

@@ -171,7 +171,11 @@ function generateCollectionBlock(
 
   const propertyLines = resolved.fields.map((f) => {
     const escaped = f.notionName.replace(/"/g, '\\"');
-    return `\t${f.tsName}: { type: "${f.defType}" as const, notion: "${escaped}" },`;
+    const optionsPart =
+      f.defType === "status" && f.literals && f.literals.length > 0
+        ? `, options: [${f.literals.map((l) => JSON.stringify(l)).join(", ")}] as const`
+        : "";
+    return `\t${f.tsName}: { type: "${f.defType}" as const, notion: "${escaped}"${optionsPart} },`;
   });
 
   // アイテム型: 必須フィールド (id, lastEditedTime) + メタデータ + Notion プロパティ

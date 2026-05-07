@@ -13,7 +13,7 @@ export const postsDataSourceId = "34a21462-5ae9-80a7-a17b-000b93010c9f";
 
 /** Notion DB "ブログ記事DB" のプロパティマップ。 */
 export const postsProperties = {
-  status: { type: "status" as const, notion: "ステータス" },
+  status: { type: "status" as const, notion: "ステータス", options: ["下書き", "編集中", "公開済み"] as const },
   publishedAt: { type: "date" as const, notion: "公開日" },
   slug: { type: "richText" as const, notion: "URL" },
   author: { type: "select" as const, notion: "著者" },

@@ -18,6 +18,11 @@ export interface PropertyDef {
     | "url";
   /** Notion DB 上のプロパティ名（表示名）。 */
   notion: string;
+  /**
+   * status / select の選択肢一覧。CLI が `as const` で出力する。
+   * 型レベルで literal union を導出するためにのみ使用し、runtime では参照しない。
+   */
+  options?: readonly string[];
 }
 
 /** Notion DB のプロパティ一覧マップ。CLI 生成の `*Properties` の型。 */

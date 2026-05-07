@@ -284,6 +284,35 @@ describe("generateSchemaFile", () => {
     expect(code).not.toContain('"Alice"');
   });
 
+  it("status カラムは PropertyMap に options を as const で出力する (型推論が literal union を導出する根拠)", () => {
+    const collection = makeCollection({
+      properties: {
+        Slug: makeProp("title"),
+        Status: makeProp("status", {
+          status: {
+            options: [
+              { id: "1", name: "公開済み", color: "green" },
+              { id: "2", name: "下書き", color: "gray" },
+            ],
+          },
+        }),
+        // select には options を出力しない（自由追加可能で陳腐化するため）
+        Author: makeProp("select", {
+          select: {
+            options: [{ id: "1", name: "Alice", color: "blue" }],
+          },
+        }),
+      },
+    });
+    const code = generateSchemaFile([collection]);
+    expect(code).toContain(
+      'status: { type: "status" as const, notion: "Status", options: ["公開済み", "下書き"] as const }',
+    );
+    expect(code).toContain(
+      'author: { type: "select" as const, notion: "Author" }',
+    );
+  });
+
   it("slugField に指定されたフィールドは string（null 非許容）で生成される", () => {
     // richText 型は通常 string | null だが slugField は BaseContentItem.slug 制約を満たすため string
     const collection = makeCollection({

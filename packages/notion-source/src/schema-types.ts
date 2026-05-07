@@ -16,16 +16,20 @@ export interface CollectionSchemaEntry {
 /** 全コレクションのスキーママップ。`schema` のトップレベル型。 */
 export type SchemaMap = Record<string, CollectionSchemaEntry>;
 
-type TSTypeForPropType<T extends PropertyDef["type"]> = T extends "checkbox"
+type TSTypeForPropDef<P extends PropertyDef> = P["type"] extends "checkbox"
   ? boolean
-  : T extends "number"
+  : P["type"] extends "number"
     ? number | null
-    : T extends "multiSelect"
+    : P["type"] extends "multiSelect"
       ? string[]
-      : string | null;
+      : P["type"] extends "status"
+        ? P extends { options: readonly (infer O extends string)[] }
+          ? O | null
+          : string | null
+        : string | null;
 
 type ItemFromPropertyMap<PM extends PropertyMap> = {
-  [K in keyof PM]: TSTypeForPropType<PM[K]["type"]>;
+  [K in keyof PM]: TSTypeForPropDef<PM[K]>;
 };
 
 /** スキーマエントリから 1 アイテムの型を導出する。slugField は null 非許容。 */
