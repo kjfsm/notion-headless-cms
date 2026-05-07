@@ -1,7 +1,7 @@
 ---
-"@notion-headless-cms/core": minor
-"@notion-headless-cms/notion-source": minor
-"@notion-headless-cms/cli": major
+"@notion-headless-cms/core": patch
+"@notion-headless-cms/notion-source": patch
+"@notion-headless-cms/cli": patch
 ---
 
 module augmentation で拡張可能な sources API を追加（#227）
