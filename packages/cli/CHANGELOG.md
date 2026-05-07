@@ -1,5 +1,13 @@
 # @notion-headless-cms/cli
 
+## 1.0.30
+
+### Patch Changes
+
+- Updated dependencies [52a9f0d]
+- Updated dependencies [52a9f0d]
+  - @notion-headless-cms/core@0.3.20
+
 ## 1.0.29
 
 ### Patch Changes

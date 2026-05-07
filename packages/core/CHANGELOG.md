@@ -1,5 +1,26 @@
 # @notion-headless-cms/core
 
+## 0.3.20
+
+### Patch Changes
+
+- 52a9f0d: Notion 更新の表示反映を 1 行で書ける再検証ヘルパを追加。
+
+  - `@notion-headless-cms/react-renderer/router`: React Router 用の `useNotionRevalidate()` フックと `<NotionRevalidator />` コンポーネント。内部で `useRevalidator` を呼び、loader を再走させる。
+  - `@notion-headless-cms/react-renderer/next`: Next.js App Router 用の同 API。内部で `useRouter().refresh()` を呼び、Server Component を再評価させる。
+  - `@notion-headless-cms/core/html`: React 非依存の `notionRevalidatorScript()`。Astro / Hono / Express など素の HTML を返すフレームワーク向けに、タブ可視化で `location.reload()` する `<script>` 文字列を返す。
+
+  いずれもクエリパラメータも別 API への fetch も発生せず、フレームワーク本来の再評価機構だけを使う。サーバ側の `cloudflarePreset({ env, ctx })` 等で `waitUntil` を渡しておけば、SWR の bg 更新で KV キャッシュが最新化された次のリクエストで画面が静かに切り替わる。
+
+- 52a9f0d: レビューに伴う細部改善とドキュメント更新。
+
+  - `react-renderer/router` と `react-renderer/next` で重複していた `NotionRevalidateTrigger` / `UseNotionRevalidateOptions` / トリガー処理を `internal/revalidate.ts` に集約し、`useCallback` で revalidate を安定化。
+  - `core/html` の `notionRevalidatorScript({ nonce })` で nonce を base64 / base64url 文字（`A-Za-z0-9+/=_-`）に厳格化。属性値ブレイクアウトを未然に防ぐため不正な値は throw する。
+  - `docs/recipes/cloudflare-workers.md` を `cloudflarePreset` ベースに全面書き換え、`swr.ttlMs` 推奨を撤廃して「永続キャッシュ + lastEditedTime 検知」方針に揃える。
+  - `docs/recipes/nextjs-app-router.md` に `<NotionRevalidator />` セクションを追加。
+  - `docs/recipes/useswr-integration.md` に「単純な再検証なら `react-renderer/router` / `react-renderer/next` の方が短い」という導入を追加。
+  - `packages/cache/README.md` / `packages/core/README.md` / `packages/react-renderer/README.md` を現状の API と推奨パターンに揃える。
+
 ## 0.3.19
 
 ### Patch Changes
