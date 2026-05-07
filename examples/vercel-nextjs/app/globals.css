@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* @notion-headless-cms/react-renderer/equation で KaTeX 数式を表示するために必要 */
+@import "katex/dist/katex.min.css";
 
 /* react-renderer のクラスも Tailwind v4 のスキャン対象に含める */
 @source "../../../node_modules/@notion-headless-cms/react-renderer/dist";

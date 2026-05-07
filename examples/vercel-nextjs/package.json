@@ -25,6 +25,7 @@
     "@notion-headless-cms/react-renderer": "workspace:*",
     "@notion-headless-cms/renderer": "workspace:*",
     "@notionhq/client": "catalog:",
+    "katex": "^0.16.11",
     "next": "^16.2.4",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
