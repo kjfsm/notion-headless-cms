@@ -1,5 +1,4 @@
 import {
-  type BlockComponentProps,
   type NotionBlock,
   NotionRenderer,
 } from "@notion-headless-cms/react-renderer";

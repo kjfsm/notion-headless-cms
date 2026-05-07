@@ -1,7 +1,7 @@
 {
   "name": "example-cloudflare-hono",
   "private": true,
-  "version": "0.0.37",
+  "version": "0.0.38",
   "type": "module",
   "scripts": {
     "build": "echo 'Hono は src/index.ts を wrangler が直接バンドルするため build は不要'",

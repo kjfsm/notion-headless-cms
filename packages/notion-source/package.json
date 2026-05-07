@@ -1,6 +1,6 @@
 {
   "name": "@notion-headless-cms/notion-source",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Notion data source adapter for @notion-headless-cms/core. Plug into createClient via sources: { notion: notionSource(...) }.",
   "keywords": [
     "notion",
