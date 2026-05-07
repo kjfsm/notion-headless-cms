@@ -56,10 +56,8 @@
     "access": "public",
     "provenance": true
   },
-  "dependencies": {
-    "@notion-headless-cms/core": "workspace:*"
-  },
   "peerDependencies": {
+    "@notion-headless-cms/core": "workspace:*",
     "next": ">=14"
   },
   "peerDependenciesMeta": {
@@ -67,5 +65,7 @@
       "optional": true
     }
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@notion-headless-cms/core": "workspace:*"
+  }
 }

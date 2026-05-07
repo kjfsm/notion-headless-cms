@@ -431,21 +431,23 @@ importers:
 
   packages/adapter-next:
     dependencies:
-      '@notion-headless-cms/core':
-        specifier: workspace:*
-        version: link:../core
       next:
         specifier: '>=14.0.0'
         version: 15.5.15(@playwright/test@1.59.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
-
-  packages/cache:
-    dependencies:
+    devDependencies:
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core
+
+  packages/cache:
+    dependencies:
       next:
         specifier: '>=14'
         version: 16.2.4(@playwright/test@1.59.1)(react-dom@19.2.5(react@19.2.5))(react@19.2.5)
+    devDependencies:
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/cli:
     dependencies:
@@ -511,16 +513,16 @@ importers:
 
   packages/notion-orm:
     dependencies:
+      linkedom:
+        specifier: ^0.18.12
+        version: 0.18.12
+    devDependencies:
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core
       '@notion-headless-cms/renderer':
         specifier: workspace:*
         version: link:../renderer
-      linkedom:
-        specifier: ^0.18.12
-        version: 0.18.12
-    devDependencies:
       '@notionhq/client':
         specifier: 'catalog:'
         version: 5.20.0
