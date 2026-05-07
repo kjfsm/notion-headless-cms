@@ -509,6 +509,15 @@ importers:
         specifier: 'catalog:'
         version: 11.0.5
 
+  packages/notion-katex:
+    devDependencies:
+      '@notion-headless-cms/notion-orm':
+        specifier: workspace:*
+        version: link:../notion-orm
+      katex:
+        specifier: ^0.16.11
+        version: 0.16.45
+
   packages/notion-orm:
     dependencies:
       '@notion-headless-cms/core':

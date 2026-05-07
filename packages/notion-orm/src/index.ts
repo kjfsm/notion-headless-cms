@@ -4,6 +4,7 @@ export type {
   TransformerConfig,
 } from "@notion-headless-cms/renderer";
 export type {
+  BlockEnricher,
   BookmarkBlockWithOgp,
   EmbedBlockWithOgp,
   FetchBlockTreeOgpOptions,

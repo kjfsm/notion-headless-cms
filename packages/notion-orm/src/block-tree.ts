@@ -61,6 +61,15 @@ export interface FetchBlockTreeOptions {
 }
 
 /**
+ * ブロック木に対して追加情報を付与する enricher 関数。
+ * `createNotionCollection` の `enrichers` オプションに渡す。
+ * `notion-katex` など拡張パッケージが実装する。
+ */
+export type BlockEnricher = (
+  blocks: NotionBlockTreeNode[],
+) => Promise<NotionBlockTreeNode[]> | NotionBlockTreeNode[];
+
+/**
  * ページ ID 配下の全ブロックを再帰的に取得し、children をネストした木として返す。
  * `opts.ogp.enabled` が true の場合、embed / bookmark / link_preview ブロックに OGP メタデータを付与する。
  */
