@@ -1,13 +1,13 @@
 "use client";
 
 import type { ToDoBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
-import { cn } from "../lib/utils";
-import { RichText } from "../rich-text/RichText";
-import type { BlockComponentProps } from "../types";
+import { cn } from "../lib/utils.js";
+import { NotionBlocks } from "../NotionBlocks.js";
+import { RichText } from "../rich-text/RichText.js";
+import type { BlockComponentProps } from "../types.js";
 
 export function ToDo({
   block,
-  renderChildren,
   className,
 }: BlockComponentProps<ToDoBlockObjectResponse>) {
   const checked = block.to_do.checked;
@@ -29,8 +29,10 @@ export function ToDo({
           <RichText value={block.to_do.rich_text} />
         </span>
       </label>
-      {block.children && renderChildren ? (
-        <div className="ml-6">{renderChildren(block.children)}</div>
+      {block.children ? (
+        <div className="ml-6">
+          <NotionBlocks blocks={block.children} />
+        </div>
       ) : null}
     </div>
   );

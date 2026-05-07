@@ -1,17 +1,17 @@
 "use client";
 
 import type { ColumnBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
-import { cn } from "../lib/utils";
-import type { BlockComponentProps } from "../types";
+import { cn } from "../lib/utils.js";
+import { NotionBlocks } from "../NotionBlocks.js";
+import type { BlockComponentProps } from "../types.js";
 
 export function Column({
   block,
-  renderChildren,
   className,
 }: BlockComponentProps<ColumnBlockObjectResponse>) {
   return (
     <div className={cn("min-w-0", className)}>
-      {block.children && renderChildren ? renderChildren(block.children) : null}
+      {block.children ? <NotionBlocks blocks={block.children} /> : null}
     </div>
   );
 }

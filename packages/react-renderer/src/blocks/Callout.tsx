@@ -1,14 +1,14 @@
 "use client";
 
 import type { CalloutBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
-import { Card, CardContent } from "../components/ui/card";
-import { cn } from "../lib/utils";
-import { RichText } from "../rich-text/RichText";
-import type { BlockComponentProps } from "../types";
+import { Card, CardContent } from "../components/ui/card.js";
+import { cn } from "../lib/utils.js";
+import { NotionBlocks } from "../NotionBlocks.js";
+import { RichText } from "../rich-text/RichText.js";
+import type { BlockComponentProps } from "../types.js";
 
 export function Callout({
   block,
-  renderChildren,
   className,
 }: BlockComponentProps<CalloutBlockObjectResponse>) {
   const icon = block.callout.icon;
@@ -26,8 +26,10 @@ export function Callout({
         </div>
         <div className="flex-1 leading-7">
           <RichText value={block.callout.rich_text} />
-          {block.children && renderChildren ? (
-            <div className="mt-2">{renderChildren(block.children)}</div>
+          {block.children ? (
+            <div className="mt-2">
+              <NotionBlocks blocks={block.children} />
+            </div>
           ) : null}
         </div>
       </CardContent>

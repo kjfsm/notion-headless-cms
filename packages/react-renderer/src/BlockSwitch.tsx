@@ -1,20 +1,17 @@
 "use client";
 
 import type { BlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
-import type { ComponentType, ReactNode } from "react";
-import * as Defaults from "./blocks";
+import type { ComponentType } from "react";
+import * as Defaults from "./blocks/index.js";
+import { useNotionContext } from "./context.js";
 import type {
-  BlockClassNames,
   BlockComponentProps,
   ComponentOverrides,
   NotionBlock,
-} from "./types";
+} from "./types.js";
 
 export interface BlockSwitchProps {
   block: NotionBlock;
-  components?: ComponentOverrides;
-  classNames?: BlockClassNames;
-  renderChildren?: (children: NotionBlock[]) => ReactNode;
 }
 
 // 各ブロック型ごとに固有プロップ型を持つコンポーネントを単一の Switch で扱うため、
@@ -22,21 +19,11 @@ export interface BlockSwitchProps {
 // React 要素を作る側ではプロップを共通形にキャストする。
 type AnyBlockComponent = ComponentType<BlockComponentProps>;
 
-/** type で対応する Block コンポーネントを引き当てて描画する。 */
-export function BlockSwitch({
-  block,
-  components,
-  classNames,
-  renderChildren,
-}: BlockSwitchProps) {
+/** type で対応する Block コンポーネントを引き当てて描画する。components / classNames は Context から取得。 */
+export function BlockSwitch({ block }: BlockSwitchProps) {
+  const { components, classNames } = useNotionContext();
   const C = pickComponent(block, components) as AnyBlockComponent;
-  return (
-    <C
-      block={block}
-      renderChildren={renderChildren}
-      className={classNames?.[block.type]}
-    />
-  );
+  return <C block={block} className={classNames?.[block.type]} />;
 }
 
 // `satisfies Record<BlockObjectResponse["type"], unknown>` により、

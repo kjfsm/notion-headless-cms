@@ -1,9 +1,10 @@
+import type { ParagraphBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { render } from "@testing-library/react";
-import type { ComponentType } from "react";
 import { describe, expect, it } from "vitest";
-import { Equation as KatexEquation } from "../equation";
-import { NotionRenderer } from "../NotionRenderer";
-import type { BlockComponentProps, NotionBlock } from "../types";
+import { Equation as KatexEquation } from "../equation.js";
+import { NotionBlocks } from "../NotionBlocks.js";
+import { NotionRenderer } from "../NotionRenderer.js";
+import type { BlockComponentProps, NotionBlock } from "../types.js";
 
 const equation = (id: string, expr: string): NotionBlock =>
   ({
@@ -14,12 +15,17 @@ const equation = (id: string, expr: string): NotionBlock =>
     equation: { expression: expr },
   }) as unknown as NotionBlock;
 
-const para = (id: string, text: string): NotionBlock =>
+const para = (
+  id: string,
+  text: string,
+  children?: NotionBlock[],
+): NotionBlock =>
   ({
     object: "block",
     id,
     type: "paragraph",
-    has_children: false,
+    has_children: (children?.length ?? 0) > 0,
+    children,
     paragraph: {
       rich_text: [
         {
@@ -67,6 +73,20 @@ const bullet = (id: string, text: string): NotionBlock =>
       color: "default",
     },
   }) as unknown as NotionBlock;
+
+// narrow 型を受ける Paragraph 差し替えコンポーネント。
+// ComponentOverrides.Paragraph が narrow 型になったため as キャスト不要。
+// 子ブロックは NotionBlocks で描画することで Context が伝播するかを検証する。
+function CustomParagraph({
+  block,
+}: BlockComponentProps<ParagraphBlockObjectResponse>) {
+  return (
+    <>
+      <p data-testid="custom">{block.paragraph.rich_text[0]?.plain_text}</p>
+      {block.children ? <NotionBlocks blocks={block.children} /> : null}
+    </>
+  );
+}
 
 describe("NotionRenderer", () => {
   it("paragraph を描画する", () => {
@@ -116,21 +136,28 @@ describe("NotionRenderer", () => {
     expect(container.querySelector(".katex")).toBeNull();
   });
 
-  // `./equation` サブパスから差し込めば katex 出力に切り替わることを確認する。
-  // `ComponentOverrides.Equation` は broad な BlockObjectResponse 型を受けるため、
-  // 個別 block 型に narrowing された KatexEquation はそのままでは渡せない。
-  // 内部 dispatch (BlockSwitch) で narrow 化されるため、利用側でも同じキャストが必要になる。
-  // 個別 block 型を受ける override の DX 改善は別 issue にて。
+  // ComponentOverrides.Equation が narrow 型になったため as キャスト不要になった。
   it("components.Equation に ./equation の実装を差し込むと katex が動く", () => {
     const { container } = render(
       <NotionRenderer
         blocks={[equation("e1", "E = mc^2")]}
-        components={{
-          Equation:
-            KatexEquation as unknown as ComponentType<BlockComponentProps>,
-        }}
+        components={{ Equation: KatexEquation }}
       />,
     );
     expect(container.querySelector(".katex")).not.toBeNull();
+  });
+
+  // Context 経由で components が子ブロック（再帰ツリー）にも伝播することを確認する。
+  it("Context 経由で components が子ブロックに伝播する", () => {
+    const parent = para("parent", "parent-text", [para("child", "child-text")]);
+    const { container } = render(
+      <NotionRenderer
+        blocks={[parent]}
+        components={{ Paragraph: CustomParagraph }}
+      />,
+    );
+    const customs = container.querySelectorAll("[data-testid='custom']");
+    // 親ブロックと子ブロック両方に CustomParagraph が適用される
+    expect(customs.length).toBeGreaterThanOrEqual(2);
   });
 });
