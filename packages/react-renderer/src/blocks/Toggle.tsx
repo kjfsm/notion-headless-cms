@@ -5,14 +5,14 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "../components/ui/collapsible";
-import { cn } from "../lib/utils";
-import { RichText } from "../rich-text/RichText";
-import type { BlockComponentProps } from "../types";
+} from "../components/ui/collapsible.js";
+import { cn } from "../lib/utils.js";
+import { NotionBlocks } from "../NotionBlocks.js";
+import { RichText } from "../rich-text/RichText.js";
+import type { BlockComponentProps } from "../types.js";
 
 export function Toggle({
   block,
-  renderChildren,
   className,
 }: BlockComponentProps<ToggleBlockObjectResponse>) {
   return (
@@ -28,9 +28,9 @@ export function Toggle({
           <RichText value={block.toggle.rich_text} />
         </span>
       </CollapsibleTrigger>
-      {block.children && renderChildren ? (
+      {block.children ? (
         <CollapsibleContent className="ml-6">
-          {renderChildren(block.children)}
+          <NotionBlocks blocks={block.children} />
         </CollapsibleContent>
       ) : null}
     </Collapsible>

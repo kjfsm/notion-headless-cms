@@ -1,12 +1,12 @@
 "use client";
 
 import type { ColumnListBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
-import { cn } from "../lib/utils";
-import type { BlockComponentProps } from "../types";
+import { cn } from "../lib/utils.js";
+import { NotionBlocks } from "../NotionBlocks.js";
+import type { BlockComponentProps } from "../types.js";
 
 export function ColumnList({
   block,
-  renderChildren,
   className,
 }: BlockComponentProps<ColumnListBlockObjectResponse>) {
   const cols = block.children ?? [];
@@ -18,7 +18,7 @@ export function ColumnList({
         gridTemplateColumns: `repeat(${Math.max(cols.length, 1)}, minmax(0, 1fr))`,
       }}
     >
-      {renderChildren ? renderChildren(cols) : null}
+      {cols.length > 0 ? <NotionBlocks blocks={cols} /> : null}
     </div>
   );
 }

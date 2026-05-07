@@ -10,10 +10,11 @@ import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
-} from "../components/ui/collapsible";
-import { cn } from "../lib/utils";
-import { RichText } from "../rich-text/RichText";
-import type { BlockComponentProps } from "../types";
+} from "../components/ui/collapsible.js";
+import { cn } from "../lib/utils.js";
+import { NotionBlocks } from "../NotionBlocks.js";
+import { RichText } from "../rich-text/RichText.js";
+import type { BlockComponentProps } from "../types.js";
 
 type HeadingBlock =
   | Heading1BlockObjectResponse
@@ -60,14 +61,13 @@ function meta(block: HeadingBlock): HeadingMeta {
 
 export function Heading({
   block,
-  renderChildren,
   className: extraClassName,
 }: BlockComponentProps<HeadingBlock>) {
   const { Tag, className, payload } = meta(block);
   const merged = cn(className, extraClassName);
   const inner = <RichText value={payload.rich_text} />;
 
-  if (payload.is_toggleable && block.children && renderChildren) {
+  if (payload.is_toggleable && block.children) {
     return (
       <Collapsible className="my-2">
         <CollapsibleTrigger className="flex items-baseline gap-2 text-left">
@@ -75,7 +75,7 @@ export function Heading({
           <Tag className={merged}>{inner}</Tag>
         </CollapsibleTrigger>
         <CollapsibleContent className="ml-6">
-          {renderChildren(block.children)}
+          <NotionBlocks blocks={block.children} />
         </CollapsibleContent>
       </Collapsible>
     );
