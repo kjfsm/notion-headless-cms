@@ -2,16 +2,18 @@
 
 import type { CalloutBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { Card, CardContent } from "../components/ui/card";
+import { cn } from "../lib/utils";
 import { RichText } from "../rich-text/RichText";
 import type { BlockComponentProps } from "../types";
 
 export function Callout({
   block,
   renderChildren,
+  className,
 }: BlockComponentProps<CalloutBlockObjectResponse>) {
   const icon = block.callout.icon;
   return (
-    <Card className="my-3 border-l-4 bg-muted/40">
+    <Card className={cn("my-3 border-l-4 bg-muted/40", className)}>
       <CardContent className="flex gap-3 p-4">
         <div className="shrink-0 text-xl leading-7" aria-hidden>
           {icon?.type === "emoji" ? icon.emoji : null}

@@ -4,6 +4,7 @@ import type { BlockObjectResponse } from "@notionhq/client/build/src/api-endpoin
 import type { ComponentType, ReactNode } from "react";
 import * as Defaults from "./blocks";
 import type {
+  BlockClassNames,
   BlockComponentProps,
   ComponentOverrides,
   NotionBlock,
@@ -12,6 +13,7 @@ import type {
 export interface BlockSwitchProps {
   block: NotionBlock;
   components?: ComponentOverrides;
+  classNames?: BlockClassNames;
   renderChildren?: (children: NotionBlock[]) => ReactNode;
 }
 
@@ -24,10 +26,17 @@ type AnyBlockComponent = ComponentType<BlockComponentProps>;
 export function BlockSwitch({
   block,
   components,
+  classNames,
   renderChildren,
 }: BlockSwitchProps) {
   const C = pickComponent(block, components) as AnyBlockComponent;
-  return <C block={block} renderChildren={renderChildren} />;
+  return (
+    <C
+      block={block}
+      renderChildren={renderChildren}
+      className={classNames?.[block.type]}
+    />
+  );
 }
 
 // `satisfies Record<BlockObjectResponse["type"], unknown>` により、

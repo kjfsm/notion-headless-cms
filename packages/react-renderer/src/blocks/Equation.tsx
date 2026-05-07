@@ -1,6 +1,7 @@
 "use client";
 
 import type { EquationBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import { cn } from "../lib/utils";
 import type { BlockComponentProps } from "../types";
 
 /**
@@ -13,9 +14,15 @@ import type { BlockComponentProps } from "../types";
  */
 export function Equation({
   block,
+  className,
 }: BlockComponentProps<EquationBlockObjectResponse>) {
   return (
-    <pre className="my-3 overflow-x-auto rounded-lg bg-muted p-4 font-mono text-sm">
+    <pre
+      className={cn(
+        "my-3 overflow-x-auto rounded-lg bg-muted p-4 font-mono text-sm",
+        className,
+      )}
+    >
       {block.equation.expression}
     </pre>
   );

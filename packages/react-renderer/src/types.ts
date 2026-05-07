@@ -11,13 +11,20 @@ export type NotionBlock = BlockObjectResponse & {
 /**
  * 各 block コンポーネントの共通プロップ。
  * children 描画時の再帰のため `renderChildren` を渡す。
+ * `className` は `<NotionRenderer classNames={{ ... }} />` 経由で型ごとに上書きされる。
  */
 export interface BlockComponentProps<
   T extends BlockObjectResponse = BlockObjectResponse,
 > {
   block: T & { children?: NotionBlock[] };
   renderChildren?: (children: NotionBlock[]) => ReactNode;
+  className?: string;
 }
+
+/** `NotionRenderer.classNames` のマップ。block.type ごとにルート要素の追加クラスを差し込める。 */
+export type BlockClassNames = Partial<
+  Record<BlockObjectResponse["type"], string>
+>;
 
 /**
  * NotionRenderer の `components` プロップ。
@@ -69,4 +76,6 @@ export interface NotionRendererProps {
   blocks: NotionBlock[];
   components?: ComponentOverrides;
   className?: string;
+  /** block.type ごとにルート要素へ追加クラスを差し込む（tailwind-merge で衝突解決）。 */
+  classNames?: BlockClassNames;
 }

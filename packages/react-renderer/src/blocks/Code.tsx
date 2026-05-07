@@ -1,4 +1,5 @@
 import type { CodeBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import { cn } from "../lib/utils";
 import { RichText } from "../rich-text/RichText";
 import type { BlockComponentProps } from "../types";
 
@@ -8,12 +9,15 @@ function plainText(
   return richText.map((rt) => rt.plain_text).join("");
 }
 
-export function Code({ block }: BlockComponentProps<CodeBlockObjectResponse>) {
+export function Code({
+  block,
+  className,
+}: BlockComponentProps<CodeBlockObjectResponse>) {
   const language = block.code.language;
   const source = plainText(block.code.rich_text);
 
   return (
-    <div className="my-3">
+    <div className={cn("my-3", className)}>
       <pre
         className="overflow-x-auto rounded-lg bg-muted p-4 text-sm"
         data-language={language}
