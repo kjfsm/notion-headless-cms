@@ -1,5 +1,15 @@
 # @notion-headless-cms/embeds
 
+## 0.2.1
+
+### Patch Changes
+
+- 391d5ea: OGP メタデータの抽出を自前正規表現から `linkedom` に置き換え、属性順や `name=`/`property=` のバリエーションを DOM API でまとめて扱うようにした。HTML エンティティのデコードも DOM 側に委譲。挙動互換。
+
+  `react-renderer` の各 block コンポーネントを `tailwind-merge` ベースの `cn()` で統一し、`BlockComponentProps.className` と `<NotionRenderer classNames={{ ... }} />` を新設。block.type ごとにルート要素のクラスを差し替えられるようになった（追加 API、後方互換）。
+
+- ec37c60: `@notionhq/client` 公式ヘルパー（`collectPaginatedAPI` / `isFullPage` / `isFullBlock` / `isFullUser` / `isNotionClientError` / `APIErrorCode` / `ClientErrorCode`）への置き換えで、自作のページネーション・エラー判定・full/partial 判定を削減し、Notion API 仕様変更への追従性を高めた。挙動互換。
+
 ## 0.2.0
 
 ### Minor Changes
