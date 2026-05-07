@@ -48,18 +48,16 @@
     "provenance": true
   },
   "dependencies": {
+    "@notion-headless-cms/core": "workspace:*",
+    "@notion-headless-cms/renderer": "workspace:*",
     "linkedom": "^0.18.12"
   },
   "peerDependencies": {
-    "@notion-headless-cms/core": "workspace:*",
-    "@notion-headless-cms/renderer": "workspace:*",
     "@notionhq/client": "^5.20.0",
     "notion-to-md": "^3.1.0",
     "zod": "^4.0.0"
   },
   "devDependencies": {
-    "@notion-headless-cms/core": "workspace:*",
-    "@notion-headless-cms/renderer": "workspace:*",
     "@notionhq/client": "catalog:",
     "notion-to-md": "catalog:",
     "zod": "catalog:"

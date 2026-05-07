@@ -47,10 +47,9 @@
     "provenance": true
   },
   "peerDependencies": {
-    "@notion-headless-cms/core": "workspace:*",
     "next": ">=14.0.0"
   },
-  "devDependencies": {
+  "dependencies": {
     "@notion-headless-cms/core": "workspace:*"
   }
 }
