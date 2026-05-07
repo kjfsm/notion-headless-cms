@@ -83,19 +83,67 @@ const components: ComponentOverrides = {
 pnpm add katex
 ```
 
+利用側プロジェクトの CSS に `katex/dist/katex.min.css` を読み込むこと（Tailwind v4 なら `@import "katex/dist/katex.min.css"` を `@source` より前に置く）。`katex` は `peerDependencies` (optional) のため、数式を使わないユースケースではインストール不要。
+
+#### Next.js App Router / React Server Components
+
+`./equation` の `Equation` は `"use client"` 付きなので、**Server Component から直接 import** すれば Next.js が client reference として正しくシリアライズし、ルート単位で自動コードスプリットされる（`katex` は post ページの client chunk にのみ含まれる）。
+
 ```tsx
-import dynamic from "next/dynamic";
+// app/posts/[slug]/page.tsx (Server Component)
+import { Equation } from "@notion-headless-cms/react-renderer/equation";
 import { NotionRenderer } from "@notion-headless-cms/react-renderer";
 
-// next/dynamic で別チャンク化すれば、equation を含むページでだけ katex が読まれる
+export default async function Page() {
+  return <NotionRenderer blocks={blocks} components={{ Equation }} />;
+}
+```
+
+> **注**: `next/dynamic(() => import(".../equation"))` を Server Component で使うと、`Functions cannot be passed directly to Client Components` という RSC エラーになる。`next/dynamic` の戻り値（LoadableComponent 関数）は client reference として serialize できないため。次節の wrapper パターンを使うか、上記の直接 import で十分。
+
+#### Pages Router / Client Component (rnx 流の細粒度レイジー)
+
+ルート単位ではなく **「数式を実際に含むページでだけ katex chunk を fetch」** したい場合は、`"use client"` を付けた wrapper コンポーネント内で `next/dynamic` を使う。Pages Router でもそのまま動く。
+
+```tsx
+// components/notion-content.tsx
+"use client";
+
+import dynamic from "next/dynamic";
+import {
+  type NotionBlock,
+  NotionRenderer,
+} from "@notion-headless-cms/react-renderer";
+
+// 数式が render される瞬間まで katex を fetch しない（route 単位より細かい lazy）
 const Equation = dynamic(() =>
   import("@notion-headless-cms/react-renderer/equation").then((m) => m.Equation),
 );
 
-<NotionRenderer blocks={blocks} components={{ Equation }} />;
+export function NotionContent({ blocks }: { blocks: NotionBlock[] }) {
+  return <NotionRenderer blocks={blocks} components={{ Equation }} />;
+}
 ```
 
-`katex` は `peerDependencies` (optional) のため、数式を使わないユースケースではインストール不要。利用側プロジェクトの CSS に `katex/dist/katex.min.css` を読み込むこと。
+```tsx
+// app/posts/[slug]/page.tsx (Server Component)
+import { NotionContent } from "@/components/notion-content";
+
+export default async function Page() {
+  return <NotionContent blocks={blocks} />;
+}
+```
+
+#### 非 Next.js 環境（Vite / React Router 等）
+
+SSR 環境ではルート単位でコードスプリットされるため、`./equation` を直接 static import すれば十分。
+
+```tsx
+import { Equation } from "@notion-headless-cms/react-renderer/equation";
+import { NotionRenderer } from "@notion-headless-cms/react-renderer";
+
+<NotionRenderer blocks={blocks} components={{ Equation }} />;
+```
 
 ## 対応ブロック
 
