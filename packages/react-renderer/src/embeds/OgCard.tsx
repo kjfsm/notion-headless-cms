@@ -44,18 +44,24 @@ export function OgCard({ url, ogp }: OgCardProps) {
       rel="noopener noreferrer"
       className="block no-underline"
     >
-      <Card className="flex flex-row items-stretch overflow-hidden p-0 transition-colors hover:bg-muted/40">
+      {/* min-h でカード高さの最低値を保証し、本文は line-clamp + break-words で
+          長文・長単語が overflow-hidden で見切れないようにする */}
+      <Card className="flex min-h-[6.5rem] flex-row items-stretch overflow-hidden p-0 transition-colors hover:bg-muted/40">
         <div className="flex min-w-0 flex-1 flex-col gap-1 p-4">
-          <div className="font-medium leading-snug">{title}</div>
+          <div className="line-clamp-2 break-words font-medium leading-snug">
+            {title}
+          </div>
           {description ? (
-            <div className="text-xs text-muted-foreground">{description}</div>
+            <div className="line-clamp-2 break-words text-xs text-muted-foreground">
+              {description}
+            </div>
           ) : null}
           <div className="mt-auto truncate pt-2 text-xs text-muted-foreground/60">
             {siteName} · {url}
           </div>
         </div>
         {image ? (
-          <div className="ml-auto w-40 shrink-0 self-stretch bg-muted sm:w-56">
+          <div className="ml-auto w-28 shrink-0 self-stretch bg-muted sm:w-40 md:w-56">
             <img
               src={image}
               alt=""
