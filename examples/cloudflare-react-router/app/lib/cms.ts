@@ -1,4 +1,4 @@
-import { cloudflareCache } from "@notion-headless-cms/cache/cloudflare";
+import { cloudflarePreset } from "@notion-headless-cms/cache/cloudflare";
 import { createClient } from "@notion-headless-cms/core";
 import {
   notionEmbed,
@@ -14,7 +14,12 @@ export interface Env {
   IMG_BUCKET?: R2Bucket;
 }
 
-export function makeCms(env: Env) {
+// ctx は `waitUntil` だけ要求する構造型で受ける。
+// React Router / Hono / Astro 等で型が微妙に違っても通る。
+export function makeCms(
+  env: Env,
+  ctx?: { waitUntil(p: Promise<unknown>): void },
+) {
   const embed = notionEmbed({
     providers: [youtubeProvider({ display: "card" })],
   });
@@ -39,10 +44,12 @@ export function makeCms(env: Env) {
         },
       }),
     },
-    cache: cloudflareCache({
-      docCache: env.DOC_CACHE,
-      imgBucket: env.IMG_BUCKET,
-    }),
     renderer: embed.renderer,
+    // swr.ttlMs はあえて未指定。キャッシュは期限なしで永続させ、
+    // Notion 側の lastEditedTime に差分があったときだけ waitUntil の bg で差し替える。
+    // TTL を入れると期限切れ時にブロッキング再取得が走り、変更が無くても遅延が発生する。
+    // cache (KV+R2) と waitUntil (SWR bg をレスポンス送信後も完走させる) を一括で注入。
+    // ctx を渡さないと bg が打ち切られて KV の古いキャッシュが残り続ける。
+    ...cloudflarePreset({ env, ctx }),
   });
 }

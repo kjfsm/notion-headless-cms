@@ -1,9 +1,10 @@
+import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
 import { Link } from "react-router";
 import { makeCms } from "../lib/cms";
 import type { Route } from "./+types/home";
 
 export async function loader({ context }: Route.LoaderArgs) {
-  const cms = makeCms(context.cloudflare.env);
+  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
   const items = await cms.posts.list();
   return { items };
 }
@@ -12,6 +13,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const { items } = loaderData;
   return (
     <main>
+      {/* ハイドレーション後に loader を 1 度再走させ、SWR で差し替わった
+          最新の一覧をクエリ無し・別 API fetch 無しで取り込む。 */}
+      <NotionRevalidator />
       <h1>記事一覧</h1>
       <ul>
         {items.map((post) => (

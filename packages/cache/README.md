@@ -31,7 +31,7 @@ pnpm add @notion-headless-cms/cache @notion-headless-cms/core next
 | サブパス | 内容 |
 |---|---|
 | `@notion-headless-cms/cache` | `memoryCache` |
-| `@notion-headless-cms/cache/cloudflare` | `kvCache`, `r2Cache`, `cloudflareCache` |
+| `@notion-headless-cms/cache/cloudflare` | `kvCache`, `r2Cache`, `cloudflareCache`, `cloudflarePreset` |
 | `@notion-headless-cms/cache/next` | `nextCache` |
 
 ## 使い方
@@ -56,40 +56,52 @@ export const cms = createClient({
 
 ### Cloudflare Workers（KV + R2）
 
+`cloudflarePreset({ env, ctx })` を `createClient` に展開すると、KV + R2 のキャッシュアダプタと `waitUntil`（SWR バックグラウンド更新を Workers のレスポンス送信後も完走させるための関数）が一括で配線される。
+
 ```ts
 // src/index.ts
-import { cloudflareCache } from "@notion-headless-cms/cache/cloudflare";
+import { cloudflarePreset } from "@notion-headless-cms/cache/cloudflare";
 import { createClient } from "@notion-headless-cms/core";
 import { notionSource } from "@notion-headless-cms/notion-source";
 import { schema } from "./generated/nhc.schema";
 
 export default {
-  async fetch(request: Request, env: Env) {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
     const cms = createClient({
       sources: {
         notion: notionSource({ schema, token: env.NOTION_TOKEN }),
       },
-      cache: cloudflareCache({
-        docCache: env.DOC_CACHE,   // KV namespace
-        imgBucket: env.IMG_BUCKET, // R2 bucket
-      }),
+      ...cloudflarePreset({ env, ctx }),
     });
     // ...
   },
 };
 ```
 
-KV と R2 を個別に設定する場合:
+`ctx.waitUntil` が未配線だと、SWR の差分検知がレスポンス送信後に Workers ランタイムにより打ち切られ、KV キャッシュが古いまま残るため、**`ctx` を渡すこと**が重要。
+
+個別に設定したい場合は低レベル API を使う:
 
 ```ts
-import { kvCache, r2Cache } from "@notion-headless-cms/cache/cloudflare";
+import {
+  cloudflareCache,
+  kvCache,
+  r2Cache,
+} from "@notion-headless-cms/cache/cloudflare";
 
 createClient({
   sources: { notion: notionSource({ schema, token: env.NOTION_TOKEN }) },
-  cache: [
-    kvCache({ namespace: env.DOC_CACHE }),
-    r2Cache({ bucket: env.IMG_BUCKET }),
-  ],
+  // KV + R2 のショートカット
+  cache: cloudflareCache({
+    docCache: env.DOC_CACHE,
+    imgBucket: env.IMG_BUCKET,
+  }),
+  // または個別:
+  // cache: [
+  //   kvCache({ namespace: env.DOC_CACHE }),
+  //   r2Cache({ bucket: env.IMG_BUCKET }),
+  // ],
+  waitUntil: (p) => ctx.waitUntil(p),
 });
 ```
 
@@ -148,6 +160,27 @@ Cloudflare R2 を画像キャッシュとして使うアダプタ。既定では
 cloudflareCache({ docCache: env.DOC_CACHE, imgBucket: env.IMG_BUCKET })
 // → [kvCache({ namespace: env.DOC_CACHE }), r2Cache({ bucket: env.IMG_BUCKET })]
 ```
+
+| オプション | 型 | 説明 |
+|---|---|---|
+| `prefix?` | `string` | キャッシュキーのプレフィックス |
+
+### `cloudflarePreset(opts)` — `./cloudflare`
+
+`createClient` に展開する Cloudflare Workers 向けのショートカット。`cache`（`cloudflareCache` 相当）と `waitUntil`（`ctx.waitUntil` を bind したもの）を返す。
+
+```ts
+createClient({
+  sources: { notion: notionSource({ schema, token: env.NOTION_TOKEN }) },
+  ...cloudflarePreset({ env, ctx }),
+});
+```
+
+| オプション | 型 | 説明 |
+|---|---|---|
+| `env` | `{ DOC_CACHE?, IMG_BUCKET? }` | Workers env binding |
+| `ctx?` | `{ waitUntil(p): void }` | Workers ExecutionContext。SWR bg を完走させるために渡す |
+| `prefix?` | `string` | キャッシュキーのプレフィックス |
 
 ### `nextCache(opts?)` — `./next`
 

@@ -1,3 +1,4 @@
+import { notionRevalidatorScript } from "@notion-headless-cms/core/html";
 import { Hono } from "hono";
 import { html, raw } from "hono/html";
 import { cms } from "./lib/cms.js";
@@ -56,6 +57,7 @@ function layout(title: string, body: string) {
   <body>
     <nav><a href="/ui">トップ</a> › <a href="/ui/posts">記事一覧</a></nav>
     ${raw(body)}
+    ${raw(notionRevalidatorScript())}
   </body>
 </html>`;
 }

@@ -95,6 +95,31 @@ export default async function PostPage({
 }
 ```
 
+## クライアント側の表示更新
+
+Notion を更新したとき、画面を**静かに切り替える**には `<NotionRevalidator />` を Server Component に置くだけ。内部で `useRouter().refresh()` を呼び、現ルートの Server Component を再評価して RSC ストリーム差分で UI を更新する。クエリも別 API fetch も発生しない。
+
+```tsx
+// app/posts/[slug]/page.tsx
+import { NotionRevalidator } from "@notion-headless-cms/react-renderer/next";
+import { cms } from "@/lib/cms";
+
+export default async function Page({ params }) {
+  const { slug } = await params;
+  const post = await cms.posts.find(slug);
+  if (!post) notFound();
+  return (
+    <article>
+      <NotionRevalidator />
+      <h1>{post.slug}</h1>
+      {/* ... */}
+    </article>
+  );
+}
+```
+
+`<NotionRevalidator on="visibility" />` でタブ可視化のたびに、`<NotionRevalidator on={["mount", "visibility"]} />` で両方発火させられる（既定はマウント時 1 回のみ）。
+
 ## 画像配信・Webhook の統合ルート
 
 ```ts

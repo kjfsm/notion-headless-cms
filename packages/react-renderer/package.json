@@ -35,6 +35,14 @@
     "./equation": {
       "types": "./dist/equation.d.mts",
       "import": "./dist/equation.mjs"
+    },
+    "./router": {
+      "types": "./dist/router.d.mts",
+      "import": "./dist/router.mjs"
+    },
+    "./next": {
+      "types": "./dist/next.d.mts",
+      "import": "./dist/next.mjs"
     }
   },
   "files": [
@@ -44,7 +52,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "tsdown src/index.ts src/server.ts src/equation.tsx --format esm --dts --sourcemap --out-dir dist",
+    "build": "tsdown src/index.ts src/server.ts src/equation.tsx src/router.tsx src/next.tsx --format esm --dts --sourcemap --out-dir dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
@@ -58,14 +66,22 @@
   "peerDependencies": {
     "@notionhq/client": "^5.20.0",
     "katex": "^0.16.11",
+    "next": ">=14",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-router": ">=7"
   },
   "peerDependenciesMeta": {
     "@notionhq/client": {
       "optional": true
     },
     "katex": {
+      "optional": true
+    },
+    "next": {
+      "optional": true
+    },
+    "react-router": {
       "optional": true
     }
   },
@@ -83,7 +99,9 @@
     "@types/react-dom": "^19.0.0",
     "happy-dom": "^20.9.0",
     "katex": "^0.16.11",
+    "next": "^15.0.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-router": "^7.0.0"
   }
 }

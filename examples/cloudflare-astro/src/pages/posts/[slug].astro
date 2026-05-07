@@ -1,9 +1,13 @@
 ---
 import { env } from "cloudflare:workers";
+import { notionRevalidatorScript } from "@notion-headless-cms/core/html";
 import { type Env, makeCms } from "../../lib/cms";
 import { getPost } from "../../lib/data";
 
-const cms = makeCms(env as Env);
+// Astro の Cloudflare アダプタは Locals.cfContext に ExecutionContext を載せる
+// (`@astrojs/cloudflare` の Runtime 型参照)。これを cms に渡さないと SWR の
+// bg 更新が打ち切られて KV の古いキャッシュが残る。
+const cms = makeCms(env as Env, Astro.locals.cfContext);
 const { slug } = Astro.params;
 if (!slug) return Astro.redirect("/404");
 const result = await getPost(cms, slug);
@@ -24,5 +28,8 @@ const { post, html } = result;
       {post.publishedAt && <time>{post.publishedAt}</time>}
       <div set:html={html} />
     </article>
+    {/* タブ可視化のたびに reload。サーバ側 SWR で KV が更新済みなら
+        次の応答で新内容が返る（クエリ無し・別 API fetch 無し）。 */}
+    <Fragment set:html={notionRevalidatorScript()} />
   </body>
 </html>

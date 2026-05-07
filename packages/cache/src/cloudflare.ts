@@ -379,3 +379,53 @@ export function cloudflareCache(
     adapters.push(r2Cache({ bucket: bindings.imgBucket, prefix }));
   return adapters;
 }
+
+// ── cloudflarePreset (createClient 用ショートカット) ───────────────────────
+
+/** `cloudflarePreset` が参照する env binding。 */
+export interface CloudflarePresetEnv {
+  DOC_CACHE?: KVNamespaceLike;
+  IMG_BUCKET?: R2BucketLike;
+}
+
+/** Cloudflare ExecutionContext の最小構造型。 */
+export interface CloudflareExecutionContextLike {
+  waitUntil(promise: Promise<unknown>): void;
+}
+
+export interface CloudflarePresetOptions {
+  env: CloudflarePresetEnv;
+  /**
+   * Cloudflare ExecutionContext。`createClient` の `waitUntil` に橋渡しする。
+   * これを渡さないと、SWR のバックグラウンド更新がレスポンス送信後に
+   * Workers ランタイムにより打ち切られ、KV キャッシュが古いまま残る。
+   */
+  ctx?: CloudflareExecutionContextLike;
+  /** キャッシュキーのプレフィックス。デフォルト: '' */
+  prefix?: string;
+}
+
+/**
+ * `createClient` に展開するための Cloudflare Workers 向けプリセット。
+ * `cache`（KV+R2）と `waitUntil`（SWR bg を完走させる）を一括で生成する。
+ *
+ * @example
+ * createClient({
+ *   sources: { notion: notionSource(...) },
+ *   renderer: ...,
+ *   ...cloudflarePreset({ env, ctx }),
+ * });
+ */
+export function cloudflarePreset(opts: CloudflarePresetOptions): {
+  cache: CacheAdapter[];
+  waitUntil?: (p: Promise<unknown>) => void;
+} {
+  const cache = cloudflareCache(
+    { docCache: opts.env.DOC_CACHE, imgBucket: opts.env.IMG_BUCKET },
+    { prefix: opts.prefix },
+  );
+  const ctx = opts.ctx;
+  // ExecutionContext.waitUntil は `this` バインドが必要なので bind する。
+  const waitUntil = ctx ? (p: Promise<unknown>) => ctx.waitUntil(p) : undefined;
+  return { cache, waitUntil };
+}

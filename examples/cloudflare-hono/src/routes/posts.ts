@@ -5,13 +5,13 @@ import { makeCms } from "../lib/cms";
 const posts = new Hono<{ Bindings: Env }>();
 
 posts.get("/", async (c) => {
-  const cms = makeCms(c.env);
+  const cms = makeCms(c.env, c.executionCtx);
   const items = await cms.posts.list();
   return c.json({ items });
 });
 
 posts.get("/:slug", async (c) => {
-  const cms = makeCms(c.env);
+  const cms = makeCms(c.env, c.executionCtx);
   const slug = c.req.param("slug");
   const post = await cms.posts.find(slug);
   if (!post) return c.json({ error: "Not Found" }, 404);
