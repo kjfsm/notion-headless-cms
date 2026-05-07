@@ -4,29 +4,6 @@
 
 > 比較対象は **「Web サイト・アプリにコンテンツを配信する」** ユースケースに絞り、UGC プラットフォームや E コマース専用ツールは除外している。
 
-## サマリー: ポジショニングマップ
-
-```
-                 編集 UX が独自 UI
-                        ▲
-                        │
-       Contentful ●     │     ● Sanity
-                        │
-       Strapi ●         │     ● Payload
-                        │
-   ─────────────────────┼─────────────────────▶
-   SaaS / フルマネージド │   OSS / セルフホスト
-                        │
-                        │     ● notion-headless-cms
-       Decap CMS ●      │     ● react-notion-x
-                        │
-                        ▼
-                 編集 UX が既存ツール
-                 (Notion / Git / etc.)
-```
-
-横軸 = 運用形態、縦軸 = 編集体験。`notion-headless-cms` は「**OSS** × **既存の Notion を編集 UI として使う**」象限に位置する。
-
 ## 機能マトリクス
 
 | 項目 | notion-headless-cms | Contentful | Sanity | Strapi | Payload | Decap CMS | react-notion-x |
