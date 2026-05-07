@@ -1,5 +1,18 @@
 # @notion-headless-cms/source-notion
 
+## 0.1.23
+
+### Patch Changes
+
+- 6a24bdc: notion-katex: フェッチ時に数式を KaTeX HTML へ事前変換するパッケージを追加（#221）
+
+  - `@notion-headless-cms/notion-katex` を新設。`notionKatex()` が `BlockEnricher` を返す
+  - `notion-orm`: `BlockEnricher` 型と `enrichers` オプションを `NotionCollectionCommonOptions` に追加
+  - `react-renderer`: `Equation` コンポーネントが `__cachedHtml` を `dangerouslySetInnerHTML` で描画。Workers バンドルから katex を除外できる
+
+- Updated dependencies [efd3c2f]
+  - @notion-headless-cms/core@0.3.18
+
 ## 0.1.22
 
 ### Patch Changes
