@@ -16,18 +16,24 @@ pnpm add @notion-headless-cms/adapter-next @notion-headless-cms/core
 
 ```ts
 // app/lib/cms.ts
-import { createCMS, nodePreset } from "@notion-headless-cms/core";
-import { nextCache } from "@notion-headless-cms/cache-next";
-import { cmsDataSources } from "../generated/nhc-schema";
+import { memoryCache } from "@notion-headless-cms/cache";
+import { nextCache } from "@notion-headless-cms/cache/next";
+import { createClient } from "@notion-headless-cms/core";
+import { notionSource } from "@notion-headless-cms/notion-source";
+import { schema } from "@/app/generated/nhc.schema";
 
-export const cms = createCMS({
-  ...nodePreset({
-    cache: {
-      document: nextCache({ revalidate: 300, tags: ["posts"] }),
-    },
-    ttlMs: 5 * 60_000,
-  }),
-  dataSources: cmsDataSources,
+export const cms = createClient({
+  sources: {
+    notion: notionSource({
+      schema,
+      token: process.env.NOTION_TOKEN!,
+      publishOptions: {
+        posts: { publishedStatuses: ["公開済み"] },
+      },
+    }),
+  },
+  cache: [nextCache({ revalidate: 300, tags: ["posts"] }), memoryCache()],
+  swr: { ttlMs: 5 * 60_000 },
 });
 ```
 
@@ -75,7 +81,7 @@ export const POST = createRevalidateRouteHandler(cms, {
 
 | 引数 | 型 | 説明 |
 |---|---|---|
-| `cms` | `CMSClient` | `createCMS()` の戻り値 |
+| `cms` | `CMSClient` | `createClient()` の戻り値 |
 
 戻り値: App Router 仕様の `GET` ハンドラ。
 

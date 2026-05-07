@@ -1,7 +1,7 @@
 # カスタムキャッシュアダプタの実装
 
 `@notion-headless-cms/core` は `DocumentCacheOps` / `ImageCacheOps` という 2 つのインターフェースを公開している。
-`CacheAdapter` としてまとめてから `createCMS` の `cache` に渡すことで、
+`CacheAdapter` としてまとめてから `createClient` の `cache` に渡すことで、
 R2 / Next.js ISR 以外のストレージ（Redis / Memcached / S3 など）にキャッシュを差し替えられる。
 
 ## CacheAdapter の構造
@@ -134,15 +134,19 @@ export function s3ImageCache(): CacheAdapter {
 }
 ```
 
-## createCMS で利用
+## createClient で利用
 
 複数のアダプタを配列で渡せる。先着順で `handles` の担当が割り当てられる。
 
 ```ts
-import { createCMS } from "@notion-headless-cms/core";
+import { createClient } from "@notion-headless-cms/core";
+import { notionSource } from "@notion-headless-cms/notion-source";
+import { schema } from "./generated/nhc.schema";
 
-const cms = createCMS({
-  collections: { /* ... */ },
+const cms = createClient({
+  sources: {
+    notion: notionSource({ schema, token: process.env.NOTION_TOKEN! }),
+  },
   cache: [
     redisCache(redis, "myapp:"),
     s3ImageCache(),

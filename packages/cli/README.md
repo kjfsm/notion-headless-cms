@@ -20,49 +20,69 @@ npx nhc init
 NOTION_TOKEN=secret_xxx npx nhc generate
 ```
 
-生成された `nhc-schema.ts` はそのまま `createCMS` に渡せる (編集不要)。
+生成された `nhc.schema.ts` には DB 構造（`schema` 定数）だけが入る。`@notion-headless-cms/notion-source` の `notionSource()` に渡して `createClient` を組み立てる:
 
 ```ts
-import { createCMS, nodePreset } from "@notion-headless-cms/core";
-import { cmsDataSources } from "./generated/nhc-schema";
+import { createClient, memoryCache } from "@notion-headless-cms/core";
+import { notionSource } from "@notion-headless-cms/notion-source";
+import { schema } from "./generated/nhc.schema";
 
-const cms = createCMS({
-  ...nodePreset({ ttlMs: 5 * 60_000 }),
-  dataSources: cmsDataSources,
+const cms = createClient({
+  sources: {
+    notion: notionSource({
+      schema,
+      token: process.env.NOTION_TOKEN!,
+      publishOptions: {
+        posts: { publishedStatuses: ["公開済み"] },
+      },
+    }),
+  },
+  cache: [memoryCache()],
+  swr: { ttlMs: 5 * 60_000 },
 });
 
-const posts = await cms.posts.getList();
+const posts = await cms.posts.list();
 ```
 
 ## `nhc.config.ts`
 
-`defineConfig()` で設定を定義し、`default export` する。
-`env()` は遅延評価の環境変数ヘルパー。
+`defineConfig()` で設定を定義し、`default export` する。`env()` は遅延評価の環境変数ヘルパー。
 
 ```ts
+import "dotenv/config";
 import { defineConfig, env } from "@notion-headless-cms/cli";
 
 export default defineConfig({
   notionToken: env("NOTION_TOKEN"),
-  dataSources: [
-    { name: "posts", dbName: "ブログ記事DB" },
-    { name: "news", id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" },
-  ],
-  output: "./app/generated/nhc-schema.ts",
+  output: "src/generated/nhc.schema.ts",
+  collections: {
+    posts: {
+      dbName: "ブログ記事DB",
+      // databaseId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx", // dbName の代わりに直接指定可
+      publishedStatuses: ["公開済み"],
+      accessibleStatuses: ["下書き", "公開済み"],
+      // slugField: "slug",     // デフォルト "slug"
+      // statusField: "status", // デフォルト "status"
+      // 日本語など ASCII 変換不能なプロパティ名は明示マッピング必須
+      // fieldMappings: { "タイトル": "title", "カテゴリ": "category" },
+    },
+  },
 });
 ```
 
-### `DataSourceConfig` オプション
+> **注意**: `publishedStatuses` / `accessibleStatuses` は `nhc.config.ts` に書いても**生成ファイルには埋め込まれない**。生成物は DB 構造（`schema`）のみを持ち、ランタイムの公開ステータスは `notionSource({ publishOptions })` で指定する。`nhc.config.ts` に書く意義は「設定を一元管理する備忘録」のみ。
 
-| フィールド | 型 | 説明 |
+### `CollectionGenConfig` オプション
+
+| フィールド | 必須 | 説明 |
 |---|---|---|
-| `name` | `string` | コード上で使う識別子 (`cms.posts` など) |
-| `id` | `string` (任意) | Notion DB ID。指定時は `dbName` より優先 |
-| `dbName` | `string` (`id` 未指定時は必須) | Notion DB 名 (完全一致で検索。一致しない場合は generate に失敗) |
-| `fields.slug` | `string` (任意) | slug に使う Notion プロパティ名 |
-| `fields.status` | `string` (任意) | status に使う Notion プロパティ名 |
-| `fields.publishedAt` | `string` (任意) | publishedAt に使う Notion プロパティ名 |
-| `fields.properties` | `Record<string, string>` (任意) | 日本語など ASCII 変換不能な Notion プロパティ名の明示マッピング |
+| `dbName` | (`databaseId` 未指定時) | Notion DB 名（完全一致で検索） |
+| `databaseId` | (`dbName` 未指定時) | Notion DB ID（指定時は `dbName` より優先） |
+| `slugField` | – | slug に使う TS フィールド名（デフォルト `"slug"`） |
+| `statusField` | – | status に使う TS フィールド名（デフォルト `"status"`） |
+| `publishedStatuses` | – | `notionSource({ publishOptions })` への移行用メモ |
+| `accessibleStatuses` | – | 同上 |
+| `fieldMappings` | – | `{ Notion プロパティ名: TS フィールド名 }` の明示マッピング |
 
 ## コマンド一覧
 
@@ -78,7 +98,7 @@ Options:
 
 ### `nhc generate`
 
-`nhc.config.ts` を読み込み、Notion DB を introspect して `nhc-schema.ts` を生成。
+`nhc.config.ts` を読み込み、Notion DB を introspect して `nhc.schema.ts` を生成。
 
 ```
 Options:
@@ -92,47 +112,49 @@ Options:
 
 | Notion | TypeScript | フィールド型 |
 |---|---|---|
-| `title` | `string \| null` | `"title"` |
+| `title` | `string \| null`（`slugField` 指定時は `string`） | `"title"` |
 | `rich_text` | `string \| null` | `"richText"` |
 | `select` | `string \| null` | `"select"` |
-| `status` | `string \| null` | `"status"` |
+| `status` | `"値1" \| "値2" \| ... \| null`（literal union） | `"status"` |
 | `multi_select` | `string[]` | `"multiSelect"` |
 | `date` | `string \| null` | `"date"` |
 | `number` | `number \| null` | `"number"` |
 | `checkbox` | `boolean` | `"checkbox"` |
 | `url` | `string \| null` | `"url"` |
-| その他 | — | スキップ (コメント付き) |
-
-`fields.*` 省略時の自動検出:
-- `slug` — `title` 型 (最初に見つかったもの)
-- `status` — 名前が `Status` / `状態` / `state` の `select` / `status` 型
-- `publishedAt` — 名前が `PublishedAt` / `CreatedAt` / `公開日` 等の `date` 型
+| その他 | — | スキップ（コメント付き） |
 
 ## 生成ファイルの構造
 
 ```ts
 // 自動生成 — 編集不要
-import { z } from "zod";
-import {
-  createNotionCollection,
-  defineMapping,
-  defineSchema,
-} from "@notion-headless-cms/notion-orm";
-import type { BaseContentItem } from "@notion-headless-cms/core";
-import { env } from "@notion-headless-cms/cli";
+import type { PropertyMap } from "@notion-headless-cms/core";
+import type { SchemaMap } from "@notion-headless-cms/notion-source";
 
-export interface PostsItem extends BaseContentItem { /* ... */ }
-export const postsSchema = defineSchema(/* ... */);
-export const postsSourceId = "xxx-yyy-zzz";
+export const postsDataSourceId = "xxx-yyy-zzz";
 
-export const cmsDataSources = {
-  posts: createNotionCollection({
-    token: env("NOTION_TOKEN"),
-    dataSourceId: postsSourceId,
-    schema: postsSchema,
-  }),
-} as const;
-export type CMSDataSources = typeof cmsDataSources;
+export const postsProperties = {
+  slug: { type: "richText" as const, notion: "URL" },
+  status: { type: "status" as const, notion: "ステータス" },
+  // ...
+} as const satisfies PropertyMap;
+
+export interface Post {
+  id: string;
+  lastEditedTime: string;
+  slug: string;
+  status: "公開済み" | "下書き" | null;
+  // ...
+}
+
+// 全コレクションのスキーマ集約 (notionSource() に渡す)
+export const schema = {
+  posts: {
+    dataSourceId: postsDataSourceId,
+    properties: postsProperties,
+    slugField: "slug",
+    statusField: "status",
+  },
+} as const satisfies SchemaMap;
 ```
 
 ## エラーコード
@@ -149,6 +171,6 @@ CLI が throw するエラーは `CMSError` の `cli/*` 名前空間で分類さ
 
 ## 関連パッケージ
 
-- [`@notion-headless-cms/core`](../core) — `createCMS` / `nodePreset`
-- [`@notion-headless-cms/cache-r2`](../cache-r2) — `cloudflarePreset`
-- [`@notion-headless-cms/notion-orm`](../notion-orm) — 内部 ORM (private)
+- [`@notion-headless-cms/core`](../core) — `createClient`
+- [`@notion-headless-cms/notion-source`](../notion-source) — 生成された `schema` を消費する Notion アダプター
+- [`@notion-headless-cms/notion-orm`](../notion-orm) — `notion-source` 内部の Notion ORM 層

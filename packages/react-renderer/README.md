@@ -40,7 +40,7 @@ export default function Page() {
 
 ### `@notion-headless-cms/core` と組み合わせて使う (推奨)
 
-`createCMS` 経由で取得すると、ブロックツリーが SWR キャッシュに乗り、画像 URL も
+`createClient` 経由で取得すると、ブロックツリーが SWR キャッシュに乗り、画像 URL も
 `cms.cacheImage` 経由で永続プロキシ URL に書き換えられる (Notion 署名 URL の失効対策)。
 
 ```tsx

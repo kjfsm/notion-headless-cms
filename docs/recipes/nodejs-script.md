@@ -5,8 +5,8 @@
 ## インストール
 
 ```bash
-pnpm add @notion-headless-cms/core @notion-headless-cms/notion-orm \
-  @notion-headless-cms/renderer @notion-headless-cms/cache \
+pnpm add @notion-headless-cms/core @notion-headless-cms/notion-source \
+  @notion-headless-cms/cache \
   @notionhq/client zod \
   unified remark-parse remark-gfm remark-rehype rehype-stringify
 pnpm add -D @notion-headless-cms/cli
@@ -25,10 +25,20 @@ NOTION_TOKEN=secret_xxx npx nhc generate
 ```ts
 // scripts/prefetch.ts
 import { memoryCache } from "@notion-headless-cms/cache";
-import { createCMS } from "../generated/nhc";
+import { createClient } from "@notion-headless-cms/core";
+import { notionSource } from "@notion-headless-cms/notion-source";
+import { schema } from "../generated/nhc.schema";
 
-const cms = createCMS({
-  notionToken: process.env.NOTION_TOKEN!,
+const cms = createClient({
+  sources: {
+    notion: notionSource({
+      schema,
+      token: process.env.NOTION_TOKEN!,
+      publishOptions: {
+        posts: { publishedStatuses: ["公開済み"] },
+      },
+    }),
+  },
   cache: [memoryCache()],
 });
 
@@ -53,15 +63,18 @@ console.log("次の記事:", adj.next?.slug);
 
 ## カスタム cache を差し込む
 
-`createCMS` の `cache` に任意のアダプタを渡せる。
-組み込みの `memoryCache` は最大アイテム数を制限できる:
+`createClient` の `cache` に任意のアダプタを渡せる。組み込みの `memoryCache` は最大アイテム数を制限できる:
 
 ```ts
 import { memoryCache } from "@notion-headless-cms/cache";
-import { createCMS } from "../generated/nhc";
+import { createClient } from "@notion-headless-cms/core";
+import { notionSource } from "@notion-headless-cms/notion-source";
+import { schema } from "../generated/nhc.schema";
 
-const cms = createCMS({
-  notionToken: process.env.NOTION_TOKEN!,
+const cms = createClient({
+  sources: {
+    notion: notionSource({ schema, token: process.env.NOTION_TOKEN! }),
+  },
   cache: [memoryCache({ maxItems: 1000 })],
   swr: { ttlMs: 10 * 60_000 },
 });
@@ -70,8 +83,10 @@ const cms = createCMS({
 キャッシュを完全に無効化する場合（常に Notion から直接取得）:
 
 ```ts
-const cms = createCMS({
-  notionToken: process.env.NOTION_TOKEN!,
+const cms = createClient({
+  sources: {
+    notion: notionSource({ schema, token: process.env.NOTION_TOKEN! }),
+  },
   // cache を省略 or undefined → noopDocOps / noopImgOps が使われる
 });
 ```

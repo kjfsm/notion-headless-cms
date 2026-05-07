@@ -6,10 +6,11 @@ CLAUDE.md と `.claude/rules/` は**事実**を述べる。ここではその**�
 
 ```
 Notion DB
-  └─ @notion-headless-cms/notion-orm（ユーザーは直接 import しない・CLI 生成物経由で利用 / fetchBlockTree のみ公開 API として直接利用可）
+  └─ @notion-headless-cms/notion-orm（ユーザーは直接 import しない・notion-source 経由で利用 / fetchBlockTree のみ公開 API として直接利用可）
        ├─ @notion-headless-cms/renderer（Markdown→HTML / SSR-only / 非 React 向け）
        ├─ @notion-headless-cms/react-renderer（BlockObjectResponse→React / shadcn/ui + Tailwind v4 / React アプリ向け）
-       └─ @notion-headless-cms/core（CMS 統合・キャッシュ・フック・nodePreset）
+       ├─ @notion-headless-cms/notion-source（CMSAdapter 実装 / `createClient({ sources: { notion } })` で組み込む）
+       └─ @notion-headless-cms/core（CMS 統合・キャッシュ・フック）
             ├─ @notion-headless-cms/cache-r2（cloudflarePreset）
             ├─ @notion-headless-cms/cache-kv
             ├─ @notion-headless-cms/cache-next
@@ -22,7 +23,8 @@ Notion DB
 - `renderer` を差し替え可能にしたかった（remark → marked / markdown-it）
 - `react-renderer` は `renderer` (HTML) とは並列の出力経路。Markdown 中継せず Notion ブロックを直接 React に変換するため、rich_text annotations や mention 等の情報を失わずに描画できる。React アプリ向けに分離し、SSR-only / 非 React フレームワーク (Astro / Hono / Express) は `notion-embed` の HTML 出力を継続利用
 - アダプタが「ランタイム固有の面倒」を引き受け、core はランタイム中立を保つ
-- v0.3.0 で `adapter-node` / `adapter-cloudflare` を廃止して preset 方式に変えた理由は、ユーザーが `createCMS` 一本で書けるようにするため（フレームワーク連携 adapter と役割を分離）
+- v0.3.0 で `adapter-node` / `adapter-cloudflare` を廃止して preset 方式に変えた理由は、ユーザーが `createClient` 一本で書けるようにするため（フレームワーク連携 adapter と役割を分離）
+- v2.0 で空の `CMSSources` インターフェースと `notion-source` パッケージを導入した理由は、生成物に Notion 固有のラッパー実装を埋め込まずに済ませるため。`declare module` でアダプターパッケージが `sources.<key>` を宣言マージできるので、Fastify プラグインのように `import` するだけで型が拡張される。生成物はスキーマだけを持ち、ランタイム設定は `createClient` 側で組み立てる
 
 ## SWR（Stale-While-Revalidate）
 

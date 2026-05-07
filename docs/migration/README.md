@@ -4,6 +4,7 @@
 
 ## 既存ガイド
 
+- [`v2.0.md`](./v2.0.md) — `createCMS` → `createClient` リネームと拡張可能な sources API への移行
 - [`v1.0.md`](./v1.0.md) — v1.0 の破壊的 API 変更（メソッド名変更・オプション構造変更）
 - [`v0-to-v1.md`](./v0-to-v1.md) — v0 系から v1 系への初回リファクタ
 - [`v0.3.md`](./v0.3.md) — v0.3.0 のランタイム preset 化

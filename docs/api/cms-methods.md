@@ -1,15 +1,18 @@
 # CMS API リファレンス
 
-`@notion-headless-cms/core` の `createCMS()` が返す `CMSClient<C>` が公開する API の一覧。
+`@notion-headless-cms/core` の `createClient()` が返す `CMSClient<C>` が公開する API の一覧。
 
 ## 全体像
 
 ```ts
-// nhc generate が生成した createCMS ラッパーを使う
-import { createCMS } from "./generated/nhc";
+import { createClient } from "@notion-headless-cms/core";
+import { notionSource } from "@notion-headless-cms/notion-source";
+import { schema } from "./generated/nhc.schema";
 
-const cms = createCMS({
-  notionToken: "...",
+const cms = createClient({
+  sources: {
+    notion: notionSource({ schema, token: process.env.NOTION_TOKEN! }),
+  },
   cache?: CacheAdapter[],
   swr?: { ttlMs?: number },
   renderer?: RendererFn,
@@ -35,7 +38,7 @@ cms.imageProxyBase     // string (デフォルト "/api/images")
 
 ## `BaseContentItem` — 自動フィールド
 
-CLI 生成の `createCMS` ラッパーで返されるすべてのアイテムには、スキーマで定義したプロパティに加えて以下の自動フィールドが含まれます:
+`notionSource(schema)` 経由で返されるすべてのアイテムには、スキーマで定義したプロパティに加えて以下の自動フィールドが含まれます:
 
 - `id: string` — Notion ページ ID
 - `slug: string` — スキーマの `slug` フィールドから抽出
@@ -184,7 +187,7 @@ const { ok, failed } = await cms.posts.cache.warm({
 | `cms.getCachedImage(hash)` | 画像キャッシュから `{ data, contentType }` を取得 |
 | `cms.handler(opts?)` | Web Standard な `(req: Request) => Promise<Response>` を返す |
 | `cms.cacheImage` | `(url: string) => Promise<string>` または `undefined`。Notion 画像 URL を `{imageProxyBase}/{sha256}` 形式へ変換しキャッシュへ書き込む。画像キャッシュ未設定 (noop) の場合は `undefined` |
-| `cms.imageProxyBase` | 画像プロキシのベース URL (`createCMS({ imageProxyBase })`、デフォルト `/api/images`) |
+| `cms.imageProxyBase` | 画像プロキシのベース URL (`createClient({ imageProxyBase })`、デフォルト `/api/images`) |
 
 ### `cms.cacheImage` の利用例
 
@@ -225,15 +228,19 @@ type InvalidateScope =
   | { collection: string; slug: string; kind?: "all" | "meta" | "content" };
 ```
 
-## `createCMS()` オプション（低レベル）
-
-CLI 生成の `createCMS` ラッパーを使わず、直接 core の `createCMS` を呼ぶ場合のオプション。
+## `createClient()` オプション
 
 ```ts
-import { createCMS } from "@notion-headless-cms/core";
+import { createClient } from "@notion-headless-cms/core";
 
-const cms = createCMS({
-  collections: {
+const cms = createClient({
+  // sources（推奨）— アダプターパッケージ経由で型安全に追加
+  sources?: {
+    notion?: CMSAdapter,       // @notion-headless-cms/notion-source の notionSource()
+    // 他のソースは module augmentation で追加される
+  },
+  // collections（低レベル）— DataSource<T> 実装を直接渡す
+  collections?: {
     posts: {
       source: myDataSource,    // DataSource<T> の実装
       slugField: "slug",
@@ -252,6 +259,29 @@ const cms = createCMS({
 });
 ```
 
+`sources` と `collections` を両方指定した場合は `sources` が優先される（`sources` の `collections` がマージされ、トップレベルの `collections` は無視される）。
+
+### `CMSAdapter` / `CMSSources` — 拡張ポイント
+
+`@notion-headless-cms/core` は空の `CMSSources` インターフェースを公開し、各アダプターパッケージが宣言マージで `sources.<key>` を追加する。
+
+```ts
+// アダプター側
+import type { CMSAdapter } from "@notion-headless-cms/core";
+
+declare module "@notion-headless-cms/core" {
+  interface CMSSources {
+    contentful?: CMSAdapter;
+  }
+}
+
+export function contentfulSource(opts: { ... }): CMSAdapter {
+  return { collections: { ... } };
+}
+```
+
+利用側は `import { contentfulSource } from "..."` するだけで `sources.contentful` キーが補完候補に現れる。
+
 ### `RateLimiterConfig`
 
 | プロパティ | 型 | デフォルト |
@@ -263,7 +293,7 @@ const cms = createCMS({
 
 ## ライフサイクルフック
 
-`createCMS({ hooks })` で注入する。
+`createClient({ hooks })` で注入する。
 
 | フック | シグネチャ | 呼び出しタイミング |
 |---|---|---|

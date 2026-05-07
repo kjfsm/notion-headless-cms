@@ -3,9 +3,8 @@
 ## インストール
 
 ```bash
-pnpm add @notion-headless-cms/core @notion-headless-cms/notion-orm \
-  @notion-headless-cms/renderer @notion-headless-cms/cache \
-  @notion-headless-cms/adapter-next \
+pnpm add @notion-headless-cms/core @notion-headless-cms/notion-source \
+  @notion-headless-cms/cache @notion-headless-cms/adapter-next \
   @notionhq/client zod \
   unified remark-parse remark-gfm remark-rehype rehype-stringify
 pnpm add -D @notion-headless-cms/cli
@@ -25,11 +24,21 @@ NOTION_TOKEN=secret_xxx npx nhc generate
 // app/lib/cms.ts
 import { memoryCache } from "@notion-headless-cms/cache";
 import { nextCache } from "@notion-headless-cms/cache/next";
-import { createCMS } from "../generated/nhc";
+import { createClient } from "@notion-headless-cms/core";
+import { notionSource } from "@notion-headless-cms/notion-source";
+import { schema } from "@/app/generated/nhc.schema";
 
 // document は Next.js の unstable_cache + revalidateTag、image は in-process メモリ。
-export const cms = createCMS({
-  notionToken: process.env.NOTION_TOKEN!,
+export const cms = createClient({
+  sources: {
+    notion: notionSource({
+      schema,
+      token: process.env.NOTION_TOKEN!,
+      publishOptions: {
+        posts: { publishedStatuses: ["公開済み"] },
+      },
+    }),
+  },
   cache: [nextCache({ revalidate: 300, tags: ["posts"] }), memoryCache()],
 });
 ```

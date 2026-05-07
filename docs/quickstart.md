@@ -9,16 +9,14 @@
 ## インストール
 
 ```bash
-pnpm add @notion-headless-cms/core @notion-headless-cms/notion-orm \
-  @notion-headless-cms/renderer @notion-headless-cms/cache \
+pnpm add @notion-headless-cms/core @notion-headless-cms/notion-source \
+  @notion-headless-cms/cache \
   @notionhq/client zod \
   unified remark-parse remark-gfm remark-rehype rehype-stringify
 pnpm add -D @notion-headless-cms/cli
 ```
 
-`core` は CMS エンジン本体。`notion-orm` は CLI が生成する `nhc.ts` から参照される内部パッケージで、
-ユーザーが直接 import する必要はない。`@notionhq/client` / `zod` / unified 系は peer 依存のため、
-利用側でインストールする。
+`core` は CMS エンジン本体、`notion-source` は Notion 用データソースアダプター。`notion-orm` / `renderer` は `notion-source` の `dependencies` に含まれるため明示インストール不要。`@notionhq/client` / `zod` / unified 系は peer 依存のため利用側でインストールする。
 
 ## スキーマを自動生成する
 
@@ -34,8 +32,13 @@ import { defineConfig, env } from "@notion-headless-cms/cli";
 
 export default defineConfig({
   notionToken: env("NOTION_TOKEN"),
-  dataSources: [{ name: "posts", dbName: "ブログ記事DB" }],
-  output: "./app/generated/nhc.ts",
+  collections: {
+    posts: {
+      dbName: "ブログ記事DB",
+      publishedStatuses: ["公開済み"],
+    },
+  },
+  output: "./app/generated/nhc.schema.ts",
 });
 ```
 
@@ -44,17 +47,26 @@ export default defineConfig({
 NOTION_TOKEN=secret_xxx npx nhc generate
 ```
 
-生成された `nhc.ts` には型付きの `createCMS` ラッパーが含まれる。
-`collections` の構成は生成物が持つので、利用側はトークンとキャッシュ設定だけ渡せばよい。
+生成された `nhc.schema.ts` には DB 構造（`schema` 定数）だけが入る。ランタイム設定（トークン・キャッシュ・publishedStatuses）は `createClient` 側で組み立てる。
 
 ## 最小構成（インメモリキャッシュ付き）
 
 ```ts
 import { memoryCache } from "@notion-headless-cms/cache";
-import { createCMS } from "./app/generated/nhc";  // nhc generate の出力
+import { createClient } from "@notion-headless-cms/core";
+import { notionSource } from "@notion-headless-cms/notion-source";
+import { schema } from "./app/generated/nhc.schema"; // nhc generate の出力
 
-const cms = createCMS({
-  notionToken: process.env.NOTION_TOKEN!,
+const cms = createClient({
+  sources: {
+    notion: notionSource({
+      schema,
+      token: process.env.NOTION_TOKEN!,
+      publishOptions: {
+        posts: { publishedStatuses: ["公開済み"] },
+      },
+    }),
+  },
   cache: [memoryCache()],
   swr: { ttlMs: 5 * 60_000 }, // 5分 TTL
 });
@@ -70,19 +82,28 @@ if (post) {
 }
 ```
 
-`memoryCache()` はインプロセス LRU キャッシュ。完全にキャッシュを切る場合は
-`createCMS` の `cache` オプションを省略するか `undefined` を渡す。
+`memoryCache()` はインプロセス LRU キャッシュ。完全にキャッシュを切る場合は `createClient` の `cache` オプションを省略するか `undefined` を渡す。
+
+`@notion-headless-cms/notion-source` を `import` するだけで `sources.notion` キーが補完候補に現れる（module augmentation = Fastify プラグインと同じパターン）。
 
 ## Cloudflare Workers の場合
 
 ```ts
 import { cloudflareCache } from "@notion-headless-cms/cache/cloudflare";
-import { createCMS } from "./app/generated/nhc";
+import { createClient } from "@notion-headless-cms/core";
+import { notionSource } from "@notion-headless-cms/notion-source";
+import { schema } from "./app/generated/nhc.schema";
 
 export default {
   async fetch(req: Request, env: Env) {
-    const cms = createCMS({
-      notionToken: env.NOTION_TOKEN,
+    const cms = createClient({
+      sources: {
+        notion: notionSource({
+          schema,
+          token: env.NOTION_TOKEN,
+          publishOptions: { posts: { publishedStatuses: ["公開済み"] } },
+        }),
+      },
       cache: cloudflareCache(env),
       swr: { ttlMs: 5 * 60_000 },
     });
@@ -92,12 +113,11 @@ export default {
 };
 ```
 
-`cloudflareCache` は `env.DOC_CACHE` (KV) / `env.IMG_BUCKET` (R2) を自動検出して
-`kvCache` + `r2Cache` の配列を返す。binding が設定されていない場合は対応するアダプタをスキップする。
+`cloudflareCache` は `env.DOC_CACHE` (KV) / `env.IMG_BUCKET` (R2) を自動検出して `kvCache` + `r2Cache` の配列を返す。binding が設定されていない場合は対応するアダプタをスキップする。
 
 ## 複数の DB を扱う場合
 
-`nhc.config.ts` に複数の `dataSources` を書けば、`cms.posts` / `cms.news` のように型安全にアクセスできる。
+`nhc.config.ts` に複数の `collections` を書けば、`cms.posts` / `cms.news` のように型安全にアクセスできる。
 
 ```ts
 import "dotenv/config";
@@ -105,20 +125,31 @@ import { defineConfig, env } from "@notion-headless-cms/cli";
 
 export default defineConfig({
   notionToken: env("NOTION_TOKEN"),
-  dataSources: [
-    { name: "posts", dbName: "ブログ記事DB" },
-    { name: "news", dbName: "ニュースDB" },
-  ],
-  output: "./app/generated/nhc.ts",
+  collections: {
+    posts: { dbName: "ブログ記事DB", publishedStatuses: ["公開済み"] },
+    news: { dbName: "ニュースDB", publishedStatuses: ["公開済み"] },
+  },
+  output: "./app/generated/nhc.schema.ts",
 });
 ```
 
 ```ts
 import { memoryCache } from "@notion-headless-cms/cache";
-import { createCMS } from "./app/generated/nhc";
+import { createClient } from "@notion-headless-cms/core";
+import { notionSource } from "@notion-headless-cms/notion-source";
+import { schema } from "./app/generated/nhc.schema";
 
-const cms = createCMS({
-  notionToken: process.env.NOTION_TOKEN!,
+const cms = createClient({
+  sources: {
+    notion: notionSource({
+      schema,
+      token: process.env.NOTION_TOKEN!,
+      publishOptions: {
+        posts: { publishedStatuses: ["公開済み"] },
+        news: { publishedStatuses: ["公開済み"] },
+      },
+    }),
+  },
   cache: [memoryCache()],
 });
 
@@ -137,5 +168,4 @@ const news = await cms.news.list();   // NewsItem[]
 - [Node スクリプト](./recipes/nodejs-script.md)
 - [カスタムデータソース](./recipes/custom-source.md)
 - [CMS メソッド一覧](./api/cms-methods.md)
-- [v1.0 移行ガイド](./migration/v1.0.md)
-- [v0.2 → v0.3 移行ガイド](./migration/v0.3.md)
+- [v2.0 移行ガイド](./migration/v2.0.md)
