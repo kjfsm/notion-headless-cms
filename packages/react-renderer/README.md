@@ -75,6 +75,28 @@ const components: ComponentOverrides = {
 <NotionRenderer blocks={blocks} components={components} />;
 ```
 
+### 数式 (KaTeX) を使う
+
+メインエントリの `Equation` は **bundle に `katex` を混入させないためのスタブ**で、`<pre>` で式をそのまま表示するだけ。整形描画したい場合は `@notion-headless-cms/react-renderer/equation` サブパスから差し込む。
+
+```bash
+pnpm add katex
+```
+
+```tsx
+import dynamic from "next/dynamic";
+import { NotionRenderer } from "@notion-headless-cms/react-renderer";
+
+// next/dynamic で別チャンク化すれば、equation を含むページでだけ katex が読まれる
+const Equation = dynamic(() =>
+  import("@notion-headless-cms/react-renderer/equation").then((m) => m.Equation),
+);
+
+<NotionRenderer blocks={blocks} components={{ Equation }} />;
+```
+
+`katex` は `peerDependencies` (optional) のため、数式を使わないユースケースではインストール不要。利用側プロジェクトの CSS に `katex/dist/katex.min.css` を読み込むこと。
+
 ## 対応ブロック
 
 paragraph / heading_1-3 / bulleted_list_item / numbered_list_item / to_do / toggle / callout /

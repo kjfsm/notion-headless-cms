@@ -1,7 +1,18 @@
 import { render } from "@testing-library/react";
+import type { ComponentType } from "react";
 import { describe, expect, it } from "vitest";
+import { Equation as KatexEquation } from "../equation";
 import { NotionRenderer } from "../NotionRenderer";
-import type { NotionBlock } from "../types";
+import type { BlockComponentProps, NotionBlock } from "../types";
+
+const equation = (id: string, expr: string): NotionBlock =>
+  ({
+    object: "block",
+    id,
+    type: "equation",
+    has_children: false,
+    equation: { expression: expr },
+  }) as unknown as NotionBlock;
 
 const para = (id: string, text: string): NotionBlock =>
   ({
@@ -92,5 +103,34 @@ describe("NotionRenderer", () => {
     } as unknown as NotionBlock;
     const { container } = render(<NotionRenderer blocks={[unsupported]} />);
     expect(container.textContent).toContain("Unsupported");
+  });
+
+  // 既定の Equation は katex を含まないスタブ実装。
+  // bundle に katex が混入しないことの担保として、katex の出力（`katex` クラス
+  // を持つ span 要素）が描画されないことを確認する。
+  it("デフォルトの Equation は katex を呼ばずに生の式を出す", () => {
+    const { container } = render(
+      <NotionRenderer blocks={[equation("e1", "E = mc^2")]} />,
+    );
+    expect(container.textContent).toContain("E = mc^2");
+    expect(container.querySelector(".katex")).toBeNull();
+  });
+
+  // `./equation` サブパスから差し込めば katex 出力に切り替わることを確認する。
+  // `ComponentOverrides.Equation` は broad な BlockObjectResponse 型を受けるため、
+  // 個別 block 型に narrowing された KatexEquation はそのままでは渡せない。
+  // 内部 dispatch (BlockSwitch) で narrow 化されるため、利用側でも同じキャストが必要になる。
+  // 個別 block 型を受ける override の DX 改善は別 issue にて。
+  it("components.Equation に ./equation の実装を差し込むと katex が動く", () => {
+    const { container } = render(
+      <NotionRenderer
+        blocks={[equation("e1", "E = mc^2")]}
+        components={{
+          Equation:
+            KatexEquation as unknown as ComponentType<BlockComponentProps>,
+        }}
+      />,
+    );
+    expect(container.querySelector(".katex")).not.toBeNull();
   });
 });

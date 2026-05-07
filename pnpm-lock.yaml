@@ -529,9 +529,6 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
-      katex:
-        specifier: ^0.16.11
-        version: 0.16.45
       lucide-react:
         specifier: ^1.14.0
         version: 1.14.0(react@19.2.5)
@@ -554,6 +551,9 @@ importers:
       happy-dom:
         specifier: ^20.9.0
         version: 20.9.0
+      katex:
+        specifier: ^0.16.11
+        version: 0.16.45
       react:
         specifier: ^19.0.0
         version: 19.2.5
