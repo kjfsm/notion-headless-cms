@@ -26,5 +26,8 @@ export function makeCms(env: Env): Nhc {
     }),
     renderer: embed.renderer,
     blocks: embed.blocks,
+    // OGP 取得は有効化するが R2 永続キャッシュは付けない。
+    // 画像 URL は OG プロバイダ側を直接参照する（Worker fetch のインメモリ TTL のみ）。
+    ogp: { enabled: true },
   });
 }
