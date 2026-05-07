@@ -3,12 +3,13 @@ import {
   NotionRenderer,
 } from "@notion-headless-cms/react-renderer";
 import { resolveBlockImageUrls } from "@notion-headless-cms/react-renderer/server";
-import { data } from "react-router";
+import { useEffect } from "react";
+import { data, useRevalidator } from "react-router";
 import { makeCms } from "../lib/cms";
 import type { Route } from "./+types/post";
 
 export async function loader({ params, context }: Route.LoaderArgs) {
-  const cms = makeCms(context.cloudflare.env);
+  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
   const post = await cms.posts.find(params.slug ?? "");
   if (!post) throw data("Not Found", { status: 404 });
   // notionBlocks() は cms (R2 + KV) キャッシュ経由で取得され、
@@ -29,6 +30,16 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 }
 
 export default function Post({ loaderData }: Route.ComponentProps) {
+  const { revalidate } = useRevalidator();
+  // ハイドレーション後に 1 度だけ loader を再走させる。
+  // 初回応答ではサーバ loader が SWR で古いキャッシュを即返却しつつ
+  // waitUntil で Notion との差分を取り込み、KV を最新化する。
+  // この再呼び出しで更新済みデータが返り、画面が静かに切り替わる。
+  // クエリパラメータも別 API fetch も使わず、loader 直呼び出しだけで完結する。
+  useEffect(() => {
+    revalidate();
+  }, [revalidate]);
+
   const { blocks, item } = loaderData;
   return (
     <article>

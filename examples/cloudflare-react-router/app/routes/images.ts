@@ -2,7 +2,7 @@ import { makeCms } from "../lib/cms";
 import type { Route } from "./+types/images";
 
 export async function loader({ params, context }: Route.LoaderArgs) {
-  const cms = makeCms(context.cloudflare.env);
+  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
   const object = await cms.getCachedImage(params.hash ?? "");
   if (!object) return new Response("Not Found", { status: 404 });
   const headers = new Headers();
