@@ -61,15 +61,13 @@ export function OgCard({ url, ogp }: OgCardProps) {
           </div>
         </div>
         {image ? (
-          // 横長 / 縦長どちらの OG 画像でも見切れないよう object-contain。
-          // bg-muted で余白部分を埋め、レターボックスを目立ちにくくする。
           <div className="ml-auto w-32 shrink-0 self-stretch bg-muted sm:w-40 md:w-56">
             <img
               src={image}
               alt=""
               loading="lazy"
               referrerPolicy="no-referrer"
-              className="not-prose m-0 h-full w-full object-contain"
+              className="not-prose m-0 h-full w-full object-cover"
             />
           </div>
         ) : null}
