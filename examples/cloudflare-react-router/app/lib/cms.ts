@@ -3,6 +3,7 @@ import {
   notionEmbed,
   youtubeProvider,
 } from "@notion-headless-cms/notion-embed";
+import { notionKatex } from "@notion-headless-cms/notion-katex";
 import { createCMS, type Nhc, type Post } from "../generated/nhc";
 
 export type { Post as BlogPost };
@@ -26,8 +27,11 @@ export function makeCms(env: Env): Nhc {
     }),
     renderer: embed.renderer,
     blocks: embed.blocks,
+    // notion-katex で fetch 時に equation ブロックを KaTeX HTML に変換する。
+    // react-renderer の Equation スタブが __cachedHtml を dangerouslySetInnerHTML で描画し、
+    // Workers バンドルに katex が不要になる。
+    enrichers: [notionKatex({ displayMode: true })],
     // OGP 取得は有効化するが R2 永続キャッシュは付けない。
-    // 画像 URL は OG プロバイダ側を直接参照する（Worker fetch のインメモリ TTL のみ）。
     ogp: { enabled: true },
   });
 }

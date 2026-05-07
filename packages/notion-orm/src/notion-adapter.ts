@@ -10,6 +10,7 @@ import type { BlockHandler } from "@notion-headless-cms/renderer";
 import { Transformer } from "@notion-headless-cms/renderer";
 import type { DataSourceObjectResponse } from "@notionhq/client";
 import {
+  type BlockEnricher,
   type FetchBlockTreeOgpOptions,
   fetchBlockTree,
   type NotionBlockTreeNode,
@@ -47,6 +48,11 @@ interface NotionCollectionCommonOptions {
   blocks?: Record<string, BlockHandler>;
   /** ブックマーク/埋め込みブロックの OGP 取得設定。省略時は OGP 非取得。 */
   ogp?: FetchBlockTreeOgpOptions;
+  /**
+   * `loadNotionBlocks()` 時にブロック木へ追加情報を付与する enricher のリスト。
+   * `notion-katex` など拡張パッケージが返す enricher を渡す。
+   */
+  enrichers?: readonly BlockEnricher[];
 }
 
 /** デフォルトマッパー利用時 (T = BaseContentItem) の入力。 */
@@ -100,6 +106,7 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
   private readonly itemMapper: (page: NotionPage) => T;
   private readonly blocksConfig: Record<string, BlockHandler> | undefined;
   private readonly ogpOptions?: FetchBlockTreeOgpOptions;
+  private readonly enrichers: readonly BlockEnricher[];
 
   constructor(opts: NotionCollectionOptions<T>) {
     if (!opts.dataSourceId && !opts.dbName) {
@@ -115,6 +122,7 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
     this.dbName = opts.dbName;
     this.blocksConfig = opts.blocks;
     this.ogpOptions = opts.ogp;
+    this.enrichers = opts.enrichers ?? [];
 
     if ("schema" in opts && opts.schema) {
       this.itemMapper = opts.schema.mapItem;
@@ -270,9 +278,13 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
 
   async loadNotionBlocks(item: T): Promise<NotionBlockTreeNode[]> {
     try {
-      return await fetchBlockTree(this.client, item.id, {
+      let blocks = await fetchBlockTree(this.client, item.id, {
         ogp: this.ogpOptions,
       });
+      for (const enricher of this.enrichers) {
+        blocks = await enricher(blocks);
+      }
+      return blocks;
     } catch (err) {
       if (isCMSError(err)) throw err;
       throw new CMSError({

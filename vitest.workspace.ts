@@ -6,6 +6,7 @@ export default defineWorkspace([
   "packages/cache",
   "packages/notion-orm",
   "packages/notion-embed",
+  "packages/notion-katex",
   "packages/cli",
   "packages/adapter-next",
 ]);

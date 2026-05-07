@@ -13,6 +13,7 @@ import {
   type SWRConfig,
 } from "@notion-headless-cms/core";
 import {
+  type BlockEnricher,
   createNotionCollection,
   type FetchBlockTreeOgpOptions,
 } from "@notion-headless-cms/notion-orm";
@@ -88,6 +89,8 @@ export interface NhcConfig {
   hooks?: CMSHooks;
   /** embed / bookmark / link_preview ブロックの OGP 取得設定。省略時は OGP 非取得。 */
   ogp?: FetchBlockTreeOgpOptions;
+  /** `loadNotionBlocks()` 時にブロック木へ追加情報を付与する enricher のリスト。 */
+  enrichers?: readonly BlockEnricher[];
 }
 
 /** 生成された CMS クライアントの型。 */
@@ -102,6 +105,7 @@ export interface Nhc extends CMSGlobalOps {
  * import { createCMS } from "./generated/nhc";
  * import { memoryCache } from "@notion-headless-cms/cache";
  * import { notionEmbed, youtubeProvider } from "@notion-headless-cms/notion-embed";
+ * import { notionKatex } from "@notion-headless-cms/notion-katex";
  *
  * const embed = notionEmbed({ providers: [youtubeProvider({ display: "card" })] });
  *
@@ -109,6 +113,7 @@ export interface Nhc extends CMSGlobalOps {
  *   notionToken: process.env.NOTION_TOKEN!,
  *   renderer: embed.renderer,
  *   blocks: embed.blocks,
+ *   enrichers: [notionKatex()],
  *   cache: [memoryCache()],
  *   swr: { ttlMs: 5 * 60_000 },
  * });
@@ -134,6 +139,7 @@ export function createCMS(config: NhcConfig): Nhc {
           properties: postsProperties,
           ogp: config.ogp,
           ...(config.blocks ? { blocks: config.blocks } : {}),
+          ...(config.enrichers ? { enrichers: config.enrichers } : {}),
         }),
         slugField: "slug",
         statusField: "status",
