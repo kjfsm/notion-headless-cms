@@ -61,7 +61,7 @@ export function OgCard({ url, ogp }: OgCardProps) {
           </div>
         </div>
         {image ? (
-          <div className="ml-auto w-32 shrink-0 self-stretch bg-muted sm:w-40 md:w-56">
+          <div className="ml-auto w-36 shrink-0 self-stretch bg-muted sm:w-48 md:w-64">
             <img
               src={image}
               alt=""
