@@ -1,5 +1,37 @@
 # @notion-headless-cms/react-renderer
 
+## 0.1.1
+
+### Patch Changes
+
+- befbaa5: `Equation` ブロックのデフォルト実装をスタブ化し、KaTeX 対応版を `@notion-headless-cms/react-renderer/equation` サブパスへ分離した。`katex` を `dependencies` から `peerDependencies`（optional）に降格したため、数式を使わないユースケースではメインバンドルから KaTeX が完全に除外される（gzip 約 75 KB 削減）。
+
+  **移行手順** — 数式を整形表示する場合のみ:
+
+  ```bash
+  pnpm add katex
+  ```
+
+  ```tsx
+  import dynamic from "next/dynamic";
+
+  const Equation = dynamic(() =>
+    import("@notion-headless-cms/react-renderer/equation").then(
+      (m) => m.Equation
+    )
+  );
+
+  <NotionRenderer blocks={blocks} components={{ Equation }} />;
+  ```
+
+  数式を使わない場合は何もする必要はない（既定の `Equation` は式を `<pre>` で素のまま表示する）。
+
+- 7e0bae4: ブックマーク（OgCard）の横方向見切れを修正: カードに `min-h-[6.5rem]` を付与し、タイトル / 説明を `line-clamp-2 break-words` で折り返し・省略するよう調整。画像エリアは `w-36 sm:w-48 md:w-64` の段階縮小で狭い親幅でも本文が圧迫されないようにした
+- 1da671d: 埋め込みカード（OgCard）の表示改善: タイトル折り返し全文表示、og:description 全文表示、URL をカード下端に配置して目立たなく調整
+- 391d5ea: OGP メタデータの抽出を自前正規表現から `linkedom` に置き換え、属性順や `name=`/`property=` のバリエーションを DOM API でまとめて扱うようにした。HTML エンティティのデコードも DOM 側に委譲。挙動互換。
+
+  `react-renderer` の各 block コンポーネントを `tailwind-merge` ベースの `cn()` で統一し、`BlockComponentProps.className` と `<NotionRenderer classNames={{ ... }} />` を新設。block.type ごとにルート要素のクラスを差し替えられるようになった（追加 API、後方互換）。
+
 ## 0.1.0
 
 ### Minor Changes

@@ -1,5 +1,12 @@
 # @notion-headless-cms/cli
 
+## 1.0.26
+
+### Patch Changes
+
+- 8ad2ba1: `@notion-headless-cms/core` を `dependencies` から `peerDependencies`（`^0.3.0`）に移動した。生成スキーマファイルが core を import するためユーザーは core を必ずインストールする必要があり、CLI がバンドルを二重に抱えないようにするための変更。
+- ec37c60: `@notionhq/client` 公式ヘルパー（`collectPaginatedAPI` / `isFullPage` / `isFullBlock` / `isFullUser` / `isNotionClientError` / `APIErrorCode` / `ClientErrorCode`）への置き換えで、自作のページネーション・エラー判定・full/partial 判定を削減し、Notion API 仕様変更への追従性を高めた。挙動互換。
+
 ## 1.0.25
 
 ### Patch Changes
