@@ -1,5 +1,13 @@
 # @notion-headless-cms/source-notion
 
+## 0.1.25
+
+### Patch Changes
+
+- Updated dependencies [52a9f0d]
+- Updated dependencies [52a9f0d]
+  - @notion-headless-cms/core@0.3.20
+
 ## 0.1.24
 
 ### Patch Changes
