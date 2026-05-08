@@ -23,7 +23,6 @@ pnpm add @notionhq/client zod notion-to-md
 1. [Notion Integrations](https://www.notion.so/my-integrations) でインテグレーションを作成
 2. 対象データベースをそのインテグレーションに「接続」
 3. `NOTION_TOKEN=ntn_xxx` を環境変数に設定
-4. データベース URL から DB ID をメモ（`https://notion.so/xxx/<DB_ID>?v=...`）
 
 Notion DB には最低限これらプロパティが必要です:
 
@@ -42,8 +41,9 @@ import { defineConfig, env } from "@notion-headless-cms/cli";
 
 export default defineConfig({
   notionToken: env("NOTION_TOKEN"),
-  dataSources: {
-    posts: { dataSourceId: "YOUR_DB_ID_HERE", slugField: "slug", statusField: "status" },
+  collections: {
+    // dbName で Notion DB を検索して ID を自動解決します
+    posts: { dbName: "ブログ記事DB", slugField: "slug", statusField: "status" },
   },
 });
 EOF
