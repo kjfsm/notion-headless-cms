@@ -1,181 +1,63 @@
 # notion-headless-cms
 
 [![CI](https://github.com/kjfsm/notion-headless-cms/actions/workflows/ci.yml/badge.svg)](https://github.com/kjfsm/notion-headless-cms/actions/workflows/ci.yml)
-[![CodeQL](https://github.com/kjfsm/notion-headless-cms/actions/workflows/codeql.yml/badge.svg)](https://github.com/kjfsm/notion-headless-cms/security/code-scanning)
 [![codecov](https://codecov.io/gh/kjfsm/notion-headless-cms/graph/badge.svg?token=H5R9JTFXU1)](https://codecov.io/gh/kjfsm/notion-headless-cms)
-[![Socket Badge](https://socket.dev/api/badge/npm/package/@notion-headless-cms/core)](https://socket.dev/npm/package/@notion-headless-cms/core)
-[![Socket Badge](https://socket.dev/api/badge/npm/package/@notion-headless-cms/cli)](https://socket.dev/npm/package/@notion-headless-cms/cli)
-[![Bundle size](https://img.shields.io/bundlephobia/minzip/@notion-headless-cms/core?label=core%20minzip)](https://bundlephobia.com/package/@notion-headless-cms/core)
-
 [![npm:core](https://img.shields.io/npm/v/@notion-headless-cms/core?label=core)](https://www.npmjs.com/package/@notion-headless-cms/core)
-[![npm:cli](https://img.shields.io/npm/v/@notion-headless-cms/cli?label=cli)](https://www.npmjs.com/package/@notion-headless-cms/cli)
-[![npm:notion-orm](https://img.shields.io/npm/v/@notion-headless-cms/notion-orm?label=notion-orm)](https://www.npmjs.com/package/@notion-headless-cms/notion-orm)
-[![npm:renderer](https://img.shields.io/npm/v/@notion-headless-cms/renderer?label=renderer)](https://www.npmjs.com/package/@notion-headless-cms/renderer)
-[![npm:react-renderer](https://img.shields.io/npm/v/@notion-headless-cms/react-renderer?label=react-renderer)](https://www.npmjs.com/package/@notion-headless-cms/react-renderer)
-[![npm:cache](https://img.shields.io/npm/v/@notion-headless-cms/cache?label=cache)](https://www.npmjs.com/package/@notion-headless-cms/cache)
-[![npm:adapter-next](https://img.shields.io/npm/v/@notion-headless-cms/adapter-next?label=adapter-next)](https://www.npmjs.com/package/@notion-headless-cms/adapter-next)
 
-Notion をヘッドレス CMS として利用するための TypeScript ライブラリ群。
-Cloudflare Workers + R2 / KV を中心としつつ、Node.js / Next.js / Astro / Hono / SvelteKit など幅広いランタイムで動作する。pnpm モノレポで管理されている。
-
-## データフロー
-
-```mermaid
-flowchart LR
-  notion[(Notion DB)]
-
-  subgraph orm["@notion-headless-cms/notion-orm"]
-    direction LR
-    fetch["Notion API 取得"]
-    transform["blocks → Markdown → ContentBlock AST"]
-    fetch --> transform
-  end
-
-  renderer["@notion-headless-cms/renderer\nMarkdown → HTML"]
-  core["@notion-headless-cms/core\ncreateClient / memoryCache\nSWR / 更新検知 / フック"]
-  cache[(Cloudflare KV+R2 /\nメモリ / Next.js cache)]
-  output["Workers / Node.js /\nNext.js / …"]
-
-  notion -->|"blocks"| orm
-  orm -->|"DataSource<T>"| core
-  core --> renderer
-  renderer -->|"HTML"| core
-  core <-->|"SWR"| cache
-  core --> output
-```
-
-> **SWR（Stale-While-Revalidate）**: キャッシュを即返し、TTL 切れなら裏で非同期更新。
-> Notion の `last_edited_time` を比較し、変更があれば HTML を再生成する。
-
-## パッケージ一覧
-
-### コア
-
-#### [`@notion-headless-cms/core`](./packages/core)
-CMS エンジン本体。`createClient` は**これ一本**で Node.js / Workers / Next.js
-どこでも動く。外部ランタイム依存ゼロ。
-- `createClient({ sources, cache?, renderer?, ... })` — `sources` に `notionSource(...)` 等のアダプターを渡してコレクション別にアクセスできる CMS クライアントを生成
-- `CMSAdapter` / `CMSSources` — module augmentation で sources を拡張するための型 (Fastify プラグイン型拡張と同じパターン)
-- `memoryCache({ maxItems? })` — インプロセス LRU キャッシュ
-- `cms.posts.find(slug)` / `cms.posts.list(opts?)` / `cms.posts.params()` / `cms.posts.cache.adjacent()` / `cms.posts.cache.warm()` / `cms.posts.cache.invalidate()`
-- `cms.collections` / `cms.invalidate(scope?)` / `cms.getCachedImage(hash)` / `cms.handler(opts)`
-- `CMSError` / `isCMSError` / `isCMSErrorInNamespace` / `matchCMSError` — 名前空間付きエラー (`core/*` / `cli/*` / `source/*` / `cache/*` / `renderer/*`)
-- サブパスエクスポート `/errors` · `/hooks` · `/cache/memory` · `/cache/noop` — 必要な型だけをインポート可
-
-#### [`@notion-headless-cms/notion-source`](./packages/notion-source)
-`createClient({ sources: { notion: notionSource(...) } })` に渡す Notion 用データソースアダプター。CLI 生成の `schema` と Notion トークンから `CMSAdapter` を組み立てる。
-- `notionSource({ schema, token, blocks?, enrichers?, ogp?, publishOptions? })`
-- `declare module "@notion-headless-cms/core"` で `sources.notion` キーを宣言マージ — import するだけで補完候補に現れる
-
-#### [`@notion-headless-cms/notion-orm`](./packages/notion-orm)
-Notion API 呼び出しとスキーマ解釈を担う ORM 層。`DataSource<T>` インターフェースを実装する。
-npm には公開されるが、**ユーザーは直接 import しない**（`notion-source` 経由で利用）。`notion-source` の `dependencies` に含まれるため明示インストールは不要。
-
-#### [`@notion-headless-cms/renderer`](./packages/renderer)
-Markdown → HTML レンダラー。remark / rehype パイプラインで変換し、GFM と画像 URL のプロキシ書き換えをサポート。
-- `renderMarkdown(markdown, options?)` — `RendererFn` として core に注入可能 (または core が動的 import)
-- `unified` / `remark-*` / `rehype-*` は `peerDependencies`
-
-#### [`@notion-headless-cms/react-renderer`](./packages/react-renderer)
-Notion ブロックを **React コンポーネントとして直接描画**するレンダラ。Markdown 経由を行わず、`BlockObjectResponse` を 1:1 で React ツリーに変換する。shadcn/ui (`new-york`) + Tailwind v4 + lucide-react ベース。
-- `<NotionRenderer blocks={...} components={...} />` — トップレベル
-- `fetchBlockTree(client, pageId)` (`@notion-headless-cms/notion-orm` 提供) で取得した children 解決済みツリーを入力にする
-- 全 block type 対応 (paragraph / heading / list / to_do / toggle / callout / quote / code (shiki) / equation (katex) / table / column_list / synced_block / embed (YouTube facade / Twitter widgets / Vimeo / DLsite / Steam) など)
-- React 利用者向け。SSR-only / 非 React フレームワーク (Astro / Hono / Express) では `notion-embed` の HTML 出力を使う
-```tsx
-import { Client } from "@notionhq/client";
-import { fetchBlockTree } from "@notion-headless-cms/notion-orm";
-import { NotionRenderer } from "@notion-headless-cms/react-renderer";
-
-const client = new Client({ auth: process.env.NOTION_TOKEN });
-const blocks = await fetchBlockTree(client, pageId);
-
-<NotionRenderer blocks={blocks} />;
-```
-
-#### [`@notion-headless-cms/notion-embed`](./packages/notion-embed)
-Notion ブロックを Notion 風 HTML にレンダリングする拡張パッケージ。`notionEmbed()` を `createClient()` の引数に差し込むだけで有効化できる。
-- bookmark ブロック → OGP カード（in-memory TTL キャッシュ付き）
-- embed ブロック → provider が一致すれば provider の HTML、なければ `<iframe>` で直接表示
-- video / audio / pdf / image → YouTube・Twitter 等のプロバイダー対応
-- callout / toggle / paragraph / heading / list / quote / to_do → Notion 風 HTML
-- rich_text の mention（link_mention / page / database / date / user / custom_emoji）と全アノテーション対応
-- `embedRehypePlugins()` — rehype-raw + rehype-sanitize を XSS セーフに設定して返す
-```ts
-import { createClient } from "@notion-headless-cms/core";
-import { notionEmbed, youtubeProvider } from "@notion-headless-cms/notion-embed";
-import { notionSource } from "@notion-headless-cms/notion-source";
-import { schema } from "./generated/nhc.schema";
-
-const embed = notionEmbed({ providers: [youtubeProvider()] });
-const cms = createClient({
-  sources: {
-    notion: notionSource({
-      schema,
-      token: process.env.NOTION_TOKEN!,
-      blocks: embed.blocks,
-      publishOptions: {
-        posts: { publishedStatuses: ["公開済み"] },
-      },
-    }),
-  },
-  renderer: embed.renderer,
-});
-```
-
-#### [`@notion-headless-cms/cli`](./packages/cli)
-Notion DB を introspect して TypeScript スキーマを自動生成する CLI ツール。
-- `nhc init` — `nhc.config.ts` テンプレートを生成
-- `nhc generate` — Notion DB を introspect して `nhc.schema.ts` を生成（DB 構造のみ。`notionSource({ schema })` で消費する）
-- `defineConfig(config)` / `env(name)` — `nhc.config.ts` 用ヘルパー
+Notion をヘッドレス CMS として利用するための TypeScript ライブラリ群。Node.js・Next.js・Cloudflare Workers に対応。SWR キャッシュ・画像プロキシ・Webhook 受信を標準装備。
 
 ---
 
-### キャッシュ実装
+## 30 秒で動かす (Node.js)
 
-#### [`@notion-headless-cms/cache`](./packages/cache)
-キャッシュアダプタ集約パッケージ。メモリ・Cloudflare・Next.js のアダプタをサブパスエクスポートで提供する。
+### 1. インストール
 
-| インポートパス | エクスポート | 用途 |
+```bash
+pnpm add @notion-headless-cms/node @notion-headless-cms/cli
+# peer deps
+pnpm add @notionhq/client zod notion-to-md
+```
+
+### 2. Notion インテグレーション設定
+
+1. [Notion Integrations](https://www.notion.so/my-integrations) でインテグレーションを作成
+2. 対象データベースをそのインテグレーションに「接続」
+3. `NOTION_TOKEN=ntn_xxx` を環境変数に設定
+4. データベース URL から DB ID をメモ（`https://notion.so/xxx/<DB_ID>?v=...`）
+
+Notion DB には最低限これらプロパティが必要です:
+
+| プロパティ名 | タイプ | 役割 |
 |---|---|---|
-| `@notion-headless-cms/cache` | `memoryCache()` | インプロセス LRU |
-| `@notion-headless-cms/cache/cloudflare` | `cloudflareCache(env)` / `kvCache()` / `r2Cache()` | Cloudflare KV + R2 |
-| `@notion-headless-cms/cache/next` | `nextCache()` | Next.js ISR / `unstable_cache` |
+| Name (title) | タイトル | ページ名 |
+| slug | テキスト | URL スラッグ（一意） |
+| status | ステータス | 公開状態 |
 
-`cloudflareCache(env)` は `env.DOC_CACHE` (KV) / `env.IMG_BUCKET` (R2) を自動検出して配列で返す。
-`nextCache()` は `unstable_cache` / `revalidateTag` を利用し、規約タグ `nhc:col:<name>` で細粒度 invalidate をサポート。
-
----
-
-### フロントエンド連携 adapter
-
-#### [`@notion-headless-cms/adapter-next`](./packages/adapter-next)
-Next.js App Router 向けルートハンドラー。画像プロキシ配信と Notion Webhook によるキャッシュ再検証を提供する。
-- `createNextHandler(cms, opts?)` — 画像プロキシ・Webhook 受信をまとめて処理する統合ハンドラ
-
-## クイックスタート
-
-### Node.js
+### 3. スキーマ生成
 
 ```bash
-pnpm add @notion-headless-cms/core @notion-headless-cms/notion-source \
-  @notion-headless-cms/cache \
-  @notionhq/client zod \
-  unified remark-parse remark-gfm remark-rehype rehype-stringify
-pnpm add -D @notion-headless-cms/cli
+# nhc.config.ts を作成
+cat > nhc.config.ts << 'EOF'
+import { defineConfig, env } from "@notion-headless-cms/cli";
+
+export default defineConfig({
+  notionToken: env("NOTION_TOKEN"),
+  dataSources: {
+    posts: { dataSourceId: "YOUR_DB_ID_HERE", slugField: "slug", statusField: "status" },
+  },
+});
+EOF
+
+# スキーマ生成
+npx nhc generate
 ```
 
-```bash
-# スキーマを生成（nhc.config.ts を編集してから）
-NOTION_TOKEN=secret_xxx npx nhc generate
-```
+### 4. クライアント作成
 
 ```ts
-// app/lib/cms.ts
-import { memoryCache } from "@notion-headless-cms/cache";
-import { createClient } from "@notion-headless-cms/core";
-import { notionSource } from "@notion-headless-cms/notion-source";
-import { schema } from "./generated/nhc.schema"; // nhc generate が出力するファイル
+// src/lib/cms.ts
+import { createClient, nodePreset, notionSource } from "@notion-headless-cms/node";
+import { schema } from "./generated/nhc.js";
 
 export const cms = createClient({
   sources: {
@@ -187,109 +69,186 @@ export const cms = createClient({
       },
     }),
   },
-  cache: [memoryCache()],
-  swr: { ttlMs: 5 * 60_000 },
+  ...nodePreset(),
 });
+```
 
-// 使い方
+### 5. データ取得
+
+```ts
 const posts = await cms.posts.list();
 const post = await cms.posts.find("my-first-post");
-if (post) console.log(await post.render());
+console.log(post?.title, post?.content); // HTML が入っています
 ```
+
+---
+
+## ランタイム別セットアップ
 
 ### Cloudflare Workers
 
 ```bash
-pnpm add @notion-headless-cms/core @notion-headless-cms/notion-source \
-  @notion-headless-cms/cache \
-  @notionhq/client zod \
-  unified remark-parse remark-gfm remark-rehype rehype-stringify
-```
-
-```toml
-# wrangler.toml
-[[kv_namespaces]]
-binding = "DOC_CACHE"
-id = "xxxxxxxx"
-
-[[r2_buckets]]
-binding = "IMG_BUCKET"
-bucket_name = "nhc-images"
+pnpm add @notion-headless-cms/cloudflare @notion-headless-cms/cli
+pnpm add @notionhq/client zod notion-to-md
 ```
 
 ```ts
-import { cloudflareCache } from "@notion-headless-cms/cache/cloudflare";
-import { createClient } from "@notion-headless-cms/core";
-import { notionSource } from "@notion-headless-cms/notion-source";
-import { schema } from "./generated/nhc.schema";
+// src/lib/cms.ts
+import { cloudflarePreset, createClient, notionSource } from "@notion-headless-cms/cloudflare";
+import { schema } from "../generated/nhc";
 
-export default {
-  async fetch(req: Request, env: Env): Promise<Response> {
-    const cms = createClient({
-      sources: {
-        notion: notionSource({
-          schema,
-          token: env.NOTION_TOKEN,
-          publishOptions: { posts: { publishedStatuses: ["公開済み"] } },
-        }),
-      },
-      cache: cloudflareCache(env),
-      swr: { ttlMs: 5 * 60_000 },
-    });
-    const posts = await cms.posts.list();
-    return Response.json(posts);
-  },
-};
+export function makeCms(
+  env: { NOTION_TOKEN: string; DOC_CACHE?: KVNamespace; IMG_BUCKET?: R2Bucket },
+  ctx: ExecutionContext,
+) {
+  return createClient({
+    sources: {
+      notion: notionSource({
+        schema,
+        token: env.NOTION_TOKEN,
+        publishOptions: { posts: { publishedStatuses: ["公開済み"] } },
+      }),
+    },
+    ...cloudflarePreset({ env, ctx }),
+  });
+}
 ```
+
+> **注意**: `ctx` (ExecutionContext) は必須です。省略すると SWR のバックグラウンド更新がレスポンス送信後に打ち切られ、キャッシュが更新されません。
+
+### Next.js (App Router)
 
 ```bash
-wrangler secret put NOTION_TOKEN
+pnpm add @notion-headless-cms/next @notion-headless-cms/cache @notion-headless-cms/cli
+pnpm add @notionhq/client zod notion-to-md
 ```
+
+```ts
+// app/lib/cms.ts
+import { createClient, notionSource } from "@notion-headless-cms/next";
+import { memoryCache } from "@notion-headless-cms/cache";
+import { schema } from "@/app/generated/nhc";
+
+export const cms = createClient({
+  sources: {
+    notion: notionSource({
+      schema,
+      token: process.env.NOTION_TOKEN!,
+      publishOptions: { posts: { publishedStatuses: ["公開済み"] } },
+    }),
+  },
+  cache: [memoryCache()],
+});
+```
+
+```ts
+// app/api/cms/[...path]/route.ts
+import { createNextHandler } from "@notion-headless-cms/next";
+import { cms } from "@/app/lib/cms";
+
+const handler = createNextHandler(cms, { webhookSecret: process.env.REVALIDATE_SECRET });
+export const GET = handler;
+export const POST = handler;
+```
+
+---
+
+## パッケージ構成
+
+### メタパッケージ（推奨）
+
+| パッケージ | 対象環境 |
+|---|---|
+| `@notion-headless-cms/node` | Node.js (Express, Hono 等) |
+| `@notion-headless-cms/cloudflare` | Cloudflare Workers |
+| `@notion-headless-cms/next` | Next.js App Router |
+
+### コアパッケージ（拡張作者向け）
+
+| パッケージ | 役割 |
+|---|---|
+| `@notion-headless-cms/core` | CMS エンジン・SWR・キャッシュ抽象 |
+| `@notion-headless-cms/notion-source` | Notion CMSAdapter 実装 |
+| `@notion-headless-cms/cache` | キャッシュアダプタ (memory / cloudflare / next) |
+| `@notion-headless-cms/markdown-html` | Markdown → HTML レンダラ |
+| `@notion-headless-cms/block-html` | Notion ブロック拡張 HTML レンダラ |
+| `@notion-headless-cms/react-renderer` | BlockObjectResponse → React コンポーネント |
+| `@notion-headless-cms/cli` | `nhc generate` スキーマ生成 CLI |
+
+---
+
+## データフロー
+
+```mermaid
+flowchart LR
+  notion[(Notion DB)]
+  orm["notion-orm\nAPI 取得 + Markdown 変換"]
+  core["core\ncreateClient / SWR / フック"]
+  cache[(KV / メモリ / Next.js cache)]
+  output["Workers / Node.js / Next.js"]
+
+  notion --> orm --> core
+  core <--> cache
+  core --> output
+```
+
+---
+
+## レンダラの選択
+
+→ [`docs/choosing-a-renderer.md`](./docs/choosing-a-renderer.md)
+
+---
 
 ## ドキュメント
 
 - [クイックスタート](./docs/quickstart.md)
-- [CLI ツール（nhc）](./docs/cli.md)
-- [CMS メソッド一覧](./docs/api/cms-methods.md)
-- レシピ
-  - [マルチソース](./docs/recipes/multi-source.md)
-  - [Cloudflare Workers + R2 + KV](./docs/recipes/cloudflare-workers.md)
-  - [Next.js App Router](./docs/recipes/nextjs-app-router.md)
-  - [Node.js スクリプト](./docs/recipes/nodejs-script.md)
-  - [カスタムデータソース](./docs/recipes/custom-source.md)
-  - [カスタムキャッシュアダプタ](./docs/recipes/custom-cache.md)
-  - [useSWR クライアントサイド連携](./docs/recipes/useswr-integration.md)
-- [開発者ガイド](./docs/development.md)
+- [アーキテクチャ](./docs/architecture.md)
+- [レシピ集](./docs/recipes/)
+- [API リファレンス](./docs/api/)
+
+---
+
+## アーキテクチャと拡張
+
+`createClient` のオプションで独自データソースや SWR フックを追加できます。
+
+```ts
+import type { CMSAdapter } from "@notion-headless-cms/core/source-author";
+
+// カスタムデータソースは CMSAdapter を実装する
+const mySource: CMSAdapter = {
+  collections: {
+    articles: {
+      source: myDataSource,
+      slugField: "slug",
+    },
+  },
+};
+
+const cms = createClient({
+  sources: { custom: mySource },
+  ...nodePreset(),
+});
+```
+
+詳細は [`docs/architecture.md`](./docs/architecture.md) を参照してください。
+
+---
 
 ## 開発
 
-### 必要なツール
-
-- Node.js 24 以上（`engines.node: ">=24"`）
-- pnpm 10
-
-### コマンド
-
 ```bash
-pnpm install          # 依存関係インストール
-pnpm build            # 全パッケージをビルド (tsdown)
-pnpm typecheck        # 全パッケージの型チェック
-pnpm test             # vitest 実行
-pnpm format           # Biome でフォーマット・Lint
+pnpm install
+pnpm build        # 全パッケージビルド
+pnpm typecheck    # 型チェック
+pnpm test         # テスト
+pnpm format       # フォーマット
 ```
 
-## リリース・公開
-
-`@notion-headless-cms/*` は changesets を使ったセマンティックバージョニングで自動公開される。
+各 example の起動:
 
 ```bash
-# 1. 変更内容を記録する changeset を作成
-pnpm changeset
-
-# 2. main にマージすると release.yml が "Version Packages" PR を自動作成
-# 3. その PR をマージすると npm に自動公開される
+pnpm --filter example-node-hono dev
+pnpm --filter example-cloudflare-hono dev
 ```
-
-## ライセンス
-
-MIT
