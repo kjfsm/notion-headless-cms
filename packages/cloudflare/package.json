@@ -48,8 +48,7 @@
   "dependencies": {
     "@notion-headless-cms/cache": "workspace:*",
     "@notion-headless-cms/core": "workspace:*",
-    "@notion-headless-cms/notion-source": "workspace:*",
-    "@notion-headless-cms/block-html": "workspace:*"
+    "@notion-headless-cms/notion-source": "workspace:*"
   },
   "peerDependencies": {
     "@notionhq/client": "^5.20.0",

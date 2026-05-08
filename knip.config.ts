@@ -31,11 +31,15 @@ export default {
       // next は ./next エントリで動的 import するためのオプショナル peerDep
       ignoreDependencies: ["next"],
     },
-    "packages/core": {
-      entry: ["src/index.ts"],
+    "packages/block-html": {
+      entry: ["src/index.ts", "src/rehype/index.ts"],
       project: ["src/**/*.ts"],
-      // renderer は rendering.ts で動的 import するオプショナル peerDep
-      ignoreDependencies: ["@notion-headless-cms/renderer"],
+    },
+    "packages/core": {
+      entry: ["src/index.ts", "src/source-author.ts"],
+      project: ["src/**/*.ts"],
+      // markdown-html は rendering.ts で動的 import するオプショナル peerDep
+      ignoreDependencies: ["@notion-headless-cms/markdown-html"],
     },
     "packages/*": {
       entry: ["src/index.ts"],
