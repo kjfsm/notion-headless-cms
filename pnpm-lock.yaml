@@ -83,9 +83,15 @@ importers:
       '@notion-headless-cms/cloudflare':
         specifier: workspace:*
         version: link:../../packages/cloudflare
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@notion-headless-cms/notion-orm':
         specifier: workspace:*
         version: link:../../packages/notion-orm
+      '@notion-headless-cms/notion-source':
+        specifier: workspace:*
+        version: link:../../packages/notion-source
       astro:
         specifier: ^6.2.2
         version: 6.2.2(@types/node@25.6.0)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.3)(tsx@4.21.0)(yaml@2.8.4)
@@ -126,9 +132,15 @@ importers:
       '@notion-headless-cms/cloudflare':
         specifier: workspace:*
         version: link:../../packages/cloudflare
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@notion-headless-cms/notion-orm':
         specifier: workspace:*
         version: link:../../packages/notion-orm
+      '@notion-headless-cms/notion-source':
+        specifier: workspace:*
+        version: link:../../packages/notion-source
       hono:
         specifier: ^4.12.17
         version: 4.12.17
@@ -163,12 +175,18 @@ importers:
       '@notion-headless-cms/cloudflare':
         specifier: workspace:*
         version: link:../../packages/cloudflare
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@notion-headless-cms/notion-katex':
         specifier: workspace:*
         version: link:../../packages/notion-katex
       '@notion-headless-cms/notion-orm':
         specifier: workspace:*
         version: link:../../packages/notion-orm
+      '@notion-headless-cms/notion-source':
+        specifier: workspace:*
+        version: link:../../packages/notion-source
       '@notion-headless-cms/react-renderer':
         specifier: workspace:*
         version: link:../../packages/react-renderer
@@ -242,12 +260,18 @@ importers:
       '@notion-headless-cms/block-html':
         specifier: workspace:*
         version: link:../../packages/block-html
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@notion-headless-cms/node':
         specifier: workspace:*
         version: link:../../packages/node
       '@notion-headless-cms/notion-orm':
         specifier: workspace:*
         version: link:../../packages/notion-orm
+      '@notion-headless-cms/notion-source':
+        specifier: workspace:*
+        version: link:../../packages/notion-source
       express:
         specifier: ^5.2.1
         version: 5.2.1
@@ -294,12 +318,18 @@ importers:
       '@hono/node-server':
         specifier: ^2.0.1
         version: 2.0.1(hono@4.12.17)
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@notion-headless-cms/node':
         specifier: workspace:*
         version: link:../../packages/node
       '@notion-headless-cms/notion-orm':
         specifier: workspace:*
         version: link:../../packages/notion-orm
+      '@notion-headless-cms/notion-source':
+        specifier: workspace:*
+        version: link:../../packages/notion-source
       hono:
         specifier: ^4.12.17
         version: 4.12.17
@@ -337,12 +367,18 @@ importers:
       '@notion-headless-cms/cache':
         specifier: workspace:*
         version: link:../../packages/cache
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@notion-headless-cms/next':
         specifier: workspace:*
         version: link:../../packages/next
       '@notion-headless-cms/notion-orm':
         specifier: workspace:*
         version: link:../../packages/notion-orm
+      '@notion-headless-cms/notion-source':
+        specifier: workspace:*
+        version: link:../../packages/notion-source
       '@notion-headless-cms/react-renderer':
         specifier: workspace:*
         version: link:../../packages/react-renderer
@@ -463,9 +499,6 @@ importers:
 
   packages/cloudflare:
     dependencies:
-      '@notion-headless-cms/block-html':
-        specifier: workspace:*
-        version: link:../block-html
       '@notion-headless-cms/cache':
         specifier: workspace:*
         version: link:../cache
@@ -521,9 +554,6 @@ importers:
 
   packages/next:
     dependencies:
-      '@notion-headless-cms/cache':
-        specifier: workspace:*
-        version: link:../cache
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core

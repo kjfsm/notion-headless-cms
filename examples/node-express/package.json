@@ -15,9 +15,11 @@
     "test:e2e": "PLAYWRIGHT_HTML_OPEN=never playwright test e2e/navigation.spec.ts"
   },
   "dependencies": {
+    "@notion-headless-cms/core": "workspace:*",
     "@notion-headless-cms/node": "workspace:*",
     "@notion-headless-cms/block-html": "workspace:*",
     "@notion-headless-cms/notion-orm": "workspace:*",
+    "@notion-headless-cms/notion-source": "workspace:*",
     "express": "^5.2.1",
     "zod": "^4.4.3"
   },

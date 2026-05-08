@@ -21,6 +21,8 @@
   "dependencies": {
     "@notion-headless-cms/cloudflare": "workspace:*",
     "@notion-headless-cms/block-html": "workspace:*",
+    "@notion-headless-cms/core": "workspace:*",
+    "@notion-headless-cms/notion-source": "workspace:*",
     "@notion-headless-cms/notion-katex": "workspace:*",
     "@notion-headless-cms/notion-orm": "workspace:*",
     "@notion-headless-cms/react-renderer": "workspace:*",
