@@ -6,9 +6,6 @@ export { noopDocOps, noopImgOps } from "./cache/noop";
 // ── メイン API ──────────────────────────────────────────────────────────
 export type { CMSClient, CMSGlobalOps } from "./cms";
 export { createClient } from "./cms";
-// ── コレクション ─────────────────────────────────────────────────────────
-export type { CollectionContext } from "./collection";
-export { CollectionClientImpl, collectionKey } from "./collection";
 // ── コンテンツ AST ──────────────────────────────────────────────────────
 export type {
   ContentBlock,
@@ -28,11 +25,14 @@ export {
   isCMSErrorInNamespace,
   matchCMSError,
 } from "./errors";
-// ── $handler ───────────────────────────────────────────────────────────
+// ── handler ────────────────────────────────────────────────────────────
 export type { HandlerAdapter, HandlerOptions } from "./handler";
 export { createHandler } from "./handler";
 // ── フック・ロガー・プラグイン ────────────────────────────────────────
 export { mergeHooks, mergeLoggers } from "./hooks";
+// ── プリセット ─────────────────────────────────────────────────────────
+export type { NodePresetOptions } from "./preset/node";
+export { nodePreset } from "./preset/node";
 // ── リトライ ───────────────────────────────────────────────────────────
 export type { RetryConfig } from "./retry";
 export { DEFAULT_RETRY_CONFIG, withRetry } from "./retry";
@@ -50,15 +50,12 @@ export type {
   CMSSchemaProperties,
   CollectionCacheOps,
   CollectionClient,
-  CollectionDef,
-  CollectionsConfig,
   ContentConfig,
   CreateClientOptions,
   DataSource,
   DocumentCacheOps,
   FindOptions,
   ImageCacheOps,
-  InferCollectionItem,
   InvalidateKind,
   InvalidateScope,
   ItemWithContent,
@@ -80,9 +77,5 @@ export type {
   WebhookConfig,
 } from "./types/index";
 export { definePlugin } from "./types/plugin";
-// ── データソース拡張ポイント ────────────────────────────────────────────
-export type {
-  CMSAdapter,
-  CMSSources,
-  MergeSourceCollections,
-} from "./types/sources";
+// ── データソース拡張ポイント (source-author サブパスからも export) ───
+export type { CMSSources } from "./types/sources";

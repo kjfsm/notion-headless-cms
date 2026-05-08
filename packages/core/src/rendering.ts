@@ -14,19 +14,19 @@ import type {
 } from "./types/index";
 
 /**
- * `@notion-headless-cms/renderer` を動的 import してデフォルトレンダラーを返す。
+ * `@notion-headless-cms/markdown-html` を動的 import してデフォルトレンダラーを返す。
  * core のゼロ依存ルールを守るため静的 import は禁止。
  */
 async function loadDefaultRenderer(): Promise<RendererFn> {
   try {
-    const mod = await import("@notion-headless-cms/renderer");
+    const mod = await import("@notion-headless-cms/markdown-html");
     return (mod as { renderMarkdown: RendererFn }).renderMarkdown;
   } catch {
     throw new CMSError({
       code: "core/config_invalid",
       message:
-        "renderer が未指定で、@notion-headless-cms/renderer のロードにも失敗しました。" +
-        " createClient の renderer オプションを指定するか、@notion-headless-cms/renderer をインストールしてください。",
+        "renderer が未指定で、@notion-headless-cms/markdown-html のロードにも失敗しました。" +
+        " createClient の renderer オプションを指定するか、@notion-headless-cms/markdown-html をインストールしてください。",
       context: { operation: "loadDefaultRenderer" },
     });
   }

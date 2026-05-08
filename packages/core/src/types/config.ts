@@ -17,7 +17,7 @@ export type RendererPluginList = unknown[];
 
 /**
  * render() オプション。core は renderer の実装を知らず、この型だけを扱う。
- * @notion-headless-cms/renderer の renderMarkdown() はこのシグネチャと構造的に互換。
+ * @notion-headless-cms/markdown-html の renderMarkdown() はこのシグネチャと構造的に互換。
  */
 export interface RenderOptions {
   imageProxyBase?: string;
@@ -26,7 +26,7 @@ export interface RenderOptions {
   rehypePlugins?: RendererPluginList;
 }
 
-/** カスタムレンダラー関数の型。デフォルトは @notion-headless-cms/renderer の renderMarkdown。 */
+/** カスタムレンダラー関数の型。デフォルトは @notion-headless-cms/markdown-html の renderMarkdown。 */
 export type RendererFn = (
   markdown: string,
   opts?: RenderOptions,
@@ -34,8 +34,6 @@ export type RendererFn = (
 
 /** レンダリング・コンテンツ処理設定。 */
 export interface ContentConfig {
-  /** 画像プロキシのベースURL。デフォルト: '/api/images' */
-  imageProxyBase?: string;
   /** 追加する remark プラグイン。 */
   remarkPlugins?: RendererPluginList;
   /** 追加する rehype プラグイン。 */
@@ -93,33 +91,20 @@ export type InferCollectionItem<C> =
 
 /**
  * `createClient()` の入力。
- * 通常は CLI が生成した `nhc.ts` の `createClient` がこの型をラップする。
  *
  * @example
- * createClient({
- *   collections: {
- *     posts: {
- *       source: createNotionCollection({ token, dataSourceId, properties }),
- *       slugField: "slug",
- *       statusField: "status",
- *       publishedStatuses: ["公開済み"],
- *     }
- *   },
- *   cache: [memoryCache()],
- *   swr: { ttlMs: 5 * 60_000 },
+ * import { createClient, nodePreset } from "@notion-headless-cms/core";
+ * import { notionSource } from "@notion-headless-cms/notion-source";
+ * import { schema } from "./generated/nhc.schema";
+ *
+ * const cms = createClient({
+ *   sources: { notion: notionSource({ schema, token: process.env.NOTION_TOKEN! }) },
+ *   ...nodePreset(),
  * });
  */
-export interface CreateClientOptions<
-  C extends CollectionsConfig = CollectionsConfig,
-  S extends CMSSources = CMSSources,
-> {
-  /**
-   * データソースアダプター (`@notion-headless-cms/notion-source` 等) のマップ。
-   * `sources` を指定する場合 `collections` は不要。両方指定された場合は `sources` が優先される。
-   */
+export interface CreateClientOptions<S extends CMSSources = CMSSources> {
+  /** データソースアダプター (`@notion-headless-cms/notion-source` 等) のマップ。 */
   sources?: S;
-  /** コレクション定義のマップ。`sources` を使う場合は不要。 */
-  collections?: C;
   /**
    * キャッシュアダプタ (配列)。未指定時はキャッシュなし。
    * - `memoryCache()` のように doc + image 両方を担当するもの
@@ -131,7 +116,7 @@ export interface CreateClientOptions<
   swr?: SWRConfig;
   /**
    * Markdown→HTML レンダラー。
-   * 省略時は `@notion-headless-cms/renderer` の `renderMarkdown` を動的 import で使用する。
+   * 省略時は `@notion-headless-cms/markdown-html` の `renderMarkdown` を動的 import で使用する。
    * カスタム実装も `RendererFn` 型を満たせば使用可能。
    */
   renderer?: RendererFn;

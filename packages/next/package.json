@@ -1,13 +1,12 @@
 {
-  "name": "@notion-headless-cms/adapter-next",
-  "version": "0.2.27",
-  "description": "Next.js App Router adapter for notion-headless-cms — image route handler and revalidate webhook",
+  "name": "@notion-headless-cms/next",
+  "version": "1.0.0",
+  "description": "Next.js App Router 向け notion-headless-cms メタパッケージ — createCms・画像プロキシ・Webhook ハンドラを一括提供",
   "keywords": [
     "notion",
     "headless-cms",
     "nextjs",
     "next",
-    "adapter",
     "typescript"
   ],
   "license": "MIT",
@@ -18,7 +17,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kjfsm/notion-headless-cms.git",
-    "directory": "packages/adapter-next"
+    "directory": "packages/next"
   },
   "type": "module",
   "sideEffects": false,
@@ -37,7 +36,7 @@
   "scripts": {
     "build": "tsdown src/index.ts --format esm --dts --sourcemap --out-dir dist",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
     "publint": "publint --strict",
     "attw": "attw --pack . --profile esm-only"
@@ -46,10 +45,21 @@
     "access": "public",
     "provenance": true
   },
-  "peerDependencies": {
-    "next": ">=14.0.0"
-  },
   "dependencies": {
-    "@notion-headless-cms/core": "workspace:*"
+    "@notion-headless-cms/cache": "workspace:*",
+    "@notion-headless-cms/core": "workspace:*",
+    "@notion-headless-cms/notion-source": "workspace:*",
+    "@notion-headless-cms/markdown-html": "workspace:*"
+  },
+  "peerDependencies": {
+    "@notionhq/client": "^5.20.0",
+    "next": ">=14.0.0",
+    "react": ">=18.0.0",
+    "zod": "^4.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
   }
 }

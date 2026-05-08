@@ -57,14 +57,18 @@ describe("CollectionClient — params", () => {
   it("params はスラッグ文字列の配列を返す", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return makeItems();
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -75,8 +79,12 @@ describe("CollectionClient — params", () => {
   it("アイテムがない場合は空配列を返す", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: { source: makeMockSource(), slugField: "slug" },
+      sources: {
+        mock: {
+          collections: {
+            posts: { source: makeMockSource(), slugField: "slug" },
+          },
+        },
       },
     });
     expect(await cms.posts.params()).toEqual([]);
@@ -87,14 +95,18 @@ describe("CollectionClient — adjacent", () => {
   it("中間要素の前後両方を返す", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return makeItems();
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -107,14 +119,18 @@ describe("CollectionClient — adjacent", () => {
   it("先頭要素(最新)の prev は null", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return makeItems();
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -127,14 +143,18 @@ describe("CollectionClient — adjacent", () => {
   it("末尾要素(最古)の next は null", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return makeItems();
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -147,14 +167,18 @@ describe("CollectionClient — adjacent", () => {
   it("存在しない slug の場合は { prev: null, next: null } を返す", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return makeItems();
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -171,14 +195,18 @@ describe("CollectionClient — adjacent", () => {
     ];
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return items;
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return items;
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -194,7 +222,13 @@ describe("CollectionClient — cache.invalidate / cache.warm", () => {
   it("キャッシュなしでも cache.invalidate / cache.invalidateItem がエラーにならない", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: { posts: { source: makeMockSource(), slugField: "slug" } },
+      sources: {
+        mock: {
+          collections: {
+            posts: { source: makeMockSource(), slugField: "slug" },
+          },
+        },
+      },
     });
     await expect(
       cms.posts.cache.invalidateItem("some-slug"),
@@ -218,7 +252,9 @@ describe("CollectionClient — cache.invalidate / cache.warm", () => {
     const cache = memoryCache();
     const cms = createClient({
       renderer: mockRenderer,
-      collections: { posts: { source, slugField: "slug" } },
+      sources: {
+        mock: { collections: { posts: { source, slugField: "slug" } } },
+      },
       cache: [cache],
     });
 
@@ -242,7 +278,9 @@ describe("CollectionClient — cache.invalidate / cache.warm", () => {
     const cache = memoryCache();
     const cms = createClient({
       renderer: mockRenderer,
-      collections: { posts: { source, slugField: "slug" } },
+      sources: {
+        mock: { collections: { posts: { source, slugField: "slug" } } },
+      },
       cache: [cache],
     });
 
@@ -266,7 +304,9 @@ describe("CollectionClient — cache.invalidate / cache.warm", () => {
     });
     const cache = memoryCache();
     const cms = createClient({
-      collections: { posts: { source, slugField: "slug" } },
+      sources: {
+        mock: { collections: { posts: { source, slugField: "slug" } } },
+      },
       renderer: mockRenderer,
       cache: [cache],
     });
@@ -284,14 +324,18 @@ describe("CollectionClient — cache.invalidate / cache.warm", () => {
 describe("CollectionClient — cache.warm", () => {
   it("全アイテムをレンダリングしてキャッシュに保存する", async () => {
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return makeItems();
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
       renderer: mockRenderer,
@@ -310,15 +354,19 @@ describe("CollectionClient — cache.warm", () => {
       .mockResolvedValueOnce("");
 
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return items;
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return items;
+                },
+                loadMarkdown: loadMarkdownMock,
+              }),
+              slugField: "slug",
             },
-            loadMarkdown: loadMarkdownMock,
-          }),
-          slugField: "slug",
+          },
         },
       },
       renderer: mockRenderer,
@@ -332,14 +380,18 @@ describe("CollectionClient — cache.warm", () => {
   it("onProgress コールバックが呼ばれる", async () => {
     const onProgress = vi.fn();
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return makeItems();
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
       renderer: mockRenderer,
@@ -352,8 +404,12 @@ describe("CollectionClient — cache.warm", () => {
 
   it("アイテムがない場合は { ok: 0, failed: 0 } を返す", async () => {
     const cms = createClient({
-      collections: {
-        posts: { source: makeMockSource(), slugField: "slug" },
+      sources: {
+        mock: {
+          collections: {
+            posts: { source: makeMockSource(), slugField: "slug" },
+          },
+        },
       },
       renderer: mockRenderer,
     });
@@ -366,14 +422,18 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   it("statuses フィルタで指定ステータスのみ返す", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return makeItems();
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -406,14 +466,18 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     ];
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return taggedItems;
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return taggedItems;
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -426,14 +490,18 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   it("where フィルタで id が一致するアイテムのみ返す", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return makeItems();
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -445,14 +513,18 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   it("sort: asc で lastEditedTime 昇順になる", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return makeItems();
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -465,14 +537,18 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   it("sort: desc で lastEditedTime 降順になる", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return makeItems();
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -485,14 +561,18 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   it("skip と limit でページングできる", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return makeItems();
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -504,14 +584,18 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   it("limit のみ指定すると先頭から N 件を返す", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return makeItems();
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -524,14 +608,18 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   it("skip のみ指定すると N 件スキップして残りを返す", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return makeItems();
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -544,14 +632,18 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   it("オプションなしで全件返す", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return makeItems();
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -582,14 +674,18 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     ];
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return items;
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return items;
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -615,14 +711,18 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     ];
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return items;
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return items;
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -633,14 +733,18 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   it("where に配列を渡すと OR 一致でフィルタする", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return makeItems();
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -653,14 +757,18 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   it("filter 関数で任意条件でフィルタできる", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return makeItems();
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -674,14 +782,18 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
   it("sort.compare カスタム comparator でソートできる", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return makeItems();
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -717,7 +829,9 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     });
     const cms = createClient({
       renderer: mockRenderer,
-      collections: { posts: { source, slugField: "slug" } },
+      sources: {
+        mock: { collections: { posts: { source, slugField: "slug" } } },
+      },
     });
     await expect(
       cms.posts.list({
@@ -738,15 +852,19 @@ describe("CollectionClient — 並行 get", () => {
       lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return [item];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return [item];
+                },
+                loadMarkdown: vi.fn().mockResolvedValue("# Concurrent"),
+              }),
+              slugField: "slug",
             },
-            loadMarkdown: vi.fn().mockResolvedValue("# Concurrent"),
-          }),
-          slugField: "slug",
+          },
         },
       },
       renderer: mockRenderer,
@@ -769,14 +887,18 @@ describe("CollectionClient — 並行 get", () => {
   it("存在しない slug への並行 get が全て null を返す", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return [];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return [];
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -805,14 +927,18 @@ describe("CollectionClient — isArchived フィルタ", () => {
       },
     ];
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return items;
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return items;
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
       renderer: mockRenderer,
@@ -829,14 +955,18 @@ describe("CollectionClient — isArchived フィルタ", () => {
       isArchived: true,
     };
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return [item];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return [item];
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
       renderer: mockRenderer,
@@ -855,15 +985,19 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
       status: "下書き",
     };
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return [item];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return [item];
+                },
+              }),
+              slugField: "slug",
+              accessibleStatuses: ["公開"],
             },
-          }),
-          slugField: "slug",
-          accessibleStatuses: ["公開"],
+          },
         },
       },
       renderer: mockRenderer,
@@ -880,15 +1014,19 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
       status: "公開",
     };
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return [item];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return [item];
+                },
+              }),
+              slugField: "slug",
+              accessibleStatuses: ["公開"],
             },
-          }),
-          slugField: "slug",
-          accessibleStatuses: ["公開"],
+          },
         },
       },
       renderer: mockRenderer,
@@ -904,15 +1042,19 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
       lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return [item];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return [item];
+                },
+              }),
+              slugField: "slug",
+              accessibleStatuses: ["公開"],
             },
-          }),
-          slugField: "slug",
-          accessibleStatuses: ["公開"],
+          },
         },
       },
       renderer: mockRenderer,
@@ -929,15 +1071,19 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
       status: null,
     };
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return [item];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return [item];
+                },
+              }),
+              slugField: "slug",
+              accessibleStatuses: ["公開"],
             },
-          }),
-          slugField: "slug",
-          accessibleStatuses: ["公開"],
+          },
         },
       },
       renderer: mockRenderer,
@@ -963,15 +1109,19 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
       { id: "3", slug: "no-status", lastEditedTime: "2024-01-01T00:00:00Z" },
     ];
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return items;
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return items;
+                },
+              }),
+              slugField: "slug",
+              accessibleStatuses: ["公開"],
             },
-          }),
-          slugField: "slug",
-          accessibleStatuses: ["公開"],
+          },
         },
       },
       renderer: mockRenderer,
@@ -997,15 +1147,19 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
       },
     ];
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return items;
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return items;
+                },
+              }),
+              slugField: "slug",
+              accessibleStatuses: ["公開"],
             },
-          }),
-          slugField: "slug",
-          accessibleStatuses: ["公開"],
+          },
         },
       },
       renderer: mockRenderer,
@@ -1032,14 +1186,18 @@ describe("CollectionClient — コンテンツアクセサ", () => {
       lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return [item];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return [item];
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
       renderer: mockRenderer,
@@ -1058,15 +1216,19 @@ describe("CollectionClient — コンテンツアクセサ", () => {
     };
     const loadMarkdown = vi.fn().mockResolvedValue("# Hello World");
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return [item];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return [item];
+                },
+                loadMarkdown,
+              }),
+              slugField: "slug",
             },
-            loadMarkdown,
-          }),
-          slugField: "slug",
+          },
         },
       },
       renderer: mockRenderer,
@@ -1085,17 +1247,21 @@ describe("CollectionClient — コンテンツアクセサ", () => {
     };
     const fakeBlocks = [{ type: "paragraph", content: [] }];
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return [item];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return [item];
+                },
+                async loadBlocks() {
+                  return fakeBlocks as never;
+                },
+              }),
+              slugField: "slug",
             },
-            async loadBlocks() {
-              return fakeBlocks as never;
-            },
-          }),
-          slugField: "slug",
+          },
         },
       },
       renderer: mockRenderer,
@@ -1109,14 +1275,18 @@ describe("CollectionClient — コンテンツアクセサ", () => {
   it("statuses を単一文字列で指定すると一致するアイテムだけ返す", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return makeItems();
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
     });
@@ -1134,15 +1304,19 @@ describe("CollectionClient — コンテンツアクセサ", () => {
     };
     const loadMarkdown = vi.fn().mockResolvedValue("# Lazy");
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return [item];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return [item];
+                },
+                loadMarkdown,
+              }),
+              slugField: "slug",
             },
-            loadMarkdown,
-          }),
-          slugField: "slug",
+          },
         },
       },
       renderer: mockRenderer,
@@ -1163,14 +1337,18 @@ describe("CollectionClient — check()", () => {
       lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return [item];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return [item];
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
       renderer: mockRenderer,
@@ -1186,14 +1364,18 @@ describe("CollectionClient — check()", () => {
       lastEditedTime: "2024-01-02T00:00:00Z",
     };
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return [item];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return [item];
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
       renderer: mockRenderer,
@@ -1218,15 +1400,19 @@ describe("CollectionClient — check()", () => {
       lastEditedTime: "2024-01-02T00:00:00Z",
     };
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return [item];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return [item];
+                },
+                loadMarkdown,
+              }),
+              slugField: "slug",
             },
-            loadMarkdown,
-          }),
-          slugField: "slug",
+          },
         },
       },
       renderer: mockRenderer,
@@ -1242,8 +1428,12 @@ describe("CollectionClient — check()", () => {
   it("存在しない slug は null を返す", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: { source: makeMockSource(), slugField: "slug" },
+      sources: {
+        mock: {
+          collections: {
+            posts: { source: makeMockSource(), slugField: "slug" },
+          },
+        },
       },
     });
     const result = await cms.posts.check("nonexistent", "2024-01-01T00:00:00Z");
@@ -1259,15 +1449,19 @@ describe("CollectionClient — check()", () => {
     };
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return [item];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return [item];
+                },
+              }),
+              slugField: "slug",
+              accessibleStatuses: ["公開"],
             },
-          }),
-          slugField: "slug",
-          accessibleStatuses: ["公開"],
+          },
         },
       },
     });
@@ -1283,13 +1477,17 @@ describe("CollectionClient — check()", () => {
     };
     const findByProp = vi.fn().mockResolvedValue(item);
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            findByProp,
-            properties: { slug: { type: "richText", notion: "Slug" } },
-          }),
-          slugField: "slug",
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                findByProp,
+                properties: { slug: { type: "richText", notion: "Slug" } },
+              }),
+              slugField: "slug",
+            },
+          },
         },
       },
       renderer: mockRenderer,
@@ -1306,13 +1504,17 @@ describe("CollectionClient — check()", () => {
     };
     const findByProp = vi.fn().mockResolvedValue(item);
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            findByProp,
-            properties: { slug: { type: "richText", notion: "Slug" } },
-          }),
-          slugField: "slug",
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                findByProp,
+                properties: { slug: { type: "richText", notion: "Slug" } },
+              }),
+              slugField: "slug",
+            },
+          },
         },
       },
       renderer: mockRenderer,
@@ -1333,14 +1535,18 @@ describe("CollectionClient — check()", () => {
     };
     const cache = memoryCache();
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return [item];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return [item];
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
       cache: [cache],
@@ -1358,14 +1564,18 @@ describe("CollectionClient — check()", () => {
       lastEditedTime: "2024-01-01T00:00:00Z",
     };
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return [item];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return [item];
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
       renderer: mockRenderer,
@@ -1392,7 +1602,9 @@ describe("CollectionClient — find() bypassCache", () => {
     const cache = memoryCache();
     const cms = createClient({
       renderer: mockRenderer,
-      collections: { posts: { source, slugField: "slug" } },
+      sources: {
+        mock: { collections: { posts: { source, slugField: "slug" } } },
+      },
       cache: [cache],
     });
 
@@ -1409,7 +1621,13 @@ describe("CollectionClient — find() bypassCache", () => {
   it("bypassCache: true で存在しない slug は null を返す", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: { posts: { source: makeMockSource(), slugField: "slug" } },
+      sources: {
+        mock: {
+          collections: {
+            posts: { source: makeMockSource(), slugField: "slug" },
+          },
+        },
+      },
     });
     const result = await cms.posts.find("nonexistent", { bypassCache: true });
     expect(result).toBeNull();
@@ -1426,15 +1644,19 @@ describe("CollectionClient — slugField + findByProp", () => {
     };
     const findByProp = vi.fn().mockResolvedValue(item);
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            findByProp,
-            properties: {
-              slug: { type: "richText", notion: "Slug" },
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                findByProp,
+                properties: {
+                  slug: { type: "richText", notion: "Slug" },
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
       renderer: mockRenderer,

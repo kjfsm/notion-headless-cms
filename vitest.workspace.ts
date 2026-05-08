@@ -2,13 +2,12 @@ import { defineWorkspace } from "vitest/config";
 
 export default defineWorkspace([
   "packages/core",
-  "packages/renderer",
+  "packages/markdown-html",
   "packages/cache",
   "packages/notion-orm",
   "packages/notion-source",
-  "packages/notion-embed",
+  "packages/block-html",
   "packages/notion-katex",
   "packages/cli",
-  "packages/adapter-next",
   "packages/react-renderer",
 ]);

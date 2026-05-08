@@ -1,11 +1,10 @@
-import { cloudflarePreset } from "@notion-headless-cms/cache/cloudflare";
-import { createClient } from "@notion-headless-cms/core";
+import { notionEmbed, youtubeProvider } from "@notion-headless-cms/block-html";
 import {
-  notionEmbed,
-  youtubeProvider,
-} from "@notion-headless-cms/notion-embed";
+  cloudflarePreset,
+  createClient,
+  notionSource,
+} from "@notion-headless-cms/cloudflare";
 import { notionKatex } from "@notion-headless-cms/notion-katex";
-import { notionSource } from "@notion-headless-cms/notion-source";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -15,10 +14,10 @@ export interface Env {
 }
 
 // ctx は `waitUntil` だけ要求する構造型で受ける。
-// React Router / Hono / Astro 等で型が微妙に違っても通る。
+// React Router / Hono / Astro 等で型が微妙に違っても通る。Workers では常に提供される。
 export function makeCms(
   env: Env,
-  ctx?: { waitUntil(p: Promise<unknown>): void },
+  ctx: { waitUntil(p: Promise<unknown>): void },
 ) {
   const embed = notionEmbed({
     providers: [youtubeProvider({ display: "card" })],

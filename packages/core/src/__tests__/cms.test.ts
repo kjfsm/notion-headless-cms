@@ -22,13 +22,20 @@ function makeMockSource(
   };
 }
 
+// collections マップを sources 形式にラップするヘルパー（ジェネリクスで型を保持）
+function makeSources<C extends Record<string, CollectionDef<BaseContentItem>>>(
+  cols: C,
+): { mock: { readonly collections: C } } {
+  return { mock: { collections: cols } };
+}
+
 describe("createClient - collections バリデーション", () => {
   it("collections が空の場合は CMSError をスローする", () => {
     let caught: unknown;
     try {
       createClient({
         renderer: mockRenderer,
-        collections: {},
+        sources: makeSources({}),
       });
     } catch (e) {
       caught = e;
@@ -43,9 +50,9 @@ describe("createClient - collections バリデーション", () => {
     try {
       createClient({
         renderer: mockRenderer,
-        collections: {
+        sources: makeSources({
           posts: { slugField: "slug" } as CollectionDef<BaseContentItem>,
-        },
+        }),
       });
     } catch (e) {
       caught = e;
@@ -60,9 +67,9 @@ describe("createClient - collections バリデーション", () => {
     try {
       createClient({
         renderer: mockRenderer,
-        collections: {
+        sources: makeSources({
           posts: { source: makeMockSource() } as CollectionDef<BaseContentItem>,
-        },
+        }),
       });
     } catch (e) {
       caught = e;
@@ -76,9 +83,9 @@ describe("createClient - collections バリデーション", () => {
     expect(() =>
       createClient({
         renderer: mockRenderer,
-        collections: {
+        sources: makeSources({
           posts: { source: makeMockSource(), slugField: "slug" },
-        },
+        }),
       }),
     ).not.toThrow();
   });
@@ -118,14 +125,14 @@ describe("createClient - publishedStatuses / accessibleStatuses", () => {
 
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
+      sources: makeSources({
         posts: {
           source,
           slugField: "slug",
           statusField: "status",
           publishedStatuses: ["公開済み"],
         },
-      },
+      }),
     });
 
     const items = await cms.posts.list();
@@ -143,9 +150,9 @@ describe("createClient - publishedStatuses / accessibleStatuses", () => {
 
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
+      sources: makeSources({
         posts: { source, slugField: "slug" },
-      },
+      }),
     });
 
     await cms.posts.list();
@@ -168,13 +175,13 @@ describe("createClient - publishedStatuses / accessibleStatuses", () => {
     });
 
     const cms = createClient({
-      collections: {
+      sources: makeSources({
         posts: {
           source,
           slugField: "slug",
           accessibleStatuses: ["Published", "限定公開"],
         },
-      },
+      }),
       renderer: mockRenderer,
     });
 
@@ -204,9 +211,9 @@ describe("createClient - findByProp の利用", () => {
     });
 
     const cms = createClient({
-      collections: {
+      sources: makeSources({
         posts: { source, slugField: "slug" },
-      },
+      }),
       renderer: mockRenderer,
     });
 
@@ -234,9 +241,9 @@ describe("createClient - findByProp の利用", () => {
     });
 
     const cms = createClient({
-      collections: {
+      sources: makeSources({
         posts: { source, slugField: "slug" },
-      },
+      }),
       renderer: mockRenderer,
     });
 
@@ -267,7 +274,7 @@ describe("createClient - コレクション間のキャッシュ独立性", () =
     const { memoryCache } = await import("../cache/memory");
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
+      sources: makeSources({
         posts: {
           source: makeMockSource({ list: postListMock }),
           slugField: "slug",
@@ -276,7 +283,7 @@ describe("createClient - コレクション間のキャッシュ独立性", () =
           source: makeMockSource({ list: pageListMock }),
           slugField: "slug",
         },
-      },
+      }),
       cache: [memoryCache()],
     });
 
@@ -318,12 +325,12 @@ describe("createClient - invalidate", () => {
     const { memoryCache } = await import("../cache/memory");
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
+      sources: makeSources({
         posts: {
           source: makeMockSource({ list: listMock }),
           slugField: "slug",
         },
-      },
+      }),
       cache: [memoryCache()],
     });
 
@@ -341,7 +348,9 @@ describe("createClient - invalidate", () => {
   it("invalidate を呼んでもエラーが発生しない（キャッシュなしの場合）", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: { posts: { source: makeMockSource(), slugField: "slug" } },
+      sources: makeSources({
+        posts: { source: makeMockSource(), slugField: "slug" },
+      }),
     });
     await expect(cms.invalidate()).resolves.toBeUndefined();
   });
@@ -349,10 +358,10 @@ describe("createClient - invalidate", () => {
   it("collections にコレクション名が含まれる", () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
+      sources: makeSources({
         posts: { source: makeMockSource(), slugField: "slug" },
         pages: { source: makeMockSource(), slugField: "slug" },
-      },
+      }),
     });
     expect(cms.collections).toContain("posts");
     expect(cms.collections).toContain("pages");
@@ -374,7 +383,7 @@ describe("createClient - logLevel オプション", () => {
     });
 
     const cms = createClient({
-      collections: { posts: { source, slugField: "slug" } },
+      sources: makeSources({ posts: { source, slugField: "slug" } }),
       renderer: mockRenderer,
       logger: { debug: debugFn, info: infoFn },
       logLevel: "info",
@@ -399,7 +408,7 @@ describe("createClient - logLevel オプション", () => {
     });
 
     const cms = createClient({
-      collections: { posts: { source, slugField: "slug" } },
+      sources: makeSources({ posts: { source, slugField: "slug" } }),
       renderer: mockRenderer,
       logger: { debug: debugFn },
     });
@@ -413,7 +422,9 @@ describe("createClient - logLevel オプション", () => {
     expect(() =>
       createClient({
         renderer: mockRenderer,
-        collections: { posts: { source: makeMockSource(), slugField: "slug" } },
+        sources: makeSources({
+          posts: { source: makeMockSource(), slugField: "slug" },
+        }),
         logLevel: "warn",
       }),
     ).not.toThrow();
@@ -440,7 +451,7 @@ describe("createClient - collections.hooks コレクション固有フック", (
     });
 
     const cms = createClient({
-      collections: {
+      sources: makeSources({
         posts: {
           source: makeMockSource({
             list: vi.fn().mockResolvedValue([item]),
@@ -448,7 +459,7 @@ describe("createClient - collections.hooks コレクション固有フック", (
           slugField: "slug",
           hooks: { onCacheHit: collectionHook },
         },
-      },
+      }),
       renderer: mockRenderer,
       cache: [cache],
       hooks: { onCacheHit: globalHook },
@@ -478,14 +489,14 @@ describe("createClient - collections.hooks コレクション固有フック", (
     });
 
     const cms = createClient({
-      collections: {
+      sources: makeSources({
         posts: {
           source: makeMockSource({
             list: vi.fn().mockResolvedValue([item]),
           }),
           slugField: "slug",
         },
-      },
+      }),
       renderer: mockRenderer,
       cache: [cache],
       hooks: { onCacheHit: globalHook },
@@ -512,9 +523,9 @@ describe("createClient - beforeCacheMeta / beforeCacheContent フック", () => 
     });
 
     const cms = createClient({
-      collections: {
+      sources: makeSources({
         posts: { source, slugField: "slug" },
-      },
+      }),
       renderer: mockRenderer,
       hooks: { beforeCacheMeta },
     });
@@ -538,9 +549,9 @@ describe("createClient - beforeCacheMeta / beforeCacheContent フック", () => 
     });
 
     const cms = createClient({
-      collections: {
+      sources: makeSources({
         posts: { source, slugField: "slug" },
-      },
+      }),
       renderer: mockRenderer,
       hooks: { beforeCacheContent },
     });
@@ -558,7 +569,9 @@ describe("createClient - getCachedImage", () => {
     const getCachedImage = vi.fn().mockResolvedValue(null);
     const cms = createClient({
       renderer: mockRenderer,
-      collections: { posts: { source: makeMockSource(), slugField: "slug" } },
+      sources: makeSources({
+        posts: { source: makeMockSource(), slugField: "slug" },
+      }),
       cache: [
         {
           name: "test-image-cache",
@@ -580,7 +593,9 @@ describe("createClient - cacheImage", () => {
   it("画像キャッシュ未設定なら cacheImage は undefined", () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: { posts: { source: makeMockSource(), slugField: "slug" } },
+      sources: makeSources({
+        posts: { source: makeMockSource(), slugField: "slug" },
+      }),
     });
     expect(cms.cacheImage).toBeUndefined();
     expect(cms.imageProxyBase).toBe("/api/images");
@@ -596,7 +611,9 @@ describe("createClient - cacheImage", () => {
     );
     const cms = createClient({
       renderer: mockRenderer,
-      collections: { posts: { source: makeMockSource(), slugField: "slug" } },
+      sources: makeSources({
+        posts: { source: makeMockSource(), slugField: "slug" },
+      }),
       cache: [
         {
           name: "test-image-cache",
@@ -617,7 +634,9 @@ describe("createClient - handler", () => {
   it("handler() がハンドラ関数を返す", () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: { posts: { source: makeMockSource(), slugField: "slug" } },
+      sources: makeSources({
+        posts: { source: makeMockSource(), slugField: "slug" },
+      }),
     });
     const handler = cms.handler();
     expect(typeof handler).toBe("function");
@@ -627,12 +646,12 @@ describe("createClient - handler", () => {
     const parseWebhook = vi.fn().mockResolvedValue({ collection: "posts" });
     const cms = createClient({
       renderer: mockRenderer,
-      collections: {
+      sources: makeSources({
         posts: {
           source: makeMockSource({ parseWebhook }),
           slugField: "slug",
         },
-      },
+      }),
     });
     const handler = cms.handler();
     const req = new Request("http://localhost/api/cms/revalidate/posts", {
@@ -648,7 +667,9 @@ describe("createClient - handler", () => {
   it("unknown collection は 404 を返す", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: { posts: { source: makeMockSource(), slugField: "slug" } },
+      sources: makeSources({
+        posts: { source: makeMockSource(), slugField: "slug" },
+      }),
     });
     const handler = cms.handler();
     const req = new Request("http://localhost/api/cms/revalidate/unknown", {
@@ -661,7 +682,9 @@ describe("createClient - handler", () => {
   it("parseWebhook 未実装の DataSource は 501 を返す", async () => {
     const cms = createClient({
       renderer: mockRenderer,
-      collections: { posts: { source: makeMockSource(), slugField: "slug" } },
+      sources: makeSources({
+        posts: { source: makeMockSource(), slugField: "slug" },
+      }),
     });
     const handler = cms.handler();
     const req = new Request("http://localhost/api/cms/revalidate/posts", {

@@ -8,12 +8,12 @@ export interface NextHandlerOptions {
 /**
  * Next.js App Router 向けの統合ルートハンドラを生成する。
  * 画像プロキシ (`GET /api/cms/images/[hash]`) と
- * Webhook による invalidate (`POST /api/cms/...`) を1つのハンドラで処理する。
+ * Webhook による invalidate (`POST /api/cms/...`) を 1 つのハンドラで処理する。
  *
  * @example
  * // app/api/cms/[...path]/route.ts
  * import { cms } from "@/lib/cms";
- * import { createNextHandler } from "@notion-headless-cms/adapter-next";
+ * import { createNextHandler } from "@notion-headless-cms/next";
  *
  * const handler = createNextHandler(cms, { webhookSecret: process.env.WEBHOOK_SECRET });
  * export const GET = handler;

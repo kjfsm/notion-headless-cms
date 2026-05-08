@@ -7,7 +7,7 @@ vi.mock("../internal/fetcher/index", () => ({
   queryPageByProp: vi.fn(),
 }));
 
-vi.mock("@notion-headless-cms/renderer", () => {
+vi.mock("@notion-headless-cms/markdown-html", () => {
   const transform = vi.fn().mockResolvedValue("# Hello");
   class MockTransformer {
     transform = transform;
@@ -19,7 +19,7 @@ vi.mock("@notion-headless-cms/renderer", () => {
 });
 
 import { isCMSError } from "@notion-headless-cms/core";
-import { Transformer } from "@notion-headless-cms/renderer";
+import { Transformer } from "@notion-headless-cms/markdown-html";
 import {
   createClient,
   queryAllPages,

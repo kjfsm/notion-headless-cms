@@ -113,54 +113,49 @@ function applyLogLevel(
 }
 
 /**
- * 複数の `CollectionDef` を束ねた CMS クライアントを生成する。
- *
- * 通常はユーザーが直接呼ぶことはなく、CLI 生成の `nhc.ts` の `createClient`
- * (低レベルのこの関数をラップしたもの) を経由する。
+ * CMS クライアントを生成する。
  *
  * @example
- * createClient({
- *   collections: {
- *     posts: {
- *       source: createNotionCollection({ token, dataSourceId, properties }),
- *       slugField: "slug",
- *       statusField: "status",
- *       publishedStatuses: ["公開済み"],
- *     }
- *   },
- *   cache: [memoryCache()],
- *   swr: { ttlMs: 5 * 60_000 },
+ * import { createClient, nodePreset } from "@notion-headless-cms/core";
+ * import { notionSource } from "@notion-headless-cms/notion-source";
+ * import { schema } from "./generated/nhc.schema";
+ *
+ * const cms = createClient({
+ *   sources: { notion: notionSource({ schema, token: process.env.NOTION_TOKEN! }) },
+ *   ...nodePreset(),
  * });
+ *
+ * const posts = await cms.posts.list();
  */
-export function createClient<
-  C extends CollectionsConfig = CollectionsConfig,
-  S extends CMSSources = CMSSources,
->(
-  opts: CreateClientOptions<C, S>,
+export function createClient<S extends CMSSources = CMSSources>(
+  opts: CreateClientOptions<S>,
 ): CMSClient<
   MergeSourceCollections<S> extends CollectionsConfig
     ? MergeSourceCollections<S>
-    : C
+    : CollectionsConfig
 > {
-  // sources を渡された場合は後勝ちで collections にマージする
-  let mergedFromSources: CollectionsConfig | undefined;
+  // sources の各アダプタが持つ collections をマージする
+  const collectionsInput: CollectionsConfig = {};
   if (opts.sources) {
-    mergedFromSources = {};
     for (const adapter of Object.values(
       opts.sources as unknown as Record<string, CMSAdapter | undefined>,
     )) {
-      if (adapter) Object.assign(mergedFromSources, adapter.collections);
+      if (adapter) Object.assign(collectionsInput, adapter.collections);
     }
   }
-  const collectionsInput: CollectionsConfig | undefined =
-    mergedFromSources ?? opts.collections;
 
-  if (!collectionsInput || Object.keys(collectionsInput).length === 0) {
+  if (Object.keys(collectionsInput).length === 0) {
     throw new CMSError({
       code: "core/config_invalid",
       message:
-        "createClient: sources または collections に少なくとも 1 つのコレクションを指定してください。",
+        "createClient: sources に少なくとも 1 つのコレクションを指定してください。",
       context: { operation: "createClient" },
+      nextSteps: [
+        "notionSource({ schema, token }) を sources.notion に渡す",
+        "`nhc generate` でスキーマを生成してから import する",
+      ],
+      docsUrl:
+        "https://github.com/kjfsm/notion-headless-cms/blob/main/docs/quickstart.md",
     });
   }
 
@@ -170,6 +165,7 @@ export function createClient<
         code: "core/config_invalid",
         message: `createClient: コレクション "${name}" の source は必須です。`,
         context: { operation: "createClient", collection: name },
+        nextSteps: ["notionSource(...) を sources に渡しているか確認する"],
       });
     }
     if (!def.slugField) {
@@ -177,6 +173,9 @@ export function createClient<
         code: "core/config_invalid",
         message: `createClient: コレクション "${name}" の slugField は必須です。`,
         context: { operation: "createClient", collection: name },
+        nextSteps: [
+          `nhc.config.ts の ${name} コレクションに slugField を設定する`,
+        ],
       });
     }
   }
@@ -205,10 +204,10 @@ export function createClient<
     ...(opts.rateLimiter ?? {}),
   };
 
-  const collectionNames: (keyof C & string)[] = [];
+  const collectionNames: string[] = [];
   const collections: Record<string, CollectionClient<BaseContentItem>> = {};
   for (const [name, def] of Object.entries(collectionsInput)) {
-    collectionNames.push(name as keyof C & string);
+    collectionNames.push(name);
     const source = def.source as DataSource<BaseContentItem>;
     const colHooks = def.hooks as CMSHooks<BaseContentItem> | undefined;
     const collectionHooks: CMSHooks<BaseContentItem> = colHooks
@@ -303,6 +302,6 @@ export function createClient<
   ) as CMSClient<
     MergeSourceCollections<S> extends CollectionsConfig
       ? MergeSourceCollections<S>
-      : C
+      : CollectionsConfig
   >;
 }

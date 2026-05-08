@@ -2,7 +2,7 @@ export type {
   BlockHandler,
   TransformContext,
   TransformerConfig,
-} from "@notion-headless-cms/renderer";
+} from "@notion-headless-cms/markdown-html";
 export type {
   BlockEnricher,
   BookmarkBlockWithOgp,

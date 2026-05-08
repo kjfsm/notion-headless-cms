@@ -1,9 +1,8 @@
+import type { PropertyDef, PropertyMap } from "@notion-headless-cms/core";
 import type {
   BaseContentItem,
   CollectionDef,
-  PropertyDef,
-  PropertyMap,
-} from "@notion-headless-cms/core";
+} from "@notion-headless-cms/core/source-author";
 
 /** 1 コレクション分のスキーマエントリ。CLI が `nhc.schema.ts` に出力する。 */
 export interface CollectionSchemaEntry {

@@ -6,8 +6,8 @@ import type {
   PropertyMap,
 } from "@notion-headless-cms/core";
 import { CMSError, isCMSError } from "@notion-headless-cms/core";
-import type { BlockHandler } from "@notion-headless-cms/renderer";
-import { Transformer } from "@notion-headless-cms/renderer";
+import type { BlockHandler } from "@notion-headless-cms/markdown-html";
+import { Transformer } from "@notion-headless-cms/markdown-html";
 import type { DataSourceObjectResponse } from "@notionhq/client";
 import {
   type BlockEnricher,

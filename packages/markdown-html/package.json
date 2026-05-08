@@ -1,7 +1,7 @@
 {
-  "name": "@notion-headless-cms/renderer",
-  "version": "0.1.8",
-  "description": "Markdown to HTML renderer using remark/rehype for notion-headless-cms",
+  "name": "@notion-headless-cms/markdown-html",
+  "version": "1.0.0",
+  "description": "Markdown を HTML に変換する remark/rehype ベースのレンダラ",
   "keywords": [
     "notion",
     "headless-cms",
@@ -20,7 +20,7 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kjfsm/notion-headless-cms.git",
-    "directory": "packages/renderer"
+    "directory": "packages/markdown-html"
   },
   "type": "module",
   "sideEffects": false,
