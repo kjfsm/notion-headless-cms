@@ -1,5 +1,14 @@
 # example-node-express
 
+## 0.0.44
+
+### Patch Changes
+
+- Updated dependencies [700ca69]
+  - @notion-headless-cms/block-html@1.0.1
+  - @notion-headless-cms/node@1.0.1
+  - @notion-headless-cms/notion-orm@0.1.27
+
 ## 0.0.43
 
 ### Patch Changes

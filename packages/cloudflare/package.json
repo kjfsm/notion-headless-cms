@@ -1,6 +1,6 @@
 {
   "name": "@notion-headless-cms/cloudflare",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Cloudflare Workers 向け notion-headless-cms メタパッケージ — createCms と cloudflarePreset を一括提供",
   "keywords": [
     "notion",
