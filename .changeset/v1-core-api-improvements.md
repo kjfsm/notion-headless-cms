@@ -1,15 +1,15 @@
 ---
-"@notion-headless-cms/core": major
-"@notion-headless-cms/cache": major
-"@notion-headless-cms/notion-source": major
-"@notion-headless-cms/block-html": major
-"@notion-headless-cms/markdown-html": major
-"@notion-headless-cms/node": major
-"@notion-headless-cms/cloudflare": major
-"@notion-headless-cms/next": major
+"@notion-headless-cms/core": patch
+"@notion-headless-cms/cache": patch
+"@notion-headless-cms/notion-source": patch
+"@notion-headless-cms/block-html": patch
+"@notion-headless-cms/markdown-html": patch
+"@notion-headless-cms/node": patch
+"@notion-headless-cms/cloudflare": patch
+"@notion-headless-cms/next": patch
 ---
 
-v1.0 完全刷新: nodePreset・メタパッケージ・パッケージ rename・CMSError 拡張・cloudflarePreset ctx 必須化
+完全刷新: nodePreset・メタパッケージ・パッケージ rename・CMSError 拡張・cloudflarePreset ctx 必須化
 
 ## 破壊的変更
 
