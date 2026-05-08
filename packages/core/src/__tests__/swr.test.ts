@@ -60,7 +60,9 @@ describe("SWR（Stale-While-Revalidate）", () => {
     });
 
     const cms = createClient({
-      collections: { posts: { source, slugField: "slug" } },
+      sources: {
+        mock: { collections: { posts: { source, slugField: "slug" } } },
+      },
       renderer: mockRenderer,
       cache: [cache],
       swr: { ttlMs: 1000 },
@@ -109,7 +111,9 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
     // TTL 未設定（永続キャッシュ）
     const cms = createClient({
-      collections: { posts: { source, slugField: "slug" } },
+      sources: {
+        mock: { collections: { posts: { source, slugField: "slug" } } },
+      },
       renderer: mockRenderer,
       cache: [cache],
       waitUntil,
@@ -165,7 +169,9 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
     // TTL 未設定（永続キャッシュ）
     const cms = createClient({
-      collections: { posts: { source, slugField: "slug" } },
+      sources: {
+        mock: { collections: { posts: { source, slugField: "slug" } } },
+      },
       renderer: mockRenderer,
       cache: [cache],
       waitUntil,
@@ -208,7 +214,9 @@ describe("SWR（Stale-While-Revalidate）", () => {
     });
 
     const cms = createClient({
-      collections: { posts: { source, slugField: "slug" } },
+      sources: {
+        mock: { collections: { posts: { source, slugField: "slug" } } },
+      },
       renderer: mockRenderer,
       cache: [cache],
       swr: { ttlMs: 1000 },
@@ -235,7 +243,9 @@ describe("SWR（Stale-While-Revalidate）", () => {
     });
 
     const cms = createClient({
-      collections: { posts: { source, slugField: "slug" } },
+      sources: {
+        mock: { collections: { posts: { source, slugField: "slug" } } },
+      },
       renderer: mockRenderer,
       cache: [memoryCache()],
       logger: { debug: debugFn },
@@ -268,14 +278,18 @@ describe("SWR（Stale-While-Revalidate）", () => {
     });
 
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return [item];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return [item];
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
       renderer: mockRenderer,
@@ -315,7 +329,9 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
     });
     const cms = createClient({
-      collections: { posts: { source, slugField: "slug" } },
+      sources: {
+        mock: { collections: { posts: { source, slugField: "slug" } } },
+      },
       renderer: mockRenderer,
       cache: [cache],
       swr: { ttlMs: 1000 },
@@ -364,7 +380,9 @@ describe("SWR（Stale-While-Revalidate）", () => {
     });
 
     const cms = createClient({
-      collections: { posts: { source, slugField: "slug" } },
+      sources: {
+        mock: { collections: { posts: { source, slugField: "slug" } } },
+      },
       renderer: mockRenderer,
       cache: [cache],
       logger: { debug: debugFn },
@@ -414,7 +432,9 @@ describe("SWR（Stale-While-Revalidate）", () => {
     });
 
     const cms = createClient({
-      collections: { posts: { source, slugField: "slug" } },
+      sources: {
+        mock: { collections: { posts: { source, slugField: "slug" } } },
+      },
       renderer: mockRenderer,
       cache: [cache],
       swr: { ttlMs: 60_000 },
@@ -461,7 +481,9 @@ describe("SWR（Stale-While-Revalidate）", () => {
     });
 
     const cms = createClient({
-      collections: { posts: { source, slugField: "slug" } },
+      sources: {
+        mock: { collections: { posts: { source, slugField: "slug" } } },
+      },
       renderer: mockRenderer,
       cache: [cache],
       hooks: { onListCacheRevalidated },
@@ -507,7 +529,9 @@ describe("SWR（Stale-While-Revalidate）", () => {
     });
 
     const cms = createClient({
-      collections: { posts: { source, slugField: "slug" } },
+      sources: {
+        mock: { collections: { posts: { source, slugField: "slug" } } },
+      },
       renderer: mockRenderer,
       cache: [cache],
       swr: { ttlMs: 60_000 },
@@ -538,7 +562,9 @@ describe("SWR（Stale-While-Revalidate）", () => {
     });
 
     const cms = createClient({
-      collections: { posts: { source, slugField: "slug" } },
+      sources: {
+        mock: { collections: { posts: { source, slugField: "slug" } } },
+      },
       renderer: mockRenderer,
       // ttlMs を設定するとリスト差分なし時に cachedAt がリセットされる
       cache: [cache],
@@ -567,15 +593,19 @@ describe("metadata と content の分離", () => {
     const getContentSpy = vi.spyOn(cache.doc, "getContent");
 
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              return [item];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return [item];
+                },
+                loadMarkdown,
+              }),
+              slugField: "slug",
             },
-            loadMarkdown,
-          }),
-          slugField: "slug",
+          },
         },
       },
       renderer: mockRenderer,
@@ -612,16 +642,20 @@ describe("リトライ中のロガー", () => {
     });
     let callCount = 0;
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              callCount++;
-              if (callCount === 1) throw retryableErr;
-              return [];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  callCount++;
+                  if (callCount === 1) throw retryableErr;
+                  return [];
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
       renderer: mockRenderer,
@@ -647,16 +681,20 @@ describe("リトライ中のロガー", () => {
     };
     let callCount = 0;
     const cms = createClient({
-      collections: {
-        posts: {
-          source: makeMockSource({
-            async list() {
-              callCount++;
-              if (callCount === 1) throw retryableErr;
-              return [targetItem];
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  callCount++;
+                  if (callCount === 1) throw retryableErr;
+                  return [targetItem];
+                },
+              }),
+              slugField: "slug",
             },
-          }),
-          slugField: "slug",
+          },
         },
       },
       renderer: mockRenderer,

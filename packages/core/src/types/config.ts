@@ -102,16 +102,9 @@ export type InferCollectionItem<C> =
  *   ...nodePreset(),
  * });
  */
-export interface CreateClientOptions<
-  C extends CollectionsConfig = CollectionsConfig,
-  S extends CMSSources = CMSSources,
-> {
+export interface CreateClientOptions<S extends CMSSources = CMSSources> {
   /** データソースアダプター (`@notion-headless-cms/notion-source` 等) のマップ。 */
   sources?: S;
-  /**
-   * @internal 低レベル API。sources を使うこと。
-   */
-  collections?: C;
   /**
    * キャッシュアダプタ (配列)。未指定時はキャッシュなし。
    * - `memoryCache()` のように doc + image 両方を担当するもの

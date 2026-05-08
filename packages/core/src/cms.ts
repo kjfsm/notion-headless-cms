@@ -127,30 +127,24 @@ function applyLogLevel(
  *
  * const posts = await cms.posts.list();
  */
-export function createClient<
-  C extends CollectionsConfig = CollectionsConfig,
-  S extends CMSSources = CMSSources,
->(
-  opts: CreateClientOptions<C, S>,
+export function createClient<S extends CMSSources = CMSSources>(
+  opts: CreateClientOptions<S>,
 ): CMSClient<
   MergeSourceCollections<S> extends CollectionsConfig
     ? MergeSourceCollections<S>
-    : C
+    : CollectionsConfig
 > {
-  // sources を渡された場合は後勝ちで collections にマージする
-  let mergedFromSources: CollectionsConfig | undefined;
+  // sources の各アダプタが持つ collections をマージする
+  const collectionsInput: CollectionsConfig = {};
   if (opts.sources) {
-    mergedFromSources = {};
     for (const adapter of Object.values(
       opts.sources as unknown as Record<string, CMSAdapter | undefined>,
     )) {
-      if (adapter) Object.assign(mergedFromSources, adapter.collections);
+      if (adapter) Object.assign(collectionsInput, adapter.collections);
     }
   }
-  const collectionsInput: CollectionsConfig | undefined =
-    mergedFromSources ?? opts.collections;
 
-  if (!collectionsInput || Object.keys(collectionsInput).length === 0) {
+  if (Object.keys(collectionsInput).length === 0) {
     throw new CMSError({
       code: "core/config_invalid",
       message:
@@ -210,10 +204,10 @@ export function createClient<
     ...(opts.rateLimiter ?? {}),
   };
 
-  const collectionNames: (keyof C & string)[] = [];
+  const collectionNames: string[] = [];
   const collections: Record<string, CollectionClient<BaseContentItem>> = {};
   for (const [name, def] of Object.entries(collectionsInput)) {
-    collectionNames.push(name as keyof C & string);
+    collectionNames.push(name);
     const source = def.source as DataSource<BaseContentItem>;
     const colHooks = def.hooks as CMSHooks<BaseContentItem> | undefined;
     const collectionHooks: CMSHooks<BaseContentItem> = colHooks
@@ -308,6 +302,6 @@ export function createClient<
   ) as CMSClient<
     MergeSourceCollections<S> extends CollectionsConfig
       ? MergeSourceCollections<S>
-      : C
+      : CollectionsConfig
   >;
 }
