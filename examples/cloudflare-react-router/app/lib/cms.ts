@@ -1,9 +1,6 @@
+import { notionEmbed, youtubeProvider } from "@notion-headless-cms/block-html";
 import { cloudflarePreset } from "@notion-headless-cms/cache/cloudflare";
 import { createClient } from "@notion-headless-cms/core";
-import {
-  notionEmbed,
-  youtubeProvider,
-} from "@notion-headless-cms/notion-embed";
 import { notionKatex } from "@notion-headless-cms/notion-katex";
 import { notionSource } from "@notion-headless-cms/notion-source";
 import { schema } from "../generated/nhc";

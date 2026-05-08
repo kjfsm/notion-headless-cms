@@ -1,9 +1,6 @@
+import { notionEmbed, youtubeProvider } from "@notion-headless-cms/block-html";
 import { memoryCache } from "@notion-headless-cms/cache";
 import { createClient } from "@notion-headless-cms/core";
-import {
-  notionEmbed,
-  youtubeProvider,
-} from "@notion-headless-cms/notion-embed";
 import { notionSource } from "@notion-headless-cms/notion-source";
 import { schema } from "../generated/nhc.js";
 

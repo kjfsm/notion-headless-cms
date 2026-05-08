@@ -71,10 +71,10 @@
     "provenance": true
   },
   "peerDependencies": {
-    "@notion-headless-cms/renderer": "workspace:*"
+    "@notion-headless-cms/markdown-html": "workspace:*"
   },
   "peerDependenciesMeta": {
-    "@notion-headless-cms/renderer": {
+    "@notion-headless-cms/markdown-html": {
       "optional": true
     }
   },

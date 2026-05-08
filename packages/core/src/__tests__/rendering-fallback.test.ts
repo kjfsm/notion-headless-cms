@@ -5,7 +5,7 @@
  */
 import { describe, expect, it, vi } from "vitest";
 
-vi.mock("@notion-headless-cms/renderer", () => {
+vi.mock("@notion-headless-cms/markdown-html", () => {
   throw new Error("renderer package not installed");
 });
 
@@ -60,7 +60,7 @@ function makeContext(
 }
 
 describe("loadDefaultRenderer — import 失敗時のフォールバック", () => {
-  it("@notion-headless-cms/renderer の import が失敗すると core/config_invalid CMSError をスローする", async () => {
+  it("@notion-headless-cms/markdown-html の import が失敗すると core/config_invalid CMSError をスローする", async () => {
     const item = makeItem();
     const ctx = makeContext({ rendererFn: undefined });
     await expect(buildCachedItemContent(item, ctx)).rejects.toSatisfy(

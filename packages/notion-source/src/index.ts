@@ -1,10 +1,10 @@
 import type { CMSAdapter } from "@notion-headless-cms/core/source-author";
+import type { BlockHandler } from "@notion-headless-cms/markdown-html";
 import type {
   BlockEnricher,
   FetchBlockTreeOgpOptions,
 } from "@notion-headless-cms/notion-orm";
 import { createNotionCollection } from "@notion-headless-cms/notion-orm";
-import type { BlockHandler } from "@notion-headless-cms/renderer";
 import type { CollectionsFromSchema, SchemaMap } from "./schema-types.js";
 
 export type {

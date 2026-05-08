@@ -18,9 +18,9 @@
     "@notion-headless-cms/cache": "workspace:*",
     "@notion-headless-cms/core": "workspace:*",
     "@notion-headless-cms/notion-source": "workspace:*",
-    "@notion-headless-cms/notion-embed": "workspace:*",
+    "@notion-headless-cms/block-html": "workspace:*",
     "@notion-headless-cms/notion-orm": "workspace:*",
-    "@notion-headless-cms/renderer": "workspace:*",
+    "@notion-headless-cms/markdown-html": "workspace:*",
     "express": "^5.2.1",
     "zod": "^4.4.3"
   },

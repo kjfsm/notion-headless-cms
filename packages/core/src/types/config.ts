@@ -17,7 +17,7 @@ export type RendererPluginList = unknown[];
 
 /**
  * render() オプション。core は renderer の実装を知らず、この型だけを扱う。
- * @notion-headless-cms/renderer の renderMarkdown() はこのシグネチャと構造的に互換。
+ * @notion-headless-cms/markdown-html の renderMarkdown() はこのシグネチャと構造的に互換。
  */
 export interface RenderOptions {
   imageProxyBase?: string;
@@ -26,7 +26,7 @@ export interface RenderOptions {
   rehypePlugins?: RendererPluginList;
 }
 
-/** カスタムレンダラー関数の型。デフォルトは @notion-headless-cms/renderer の renderMarkdown。 */
+/** カスタムレンダラー関数の型。デフォルトは @notion-headless-cms/markdown-html の renderMarkdown。 */
 export type RendererFn = (
   markdown: string,
   opts?: RenderOptions,
@@ -123,7 +123,7 @@ export interface CreateClientOptions<
   swr?: SWRConfig;
   /**
    * Markdown→HTML レンダラー。
-   * 省略時は `@notion-headless-cms/renderer` の `renderMarkdown` を動的 import で使用する。
+   * 省略時は `@notion-headless-cms/markdown-html` の `renderMarkdown` を動的 import で使用する。
    * カスタム実装も `RendererFn` 型を満たせば使用可能。
    */
   renderer?: RendererFn;

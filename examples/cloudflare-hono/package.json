@@ -19,7 +19,7 @@
     "@notion-headless-cms/core": "workspace:*",
     "@notion-headless-cms/notion-source": "workspace:*",
     "@notion-headless-cms/notion-orm": "workspace:*",
-    "@notion-headless-cms/renderer": "workspace:*",
+    "@notion-headless-cms/markdown-html": "workspace:*",
     "hono": "^4.12.17",
     "zod": "^4.4.3"
   },

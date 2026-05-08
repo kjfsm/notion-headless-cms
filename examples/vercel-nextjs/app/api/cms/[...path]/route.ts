@@ -1,4 +1,4 @@
-import { createNextHandler } from "@notion-headless-cms/adapter-next";
+import { createNextHandler } from "@notion-headless-cms/next";
 import { cms } from "@/app/lib/cms";
 
 const handler = createNextHandler(cms, {

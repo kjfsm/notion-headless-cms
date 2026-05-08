@@ -3,7 +3,7 @@ import { notionEmbed } from "../index";
 import { youtubeProvider } from "../providers/youtube";
 import type { BlockHandler, BlockObjectResponse } from "../types";
 
-vi.mock("@notion-headless-cms/renderer", () => ({
+vi.mock("@notion-headless-cms/markdown-html", () => ({
   renderMarkdown: vi.fn(
     async (md: string, opts?: { allowDangerousHtml?: boolean }) => {
       return `[allowDangerousHtml=${opts?.allowDangerousHtml ?? false}]${md}`;

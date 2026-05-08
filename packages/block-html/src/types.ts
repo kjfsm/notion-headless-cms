@@ -64,13 +64,13 @@ export interface OgpFetchOptions {
   userAgent?: string;
 }
 
-/** @notion-headless-cms/renderer の BlockHandler と同じシグネチャ。型のみ定義して依存を避ける。 */
+/** @notion-headless-cms/markdown-html の BlockHandler と同じシグネチャ。型のみ定義して依存を避ける。 */
 export type BlockHandler = (
   block: BlockObjectResponse,
   context: { client: unknown; pageId: string },
 ) => Promise<string> | string;
 
-/** @notion-headless-cms/renderer の RendererFn と同じシグネチャ。 */
+/** @notion-headless-cms/markdown-html の RendererFn と同じシグネチャ。 */
 export type RendererFn = (
   markdown: string,
   options?: {

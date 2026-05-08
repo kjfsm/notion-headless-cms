@@ -48,7 +48,9 @@ export function notionEmbed(opts?: NotionEmbedOptions): NotionEmbedResult {
   const blocks = createBlockHandlers(opts ?? {});
 
   const renderer: RendererFn = async (markdown, rendererOpts) => {
-    const { renderMarkdown } = await import("@notion-headless-cms/renderer");
+    const { renderMarkdown } = await import(
+      "@notion-headless-cms/markdown-html"
+    );
 
     const rehypePlugins = await embedRehypePlugins({
       providers: opts?.providers ?? [],
