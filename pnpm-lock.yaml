@@ -463,9 +463,6 @@ importers:
 
   packages/cloudflare:
     dependencies:
-      '@notion-headless-cms/block-html':
-        specifier: workspace:*
-        version: link:../block-html
       '@notion-headless-cms/cache':
         specifier: workspace:*
         version: link:../cache
@@ -521,9 +518,6 @@ importers:
 
   packages/next:
     dependencies:
-      '@notion-headless-cms/cache':
-        specifier: workspace:*
-        version: link:../cache
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core
