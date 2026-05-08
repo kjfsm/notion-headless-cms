@@ -32,31 +32,22 @@ import type {
 
 const DEFAULT_IMAGE_PROXY_BASE = "/api/images";
 
-/** `CMSClient<C>` — コレクション別アクセス + グローバル操作の合成型。 */
+/** コレクション別アクセス + グローバル操作の合成型。 */
 export type CMSClient<C extends CollectionsConfig> = {
   [K in keyof C]: CollectionClient<InferCollectionItem<C[K]>>;
 } & CMSGlobalOps;
 
-/** `CMSClient` のグローバル名前空間。 */
 export interface CMSGlobalOps {
-  /** 登録されているコレクション名の一覧。 */
   readonly collections: readonly string[];
-  /** 全コレクションまたは特定スコープのキャッシュを無効化する。 */
   invalidate(scope?: InvalidateScope): Promise<void>;
-  /** Web Standard なルーティングハンドラ (画像プロキシ / webhook) を生成する。 */
+  /** Web Standard な Request/Response ベースのルートハンドラ (画像プロキシ + webhook)。 */
   handler(opts?: HandlerOptions): (req: Request) => Promise<Response>;
-  /** ハッシュキーでキャッシュ画像を取得する。 */
   getCachedImage(hash: string): Promise<StorageBinary | null>;
   /**
-   * Notion 画像 URL を `{imageProxyBase}/{sha256}` 形式へ変換しキャッシュへ書き込む関数。
-   * 画像キャッシュが未設定 (noop) の場合は `undefined`。react-renderer の
-   * `resolveBlockImageUrls` などサーバー側で URL 書き換えに使う。
+   * Notion 画像 URL を `{imageProxyBase}/{sha256}` 形式へ変換しキャッシュへ書き込む。
+   * 画像キャッシュが未設定 (noop) の場合は `undefined`。
    */
   readonly cacheImage: ((url: string) => Promise<string>) | undefined;
-  /**
-   * 画像プロキシのベース URL (`createClient({ imageProxyBase })`)。
-   * デフォルト `/api/images`。
-   */
   readonly imageProxyBase: string;
 }
 
@@ -69,10 +60,7 @@ interface ResolvedCache {
 }
 
 /**
- * `cache` オプションから document / image オペレーションを解決する。
- *
- * - 各 adapter の `handles` を見て先勝ち (最初に見つかったもの) で振り分ける
- * - 未指定なら両方 noop
+ * adapter の `handles` を見て先勝ちで document / image を割り当てる。未指定は両方 noop。
  */
 function resolveCache(
   cache: readonly CacheAdapter[] | undefined,
@@ -109,7 +97,6 @@ const LOG_LEVEL_ORDER: Record<LogLevel, number> = {
   error: 3,
 };
 
-/** `logger` から `minLevel` 未満のレベルを除いた新しい Logger を返す。 */
 function applyLogLevel(
   logger: Logger | undefined,
   minLevel: LogLevel,
@@ -155,7 +142,7 @@ export function createClient<
     ? MergeSourceCollections<S>
     : C
 > {
-  // sources が指定されていれば各 adapter の collections をマージする (後勝ち)
+  // sources を渡された場合は後勝ちで collections にマージする
   let mergedFromSources: CollectionsConfig | undefined;
   if (opts.sources) {
     mergedFromSources = {};

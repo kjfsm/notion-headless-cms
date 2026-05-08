@@ -1,5 +1,4 @@
-// このパッケージ全体がクライアント側コンポーネント。tsdown が単一ファイルにバンドルする
-// 際に各ファイルの "use client" が脱落するため、エントリ先頭でも宣言する。
+// tsdown でバンドルすると各ファイルの "use client" が落ちるため、エントリ側でも宣言する
 "use client";
 
 export type { BlockSwitchProps } from "./BlockSwitch.js";

@@ -14,23 +14,20 @@ export interface BlockSwitchProps {
   block: NotionBlock;
 }
 
-// 各ブロック型ごとに固有プロップ型を持つコンポーネントを単一の Switch で扱うため、
-// 型整合は block.type による narrowing で保証し、
-// React 要素を作る側ではプロップを共通形にキャストする。
+// ブロック型ごとに別プロップ型を持つコンポーネント群を単一の Switch でディスパッチする。
+// 型整合は block.type による narrowing で保証し、要素を作る側はプロップを共通形にキャスト。
 type AnyBlockComponent = ComponentType<BlockComponentProps>;
 
-/** type で対応する Block コンポーネントを引き当てて描画する。components / classNames は Context から取得。 */
+/** `block.type` から対応するコンポーネントを Context 経由で引き当てて描画する。 */
 export function BlockSwitch({ block }: BlockSwitchProps) {
   const { components, classNames } = useNotionContext();
   const C = pickComponent(block, components) as AnyBlockComponent;
   return <C block={block} className={classNames?.[block.type]} />;
 }
 
-// `satisfies Record<BlockObjectResponse["type"], unknown>` により、
-// `@notionhq/client` 側で BlockObjectResponse union に新しい block type が
-// 追加された場合は型エラーになる (= ライブラリ更新検知)。
-// 自前の type-test ファイルを置かずに、@notionhq/client の型を直接用いて
-// 網羅性を保証する仕組み。
+// `@notionhq/client` 側で BlockObjectResponse の union に新 type が増えると
+// satisfies が型エラーになる (= ライブラリ追従漏れの検知)。自前の type-test を
+// 置かずに @notionhq/client の型を直接使って網羅性を保証する。
 function pickComponent(block: NotionBlock, o?: ComponentOverrides): unknown {
   const map = {
     paragraph: o?.Paragraph ?? Defaults.Paragraph,
@@ -71,8 +68,7 @@ function pickComponent(block: NotionBlock, o?: ComponentOverrides): unknown {
     transcription: Defaults.Unsupported,
     unsupported: o?.Unsupported ?? Defaults.Unsupported,
   } satisfies Record<BlockObjectResponse["type"], unknown>;
-  // 実行時に未知の type (型では現れないがランタイムで Notion API が返した新 type) は
-  // Unsupported にフォールバック。型チェックは satisfies で別途網羅性を保証している。
+  // 型より新しいランタイム値 (lib 未追従の Notion 新 block type) は Unsupported に倒す
   return (
     (map as Record<string, unknown>)[block.type] ??
     o?.Unsupported ??

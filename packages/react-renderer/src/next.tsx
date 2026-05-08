@@ -1,14 +1,5 @@
 "use client";
 
-// Next.js App Router 向けの再検証ヘルパ。
-// 利用例:
-//   <NotionRevalidator />            // Server Component (page.tsx) に直接置ける
-//   useNotionRevalidate({ on: ["mount", "visibility"] });
-//
-// `useRouter().refresh()` は現在のルートの Server Component を再評価し、RSC
-// ストリームを差分で受け取って画面を静かに更新する。クエリも別 API fetch も
-// 発生しないため、URL は変わらず、UI も chatter なく書き換わる。
-
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
 import {
@@ -22,7 +13,11 @@ export type {
 } from "./internal/revalidate.js";
 
 /**
- * Next.js App Router の `router.refresh()` を内部で呼ぶフック。
+ * Next.js App Router で SWR 再検証を `router.refresh()` 経由で発火させるフック。
+ * RSC ストリームを差分で受け取るため、URL も変わらず別 API fetch も発生しない。
+ *
+ * @example
+ *   useNotionRevalidate({ on: ["mount", "visibility"] });
  */
 export function useNotionRevalidate(
   opts: UseNotionRevalidateOptions = {},
@@ -34,7 +29,7 @@ export function useNotionRevalidate(
   useRevalidateEffect(stable, opts);
 }
 
-/** `useNotionRevalidate` を呼ぶだけのレンダー無しコンポーネント。 */
+/** `useNotionRevalidate` を呼ぶだけのレンダー無しコンポーネント (page.tsx 用)。 */
 export function NotionRevalidator(props: UseNotionRevalidateOptions): null {
   useNotionRevalidate(props);
   return null;

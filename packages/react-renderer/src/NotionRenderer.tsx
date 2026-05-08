@@ -6,6 +6,10 @@ import { cn } from "./lib/utils.js";
 import { NotionBlocks } from "./NotionBlocks.js";
 import type { NotionRendererProps } from "./types.js";
 
+/**
+ * Notion ブロック木 (`NotionBlockTreeNode[]`) を React で描画するエントリ。
+ * `components` / `classNames` を Context に注入して各ブロックコンポーネントへ伝搬する。
+ */
 export function NotionRenderer({
   blocks,
   components,

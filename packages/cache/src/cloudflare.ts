@@ -425,7 +425,7 @@ export function cloudflarePreset(opts: CloudflarePresetOptions): {
     { prefix: opts.prefix },
   );
   const ctx = opts.ctx;
-  // ExecutionContext.waitUntil は `this` バインドが必要なので bind する。
+  // ExecutionContext.waitUntil は `this` を必要とするため、参照を切り出すには再ラップする
   const waitUntil = ctx ? (p: Promise<unknown>) => ctx.waitUntil(p) : undefined;
   return { cache, waitUntil };
 }

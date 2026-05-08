@@ -75,9 +75,8 @@ export interface NotionCollectionSchemaOptions<T extends BaseContentItem>
 }
 
 /**
- * CLI が生成した `*Properties` オブジェクトを使うオプション。
- * ページ構成の知識（slug/status の意味）を持たない型付きNotionクライアント。
- * slug/status/publishedStatuses は `createClient({ collections })` で指定する。
+ * CLI が生成した `*Properties` を直接渡す形式。
+ * このコレクション自身は slug/status の意味を持たず、解釈は `createClient({ collections })` 側に委ねる。
  */
 export interface NotionCollectionPropertiesOptions
   extends NotionCollectionCommonOptions {
@@ -92,12 +91,11 @@ export type NotionCollectionOptions<
   | NotionCollectionSchemaOptions<T>
   | NotionCollectionPropertiesOptions;
 
-/** Notion を `DataSource<T>` として実装するコレクションクラス。 */
 class NotionCollection<T extends BaseContentItem = BaseContentItem>
   implements DataSource<T>
 {
   readonly name = "notion";
-  /** CLI 生成の `*Properties` に対応するプロパティマップ。properties オプション使用時のみ設定される。 */
+  /** properties オプション使用時のみ設定。core 側の `findByProp` 高速化に使われる。 */
   readonly properties?: PropertyMap;
   private readonly client: ReturnType<typeof createClient>;
   private readonly dbName: string | undefined;
@@ -129,9 +127,7 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
     } else if ("mapItem" in opts && opts.mapItem) {
       this.itemMapper = opts.mapItem;
     } else if ("properties" in opts && opts.properties && !("fields" in opts)) {
-      // CLI 生成の PropertyMap を使う新形式。
-      // slug/status/publishedStatuses はページ構成の知識を持たないため設定しない。
-      // createClient({ collections }) で指定する。
+      // CLI 生成 PropertyMap 形式。slug/status は createClient({ collections }) 側で解釈する
       const propMap = opts.properties as PropertyMap;
       this.properties = propMap;
       this.itemMapper = ((page: NotionPage) =>
@@ -149,7 +145,7 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
     }
   }
 
-  /** dataSourceId を返す。未設定なら dbName で検索して解決し、結果をキャッシュする。 */
+  /** dbName 指定時は最初の呼び出しで `client.search` を使って ID を解決し、結果をキャッシュする。 */
   private async getDataSourceId(): Promise<string> {
     if (this.resolvedDataSourceId) return this.resolvedDataSourceId;
     if (this.resolvingDataSourceId) return this.resolvingDataSourceId;
@@ -175,7 +171,7 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
           return ds.id;
         }
       }
-      // 部分一致の結果はあっても完全一致しない場合は意図しないDBを掴むリスクがあるためエラーにする
+      // 完全一致を強制: 部分一致を許すと別 DB を掴む事故が起きやすい
       throw new CMSError({
         code: "source/fetch_items_failed",
         message: `Notion データベース "${dbName}" が見つかりませんでした。インテグレーションが DB にアクセスできるか確認してください。`,
@@ -309,23 +305,24 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
   }
 }
 
-/** デフォルトマッパーで `BaseContentItem` を返す Notion コレクションを生成する。 */
+/**
+ * Notion DB を `DataSource<T>` として束ねる。
+ *
+ * 入力形式は 4 通り:
+ * - デフォルト (`BaseContentItem` を返す)
+ * - `mapItem` でカスタム T に写像
+ * - 宣言的 `schema` (zod + defineMapping)
+ * - CLI 生成の `*Properties` (slug/status の解釈は `createClient({ collections })` 側)
+ */
 export function createNotionCollection(
   opts: NotionCollectionDefaultOptions,
 ): DataSource<BaseContentItem>;
-/** カスタム `mapItem` で任意の `T` に写像する Notion コレクションを生成する。 */
 export function createNotionCollection<T extends BaseContentItem>(
   opts: NotionCollectionMapItemOptions<T>,
 ): DataSource<T>;
-/** 宣言的 `schema` で任意の `T` に写像する Notion コレクションを生成する。 */
 export function createNotionCollection<T extends BaseContentItem>(
   opts: NotionCollectionSchemaOptions<T>,
 ): DataSource<T>;
-/**
- * CLI 生成の `*Properties` オブジェクトを使う新形式。
- * ページ構成の知識（slug/status/publishedStatuses の意味）を持たず、
- * すべての設定は `createClient({ collections })` で行う。
- */
 export function createNotionCollection(
   opts: NotionCollectionPropertiesOptions,
 ): DataSource<BaseContentItem>;
