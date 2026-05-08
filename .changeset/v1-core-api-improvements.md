@@ -2,9 +2,14 @@
 "@notion-headless-cms/core": major
 "@notion-headless-cms/cache": major
 "@notion-headless-cms/notion-source": major
+"@notion-headless-cms/block-html": major
+"@notion-headless-cms/markdown-html": major
+"@notion-headless-cms/node": major
+"@notion-headless-cms/cloudflare": major
+"@notion-headless-cms/next": major
 ---
 
-v1.0 API 整理 (第1フェーズ): nodePreset 追加・公開 export 整理・CMSError 拡張・cloudflarePreset ctx 必須化
+v1.0 完全刷新: nodePreset・メタパッケージ・パッケージ rename・CMSError 拡張・cloudflarePreset ctx 必須化
 
 ## 破壊的変更
 
@@ -31,3 +36,15 @@ v1.0 API 整理 (第1フェーズ): nodePreset 追加・公開 export 整理・C
 - `nodePreset(opts?)` を追加。`...nodePreset()` を `createClient` にスプレッドするだけで Node.js の標準構成（memoryCache + SWR 5 分）が有効になる
 - `@notion-headless-cms/core/source-author` サブパスを追加。データソースアダプター実装者向けの型を分離
 - `@notion-headless-cms/core/preset/node` サブパスを追加
+
+## パッケージ rename (旧パッケージは廃止)
+
+- `@notion-headless-cms/notion-embed` → `@notion-headless-cms/block-html`
+- `@notion-headless-cms/renderer` → `@notion-headless-cms/markdown-html`
+- `@notion-headless-cms/adapter-next` → `@notion-headless-cms/next` に統合
+
+## 新規メタパッケージ
+
+- `@notion-headless-cms/node`: Node.js 向け (core + notion-source + markdown-html + nodePreset)
+- `@notion-headless-cms/cloudflare`: Cloudflare Workers 向け (core + notion-source + cache/cloudflare + block-html)
+- `@notion-headless-cms/next`: Next.js 向け (core + notion-source + markdown-html + createNextHandler)

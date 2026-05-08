@@ -25,7 +25,7 @@ function makeMockSource(
 // collections マップを sources 形式にラップするヘルパー（ジェネリクスで型を保持）
 function makeSources<C extends Record<string, CollectionDef<BaseContentItem>>>(
   cols: C,
-) {
+): { mock: { readonly collections: C } } {
   return { mock: { collections: cols } };
 }
 
