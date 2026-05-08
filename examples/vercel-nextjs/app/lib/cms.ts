@@ -1,8 +1,7 @@
 import { notionEmbed, youtubeProvider } from "@notion-headless-cms/block-html";
 import { memoryCache } from "@notion-headless-cms/cache";
 import { nextCache } from "@notion-headless-cms/cache/next";
-import { createClient } from "@notion-headless-cms/core";
-import { notionSource } from "@notion-headless-cms/notion-source";
+import { createClient, notionSource } from "@notion-headless-cms/next";
 import { schema } from "@/app/generated/nhc";
 
 const embed = notionEmbed({

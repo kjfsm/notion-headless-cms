@@ -1,6 +1,8 @@
-import { cloudflarePreset } from "@notion-headless-cms/cache/cloudflare";
-import { createClient } from "@notion-headless-cms/core";
-import { notionSource } from "@notion-headless-cms/notion-source";
+import {
+  cloudflarePreset,
+  createClient,
+  notionSource,
+} from "@notion-headless-cms/cloudflare";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -9,11 +11,11 @@ export interface Env {
   IMG_BUCKET?: R2Bucket;
 }
 
-// 構造型で受けることで Hono の `ExecutionContext<unknown>` と
-// Workers ランタイムの `ExecutionContext` の差を吸収する。
+// ctx は構造型で受けることで Hono の ExecutionContext と Workers の ExecutionContext 両方に対応する。
+// Workers ランタイムでは常に ctx が渡るため必須とする。
 export function makeCms(
   env: Env,
-  ctx?: { waitUntil(p: Promise<unknown>): void },
+  ctx: { waitUntil(p: Promise<unknown>): void },
 ) {
   return createClient({
     sources: {
@@ -29,8 +31,7 @@ export function makeCms(
       }),
     },
     // swr.ttlMs は未指定。キャッシュは永続させ、Notion の lastEditedTime に
-    // 差分があったときだけ waitUntil の bg で差し替える。Hono では
-    // c.executionCtx を渡さないと bg が打ち切られる。
+    // 差分があったときだけ waitUntil の bg で差し替える。ctx がないと bg が打ち切られる。
     ...cloudflarePreset({ env, ctx }),
   });
 }

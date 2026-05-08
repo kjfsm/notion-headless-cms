@@ -1,6 +1,8 @@
-import { cloudflarePreset } from "@notion-headless-cms/cache/cloudflare";
-import { createClient } from "@notion-headless-cms/core";
-import { notionSource } from "@notion-headless-cms/notion-source";
+import {
+  cloudflarePreset,
+  createClient,
+  notionSource,
+} from "@notion-headless-cms/cloudflare";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -10,10 +12,10 @@ export interface Env {
 }
 
 // ctx は `waitUntil` だけ要求する構造型で受ける。
-// Astro の Locals.cfContext などをそのまま渡せる。
+// Astro の Locals.cfContext などをそのまま渡せる。Workers では常に提供される。
 export function makeCms(
   env: Env,
-  ctx?: { waitUntil(p: Promise<unknown>): void },
+  ctx: { waitUntil(p: Promise<unknown>): void },
 ) {
   return createClient({
     sources: {

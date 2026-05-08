@@ -1,7 +1,9 @@
 import { notionEmbed, youtubeProvider } from "@notion-headless-cms/block-html";
-import { memoryCache } from "@notion-headless-cms/cache";
-import { createClient } from "@notion-headless-cms/core";
-import { notionSource } from "@notion-headless-cms/notion-source";
+import {
+  createClient,
+  nodePreset,
+  notionSource,
+} from "@notion-headless-cms/node";
 import { schema } from "../generated/nhc.js";
 
 const token = process.env.NOTION_TOKEN;
@@ -27,7 +29,6 @@ export const cms = createClient({
       },
     }),
   },
-  cache: [memoryCache()],
-  swr: { ttlMs: 5 * 60_000 },
+  ...nodePreset(),
   renderer: embed.renderer,
 });
