@@ -37,10 +37,7 @@ const DEFAULT_OPTS = {
   revalidatePath: "/revalidate",
 } as const;
 
-/**
- * CMSError のコードから HTTP ステータスコードを返す。
- * 既知の webhook エラーコードのみ対応し、それ以外は null を返す。
- */
+/** Webhook 系の CMSError コードを HTTP ステータスへ写像する。未対応コードは null。 */
 function webhookErrorStatus(code: string): number | null {
   if (code === "webhook/signature_invalid") return 401;
   if (code === "webhook/not_implemented") return 501;
@@ -74,7 +71,6 @@ export function createHandler(
     }
     const rel = path.slice(basePath.length) || "/";
 
-    // 画像: GET {basePath}/images/:hash
     if (req.method === "GET" && rel.startsWith(`${imagesPath}/`)) {
       const hash = rel.slice(imagesPath.length + 1);
       if (!hash) return new Response("Bad Request", { status: 400 });
@@ -86,7 +82,6 @@ export function createHandler(
       return new Response(object.data, { headers });
     }
 
-    // Revalidate: POST {basePath}/revalidate/:collection
     if (req.method === "POST" && rel.startsWith(`${revalidatePath}/`)) {
       const collection = rel.slice(revalidatePath.length + 1);
       if (!collection || collection.includes("/")) {

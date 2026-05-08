@@ -2,8 +2,7 @@ import { isFullUser, type RichTextItemResponse } from "@notionhq/client";
 import { escapeAttr, escapeHtml } from "./providers/_internal";
 import { normalizeUrl } from "./url-normalize";
 
-// AnnotationResponse 単体では公式から再公開されていないため、
-// RichTextItemResponse の indexed access で型を導出する。
+// AnnotationResponse は @notionhq/client から直接 export されないため indexed access で導出する
 type Annotations = RichTextItemResponse["annotations"];
 
 export interface RichTextRenderOptions {
@@ -12,12 +11,8 @@ export interface RichTextRenderOptions {
 }
 
 /**
- * Notion の rich_text 配列全体を HTML 文字列に変換する。
- * - text: bold/italic/code/strikethrough/underline + リンク
- * - mention: link_mention / link_preview / page / database / date / user / custom_emoji
- * - equation: LaTeX をコードブロックとして出力 (MathJax/KaTeX は利用側で処理)
- *
- * 戻り値は "生 HTML" なので allowDangerousHtml: true が有効なパイプラインでのみ使う。
+ * Notion の rich_text 配列を HTML 文字列に変換する。
+ * 戻り値は生 HTML を含むため `allowDangerousHtml` が有効なパイプラインでのみ使う。
  */
 export async function renderRichText(
   richText: ReadonlyArray<RichTextItemResponse>,
@@ -44,7 +39,6 @@ async function renderRichTextItem(
       item.href,
     );
   }
-  // text
   const text = item.text;
   const inner = escapeHtml(text.content);
   const url = text.link?.url
@@ -53,7 +47,6 @@ async function renderRichTextItem(
   return wrapAnnotations(inner, item.annotations, url);
 }
 
-/** RichTextItemResponse の mention ケースを処理する。plain_text は共通プロパティとして使う。 */
 async function renderMention(
   item: RichTextItemResponse & { type: "mention" },
   opts?: RichTextRenderOptions,
@@ -65,9 +58,8 @@ async function renderMention(
     const lm = m.link_mention;
     const href = escapeAttr(normalizeUrl(lm.href));
     const title = escapeHtml(lm.title ?? lm.href);
-    // Notion の link_mention は API から icon_url / link_provider / title を返す。
-    // 例: YouTube → icon_url=YouTube favicon, link_provider="YouTube", title=動画/チャンネル名。
-    // これにより Notion 上のインラインカードと同じ「アイコン + プロバイダ名 + 太字タイトル」表示が再現できる。
+    // Notion インラインカードの「アイコン + プロバイダ名 + 太字タイトル」表示を再現する
+    // (例: YouTube → icon_url=YouTube favicon, link_provider="YouTube", title=動画名)
     const icon = lm.icon_url
       ? `<img class="nhc-mention__icon nhc-mention__icon--image" src="${escapeAttr(lm.icon_url)}" alt="" aria-hidden="true" />`
       : `<span class="nhc-mention__icon" aria-hidden="true">🔗</span>`;
@@ -124,25 +116,23 @@ async function renderMention(
 
   if (m.type === "user") {
     const u = m.user;
-    // 公式の type guard で full / partial を識別する。partial の場合は name が無いので id を表示
+    // partial user は name が欠落しうるため id にフォールバック
     const name = isFullUser(u) ? (u.name ?? u.id) : u.id;
     return `<span class="nhc-mention nhc-mention--user">@${escapeHtml(name)}</span>`;
   }
 
   if (m.type === "custom_emoji") {
     const emoji = m.custom_emoji;
-    // CustomEmojiObject は `url` / `name` を必須として持つ
     if (emoji.url) {
       return `<img class="nhc-mention nhc-mention--emoji" src="${escapeAttr(emoji.url)}" alt="${escapeAttr(emoji.name)}" />`;
     }
     return escapeHtml(plainText);
   }
 
-  // template_mention など: plain_text にフォールバック
+  // template_mention など未対応 type は plain_text にフォールバック
   return escapeHtml(plainText);
 }
 
-/** Notion アノテーション (bold/italic/etc.) を HTML タグで包む。 */
 function wrapAnnotations(
   inner: string,
   ann: Annotations,

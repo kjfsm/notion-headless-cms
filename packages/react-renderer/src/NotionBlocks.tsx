@@ -6,10 +6,13 @@ import { useNotionContext } from "./context.js";
 import { groupListItems } from "./lib/group-list-items.js";
 import type { NotionBlock } from "./types.js";
 
-/** ブロック配列を再帰的に描画する。Context から components / classNames を読む。 */
+/**
+ * ブロック配列を描画する。連続する `bulleted_list_item` / `numbered_list_item` は
+ * 1 つの `<ul>` / `<ol>` にまとめてから子要素を `BlockSwitch` で描画する。
+ */
 export function NotionBlocks({ blocks }: { blocks: NotionBlock[] }): ReactNode {
-  // classNames は BlockSwitch が Context から取得するため、ここでは grouping のみ担当
-  useNotionContext(); // Context 内で描画されていることを保証（将来の拡張で使用）
+  // 副作用は無いが、Context スコープ外での呼び出しを Hook 規約で検出させる目的で読む
+  useNotionContext();
   const groups = groupListItems(blocks);
   return groups.map((group, idx) => {
     if (group.kind === "ul") {

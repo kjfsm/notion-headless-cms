@@ -7,15 +7,8 @@ import { unified } from "unified";
 import { rehypeImageCache } from "./rehype-image-cache";
 import type { RendererOptions } from "./types";
 
-/**
- * オプションに応じた unified processor をメモ化する。
- *
- * 1 回のリクエスト中に同じ rehype/remark プラグイン構成で複数アイテムをレンダリングするケース
- * (warm / list view) では、processor 構築コストが支配的になるため freeze 済みのプロセッサを再利用する。
- *
- * key は (allowDangerousHtml, remark length, rehype length, plugin object identity) の合成。
- * プラグインの参照同一性 (===) で判定するため、毎回新しい配列を渡すと再構築になる。
- */
+// warm / list view では同じ構成で大量レンダリングするため、freeze 済み processor を使い回す。
+// プラグイン配列は参照同一性 (===) で比較するので、呼び出しごとに新しい配列を渡すと再構築される。
 interface ProcessorMeta {
   remarkLen: number;
   rehypeLen: number;
@@ -52,9 +45,8 @@ function buildProcessor(
 }
 
 /**
- * processor キャッシュキーを引き当てる。
- * `imgCtx` を WeakMap キーにすると、同一 cacheImage 関数 (createClient 内で 1 回生成) なら
- * processor をプロセス全体で 1 つ使い回せる。
+ * `cacheImage` 関数を WeakMap キーに使い、createClient のライフサイクルに合わせて processor を共有する。
+ * これにより同一 client の全レンダリングで 1 つの freeze 済みパイプラインを再利用できる。
  */
 function getProcessor(
   imgCtx: CacheImageContext,
@@ -62,7 +54,7 @@ function getProcessor(
   remarkPlugins: PluggableList,
   rehypePlugins: PluggableList,
 ): Processor {
-  // プラグイン無し + cacheImage 無しは静的にキャッシュ (テスト/単純ケース)
+  // プラグイン無し + cacheImage 無し: テストや素朴なケース。プロセス全体で静的に共有する
   if (
     !imgCtx.cacheImage &&
     remarkPlugins.length === 0 &&
@@ -76,7 +68,6 @@ function getProcessor(
     return proc;
   }
 
-  // それ以外は cacheImage 関数を WeakMap キーにする (createClient のライフサイクルに同期)
   const key = imgCtx.cacheImage ?? imgCtx;
   const keyObj = key as object;
   const cached = PROCESSOR_CACHE.get(keyObj);
@@ -106,11 +97,11 @@ function getProcessor(
 }
 
 /**
- * Markdown を HTML に変換する。unified/remark/rehype パイプラインを使用。
+ * Markdown を HTML に変換する (unified + remark + rehype)。
  *
- * - cacheImage が指定された場合は Notion 画像 URL をプロキシ経由に変換する。
- * - render が指定された場合はデフォルトのパイプラインを置き換える。
- * - 同一の cacheImage 関数 + プラグイン構成では processor を再利用する (パフォーマンス最適化)。
+ * `cacheImage` 指定時は Notion の画像 URL をプロキシキーに書き換える。
+ * `render` 指定時はパイプライン全体をユーザー実装に差し替える (notion-embed など)。
+ * 同一構成では freeze 済み processor を再利用する。
  */
 export async function renderMarkdown(
   markdown: string,

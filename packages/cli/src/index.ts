@@ -61,8 +61,8 @@ export function defineConfig(config: CMSConfig): CMSConfig {
 }
 
 /**
- * 環境変数を読み込む設定ヘルパー (Prisma の `env()` と同様)。
- * 環境変数が未設定の場合は空文字を返す。トークン未設定エラーは `nhc generate` 実行時に表示される。
+ * 環境変数を遅延評価で読み込む (Prisma の `env()` 相当)。
+ * 設定評価時には throw せず空文字を返し、トークン必要性のチェックは `nhc generate` 実行時に行う。
  *
  * @example notionToken: env("NOTION_TOKEN")
  */

@@ -27,17 +27,15 @@ import type {
 } from "./types/index";
 
 /**
- * コレクション別キャッシュキーを生成する。
- * item: `{collection}:{slug}` / list: `{collection}`
+ * コレクション別キャッシュキーを生成する (item: `{collection}:{slug}` / list: `{collection}`)。
  *
- * (Cache adapter 内部のキー戦略はアダプタごとに異なるが、
- * 表示や再計算用に core 側でも公開ヘルパーを提供する)
+ * 各 cache adapter は内部で独自のキー戦略を持つが、ログ出力や差分再計算で
+ * 同一表現が必要になるため core 側にも公開する。
  */
 export function collectionKey(collection: string, slug?: string): string {
   return slug ? `${collection}:${slug}` : collection;
 }
 
-/** 単一コレクションの DataSource + SWR キャッシュ依存を束ねたコンテキスト。 */
 export interface CollectionContext<T extends BaseContentItem> {
   collection: string;
   source: DataSource<T>;
@@ -53,14 +51,12 @@ export interface CollectionContext<T extends BaseContentItem> {
   maxConcurrent: number;
   waitUntil: ((p: Promise<unknown>) => void) | undefined;
   /**
-   * slug として使うフィールド名 (CLI 生成の `CollectionDef.slugField`)。
-   * `source.properties[slugField].notion` を Notion プロパティ名として
-   * `findByProp` を呼び出す。
+   * slug として使うフィールド名。`source.properties[slugField].notion` を
+   * Notion プロパティ名として `findByProp` を呼び出す。
    */
   slugField: string;
 }
 
-/** CollectionClient の実装。ユーザーは `createClient` 経由でインスタンスを受け取る。 */
 export class CollectionClientImpl<T extends BaseContentItem>
   implements CollectionClient<T>
 {
@@ -80,7 +76,6 @@ export class CollectionClientImpl<T extends BaseContentItem>
     slug: string,
     opts: FindOptions = {},
   ): Promise<ItemWithContent<T> | null> {
-    // bypassCache: 強制ブロッキング取得
     if (opts.bypassCache) {
       this.ctx.hooks.onCacheMiss?.(slug);
       const item = await this.fetchRaw(slug);
@@ -95,11 +90,11 @@ export class CollectionClientImpl<T extends BaseContentItem>
       slug,
     );
     if (cachedMeta) {
+      // TTL 切れはブロッキングで再取得する (stale を返さない要件)
       if (
         this.ctx.ttlMs !== undefined &&
         isStale(cachedMeta.cachedAt, this.ctx.ttlMs)
       ) {
-        // TTL 切れ: ブロッキング再取得
         this.ctx.logger?.debug?.("キャッシュ期限切れ（TTL）、フェッチ", {
           operation: "find",
           slug,
@@ -113,7 +108,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
         await this.invalidateContentEntry(slug);
         return this.attachLazyContent(meta);
       }
-      // SWR: キャッシュ即時返却 + バックグラウンド差分チェック
+      // SWR: 即時返却しつつバックグラウンドで差分チェック
       const bg = this.checkAndUpdateItemBg(slug, cachedMeta);
       if (this.ctx.waitUntil) this.ctx.waitUntil(bg);
       this.ctx.logger?.debug?.("キャッシュヒット", {
@@ -127,7 +122,6 @@ export class CollectionClientImpl<T extends BaseContentItem>
       return this.attachLazyContent(cachedMeta);
     }
 
-    // メタ未キャッシュ: 同期フェッチ (保存はバックグラウンド可)
     this.ctx.logger?.debug?.("キャッシュミス、フェッチ", {
       operation: "find",
       slug,
@@ -137,6 +131,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
     this.ctx.hooks.onCacheMiss?.(slug);
     const item = await this.fetchRaw(slug);
     if (!item) return null;
+    // 保存だけはバックグラウンド可: ユーザー向けレスポンスを早めに返す
     const meta = await this.persistMeta(slug, item, { background: true });
     return this.attachLazyContent(meta);
   }
@@ -269,10 +264,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
     });
   }
 
-  /**
-   * 本文キャッシュをロードする。キャッシュが無いか、メタとの整合性が取れない場合は
-   * 再生成して書き戻す。
-   */
+  /** 本文キャッシュ。メタとの整合 (`notionUpdatedAt`) が崩れていれば再生成して書き戻す。 */
   private async loadOrBuildContent(
     slug: string,
     item: T,
@@ -292,7 +284,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
     return fresh;
   }
 
-  /** メタ既知の状態で本文だけバックグラウンド再生成する。エラーは onSwrError フックに通知する。 */
+  /** メタ既知の状態で本文だけ再生成する。エラーは onSwrError フックに通知して握り潰す。 */
   private async rebuildContentBg(slug: string, item: T): Promise<void> {
     try {
       const fresh = await buildCachedItemContent(item, this.ctx.render);
@@ -324,7 +316,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
   private attachLazyContent(meta: CachedItemMeta<T>): ItemWithContent<T> {
     const slug = meta.item.slug;
     const item = meta.item;
-    // 同一インスタンス内で本文ロードを集約する (複数呼び出しでも 1 回の I/O)
+    // html() / markdown() / blocks() を同じアイテムから複数回呼んでも I/O は 1 回に集約する
     let payloadPromise: Promise<CachedItemContent> | undefined;
     const loadPayload = (): Promise<CachedItemContent> => {
       if (!payloadPromise) {
@@ -344,11 +336,11 @@ export class CollectionClientImpl<T extends BaseContentItem>
   private async fetchList(): Promise<T[]> {
     const cached = await this.ctx.docCache.getList<T>(this.ctx.collection);
     if (cached) {
+      // TTL 切れはブロッキングで再取得する (find と同じ理由)
       if (
         this.ctx.ttlMs !== undefined &&
         isStale(cached.cachedAt, this.ctx.ttlMs)
       ) {
-        // TTL 切れ: ブロッキング再取得
         this.ctx.logger?.debug?.("リストキャッシュ期限切れ（TTL）、フェッチ", {
           operation: "list",
           collection: this.ctx.collection,
@@ -362,7 +354,6 @@ export class CollectionClientImpl<T extends BaseContentItem>
         });
         return items;
       }
-      // SWR: 即時返却 + バックグラウンド差分チェック
       const bg = this.checkAndUpdateListBg(cached);
       if (this.ctx.waitUntil) this.ctx.waitUntil(bg);
       this.ctx.logger?.debug?.("リストキャッシュヒット", {
@@ -374,7 +365,6 @@ export class CollectionClientImpl<T extends BaseContentItem>
       return cached.items;
     }
 
-    // 未キャッシュ: 同期フェッチ
     this.ctx.logger?.debug?.("リストキャッシュミス、フェッチ", {
       operation: "list",
       collection: this.ctx.collection,
@@ -415,7 +405,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
         this.ctx.hooks.onCacheRevalidated?.(slug, meta);
         await this.rebuildContentBg(slug, item);
       } else if (this.ctx.ttlMs !== undefined) {
-        // 変更なし + TTL あり: cachedAt をリセットして次回の期限切れを先送りする
+        // Notion 側に変化が無いので cachedAt だけ更新し TTL 期限切れを先送りする
         await this.ctx.docCache.setMeta(this.ctx.collection, slug, {
           ...cached,
           cachedAt: Date.now(),
@@ -542,7 +532,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
       },
     };
 
-    // slugField から Notion プロパティ名を解決して効率的なフィルタクエリを実行する。
+    // PropertyMap が解決できる場合は単一プロパティ filter で 1 ページだけ取得する (高速)
     const notionPropName =
       this.ctx.source.properties?.[this.ctx.slugField]?.notion;
 
@@ -551,7 +541,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
     if (notionPropName && findByProp) {
       item = await withRetry(() => findByProp(notionPropName, slug), retryOpts);
     } else {
-      // フォールバック: list して線形探索
+      // PropertyMap 未提供 / findByProp 未実装の DataSource 向けフォールバック
       const all = await withRetry(() => this.ctx.source.list(), retryOpts);
       item = all.find((i) => i.slug === slug) ?? null;
     }
@@ -630,10 +620,9 @@ function applyListOptions<T extends BaseContentItem>(
   return result;
 }
 
-/** publishedAt 降順、未設定の場合は lastEditedTime 降順でソートする。 */
+/** publishedAt 降順 (未設定なら lastEditedTime 降順) でソートする。 */
 function sortByPublishedAtDesc<T extends BaseContentItem>(items: T[]): T[] {
   return [...items].sort((a, b) => {
-    // lastEditedTime は必須なので av/bv は常に truthy
     const av = a.publishedAt ?? a.lastEditedTime;
     const bv = b.publishedAt ?? b.lastEditedTime;
     if (av === bv) return 0;
