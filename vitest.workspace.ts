@@ -10,4 +10,5 @@ export default defineWorkspace([
   "packages/notion-katex",
   "packages/cli",
   "packages/adapter-next",
+  "packages/react-renderer",
 ]);

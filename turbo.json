@@ -33,6 +33,10 @@
       "inputs": ["dist/**", "package.json"],
       "outputs": []
     },
+    "cf-typegen": {
+      "inputs": ["wrangler.toml", "wrangler.jsonc"],
+      "outputs": ["worker-configuration.d.ts"]
+    },
     "lint": {
       "cache": false
     },
