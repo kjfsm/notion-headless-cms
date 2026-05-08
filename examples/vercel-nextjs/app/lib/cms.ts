@@ -29,4 +29,6 @@ export const cms = createClient({
   },
   renderer: embed.renderer,
   cache: [nextCache({ tags: ["posts"] }), memoryCache()],
+  // 統合ハンドラ (/app/api/cms/[...path]/route.ts) のマウントパスに合わせる。
+  imageProxyBase: "/api/cms/images",
 });

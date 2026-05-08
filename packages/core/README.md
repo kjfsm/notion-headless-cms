@@ -136,4 +136,3 @@ import { memoryCache } from "@notion-headless-cms/core/cache/memory";
 
 - [クイックスタート](../../docs/quickstart.md)
 - [CMS メソッド一覧](../../docs/api/cms-methods.md)
-- [v2.0 移行ガイド](../../docs/migration/v2.0.md)

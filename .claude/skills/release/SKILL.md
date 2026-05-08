@@ -59,7 +59,7 @@ pnpm -r --filter "./packages/*" --workspace-concurrency=1 --parseable list --dep
 - 各 `packages/*/package.json` の version 上げ幅が bump 種別と一致するか
 - `peerDependencies` の整合（core を上げたら依存 adapter の peerDep 範囲を確認）
 - `CHANGELOG.md` に不適切な差分が混入していないか
-- 関連 docs (`docs/api/*`, `packages/*/README.md`, `docs/migration/*`) が同じ PR にあるか
+- 関連 docs (`docs/api/*`, `packages/*/README.md`) が同じ PR にあるか
 
 ## トラブル時
 

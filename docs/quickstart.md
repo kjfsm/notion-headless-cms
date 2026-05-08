@@ -168,4 +168,3 @@ const news = await cms.news.list();   // NewsItem[]
 - [Node スクリプト](./recipes/nodejs-script.md)
 - [カスタムデータソース](./recipes/custom-source.md)
 - [CMS メソッド一覧](./api/cms-methods.md)
-- [v2.0 移行ガイド](./migration/v2.0.md)

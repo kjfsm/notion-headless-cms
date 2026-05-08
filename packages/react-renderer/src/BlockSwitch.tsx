@@ -68,7 +68,7 @@ function pickComponent(block: NotionBlock, o?: ComponentOverrides): unknown {
     tab: o?.Tab ?? Defaults.Unsupported,
     template: o?.Template ?? Defaults.Unsupported,
     meeting_notes: o?.MeetingNotes ?? Defaults.Unsupported,
-    transcription: o?.Transcription ?? Defaults.Unsupported,
+    transcription: Defaults.Unsupported,
     unsupported: o?.Unsupported ?? Defaults.Unsupported,
   } satisfies Record<BlockObjectResponse["type"], unknown>;
   // 実行時に未知の type (型では現れないがランタイムで Notion API が返した新 type) は

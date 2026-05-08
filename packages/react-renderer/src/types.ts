@@ -34,7 +34,6 @@ import type {
   TemplateBlockObjectResponse,
   ToDoBlockObjectResponse,
   ToggleBlockObjectResponse,
-  TranscriptionBlockObjectResponse,
   VideoBlockObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
 import type { ComponentType } from "react";
@@ -76,7 +75,7 @@ export type HeadingBlockObjectResponse =
  * 各スロットは block 固有の型を受けるため、as キャスト不要で差し込める。
  *
  * Heading は heading_1 / heading_2 / heading_3 / heading_4 を共通で受け持つ。
- * TableRow / Tab / Template / MeetingNotes / Transcription はデフォルト実装が
+ * TableRow / Tab / Template / MeetingNotes はデフォルト実装が
  * 用意されておらず Unsupported にフォールバックされるが、
  * BlockObjectResponse union と網羅性を一致させるため override スロットは提供する。
  */
@@ -132,9 +131,6 @@ export interface ComponentOverrides {
   Template?: ComponentType<BlockComponentProps<TemplateBlockObjectResponse>>;
   MeetingNotes?: ComponentType<
     BlockComponentProps<MeetingNotesBlockObjectResponse>
-  >;
-  Transcription?: ComponentType<
-    BlockComponentProps<TranscriptionBlockObjectResponse>
   >;
   Unsupported?: ComponentType<BlockComponentProps>;
 }

@@ -20,17 +20,16 @@ export interface YoutubeProviderOptions {
   display?: "iframe" | "card";
   /**
    * card モードのデータ取得設定。
-   * false を指定するとデータ取得を無効化する。
-   * @deprecated ogp オプション名は旧 API 互換のため残している。内部では oEmbed を使用。
+   * false を指定するとデータ取得を無効化する。oEmbed エンドポイントを使用する。
    */
-  ogp?: false | OgpFetchOptions;
+  fetchData?: false | OgpFetchOptions;
 }
 
 export function youtubeProvider(opts?: YoutubeProviderOptions): EmbedProvider {
   const width = opts?.width ?? 560;
   const height = opts?.height ?? 315;
   const display = opts?.display ?? "iframe";
-  const fetchData = opts?.ogp !== false;
+  const fetchData = opts?.fetchData !== false;
   return {
     id: "youtube",
     // チャンネル / 動画 / shorts いずれの YouTube URL にもマッチする。

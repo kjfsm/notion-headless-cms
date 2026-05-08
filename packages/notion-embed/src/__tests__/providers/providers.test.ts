@@ -194,11 +194,11 @@ describe("youtubeProvider", () => {
       }
     });
 
-    it("ogp: false では oEmbed fetch を行わず nhc-bookmark--no-ogp を付ける", async () => {
+    it("fetchData: false では oEmbed fetch を行わず nhc-bookmark--no-ogp を付ける", async () => {
       const fetchSpy = vi
         .spyOn(globalThis, "fetch")
         .mockResolvedValue(new Response(JSON.stringify({})));
-      const noOgp = youtubeProvider({ display: "card", ogp: false });
+      const noOgp = youtubeProvider({ display: "card", fetchData: false });
       const out = await noOgp.render({
         block: dummyBlock,
         url: "https://www.youtube.com/@some-channel",
@@ -213,7 +213,7 @@ describe("youtubeProvider", () => {
     });
 
     it("無効な URL でも例外を throw しない (ホスト名 fallback)", async () => {
-      const noOgp = youtubeProvider({ display: "card", ogp: false });
+      const noOgp = youtubeProvider({ display: "card", fetchData: false });
       await expect(
         noOgp.render({ block: dummyBlock, url: "not-a-valid-url" }),
       ).resolves.toMatchObject({ kind: "html" });
