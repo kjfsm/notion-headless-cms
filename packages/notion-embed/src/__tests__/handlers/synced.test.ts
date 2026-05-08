@@ -2,14 +2,12 @@ import type {
   MeetingNotesBlockObjectResponse,
   SyncedBlockBlockObjectResponse,
   TemplateBlockObjectResponse,
-  TranscriptionBlockObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
 import { describe, expect, it } from "vitest";
 import {
   renderMeetingNotes,
   renderSyncedBlock,
   renderTemplate,
-  renderTranscription,
 } from "../../handlers/synced";
 
 const blockBase = {
@@ -78,7 +76,7 @@ describe("renderTemplate", () => {
   });
 });
 
-describe("renderMeetingNotes / renderTranscription", () => {
+describe("renderMeetingNotes", () => {
   it("meeting_notes は基本クラスのみ", () => {
     const block: MeetingNotesBlockObjectResponse = {
       ...blockBase,
@@ -88,15 +86,5 @@ describe("renderMeetingNotes / renderTranscription", () => {
     expect(renderMeetingNotes(block)).toBe(
       '<div class="nhc-meeting-notes"></div>',
     );
-  });
-
-  it("transcription は legacy モディファイア付き", () => {
-    const block: TranscriptionBlockObjectResponse = {
-      ...blockBase,
-      type: "transcription",
-      transcription: {},
-    };
-    const html = renderTranscription(block);
-    expect(html).toContain("nhc-meeting-notes--legacy");
   });
 });

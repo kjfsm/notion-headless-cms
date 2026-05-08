@@ -42,7 +42,6 @@ import {
   renderMeetingNotes,
   renderSyncedBlock,
   renderTemplate,
-  renderTranscription,
 } from "./synced";
 import { renderTable, renderTableRow } from "./table";
 import { renderToggle } from "./toggle";
@@ -174,7 +173,7 @@ export function createBlockHandlers(
       return renderMeetingNotes(block as never);
     },
     transcription: (block) => {
-      return renderTranscription(block as never);
+      return renderMeetingNotes(block as never);
     },
     unsupported: (block) => {
       return renderUnsupported(block as never);

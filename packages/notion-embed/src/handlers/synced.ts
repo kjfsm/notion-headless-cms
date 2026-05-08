@@ -2,7 +2,6 @@ import type {
   MeetingNotesBlockObjectResponse,
   SyncedBlockBlockObjectResponse,
   TemplateBlockObjectResponse,
-  TranscriptionBlockObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
 import type { RichTextRenderOptions } from "../render-rich-text";
 import { renderRichText } from "../render-rich-text";
@@ -35,7 +34,6 @@ export async function renderTemplate(
 
 /**
  * meeting_notes ブロックを HTML に変換する。
- * Notion API 2026-03-11 以降は meeting_notes、それ以前は transcription として返る。
  * 内部構造 (title / status / 子ブロック ID 群) は利用側で展開する想定で、
  * ここではマーカー要素のみ出力する。
  */
@@ -43,15 +41,4 @@ export function renderMeetingNotes(
   _block: MeetingNotesBlockObjectResponse,
 ): string {
   return `<div class="nhc-meeting-notes"></div>`;
-}
-
-/**
- * transcription ブロックを HTML に変換する。
- * meeting_notes の旧名 (deprecated) だが BlockObjectResponse union に存在するため
- * 互換目的で同等のレンダラを提供する。
- */
-export function renderTranscription(
-  _block: TranscriptionBlockObjectResponse,
-): string {
-  return `<div class="nhc-meeting-notes nhc-meeting-notes--legacy"></div>`;
 }

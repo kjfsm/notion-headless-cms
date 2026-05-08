@@ -6,22 +6,15 @@ paths:
 
 # adapter-* パッケージ
 
-**v0.3.0 から `adapter-*` は「フロントエンド / フレームワーク連携」に役割を限定した。**
-ランタイム差分（Node / Cloudflare）は `nodePreset` (core) / `cloudflarePreset` (cache-r2) で吸収する。
-
-## 歴史的経緯
-
-- v0.2.x までの `adapter-node` (`createNodeCMS`) / `adapter-cloudflare` (`createCloudflareCMS`) はランタイム別ファクトリとして存在していた
-- v0.3.0 でこれらは廃止。ユーザーは `createCMS({ ...nodePreset(), dataSources })` のように `createCMS` 一本で書く
-- 「adapter」は以後、Next.js / Astro など**フレームワーク側の作法に合わせた薄いグルー**を意味する
+`adapter-*` は「フロントエンド / フレームワーク連携」に役割を限定する。
+ランタイム差分（Node / Cloudflare）は `nodePreset` (core) / `cloudflarePreset` (cache-r2) で吸収し、
+adapter は Next.js / Astro など**フレームワーク側の作法に合わせた薄いグルー**として実装する。
 
 ## adapter-next
 
-- Next.js App Router 向けのルートハンドラ群（ファクトリ関数ではなく handler を返す）
-- `createImageRouteHandler(cms)` — `/api/images/[hash]/route.ts` 用
-- `createCollectionRevalidateRouteHandler(cms, { secret })` — `/api/revalidate/[collection]` Webhook 受信用
-- `createInvalidateAllRouteHandler(cms, { secret })` — `/api/revalidate` 全件無効化用
-- CMS インスタンスを受け取り、Next.js の `Route Handler` に適合する関数を返す
+- Next.js App Router 向けの統合ルートハンドラ
+- `createNextHandler(cms, opts?)` — `/app/api/cms/[...path]/route.ts` に置き、画像プロキシ (`GET /api/cms/images/:hash`) と Webhook 受信 (`POST /api/cms/revalidate/:collection`) を 1 つのハンドラで処理する
+- CMS インスタンスを受け取り、Next.js の `Route Handler` (`GET` / `POST` 共通) に適合する関数を返す
 
 ## 新 adapter 追加時（SvelteKit / Astro integration 等）
 

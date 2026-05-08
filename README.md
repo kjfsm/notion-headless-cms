@@ -152,9 +152,6 @@ Notion DB を introspect して TypeScript スキーマを自動生成する CLI
 #### [`@notion-headless-cms/adapter-next`](./packages/adapter-next)
 Next.js App Router 向けルートハンドラー。画像プロキシ配信と Notion Webhook によるキャッシュ再検証を提供する。
 - `createNextHandler(cms, opts?)` — 画像プロキシ・Webhook 受信をまとめて処理する統合ハンドラ
-- `createImageRouteHandler(cms)` — **非推奨** (`@deprecated`)。`createNextHandler` を使うこと
-- `createCollectionRevalidateRouteHandler(cms, opts)` — **非推奨** (`@deprecated`)。`createNextHandler` を使うこと
-- `createInvalidateAllRouteHandler(cms, opts)` — **非推奨** (`@deprecated`)。`createNextHandler` を使うこと
 
 ## クイックスタート
 
@@ -262,9 +259,6 @@ wrangler secret put NOTION_TOKEN
   - [カスタムデータソース](./docs/recipes/custom-source.md)
   - [カスタムキャッシュアダプタ](./docs/recipes/custom-cache.md)
   - [useSWR クライアントサイド連携](./docs/recipes/useswr-integration.md)
-- [v1.0 移行ガイド](./docs/migration/v1.0.md)
-- [v0.2 → v0.3 移行ガイド](./docs/migration/v0.3.md)
-- [v0 → v1 ORM 分離の経緯](./docs/migration/v0-to-v1.md)
 - [開発者ガイド](./docs/development.md)
 
 ## 開発

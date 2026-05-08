@@ -1,8 +1,8 @@
 # @notion-headless-cms/adapter-next
 
-Next.js App Router 向けルートハンドラ。`@notion-headless-cms/core` の
-CMS インスタンスから、画像プロキシ配信と Revalidate Webhook の
-`GET` / `POST` ハンドラを生成する。
+Next.js App Router 向けの統合ルートハンドラ。`@notion-headless-cms/core` の
+CMS インスタンスから、画像プロキシ配信と Revalidate Webhook を 1 つの
+ハンドラで処理する `GET` / `POST` を生成する。
 
 ## インストール
 
@@ -34,65 +34,44 @@ export const cms = createClient({
   },
   cache: [nextCache({ revalidate: 300, tags: ["posts"] }), memoryCache()],
   swr: { ttlMs: 5 * 60_000 },
+  // 統合ハンドラのマウントパスに合わせる。
+  imageProxyBase: "/api/cms/images",
 });
 ```
 
-### 画像プロキシルート
+### 統合ルートハンドラ
 
 ```ts
-// app/api/images/[hash]/route.ts
+// app/api/cms/[...path]/route.ts
+import { createNextHandler } from "@notion-headless-cms/adapter-next";
 import { cms } from "@/lib/cms";
-import { createImageRouteHandler } from "@notion-headless-cms/adapter-next";
 
-export const GET = createImageRouteHandler(cms);
-```
-
-`/api/images/[hash]` に配置する前提。ハッシュに対応する画像が
-存在しない場合は `404 Not Found` を返す。
-
-### Revalidate Webhook ルート
-
-```ts
-// app/api/revalidate/route.ts
-import { cms } from "@/lib/cms";
-import { createRevalidateRouteHandler } from "@notion-headless-cms/adapter-next";
-
-export const POST = createRevalidateRouteHandler(cms, {
-  secret: process.env.REVALIDATE_SECRET!,
+const handler = createNextHandler(cms, {
+  webhookSecret: process.env.REVALIDATE_SECRET,
 });
+
+export const GET = handler;
+export const POST = handler;
 ```
 
-`POST /api/revalidate` を `Authorization: Bearer <REVALIDATE_SECRET>` で叩く。
-リクエストボディの例:
+`/app/api/cms/[...path]/route.ts` に配置する前提で以下のサブパスを処理する。
 
-```json
-{ "collection": "posts", "slug": "my-post" }
-```
-
-`collection` / `slug` を省略すると全件 (`"all"`) 扱い。レスポンスで
-`{ "updated": string[] }` が返る。認可失敗時は 401 Unauthorized。
+- `GET  /api/cms/images/<hash>` — 画像プロキシ配信。ハッシュ未登録時は 404
+- `POST /api/cms/revalidate/<collection>` — Webhook 受信。`Authorization: Bearer <REVALIDATE_SECRET>` で認証
 
 `cache-next` と組み合わせた場合、invalidate 時に規約タグ
 `nhc:col:<name>` / `nhc:col:<name>:slug:<slug>` が `revalidateTag` される。
 
 ## API
 
-### `createImageRouteHandler(cms)`
+### `createNextHandler(cms, opts?)`
 
 | 引数 | 型 | 説明 |
 |---|---|---|
-| `cms` | `CMSClient` | `createClient()` の戻り値 |
+| `cms` | `CMSGlobalOps` | `createClient()` の戻り値 |
+| `opts.webhookSecret` | `string \| undefined` | Webhook 署名検証用シークレット。未指定時は検証スキップ |
 
-戻り値: App Router 仕様の `GET` ハンドラ。
-
-### `createRevalidateRouteHandler(cms, opts)`
-
-| 引数 | 型 | 説明 |
-|---|---|---|
-| `cms` | `CMSClient` | CMS インスタンス |
-| `opts.secret` | `string` | `Authorization: Bearer <secret>` と照合するシークレット |
-
-戻り値: `POST` ハンドラ `(request) => Promise<Response>`。
+戻り値: App Router 仕様の `GET` / `POST` 共通ハンドラ `(req: Request) => Promise<Response>`。
 
 ## 関連パッケージ
 
