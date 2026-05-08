@@ -34,8 +34,6 @@ export type RendererFn = (
 
 /** レンダリング・コンテンツ処理設定。 */
 export interface ContentConfig {
-  /** 画像プロキシのベースURL。デフォルト: '/api/images' */
-  imageProxyBase?: string;
   /** 追加する remark プラグイン。 */
   remarkPlugins?: RendererPluginList;
   /** 追加する rehype プラグイン。 */
@@ -93,32 +91,26 @@ export type InferCollectionItem<C> =
 
 /**
  * `createClient()` の入力。
- * 通常は CLI が生成した `nhc.ts` の `createClient` がこの型をラップする。
  *
  * @example
- * createClient({
- *   collections: {
- *     posts: {
- *       source: createNotionCollection({ token, dataSourceId, properties }),
- *       slugField: "slug",
- *       statusField: "status",
- *       publishedStatuses: ["公開済み"],
- *     }
- *   },
- *   cache: [memoryCache()],
- *   swr: { ttlMs: 5 * 60_000 },
+ * import { createClient, nodePreset } from "@notion-headless-cms/core";
+ * import { notionSource } from "@notion-headless-cms/notion-source";
+ * import { schema } from "./generated/nhc.schema";
+ *
+ * const cms = createClient({
+ *   sources: { notion: notionSource({ schema, token: process.env.NOTION_TOKEN! }) },
+ *   ...nodePreset(),
  * });
  */
 export interface CreateClientOptions<
   C extends CollectionsConfig = CollectionsConfig,
   S extends CMSSources = CMSSources,
 > {
-  /**
-   * データソースアダプター (`@notion-headless-cms/notion-source` 等) のマップ。
-   * `sources` を指定する場合 `collections` は不要。両方指定された場合は `sources` が優先される。
-   */
+  /** データソースアダプター (`@notion-headless-cms/notion-source` 等) のマップ。 */
   sources?: S;
-  /** コレクション定義のマップ。`sources` を使う場合は不要。 */
+  /**
+   * @internal 低レベル API。sources を使うこと。
+   */
   collections?: C;
   /**
    * キャッシュアダプタ (配列)。未指定時はキャッシュなし。

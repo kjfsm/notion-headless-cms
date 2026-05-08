@@ -92,14 +92,14 @@ const meta = (slug: string, lastEdited = "2024-01-01"): CachedItemMeta =>
 describe("cloudflarePreset", () => {
   it("env.DOC_CACHE / env.IMG_BUCKET から cache 配列を生成する", () => {
     const env = { DOC_CACHE: inMemoryKV(), IMG_BUCKET: inMemoryBucket() };
-    const { cache } = cloudflarePreset({ env });
+    const { cache } = cloudflarePreset({ env, ctx: { waitUntil: vi.fn() } });
     expect(cache).toHaveLength(2);
     expect(cache[0]?.name).toBe("kv");
     expect(cache[1]?.name).toBe("r2");
   });
 
-  it("env binding が無ければ cache は空配列", () => {
-    const { cache } = cloudflarePreset({ env: {} });
+  it("forTest: env binding が無ければ cache は空配列", () => {
+    const { cache } = cloudflarePreset.forTest({ env: {} });
     expect(cache).toEqual([]);
   });
 
@@ -113,14 +113,14 @@ describe("cloudflarePreset", () => {
     const { waitUntil } = cloudflarePreset({ env: {}, ctx });
     expect(waitUntil).toBeTypeOf("function");
     const p = Promise.resolve();
-    waitUntil?.(p);
+    waitUntil(p);
     expect(inner).toHaveBeenCalledTimes(1);
     expect(inner.mock.calls[0]?.[0]).toBe(ctx);
     expect(inner.mock.calls[0]?.[1]).toBe(p);
   });
 
-  it("ctx 未指定なら waitUntil は undefined", () => {
-    const { waitUntil } = cloudflarePreset({ env: {} });
+  it("forTest では waitUntil は undefined", () => {
+    const { waitUntil } = cloudflarePreset.forTest({ env: {} });
     expect(waitUntil).toBeUndefined();
   });
 
@@ -134,7 +134,7 @@ describe("cloudflarePreset", () => {
 
   it("prefix を伝播する", async () => {
     const kv = inMemoryKV();
-    const { cache } = cloudflarePreset({
+    const { cache } = cloudflarePreset.forTest({
       env: { DOC_CACHE: kv },
       prefix: "blog:",
     });

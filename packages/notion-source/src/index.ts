@@ -1,4 +1,4 @@
-import type { CMSAdapter } from "@notion-headless-cms/core";
+import type { CMSAdapter } from "@notion-headless-cms/core/source-author";
 import type {
   BlockEnricher,
   FetchBlockTreeOgpOptions,

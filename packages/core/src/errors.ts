@@ -79,18 +79,26 @@ export class CMSError extends Error {
   readonly code: CMSErrorCode;
   override readonly cause?: unknown;
   readonly context: CMSErrorContext;
+  /** エラーを解消するための次のアクション（表示用）。 */
+  readonly nextSteps?: readonly string[];
+  /** 詳細ドキュメントへの URL（表示用）。 */
+  readonly docsUrl?: string;
 
   constructor(params: {
     code: CMSErrorCode;
     message: string;
     cause?: unknown;
     context: CMSErrorContext;
+    nextSteps?: readonly string[];
+    docsUrl?: string;
   }) {
     super(params.message, { cause: params.cause });
     this.name = "CMSError";
     this.code = params.code;
     this.cause = params.cause;
     this.context = params.context;
+    this.nextSteps = params.nextSteps;
+    this.docsUrl = params.docsUrl;
   }
 
   /** エラーコードが指定した値と一致するか判定する。 */
@@ -101,6 +109,24 @@ export class CMSError extends Error {
   /** エラーコードが指定した名前空間に属するか判定する（例: `"source/"`）。 */
   inNamespace(namespace: string): boolean {
     return this.code.startsWith(namespace);
+  }
+
+  /**
+   * nextSteps と docsUrl を含む人間向けの詳細メッセージを返す。
+   * エラーダイアログ・ログ出力時に使う。
+   */
+  format(): string {
+    const lines: string[] = [this.message];
+    if (this.nextSteps?.length) {
+      lines.push("\n次にやること:");
+      for (const step of this.nextSteps) {
+        lines.push(`  - ${step}`);
+      }
+    }
+    if (this.docsUrl) {
+      lines.push(`\n詳細: ${this.docsUrl}`);
+    }
+    return lines.join("\n");
   }
 }
 

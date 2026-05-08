@@ -396,12 +396,18 @@ export interface CloudflareExecutionContextLike {
 export interface CloudflarePresetOptions {
   env: CloudflarePresetEnv;
   /**
-   * Cloudflare ExecutionContext。`createClient` の `waitUntil` に橋渡しする。
-   * これを渡さないと、SWR のバックグラウンド更新がレスポンス送信後に
-   * Workers ランタイムにより打ち切られ、KV キャッシュが古いまま残る。
+   * Cloudflare ExecutionContext。必須。
+   * 省略すると SWR のバックグラウンド更新がレスポンス送信後に Workers ランタイムに
+   * より打ち切られ、KV キャッシュが古いまま残る。
    */
-  ctx?: CloudflareExecutionContextLike;
+  ctx: CloudflareExecutionContextLike;
   /** キャッシュキーのプレフィックス。デフォルト: '' */
+  prefix?: string;
+}
+
+/** テスト用オプション。`ctx` なしで呼べる（本番 Workers では使わないこと）。 */
+export interface CloudflarePresetTestOptions {
+  env: CloudflarePresetEnv;
   prefix?: string;
 }
 
@@ -410,15 +416,19 @@ export interface CloudflarePresetOptions {
  * `cache`（KV+R2）と `waitUntil`（SWR bg を完走させる）を一括で生成する。
  *
  * @example
- * createClient({
- *   sources: { notion: notionSource(...) },
- *   renderer: ...,
- *   ...cloudflarePreset({ env, ctx }),
- * });
+ * export default {
+ *   async fetch(req: Request, env: Env, ctx: ExecutionContext) {
+ *     const cms = createClient({
+ *       sources: { notion: notionSource(...) },
+ *       ...cloudflarePreset({ env, ctx }),
+ *     });
+ *     // ...
+ *   },
+ * };
  */
 export function cloudflarePreset(opts: CloudflarePresetOptions): {
   cache: CacheAdapter[];
-  waitUntil?: (p: Promise<unknown>) => void;
+  waitUntil: (p: Promise<unknown>) => void;
 } {
   const cache = cloudflareCache(
     { docCache: opts.env.DOC_CACHE, imgBucket: opts.env.IMG_BUCKET },
@@ -426,6 +436,23 @@ export function cloudflarePreset(opts: CloudflarePresetOptions): {
   );
   const ctx = opts.ctx;
   // ExecutionContext.waitUntil は `this` を必要とするため、参照を切り出すには再ラップする
-  const waitUntil = ctx ? (p: Promise<unknown>) => ctx.waitUntil(p) : undefined;
+  const waitUntil = (p: Promise<unknown>) => ctx.waitUntil(p);
   return { cache, waitUntil };
 }
+
+/**
+ * テスト用の `cloudflarePreset`。`ctx` なしで呼べる。
+ * 本番 Workers では使わないこと（SWR 背景更新が動作しない）。
+ */
+cloudflarePreset.forTest = (
+  opts: CloudflarePresetTestOptions,
+): {
+  cache: CacheAdapter[];
+  waitUntil?: (p: Promise<unknown>) => void;
+} => {
+  const cache = cloudflareCache(
+    { docCache: opts.env.DOC_CACHE, imgBucket: opts.env.IMG_BUCKET },
+    { prefix: opts.prefix },
+  );
+  return { cache };
+};

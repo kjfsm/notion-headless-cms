@@ -113,24 +113,19 @@ function applyLogLevel(
 }
 
 /**
- * 複数の `CollectionDef` を束ねた CMS クライアントを生成する。
- *
- * 通常はユーザーが直接呼ぶことはなく、CLI 生成の `nhc.ts` の `createClient`
- * (低レベルのこの関数をラップしたもの) を経由する。
+ * CMS クライアントを生成する。
  *
  * @example
- * createClient({
- *   collections: {
- *     posts: {
- *       source: createNotionCollection({ token, dataSourceId, properties }),
- *       slugField: "slug",
- *       statusField: "status",
- *       publishedStatuses: ["公開済み"],
- *     }
- *   },
- *   cache: [memoryCache()],
- *   swr: { ttlMs: 5 * 60_000 },
+ * import { createClient, nodePreset } from "@notion-headless-cms/core";
+ * import { notionSource } from "@notion-headless-cms/notion-source";
+ * import { schema } from "./generated/nhc.schema";
+ *
+ * const cms = createClient({
+ *   sources: { notion: notionSource({ schema, token: process.env.NOTION_TOKEN! }) },
+ *   ...nodePreset(),
  * });
+ *
+ * const posts = await cms.posts.list();
  */
 export function createClient<
   C extends CollectionsConfig = CollectionsConfig,
@@ -159,8 +154,14 @@ export function createClient<
     throw new CMSError({
       code: "core/config_invalid",
       message:
-        "createClient: sources または collections に少なくとも 1 つのコレクションを指定してください。",
+        "createClient: sources に少なくとも 1 つのコレクションを指定してください。",
       context: { operation: "createClient" },
+      nextSteps: [
+        "notionSource({ schema, token }) を sources.notion に渡す",
+        "`nhc generate` でスキーマを生成してから import する",
+      ],
+      docsUrl:
+        "https://github.com/kjfsm/notion-headless-cms/blob/main/docs/quickstart.md",
     });
   }
 
@@ -170,6 +171,7 @@ export function createClient<
         code: "core/config_invalid",
         message: `createClient: コレクション "${name}" の source は必須です。`,
         context: { operation: "createClient", collection: name },
+        nextSteps: ["notionSource(...) を sources に渡しているか確認する"],
       });
     }
     if (!def.slugField) {
@@ -177,6 +179,9 @@ export function createClient<
         code: "core/config_invalid",
         message: `createClient: コレクション "${name}" の slugField は必須です。`,
         context: { operation: "createClient", collection: name },
+        nextSteps: [
+          `nhc.config.ts の ${name} コレクションに slugField を設定する`,
+        ],
       });
     }
   }
