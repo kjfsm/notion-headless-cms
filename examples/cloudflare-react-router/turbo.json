@@ -7,7 +7,7 @@
       "outputs": ["worker-configuration.d.ts", ".react-router/types/**"]
     },
     "typecheck": {
-      "dependsOn": ["cf-typegen"]
+      "dependsOn": ["cf-typegen", "^build"]
     }
   }
 }

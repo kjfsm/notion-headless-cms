@@ -16,7 +16,9 @@
   },
   "dependencies": {
     "@notion-headless-cms/cloudflare": "workspace:*",
+    "@notion-headless-cms/core": "workspace:*",
     "@notion-headless-cms/notion-orm": "workspace:*",
+    "@notion-headless-cms/notion-source": "workspace:*",
     "hono": "^4.12.17",
     "zod": "^4.4.3"
   },
