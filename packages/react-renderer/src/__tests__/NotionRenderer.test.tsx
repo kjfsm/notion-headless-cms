@@ -323,7 +323,6 @@ describe("NotionRenderer", () => {
     });
   });
 
-
   // Context 経由で components が子ブロック（再帰ツリー）にも伝播することを確認する。
   it("Context 経由で components が子ブロックに伝播する", () => {
     const parent = para("parent", "parent-text", [para("child", "child-text")]);
