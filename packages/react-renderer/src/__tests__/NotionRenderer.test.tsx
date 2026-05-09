@@ -6,6 +6,28 @@ import { NotionBlocks } from "../NotionBlocks.js";
 import { NotionRenderer } from "../NotionRenderer.js";
 import type { BlockComponentProps, NotionBlock } from "../types.js";
 
+const imageBlock = (id: string, url: string): NotionBlock =>
+  ({
+    object: "block",
+    id,
+    type: "image",
+    has_children: false,
+    image: {
+      type: "external",
+      external: { url },
+      caption: [],
+    },
+  }) as unknown as NotionBlock;
+
+const linkToPageBlock = (id: string, pageId: string): NotionBlock =>
+  ({
+    object: "block",
+    id,
+    type: "link_to_page",
+    has_children: false,
+    link_to_page: { type: "page_id", page_id: pageId },
+  }) as unknown as NotionBlock;
+
 const equation = (id: string, expr: string): NotionBlock =>
   ({
     object: "block",
@@ -145,6 +167,54 @@ describe("NotionRenderer", () => {
       />,
     );
     expect(container.querySelector(".katex")).not.toBeNull();
+  });
+
+  describe("URL / DOM 差替（拡張ポイント）", () => {
+    it("resolveImageUrl を渡すと Image ブロックの src が変換される", () => {
+      const block = imageBlock("img1", "https://notion.so/original.png");
+      const { container } = render(
+        <NotionRenderer
+          blocks={[block]}
+          resolveImageUrl={() => "/proxy/image.png"}
+        />,
+      );
+      const img = container.querySelector("img");
+      expect(img?.getAttribute("src")).toBe("/proxy/image.png");
+    });
+
+    it("resolvePageUrl を渡すと LinkToPage の href が変換される", () => {
+      const block = linkToPageBlock("ltp1", "page-id-abc");
+      const { container } = render(
+        <NotionRenderer
+          blocks={[block]}
+          resolvePageUrl={(id) => `/pages/${id}`}
+        />,
+      );
+      const link = container.querySelector("a");
+      expect(link?.getAttribute("href")).toBe("/pages/page-id-abc");
+    });
+
+    it("Image スロットを渡すと img 要素が差し替えコンポーネントで描画される", () => {
+      const block = imageBlock("img2", "https://notion.so/photo.png");
+      const CustomImg = (props: React.ImgHTMLAttributes<HTMLImageElement>) => (
+        <img data-testid="custom-img" {...props} />
+      );
+      const { container } = render(
+        <NotionRenderer blocks={[block]} Image={CustomImg} />,
+      );
+      expect(container.querySelector("[data-testid='custom-img']")).not.toBeNull();
+    });
+
+    it("Link スロットを渡すと LinkToPage の a 要素が差し替えコンポーネントで描画される", () => {
+      const block = linkToPageBlock("ltp2", "page-id-xyz");
+      const CustomLink = (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+        <a data-testid="custom-link" {...props} />
+      );
+      const { container } = render(
+        <NotionRenderer blocks={[block]} Link={CustomLink} />,
+      );
+      expect(container.querySelector("[data-testid='custom-link']")).not.toBeNull();
+    });
   });
 
   // Context 経由で components が子ブロック（再帰ツリー）にも伝播することを確認する。

@@ -1,6 +1,8 @@
 "use client";
 
+import type { ElementType } from "react";
 import { Card } from "../components/ui/card";
+import { useNotionContext } from "../context";
 
 /**
  * notion-orm が embed/bookmark ブロックに付与する `ogp` フィールドと同形状の型。
@@ -32,13 +34,20 @@ function hostname(url: string): string {
  * ogp 未指定または空でもホスト名 + URL のリンクカードとして崩れずに描画する。
  */
 export function OgCard({ url, ogp }: OgCardProps) {
+  const { Image: ImageSlot, Link: LinkSlot } = useNotionContext();
   const title = ogp?.title?.trim() || hostname(url);
   const description = ogp?.description?.trim();
   const siteName = ogp?.siteName?.trim() || hostname(url);
   const image = ogp?.image;
+  const LinkComp = (LinkSlot ?? "a") as ElementType<
+    React.AnchorHTMLAttributes<HTMLAnchorElement>
+  >;
+  const Img = (ImageSlot ?? "img") as ElementType<
+    React.ImgHTMLAttributes<HTMLImageElement>
+  >;
 
   return (
-    <a
+    <LinkComp
       href={url}
       target="_blank"
       rel="noopener noreferrer"
@@ -62,7 +71,7 @@ export function OgCard({ url, ogp }: OgCardProps) {
         </div>
         {image ? (
           <div className="ml-auto w-36 shrink-0 self-stretch bg-muted sm:w-48 md:w-64">
-            <img
+            <Img
               src={image}
               alt=""
               loading="lazy"
@@ -72,6 +81,6 @@ export function OgCard({ url, ogp }: OgCardProps) {
           </div>
         ) : null}
       </Card>
-    </a>
+    </LinkComp>
   );
 }
