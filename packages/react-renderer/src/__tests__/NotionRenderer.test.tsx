@@ -197,23 +197,28 @@ describe("NotionRenderer", () => {
     it("Image スロットを渡すと img 要素が差し替えコンポーネントで描画される", () => {
       const block = imageBlock("img2", "https://notion.so/photo.png");
       const CustomImg = (props: React.ImgHTMLAttributes<HTMLImageElement>) => (
+        // biome-ignore lint/performance/noImgElement lint/a11y/useAltText: テスト用スタブ
         <img data-testid="custom-img" {...props} />
       );
       const { container } = render(
         <NotionRenderer blocks={[block]} Image={CustomImg} />,
       );
-      expect(container.querySelector("[data-testid='custom-img']")).not.toBeNull();
+      expect(
+        container.querySelector("[data-testid='custom-img']"),
+      ).not.toBeNull();
     });
 
     it("Link スロットを渡すと LinkToPage の a 要素が差し替えコンポーネントで描画される", () => {
       const block = linkToPageBlock("ltp2", "page-id-xyz");
-      const CustomLink = (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
-        <a data-testid="custom-link" {...props} />
-      );
+      const CustomLink = (
+        props: React.AnchorHTMLAttributes<HTMLAnchorElement>,
+      ) => <a data-testid="custom-link" {...props} />;
       const { container } = render(
         <NotionRenderer blocks={[block]} Link={CustomLink} />,
       );
-      expect(container.querySelector("[data-testid='custom-link']")).not.toBeNull();
+      expect(
+        container.querySelector("[data-testid='custom-link']"),
+      ).not.toBeNull();
     });
   });
 
