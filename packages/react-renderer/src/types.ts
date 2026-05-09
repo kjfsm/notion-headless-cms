@@ -36,7 +36,12 @@ import type {
   ToggleBlockObjectResponse,
   VideoBlockObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
-import type { ComponentType } from "react";
+import type {
+  AnchorHTMLAttributes,
+  ComponentType,
+  ElementType,
+  ImgHTMLAttributes,
+} from "react";
 
 export type { BlockObjectResponse };
 
@@ -44,6 +49,12 @@ export type { BlockObjectResponse };
 export type NotionBlock = BlockObjectResponse & {
   children?: NotionBlock[];
 };
+
+/** Image/Video/Audio/File/PDF の file URL を変換する関数。CDN プロキシや永続 URL への書き換えに使う。 */
+export type ResolveImageUrlFn = (url: string, block: NotionBlock) => string;
+
+/** Notion 内部ページ ID をサイト内 URL に変換する関数。slug ベースルーティングなどに使う。 */
+export type ResolvePageUrlFn = (pageId: string) => string;
 
 /**
  * 各 block コンポーネントの共通プロップ。
@@ -141,4 +152,12 @@ export interface NotionRendererProps {
   className?: string;
   /** block.type ごとにルート要素へ追加クラスを差し込む（tailwind-merge で衝突解決）。 */
   classNames?: BlockClassNames;
+  /** file URL を変換する関数。Notion 署名済み URL をプロキシ URL 等に書き換えるために使う（#218）。 */
+  resolveImageUrl?: ResolveImageUrlFn;
+  /** Notion ページ ID をサイト内 URL に変換する関数（#218）。 */
+  resolvePageUrl?: ResolvePageUrlFn;
+  /** `<img>` を差し替えるコンポーネント。next/image などのフレームワーク最適化に使う（#219）。 */
+  Image?: ElementType<ImgHTMLAttributes<HTMLImageElement>>;
+  /** `<a>` を差し替えるコンポーネント。next/link などのフレームワーク最適化に使う（#219）。 */
+  Link?: ElementType<AnchorHTMLAttributes<HTMLAnchorElement>>;
 }

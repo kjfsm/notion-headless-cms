@@ -2,6 +2,7 @@
 
 import type { VideoBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { AspectRatio } from "../components/ui/aspect-ratio";
+import { useNotionContext } from "../context";
 import { getFileUrl } from "../lib/notion-file";
 import { cn } from "../lib/utils";
 import { Caption } from "../rich-text/Caption";
@@ -11,7 +12,9 @@ export function Video({
   block,
   className,
 }: BlockComponentProps<VideoBlockObjectResponse>) {
-  const src = getFileUrl(block.video);
+  const { resolveImageUrl } = useNotionContext();
+  const rawUrl = getFileUrl(block.video);
+  const src = resolveImageUrl ? resolveImageUrl(rawUrl, block) : rawUrl;
   const caption = <Caption value={block.video.caption} />;
 
   if (block.video.type === "external") {

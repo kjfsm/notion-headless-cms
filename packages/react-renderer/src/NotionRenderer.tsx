@@ -15,11 +15,29 @@ export function NotionRenderer({
   components,
   className,
   classNames,
+  resolveImageUrl,
+  resolvePageUrl,
+  Image: ImageSlot,
+  Link: LinkSlot,
 }: NotionRendererProps) {
   const contextValue = useMemo(
-    () => ({ components: components ?? {}, classNames }),
+    () => ({
+      components: components ?? {},
+      classNames,
+      resolveImageUrl,
+      resolvePageUrl,
+      Image: ImageSlot,
+      Link: LinkSlot,
+    }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [components, classNames],
+    [
+      components,
+      classNames,
+      resolveImageUrl,
+      resolvePageUrl,
+      ImageSlot,
+      LinkSlot,
+    ],
   );
   return (
     <NotionContext.Provider value={contextValue}>
