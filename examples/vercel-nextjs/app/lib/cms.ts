@@ -2,6 +2,7 @@ import { notionEmbed, youtubeProvider } from "@notion-headless-cms/block-html";
 import { memoryCache } from "@notion-headless-cms/cache";
 import { nextCache } from "@notion-headless-cms/cache/next";
 import { createClient, notionSource } from "@notion-headless-cms/next";
+import { notionShiki } from "@notion-headless-cms/notion-shiki";
 import { schema } from "@/app/generated/nhc";
 
 const embed = notionEmbed({
@@ -15,6 +16,9 @@ export const cms = createClient({
       schema,
       token: process.env.NOTION_TOKEN ?? "",
       blocks: embed.blocks,
+      // notion-shiki で fetch 時に code ブロックを shiki で pre-render する。
+      // Code スタブが __cachedHtml を読んで描画するため Next.js バンドルに shiki が不要になる。
+      enrichers: [notionShiki()],
       publishOptions: {
         posts: {
           publishedStatuses: ["公開済み"],

@@ -8,6 +8,7 @@ export default defineWorkspace([
   "packages/notion-source",
   "packages/block-html",
   "packages/notion-katex",
+  "packages/notion-shiki",
   "packages/cli",
   "packages/react-renderer",
 ]);

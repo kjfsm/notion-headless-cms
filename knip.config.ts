@@ -11,8 +11,15 @@ export default {
       },
     },
     "packages/react-renderer": {
-      // package.json の exports サブパス (./, ./server)
-      entry: ["src/index.ts", "src/server.ts"],
+      // package.json の exports サブパス (./, ./server, ./equation, ./code, ./router, ./next)
+      entry: [
+        "src/index.ts",
+        "src/server.ts",
+        "src/equation.tsx",
+        "src/code.tsx",
+        "src/router.tsx",
+        "src/next.tsx",
+      ],
       project: ["src/**/*.{ts,tsx}"],
     },
     "packages/cli": {
