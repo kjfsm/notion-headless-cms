@@ -5,6 +5,7 @@ import {
   notionSource,
 } from "@notion-headless-cms/cloudflare";
 import { notionKatex } from "@notion-headless-cms/notion-katex";
+import { notionShiki } from "@notion-headless-cms/notion-shiki";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -29,10 +30,10 @@ export function makeCms(
         schema,
         token: env.NOTION_TOKEN,
         blocks: embed.blocks,
-        // notion-katex で fetch 時に equation ブロックを KaTeX HTML に変換する。
-        // react-renderer の Equation スタブが __cachedHtml を dangerouslySetInnerHTML で描画し、
-        // Workers バンドルに katex が不要になる。
-        enrichers: [notionKatex({ displayMode: true })],
+        // notion-katex / notion-shiki で fetch 時に各ブロックを pre-render する。
+        // react-renderer の Equation / Code スタブが __cachedHtml を dangerouslySetInnerHTML
+        // で描画するため、katex / shiki が Workers バンドルに含まれない。
+        enrichers: [notionKatex({ displayMode: true }), notionShiki()],
         // OGP 取得は有効化するが R2 永続キャッシュは付けない。
         ogp: { enabled: true },
         publishOptions: {
