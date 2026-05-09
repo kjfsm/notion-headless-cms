@@ -19,7 +19,10 @@ export function ChildPage({
       React.AnchorHTMLAttributes<HTMLAnchorElement>
     >;
     return (
-      <LinkComp href={href} className={cn("my-2 flex items-baseline gap-2", className)}>
+      <LinkComp
+        href={href}
+        className={cn("my-2 flex items-baseline gap-2", className)}
+      >
         <FileText
           className="size-4 self-center text-muted-foreground"
           aria-hidden

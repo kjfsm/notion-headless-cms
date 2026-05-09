@@ -30,7 +30,14 @@ export function NotionRenderer({
       Link: LinkSlot,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [components, classNames, resolveImageUrl, resolvePageUrl, ImageSlot, LinkSlot],
+    [
+      components,
+      classNames,
+      resolveImageUrl,
+      resolvePageUrl,
+      ImageSlot,
+      LinkSlot,
+    ],
   );
   return (
     <NotionContext.Provider value={contextValue}>
