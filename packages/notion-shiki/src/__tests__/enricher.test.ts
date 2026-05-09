@@ -105,6 +105,37 @@ describe("notionShiki", () => {
     expect(code?.__cachedHtml).toBeDefined();
   });
 
+  it("language が空文字列の場合は fallbackLang を使う", async () => {
+    const enricher = notionShiki({ fallbackLang: "text" });
+    const block: MinimalBlock = {
+      object: "block",
+      id: "code-no-lang",
+      type: "code",
+      has_children: false,
+      code: { rich_text: [{ plain_text: "hello world" }], language: "" },
+    };
+    const result = await enricher([block] as never);
+    const code = (result[0] as MinimalBlock).code;
+    expect(code?.__cachedHtml).toBeDefined();
+  });
+
+  it("language が undefined の場合も fallbackLang を使う", async () => {
+    const enricher = notionShiki({ fallbackLang: "text" });
+    const block = {
+      object: "block",
+      id: "code-undef-lang",
+      type: "code",
+      has_children: false,
+      code: {
+        rich_text: [{ plain_text: "hello" }],
+        language: undefined as unknown as string,
+      },
+    };
+    const result = await enricher([block] as never);
+    const code = (result[0] as typeof block).code;
+    expect((code as { __cachedHtml?: string }).__cachedHtml).toBeDefined();
+  });
+
   it("元のブロック配列を返す（同一参照）", async () => {
     const enricher = notionShiki();
     const blocks = [makeCodeBlock("const a = 1;")];

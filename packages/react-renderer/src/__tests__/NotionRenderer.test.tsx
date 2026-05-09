@@ -37,6 +37,58 @@ const equation = (id: string, expr: string): NotionBlock =>
     equation: { expression: expr },
   }) as unknown as NotionBlock;
 
+const codeBlock = (
+  id: string,
+  source: string,
+  lang = "typescript",
+  cachedHtml?: string,
+  captionText?: string,
+): NotionBlock =>
+  ({
+    object: "block",
+    id,
+    type: "code",
+    has_children: false,
+    code: {
+      rich_text: [
+        {
+          type: "text",
+          plain_text: source,
+          href: null,
+          text: { content: source, link: null },
+          annotations: {
+            bold: false,
+            italic: false,
+            strikethrough: false,
+            underline: false,
+            code: false,
+            color: "default",
+          },
+        },
+      ],
+      language: lang,
+      caption: captionText
+        ? [
+            {
+              type: "text",
+              plain_text: captionText,
+              href: null,
+              text: { content: captionText, link: null },
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: "default",
+              },
+            },
+          ]
+        : [],
+      ...(cachedHtml !== undefined && { __cachedHtml: cachedHtml }),
+    },
+  }) as unknown as NotionBlock;
+
 const para = (
   id: string,
   text: string,
@@ -219,6 +271,55 @@ describe("NotionRenderer", () => {
       expect(
         container.querySelector("[data-testid='custom-link']"),
       ).not.toBeNull();
+    });
+  });
+
+  describe("Code ブロック", () => {
+    it("デフォルトは <pre> でソースを表示する", () => {
+      const { container } = render(
+        <NotionRenderer blocks={[codeBlock("c1", "const x = 1;")]} />,
+      );
+      expect(container.querySelector("pre")).not.toBeNull();
+      expect(container.textContent).toContain("const x = 1;");
+    });
+
+    it("caption がある場合は <pre> パスでも表示する", () => {
+      const { container } = render(
+        <NotionRenderer
+          blocks={[
+            codeBlock(
+              "c1b",
+              "const x = 1;",
+              "typescript",
+              undefined,
+              "サンプル",
+            ),
+          ]}
+        />,
+      );
+      expect(container.textContent).toContain("サンプル");
+    });
+
+    it("__cachedHtml があれば dangerouslySetInnerHTML で描画する", () => {
+      const html = '<div class="shiki"><span>highlighted</span></div>';
+      const { container } = render(
+        <NotionRenderer
+          blocks={[codeBlock("c2", "let y = 2;", "typescript", html)]}
+        />,
+      );
+      expect(container.querySelector(".shiki")).not.toBeNull();
+      expect(container.textContent).toContain("highlighted");
+    });
+
+    it("__cachedHtml + caption の両方を描画する", () => {
+      const html = '<div class="shiki"><span>highlighted</span></div>';
+      const { container } = render(
+        <NotionRenderer
+          blocks={[codeBlock("c3", "let z = 3;", "typescript", html, "注釈")]}
+        />,
+      );
+      expect(container.querySelector(".shiki")).not.toBeNull();
+      expect(container.textContent).toContain("注釈");
     });
   });
 
