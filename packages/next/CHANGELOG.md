@@ -1,5 +1,15 @@
 # @notion-headless-cms/next
 
+## 1.0.2
+
+### Patch Changes
+
+- a386b14: react-renderer: LinkPreview・Mention の残存ハードコード `<a>`/`<img>` を Context の Image/Link スロットに差替
+
+  - `LinkPreview.tsx` の非 OGP fallback `<a>` を `useNotionContext()` の `Link` スロット経由に変更
+  - `Mention.tsx` の `link_mention`・`link_preview` の `<a>` と、`link_mention` アイコン・`custom_emoji` の `<img>` を `useNotionContext()` の `Link`/`Image` スロット経由に変更
+  - `@notion-headless-cms/next` に next/image・next/link 注入例を含む README.md を追加
+
 ## 1.0.1
 
 ### Patch Changes
