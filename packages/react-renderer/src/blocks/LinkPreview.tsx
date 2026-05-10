@@ -2,7 +2,9 @@
 
 import type { LinkPreviewBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { Link as LinkIcon } from "lucide-react";
+import type { ElementType } from "react";
 import { Card, CardContent } from "../components/ui/card";
+import { useNotionContext } from "../context";
 import { OgCard, type OgCardData } from "../embeds/OgCard";
 import { cn } from "../lib/utils";
 import type { BlockComponentProps } from "../types";
@@ -15,6 +17,7 @@ export function LinkPreview({
   block,
   className,
 }: BlockComponentProps<LinkPreviewBlockObjectResponse>) {
+  const { Link: LinkSlot } = useNotionContext();
   const url = block.link_preview.url;
   const ogp = (block as LinkPreviewBlockMaybeWithOgp).ogp;
 
@@ -26,8 +29,11 @@ export function LinkPreview({
     );
   }
 
+  const LinkComp = (LinkSlot ?? "a") as ElementType<
+    React.AnchorHTMLAttributes<HTMLAnchorElement>
+  >;
   return (
-    <a
+    <LinkComp
       href={url}
       target="_blank"
       rel="noopener noreferrer"
@@ -39,6 +45,6 @@ export function LinkPreview({
           <span className="truncate">{url}</span>
         </CardContent>
       </Card>
-    </a>
+    </LinkComp>
   );
 }

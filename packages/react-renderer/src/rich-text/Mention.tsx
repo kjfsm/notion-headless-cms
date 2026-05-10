@@ -2,6 +2,8 @@
 
 import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 import { Link as LinkIcon } from "lucide-react";
+import type { ElementType } from "react";
+import { useNotionContext } from "../context";
 
 export interface MentionProps {
   item: Extract<RichTextItemResponse, { type: "mention" }>;
@@ -9,20 +11,28 @@ export interface MentionProps {
 
 /** rich_text の mention 種別を React で描画する。link_mention は Notion 風カードに近い見た目。 */
 export function Mention({ item }: MentionProps) {
+  const { Image: ImageSlot, Link: LinkSlot } = useNotionContext();
   const m = item.mention;
   const plainText = item.plain_text;
+
+  const LinkComp = (LinkSlot ?? "a") as ElementType<
+    React.AnchorHTMLAttributes<HTMLAnchorElement>
+  >;
+  const Img = (ImageSlot ?? "img") as ElementType<
+    React.ImgHTMLAttributes<HTMLImageElement>
+  >;
 
   if (m.type === "link_mention") {
     const lm = m.link_mention;
     return (
-      <a
+      <LinkComp
         href={lm.href}
         target="_blank"
         rel="noopener noreferrer"
         className="inline-flex items-baseline gap-1 rounded px-1 hover:bg-muted"
       >
         {lm.icon_url ? (
-          <img
+          <Img
             src={lm.icon_url}
             alt=""
             aria-hidden
@@ -37,13 +47,13 @@ export function Mention({ item }: MentionProps) {
           </span>
         ) : null}
         <strong className="font-medium">{lm.title ?? lm.href}</strong>
-      </a>
+      </LinkComp>
     );
   }
 
   if (m.type === "link_preview") {
     return (
-      <a
+      <LinkComp
         href={m.link_preview.url}
         target="_blank"
         rel="noopener noreferrer"
@@ -51,7 +61,7 @@ export function Mention({ item }: MentionProps) {
       >
         <LinkIcon className="inline-block size-3.5 self-center" aria-hidden />
         <span>{plainText || m.link_preview.url}</span>
-      </a>
+      </LinkComp>
     );
   }
 
@@ -89,7 +99,7 @@ export function Mention({ item }: MentionProps) {
     const emoji = m.custom_emoji;
     if ("url" in emoji && emoji.url) {
       return (
-        <img
+        <Img
           src={String(emoji.url)}
           alt={"name" in emoji ? String(emoji.name) : ""}
           className="inline-block size-[1em] align-baseline"
