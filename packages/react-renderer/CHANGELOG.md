@@ -1,5 +1,28 @@
 # @notion-headless-cms/react-renderer
 
+## 0.1.5
+
+### Patch Changes
+
+- b26e623: feat(#220): notion-shiki パッケージと react-renderer/code サブパス export を追加
+
+  - `@notion-headless-cms/notion-shiki` 新規パッケージ: fetch 時に shiki で code ブロックを pre-render し `block.code.__cachedHtml` へ埋め込む `BlockEnricher` を提供。Workers バンドルから shiki を除外できる（`notion-katex` の Code 版）
+  - `react-renderer` の `Code` スタブを更新: `__cachedHtml` が付与されていれば `dangerouslySetInnerHTML` で描画、なければ従来の `<pre>` にフォールバック（完全後方互換）
+  - `react-renderer/code` サブパスを追加: `shiki` をブラウザで直接使いたい場合に `SyntaxHighlighter` を import できる（`createHighlighter` + React 19 `use()` + Suspense で非同期初期化を吸収）
+
+- 2aa855a: react-renderer: resolveImageUrl / resolvePageUrl / Image / Link スロットを追加 (#218 / #219)
+
+  - `NotionRenderer` props に `resolveImageUrl` / `resolvePageUrl` を追加。Context 経由で Image・Video・Audio・File・Pdf・LinkToPage・ChildPage ブロック全体に伝播する
+  - `Image` / `Link` コンポーネントスロットを追加。`next/image` / `next/link` などのフレームワーク最適化コンポーネントをブロック override なしに差し込める
+  - `OgCard` の `<a>` / `<img>` も同スロットに対応
+  - 未注入時は従来通り `<img>` / `<a>` にフォールバックし、完全互換
+
+- a386b14: react-renderer: LinkPreview・Mention の残存ハードコード `<a>`/`<img>` を Context の Image/Link スロットに差替
+
+  - `LinkPreview.tsx` の非 OGP fallback `<a>` を `useNotionContext()` の `Link` スロット経由に変更
+  - `Mention.tsx` の `link_mention`・`link_preview` の `<a>` と、`link_mention` アイコン・`custom_emoji` の `<img>` を `useNotionContext()` の `Link`/`Image` スロット経由に変更
+  - `@notion-headless-cms/next` に next/image・next/link 注入例を含む README.md を追加
+
 ## 0.1.4
 
 ### Patch Changes

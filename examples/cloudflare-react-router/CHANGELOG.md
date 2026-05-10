@@ -1,5 +1,15 @@
 # example-cloudflare-react-router
 
+## 0.0.51
+
+### Patch Changes
+
+- Updated dependencies [b26e623]
+- Updated dependencies [2aa855a]
+- Updated dependencies [a386b14]
+  - @notion-headless-cms/notion-shiki@0.1.1
+  - @notion-headless-cms/react-renderer@0.1.5
+
 ## 0.0.50
 
 ### Patch Changes
