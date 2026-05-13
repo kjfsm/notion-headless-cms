@@ -1,6 +1,6 @@
 {
   "name": "@notion-headless-cms/node",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Node.js 向け notion-headless-cms メタパッケージ — createCms と nodePreset を一括提供",
   "keywords": [
     "notion",
