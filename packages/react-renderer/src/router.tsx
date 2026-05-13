@@ -33,7 +33,10 @@ export function useNotionRevalidate(
   useRevalidateEffect(stable, opts);
 }
 
-/** `useNotionRevalidate` を呼ぶだけのレンダー無しコンポーネント (root.tsx 用)。 */
+/**
+ * マウント後に loader を 1 度再走させ、サーバー側 SWR で差し替わった最新データを
+ * 別 fetch なしで取り込むレンダー無しコンポーネント。
+ */
 export function NotionRevalidator(props: UseNotionRevalidateOptions): null {
   useNotionRevalidate(props);
   return null;
