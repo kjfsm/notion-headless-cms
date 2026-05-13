@@ -31,6 +31,14 @@
     "./server": {
       "types": "./dist/server.d.mts",
       "import": "./dist/server.mjs"
+    },
+    "./router": {
+      "types": "./dist/router.d.mts",
+      "import": "./dist/router.mjs"
+    },
+    "./next": {
+      "types": "./dist/next.d.mts",
+      "import": "./dist/next.mjs"
     }
   },
   "files": [
@@ -40,7 +48,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "tsdown src/index.ts src/server.ts --format esm --dts --sourcemap --out-dir dist",
+    "build": "tsdown src/index.ts src/server.ts src/router.tsx src/next.tsx --format esm --dts --sourcemap --out-dir dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
@@ -53,11 +61,19 @@
   },
   "peerDependencies": {
     "@notionhq/client": "^5.20.0",
+    "next": ">=15.0.0",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "react-router": "^7.0.0"
   },
   "peerDependenciesMeta": {
     "@notionhq/client": {
+      "optional": true
+    },
+    "next": {
+      "optional": true
+    },
+    "react-router": {
       "optional": true
     }
   },

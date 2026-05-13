@@ -427,7 +427,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     await Promise.all(capturedPromises);
 
     expect(debugFn).toHaveBeenCalledWith(
-      "SWR: 差分なし、TTL をリセット",
+      "SWR: 差分なし、cachedAt を更新",
       expect.objectContaining({ operation: "find:bg", slug: "post-1" }),
     );
     expect(onCacheRevalidated).not.toHaveBeenCalled();

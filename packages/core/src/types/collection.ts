@@ -140,6 +140,15 @@ export interface CollectionClient<T extends BaseContentItem = BaseContentItem> {
    */
   check(slug: string, currentVersion: string): Promise<CheckResult<T> | null>;
 
+  /**
+   * KV だけを読んで `{ notionUpdatedAt, cachedAt }` を返す。Notion API を叩かない。
+   * クライアント側ポーリングで「バックグラウンド更新が完了したか」を安価に確認するためのもの。
+   * キャッシュに存在しない場合は `null`。
+   */
+  peekVersion(
+    slug: string,
+  ): Promise<{ notionUpdatedAt: string; cachedAt: number } | null>;
+
   /** 前後アイテムのナビゲーション (リスト順序ベース)。 */
   adjacent(
     slug: string,

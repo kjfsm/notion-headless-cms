@@ -13,7 +13,10 @@ export interface Env {
   IMG_BUCKET?: R2Bucket;
 }
 
-export function makeCms(env: Env): Nhc {
+export function makeCms(
+  env: Env,
+  ctx?: { waitUntil(p: Promise<unknown>): void },
+): Nhc {
   const embed = notionEmbed({
     providers: [youtubeProvider({ display: "card" })],
   });
@@ -26,5 +29,6 @@ export function makeCms(env: Env): Nhc {
     }),
     renderer: embed.renderer,
     blocks: embed.blocks,
+    waitUntil: ctx ? (p) => ctx.waitUntil(p) : undefined,
   });
 }
