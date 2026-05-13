@@ -3,7 +3,7 @@
   "extends": ["//"],
   "tasks": {
     "cf-typegen": {
-      "inputs": ["wrangler.toml", "react-router.config.ts"],
+      "inputs": ["wrangler.toml", "react-router.config.ts", "app/routes.ts"],
       "outputs": ["worker-configuration.d.ts", ".react-router/types/**"]
     },
     "typecheck": {
