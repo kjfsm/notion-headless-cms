@@ -130,6 +130,28 @@ export default function Post({ loaderData }) {
 }
 ```
 
+**KV ポーリングで確実に最新化したい場合**は `poll` オプションを使う。`peekVersion` エンドポイントをポーリングし、SWR バックグラウンド更新が完了したタイミングで自動的に loader を再走させる。
+
+```ts
+// app/routes/check.ts
+export async function loader({ params, context }: Route.LoaderArgs) {
+  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
+  return Response.json(await cms.posts.peekVersion(params.slug ?? ""));
+}
+```
+
+```tsx
+// app/routes/post.tsx
+<NotionRevalidator
+  poll={{
+    url: `/api/posts/${item.slug}/check`,
+    version: item.lastEditedTime,
+  }}
+/>
+```
+
+ポーリングは `notionUpdatedAt` の変化（更新あり → revalidate）または `cachedAt` の変化（確認完了・更新なし → 停止）を検出した時点で自動停止する。既定タイムアウトは 30 秒。
+
 ### Hono / Astro / Express など素 HTML
 
 `notionRevalidatorScript()` をテンプレートに埋め込む。タブ可視化で `location.reload()` する `<script>` 文字列を返す。

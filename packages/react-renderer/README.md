@@ -188,11 +188,21 @@ export default async function Page({ params }) {
 
 | プロップ / オプション | 既定値 | 説明 |
 |---|---|---|
-| `on` | `"mount"` | 発火タイミング。`"mount"` / `"visibility"` / 配列で複数指定可 |
+| `on` | `"mount"` | 発火タイミング。`"mount"` / `"visibility"` / 配列で複数指定可。`poll` 指定時は既定が `[]`（空）になる |
+| `poll.url` | — | `peekVersion` を返すエンドポイント URL |
+| `poll.version` | — | ページロード時の `item.lastEditedTime`（比較基準） |
+| `poll.intervalMs` | `500` | ポーリング間隔（ms） |
+| `poll.timeoutMs` | `30000` | タイムアウト（ms） |
 
 ```tsx
 <NotionRevalidator on={["mount", "visibility"]} />
 // マウント時 + タブが visible に戻った時の両方で再評価
+
+<NotionRevalidator
+  poll={{ url: `/api/posts/${item.slug}/check`, version: item.lastEditedTime }}
+/>
+// KV ポーリング: バックグラウンド SWR 更新の完了を検出してから revalidate
+// notionUpdatedAt 変化 → 即 revalidate / cachedAt 変化（確認完了・更新なし）→ 停止
 ```
 
 フック版 `useNotionRevalidate(opts)` も同じシグネチャで提供。React 非依存の素 HTML 向けには `@notion-headless-cms/core/html` の `notionRevalidatorScript()` を使う。
