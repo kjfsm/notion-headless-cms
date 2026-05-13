@@ -13,8 +13,6 @@ export default function Home({ loaderData }: Route.ComponentProps) {
   const { items } = loaderData;
   return (
     <main>
-      {/* ハイドレーション後に loader を 1 度再走させ、SWR で差し替わった
-          最新の一覧をクエリ無し・別 API fetch 無しで取り込む。 */}
       <NotionRevalidator />
       <h1>記事一覧</h1>
       <ul>

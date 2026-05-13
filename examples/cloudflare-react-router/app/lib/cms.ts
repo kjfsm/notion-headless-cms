@@ -14,8 +14,6 @@ export interface Env {
   IMG_BUCKET?: R2Bucket;
 }
 
-// ctx は `waitUntil` だけ要求する構造型で受ける。
-// React Router / Hono / Astro 等で型が微妙に違っても通る。Workers では常に提供される。
 export function makeCms(
   env: Env,
   ctx: { waitUntil(p: Promise<unknown>): void },
@@ -30,11 +28,7 @@ export function makeCms(
         schema,
         token: env.NOTION_TOKEN,
         blocks: embed.blocks,
-        // notion-katex / notion-shiki で fetch 時に各ブロックを pre-render する。
-        // react-renderer の Equation / Code スタブが __cachedHtml を dangerouslySetInnerHTML
-        // で描画するため、katex / shiki が Workers バンドルに含まれない。
         enrichers: [notionKatex({ displayMode: true }), notionShiki()],
-        // OGP 取得は有効化するが R2 永続キャッシュは付けない。
         ogp: { enabled: true },
         publishOptions: {
           posts: {
@@ -45,11 +39,6 @@ export function makeCms(
       }),
     },
     renderer: embed.renderer,
-    // swr.ttlMs はあえて未指定。キャッシュは期限なしで永続させ、
-    // Notion 側の lastEditedTime に差分があったときだけ waitUntil の bg で差し替える。
-    // TTL を入れると期限切れ時にブロッキング再取得が走り、変更が無くても遅延が発生する。
-    // cache (KV+R2) と waitUntil (SWR bg をレスポンス送信後も完走させる) を一括で注入。
-    // ctx を渡さないと bg が打ち切られて KV の古いキャッシュが残り続ける。
     ...cloudflarePreset({ env, ctx }),
   });
 }
