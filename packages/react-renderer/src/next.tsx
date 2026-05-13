@@ -8,6 +8,7 @@ import {
 } from "./internal/revalidate.js";
 
 export type {
+  NotionPollOptions,
   NotionRevalidateTrigger,
   UseNotionRevalidateOptions,
 } from "./internal/revalidate.js";
@@ -32,6 +33,7 @@ export function useNotionRevalidate(
 /**
  * マウント後に `router.refresh()` を呼び、サーバー側 SWR で差し替わった最新データを
  * 別 fetch なしで取り込むレンダー無しコンポーネント。
+ * `poll` を指定すると KV ポーリングで更新完了を検出してから revalidate する。
  */
 export function NotionRevalidator(props: UseNotionRevalidateOptions): null {
   useNotionRevalidate(props);

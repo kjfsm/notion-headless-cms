@@ -21,6 +21,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
       slug: post.slug,
       title: post.title,
       publishedAt: post.publishedAt,
+      lastEditedTime: post.lastEditedTime,
     },
   };
 }
@@ -29,7 +30,12 @@ export default function Post({ loaderData }: Route.ComponentProps) {
   const { blocks, item } = loaderData;
   return (
     <article>
-      <NotionRevalidator />
+      <NotionRevalidator
+        poll={{
+          url: `/api/posts/${item.slug}/check`,
+          version: item.lastEditedTime,
+        }}
+      />
       <h1>{item.title ?? item.slug}</h1>
       {item.publishedAt && <time>{item.publishedAt}</time>}
       <NotionRenderer blocks={blocks} />
