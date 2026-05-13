@@ -32,13 +32,13 @@
     "dotenv": "^17.4.2",
     "katex": "^0.16.11",
     "shiki": "^1.0.0",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "react-router": "^7.15.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.36.0",
+    "@cloudflare/vite-plugin": "^1.36.4",
     "@notion-headless-cms/cli": "workspace:*",
     "@playwright/test": "catalog:",
     "@react-router/dev": "^7.15.0",
@@ -48,8 +48,8 @@
     "dotenv-cli": "^11.0.0",
     "tailwindcss": "^4",
     "typescript": "^6.0.3",
-    "vite": "^8.0.10",
-    "vitest": "^4.1.5",
-    "wrangler": "^4.88.0"
+    "vite": "^8.0.12",
+    "vitest": "^4.1.6",
+    "wrangler": "^4.90.1"
   }
 }
