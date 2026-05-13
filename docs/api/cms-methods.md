@@ -146,6 +146,42 @@ useEffect(() => {
 }, []);
 ```
 
+### `peekVersion(slug)`
+
+KV **のみ**を読んで `{ notionUpdatedAt, cachedAt }` を返す。Notion API を叩かないため安価。
+クライアント側ポーリングで「SWR バックグラウンド更新が完了したか」を確認するためのもの。
+
+```ts
+const version = await cms.posts.peekVersion("hello-world");
+// => { notionUpdatedAt: "2024-01-01T00:00:00.000Z", cachedAt: 1704067200000 }
+// => null (キャッシュ未作成の場合)
+```
+
+- キャッシュが存在しない場合は `null` を返す
+- Notion API 呼び出しなし（KV 1 読み取りのみ）
+- `NotionRevalidator` の `poll` オプションと組み合わせて使う
+
+**Cloudflare Workers + React Router での使用例:**
+
+```ts
+// サーバー: /api/posts/:slug/check
+export async function loader({ params, context }: Route.LoaderArgs) {
+  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
+  const version = await cms.posts.peekVersion(params.slug ?? "");
+  return Response.json(version);
+}
+```
+
+```tsx
+// クライアント: バックグラウンド更新完了後に自動再描画
+<NotionRevalidator
+  poll={{
+    url: `/api/posts/${item.slug}/check`,
+    version: item.lastEditedTime,
+  }}
+/>
+```
+
 ## コレクション別キャッシュ操作 (`CollectionCacheOps<T>`)
 
 `cms.posts.cache` で取得できるキャッシュ操作 namespace。

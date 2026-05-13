@@ -131,6 +131,15 @@ export interface CollectionClient<T extends BaseContentItem = BaseContentItem> {
   params(): Promise<string[]>;
 
   /**
+   * KV だけを読んで `{ notionUpdatedAt, cachedAt }` を返す。Notion API を叩かない。
+   * クライアント側ポーリングで「バックグラウンド更新が完了したか」を安価に確認するためのもの。
+   * キャッシュに存在しない場合は `null`。
+   */
+  peekVersion(
+    slug: string,
+  ): Promise<{ notionUpdatedAt: string; cachedAt: number } | null>;
+
+  /**
    * Notion から最新版を取得し、`currentVersion`（`item.lastEditedTime`）と比較する。
    * 差分があればキャッシュを更新してアイテムを返す。
    * ページ表示後の1回限りのクライアント再検証エンドポイント用。

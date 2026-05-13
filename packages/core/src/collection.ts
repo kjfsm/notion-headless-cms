@@ -146,6 +146,14 @@ export class CollectionClientImpl<T extends BaseContentItem>
     return items.map((item) => item.slug);
   }
 
+  async peekVersion(
+    slug: string,
+  ): Promise<{ notionUpdatedAt: string; cachedAt: number } | null> {
+    const meta = await this.ctx.docCache.getMeta<T>(this.ctx.collection, slug);
+    if (!meta) return null;
+    return { notionUpdatedAt: meta.notionUpdatedAt, cachedAt: meta.cachedAt };
+  }
+
   async check(
     slug: string,
     currentVersion: string,
@@ -404,13 +412,12 @@ export class CollectionClientImpl<T extends BaseContentItem>
         });
         this.ctx.hooks.onCacheRevalidated?.(slug, meta);
         await this.rebuildContentBg(slug, item);
-      } else if (this.ctx.ttlMs !== undefined) {
-        // Notion 側に変化が無いので cachedAt だけ更新し TTL 期限切れを先送りする
+      } else {
         await this.ctx.docCache.setMeta(this.ctx.collection, slug, {
           ...cached,
           cachedAt: Date.now(),
         });
-        this.ctx.logger?.debug?.("SWR: 差分なし、TTL をリセット", {
+        this.ctx.logger?.debug?.("SWR: 差分なし、cachedAt を更新", {
           operation: "find:bg",
           slug,
           collection: this.ctx.collection,
