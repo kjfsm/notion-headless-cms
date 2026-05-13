@@ -1,6 +1,6 @@
 {
   "name": "@notion-headless-cms/next",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Next.js App Router 向け notion-headless-cms メタパッケージ — createCms・画像プロキシ・Webhook ハンドラを一括提供",
   "keywords": [
     "notion",
