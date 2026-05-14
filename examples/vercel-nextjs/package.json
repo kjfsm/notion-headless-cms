@@ -26,23 +26,23 @@
     "@notion-headless-cms/react-renderer": "workspace:*",
     "@notionhq/client": "catalog:",
     "@notion-headless-cms/notion-shiki": "workspace:*",
-    "katex": "^0.16.11",
+    "katex": "^0.16.46",
     "shiki": "^1.0.0",
     "next": "^16.2.4",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "zod": "^4.4.3"
   },
   "devDependencies": {
     "@notion-headless-cms/cli": "workspace:*",
     "@playwright/test": "catalog:",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^25.6.0",
+    "@types/node": "^25.8.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "dotenv": "^17.4.2",
     "tailwindcss": "^4",
     "typescript": "^6.0.3",
-    "vitest": "^4.1.5"
+    "vitest": "^4.1.6"
   }
 }

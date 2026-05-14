@@ -5,10 +5,10 @@ allowBuilds:
   esbuild: true
 
 catalog:
-  "@notionhq/client": "^5.20.0"
-  "@playwright/test": "^1.52.0"
+  "@notionhq/client": "^5.21.0"
+  "@playwright/test": "^1.60.0"
   zod: "^4.0.0"
-  "@types/node": "^25.6.0"
+  "@types/node": "^25.8.0"
   unified: "^11.0.5"
   "remark-parse": "^11.0.0"
   "remark-gfm": "^4.0.1"

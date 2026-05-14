@@ -49,10 +49,10 @@
   },
   "peerDependencies": {
     "@notion-headless-cms/notion-orm": "workspace:*",
-    "katex": "^0.16.11"
+    "katex": "^0.16.46"
   },
   "devDependencies": {
     "@notion-headless-cms/notion-orm": "workspace:*",
-    "katex": "^0.16.11"
+    "katex": "^0.16.46"
   }
 }
