@@ -31,7 +31,7 @@
     "@react-router/cloudflare": "^7.15.0",
     "dotenv": "^17.4.2",
     "katex": "^0.16.11",
-    "shiki": "^1.0.0",
+    "shiki": "^4.0.2",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router": "^7.15.0",
