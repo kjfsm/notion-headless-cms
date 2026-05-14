@@ -55,6 +55,15 @@ const text = (s: string) =>
   }) satisfies RichTextItemResponse;
 
 describe("renderParagraph", () => {
+  it("空ブロックは <p><br></p> を出す", async () => {
+    const block: ParagraphBlockObjectResponse = {
+      ...blockBase,
+      type: "paragraph",
+      paragraph: { rich_text: [], color: "default", icon: null },
+    };
+    expect(await renderParagraph(block)).toBe("<p><br></p>");
+  });
+
   it("シンプルな <p> を出す", async () => {
     const block: ParagraphBlockObjectResponse = {
       ...blockBase,
