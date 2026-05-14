@@ -20,6 +20,11 @@ function toEmbedUrl(url: string): string {
   return url;
 }
 
+/** YouTube の embed URL かどうかを判定する。 */
+function isYoutubeEmbed(url: string): boolean {
+  return url.startsWith("https://www.youtube-nocookie.com/embed/");
+}
+
 export function Video({
   block,
   className,
@@ -41,8 +46,12 @@ export function Video({
             src={src}
             title="Video"
             className="h-full w-full"
-            sandbox="allow-scripts allow-same-origin allow-popups"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            sandbox={
+              isYoutubeEmbed(src)
+                ? undefined
+                : "allow-scripts allow-same-origin allow-popups"
+            }
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
           />
         </AspectRatio>
