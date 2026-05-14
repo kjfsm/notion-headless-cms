@@ -4,6 +4,7 @@ import type { ImageBlockObjectResponse } from "@notionhq/client/build/src/api-en
 import { type ElementType, useCallback, useEffect, useState } from "react";
 import { useNotionContext } from "../context";
 import { getFileUrl } from "../lib/notion-file";
+import { cn } from "../lib/utils";
 import { Caption } from "../rich-text/Caption";
 import type { BlockComponentProps } from "../types";
 
@@ -34,7 +35,7 @@ export function Image({
 
   return (
     <>
-      <figure className={className}>
+      <figure className={cn("my-0", className)}>
         <button
           type="button"
           onClick={() => setOpen(true)}
