@@ -1,6 +1,7 @@
 "use client";
 
 import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
+import { Fragment } from "react";
 import { Annotated } from "./Annotation";
 import { Mention } from "./Mention";
 
@@ -45,7 +46,20 @@ function RichTextItem({ item }: { item: RichTextItemResponse }) {
   const url = item.text.link?.url ?? item.href ?? null;
   return (
     <Annotated annotations={item.annotations} href={url}>
-      {item.text.content}
+      {renderWithLineBreaks(item.text.content)}
     </Annotated>
   );
+}
+
+/** テキスト内の改行文字を <br> 要素に変換する。 */
+function renderWithLineBreaks(content: string) {
+  const parts = content.split("\n");
+  if (parts.length === 1) return content;
+  return parts.map((part, i) => (
+    // biome-ignore lint/suspicious/noArrayIndexKey: 改行分割の順序は安定している
+    <Fragment key={i}>
+      {i > 0 && <br />}
+      {part}
+    </Fragment>
+  ));
 }

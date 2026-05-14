@@ -8,13 +8,26 @@ import { cn } from "../lib/utils";
 import { Caption } from "../rich-text/Caption";
 import type { BlockComponentProps } from "../types";
 
+const YOUTUBE_RE =
+  /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+
+/** YouTube の watch URL を embed URL に変換する。既に embed 形式か非 YouTube URL はそのまま返す。 */
+function toEmbedUrl(url: string): string {
+  const m = url.match(YOUTUBE_RE);
+  if (m?.[1]) {
+    return `https://www.youtube-nocookie.com/embed/${m[1]}`;
+  }
+  return url;
+}
+
 export function Video({
   block,
   className,
 }: BlockComponentProps<VideoBlockObjectResponse>) {
   const { resolveImageUrl } = useNotionContext();
   const rawUrl = getFileUrl(block.video);
-  const src = resolveImageUrl ? resolveImageUrl(rawUrl, block) : rawUrl;
+  const resolved = resolveImageUrl ? resolveImageUrl(rawUrl, block) : rawUrl;
+  const src = block.video.type === "external" ? toEmbedUrl(resolved) : resolved;
   const caption = <Caption value={block.video.caption} />;
 
   if (block.video.type === "external") {
@@ -29,6 +42,7 @@ export function Video({
             title="Video"
             className="h-full w-full"
             sandbox="allow-scripts allow-same-origin allow-popups"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
             allowFullScreen
           />
         </AspectRatio>

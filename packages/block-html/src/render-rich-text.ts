@@ -40,7 +40,7 @@ async function renderRichTextItem(
     );
   }
   const text = item.text;
-  const inner = escapeHtml(text.content);
+  const inner = escapeHtml(text.content).replace(/\n/g, "<br>");
   const url = text.link?.url
     ? normalizeUrl(text.link.url)
     : (item.href ?? null);
