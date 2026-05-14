@@ -13,7 +13,11 @@ export function Paragraph({
   return (
     <div className={cn("my-2", className)}>
       <p className="leading-7">
-        <RichText value={block.paragraph.rich_text} />
+        {block.paragraph.rich_text.length === 0 ? (
+          <br />
+        ) : (
+          <RichText value={block.paragraph.rich_text} />
+        )}
       </p>
       {block.children ? (
         <div className="ml-6">

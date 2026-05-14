@@ -25,7 +25,8 @@ export async function renderParagraph(
     typeof colorValue === "string" && colorValue !== "default"
       ? ` class="nhc-color-bg--${colorValue.replace("_background", "")}"`
       : "";
-  return `<p${color}>${html}</p>`;
+  // 空ブロックは <p></p> だとブラウザが折り畳むため <br> で高さを確保する。
+  return `<p${color}>${html || "<br>"}</p>`;
 }
 
 /** heading_1 ブロックを HTML に変換する。 */
