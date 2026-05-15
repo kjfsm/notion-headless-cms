@@ -53,6 +53,6 @@
   },
   "devDependencies": {
     "@notion-headless-cms/notion-orm": "workspace:*",
-    "shiki": "^1.0.0"
+    "shiki": "catalog:"
   }
 }

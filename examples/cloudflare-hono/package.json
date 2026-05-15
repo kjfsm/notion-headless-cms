@@ -19,15 +19,15 @@
     "@notion-headless-cms/core": "workspace:*",
     "@notion-headless-cms/notion-orm": "workspace:*",
     "@notion-headless-cms/notion-source": "workspace:*",
-    "hono": "^4.12.17",
-    "zod": "^4.4.3"
+    "hono": "catalog:",
+    "zod": "catalog:"
   },
   "devDependencies": {
     "@notion-headless-cms/cli": "workspace:*",
     "@playwright/test": "catalog:",
-    "dotenv": "^17.4.2",
-    "typescript": "^6.0.3",
-    "vitest": "^4.1.5",
-    "wrangler": "^4.88.0"
+    "dotenv": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "wrangler": "catalog:"
   }
 }

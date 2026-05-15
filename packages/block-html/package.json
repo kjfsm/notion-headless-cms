@@ -81,6 +81,6 @@
     "unified": "catalog:"
   },
   "dependencies": {
-    "linkedom": "^0.18.12"
+    "linkedom": "catalog:"
   }
 }

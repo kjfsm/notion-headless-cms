@@ -50,7 +50,7 @@
   "dependencies": {
     "@notion-headless-cms/core": "workspace:*",
     "@notion-headless-cms/markdown-html": "workspace:*",
-    "linkedom": "^0.18.12"
+    "linkedom": "catalog:"
   },
   "peerDependencies": {
     "@notionhq/client": "^5.20.0",
