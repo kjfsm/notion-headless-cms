@@ -24,7 +24,7 @@ catalog:
   "@types/react": "^19.0.0"
   "@types/react-dom": "^19.0.0"
   tailwindcss: "^4"
-  hono: "^4.12.17"
+  hono: "^4.12.18"
   tsx: "^4.19.0"
   katex: "^0.16.11"
   shiki: "^1.0.0"
