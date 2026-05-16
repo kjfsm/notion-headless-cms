@@ -1,19 +1,19 @@
-import { Slot } from "@radix-ui/react-slot"
-import * as React from "react"
-import { cn } from "~/lib/utils"
+import { Slot } from "@radix-ui/react-slot";
+import type * as React from "react";
+import { cn } from "~/lib/utils";
 
-type BadgeVariant = "default" | "secondary" | "destructive" | "outline"
+type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
 
 const variantClasses: Record<BadgeVariant, string> = {
   default: "border-transparent bg-primary text-primary-foreground",
   secondary: "border-transparent bg-secondary text-secondary-foreground",
   destructive: "border-transparent bg-destructive text-white",
   outline: "text-foreground",
-}
+};
 
 interface BadgeProps extends React.ComponentProps<"span"> {
-  variant?: BadgeVariant
-  asChild?: boolean
+  variant?: BadgeVariant;
+  asChild?: boolean;
 }
 
 function Badge({
@@ -22,7 +22,7 @@ function Badge({
   asChild = false,
   ...props
 }: BadgeProps) {
-  const Comp = asChild ? Slot : "span"
+  const Comp = asChild ? Slot : "span";
 
   return (
     <Comp
@@ -34,8 +34,8 @@ function Badge({
       )}
       {...props}
     />
-  )
+  );
 }
 
-export { Badge }
-export type { BadgeVariant }
+export type { BadgeVariant };
+export { Badge };

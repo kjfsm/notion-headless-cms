@@ -14,10 +14,10 @@ import { cn } from "~/lib/utils";
 const SECTION_ORDER = ["はじめに", "ガイド", "APIリファレンス", "レシピ"];
 
 const SECTION_ICONS: Record<string, React.ElementType> = {
-  "はじめに": BookOpen,
-  "ガイド": Layers,
-  "APIリファレンス": FileText,
-  "レシピ": FlaskConical,
+  はじめに: BookOpen,
+  ガイド: Layers,
+  APIリファレンス: FileText,
+  レシピ: FlaskConical,
 };
 
 interface DocsSidebarProps {
@@ -62,7 +62,9 @@ export function DocsSidebar({ docs, currentSlug }: DocsSidebarProps) {
                 return (
                   <li
                     key={doc.slug}
-                    style={{ animationDelay: `${(sectionIndex * 5 + i) * 25}ms` }}
+                    style={{
+                      animationDelay: `${(sectionIndex * 5 + i) * 25}ms`,
+                    }}
                     className="animate-slide-in-left"
                   >
                     <NavLink
