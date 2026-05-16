@@ -44,7 +44,9 @@ export default function Doc({ loaderData }: Route.ComponentProps) {
       <h1 className="text-3xl font-bold text-gray-900 mb-6">
         {item.title ?? item.slug}
       </h1>
-      {item.description && <p className="text-muted-foreground mb-6">{item.description}</p>}
+      {item.description && (
+        <p className="text-muted-foreground mb-6">{item.description}</p>
+      )}
       <div className="prose prose-gray max-w-none">
         <NotionRenderer blocks={blocks} />
       </div>
