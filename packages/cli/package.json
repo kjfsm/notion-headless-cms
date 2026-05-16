@@ -52,7 +52,7 @@
     "@notion-headless-cms/core": "workspace:*",
     "@notionhq/client": "catalog:",
     "commander": "^14.0.3",
-    "dotenv": "^17.4.2",
+    "dotenv": "catalog:",
     "jiti": "^2.7.0"
   },
   "devDependencies": {

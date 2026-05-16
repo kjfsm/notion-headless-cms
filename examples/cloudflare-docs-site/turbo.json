@@ -1,0 +1,13 @@
+{
+  "$schema": "https://turborepo.dev/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "cf-typegen": {
+      "inputs": ["wrangler.toml", "react-router.config.ts", "app/routes.ts"],
+      "outputs": ["worker-configuration.d.ts", ".react-router/types/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["cf-typegen", "^build"]
+    }
+  }
+}

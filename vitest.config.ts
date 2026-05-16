@@ -3,7 +3,7 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     pool: "threads",
-    reporters: process.env.CI ? ["dot"] : ["verbose"],
+    reporter: process.env.CI ? ["dot"] : ["verbose"],
     coverage: {
       provider: "v8",
       thresholds: {

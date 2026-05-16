@@ -1,0 +1,27 @@
+name = "nhc-docs-site"
+main = "./workers/app.ts"
+compatibility_date = "2026-04-22"
+compatibility_flags = ["nodejs_compat"]
+assets = { directory = "./build/client" }
+
+# Workers の組み込み観測機能を有効化（ダッシュボードでログ・メトリクスを閲覧可能）
+[observability]
+enabled = true
+
+[build]
+command = "pnpm build"
+
+# KV namespace は初回デプロイ前に作成して ID を設定してください:
+# wrangler kv namespace create DOC_CACHE
+# [[kv_namespaces]]
+# binding = "DOC_CACHE"
+# id = "<KV_NAMESPACE_ID>"
+
+[[r2_buckets]]
+binding = "IMG_BUCKET"
+bucket_name = "nhc-docs-site-cache"
+preview_bucket_name = "nhc-docs-site-cache-preview"
+
+# ランタイムシークレットは初回デプロイ前に以下で設定してください:
+# wrangler secret put NOTION_TOKEN
+# KV / R2 バインディングは wrangler kv namespace create / wrangler r2 bucket create で作成する
