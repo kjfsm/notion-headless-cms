@@ -1,7 +1,7 @@
 "use client";
 
 import type { CalloutBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
-import { Card, CardContent } from "../components/ui/card.js";
+import { Alert, AlertDescription } from "../components/ui/alert.js";
 import { cn } from "../lib/utils.js";
 import { NotionBlocks } from "../NotionBlocks.js";
 import { RichText } from "../rich-text/RichText.js";
@@ -13,26 +13,27 @@ export function Callout({
 }: BlockComponentProps<CalloutBlockObjectResponse>) {
   const icon = block.callout.icon;
   return (
-    <Card className={cn("my-3 border-l-4 bg-muted/40", className)}>
-      <CardContent className="flex gap-3 p-4">
-        <div className="shrink-0 text-xl leading-7" aria-hidden>
-          {icon?.type === "emoji" ? icon.emoji : null}
-          {icon?.type === "external" ? (
-            <img src={icon.external.url} alt="" className="size-5" />
-          ) : null}
-          {icon?.type === "file" ? (
-            <img src={icon.file.url} alt="" className="size-5" />
-          ) : null}
-        </div>
-        <div className="flex-1 leading-7">
-          <RichText value={block.callout.rich_text} />
-          {block.children ? (
-            <div className="mt-2">
-              <NotionBlocks blocks={block.children} />
-            </div>
-          ) : null}
-        </div>
-      </CardContent>
-    </Card>
+    <Alert className={cn("my-3", className)}>
+      <span
+        className="col-start-1 row-span-2 row-start-1 self-start text-base leading-none"
+        aria-hidden
+      >
+        {icon?.type === "emoji" ? icon.emoji : null}
+        {icon?.type === "external" ? (
+          <img src={icon.external.url} alt="" className="size-5" />
+        ) : null}
+        {icon?.type === "file" ? (
+          <img src={icon.file.url} alt="" className="size-5" />
+        ) : null}
+      </span>
+      <AlertDescription>
+        <RichText value={block.callout.rich_text} />
+        {block.children ? (
+          <div className="mt-2 w-full">
+            <NotionBlocks blocks={block.children} />
+          </div>
+        ) : null}
+      </AlertDescription>
+    </Alert>
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import type { EmbedBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import { AspectRatio } from "../components/ui/aspect-ratio.js";
+import { cn } from "../lib/utils";
 import { Caption } from "../rich-text/Caption";
 import type { BlockComponentProps } from "../types";
 
@@ -26,7 +28,7 @@ const NOTION_SANDBOX =
 function resolveEmbedSize(url: string): {
   width?: number;
   height?: number;
-  aspectVideo?: boolean;
+  ratio?: number;
 } {
   try {
     const { hostname, pathname } = new URL(url);
@@ -39,7 +41,7 @@ function resolveEmbedSize(url: string): {
   } catch {
     // URL parse 失敗時は既定にフォールバック
   }
-  return { aspectVideo: true };
+  return { ratio: 16 / 9 };
 }
 
 export function Embed({
@@ -48,6 +50,28 @@ export function Embed({
 }: BlockComponentProps<EmbedBlockObjectResponse>) {
   const url = toYoutubeEmbedUrl(block.embed.url);
   const size = resolveEmbedSize(url);
+  const caption = <Caption value={block.embed.caption} />;
+
+  if (size.ratio) {
+    return (
+      <figure className={cn("my-4", className)}>
+        <AspectRatio
+          ratio={size.ratio}
+          className="overflow-hidden rounded-lg border"
+        >
+          <iframe
+            src={url}
+            title="Embed"
+            className="h-full w-full"
+            sandbox={NOTION_SANDBOX}
+            allowFullScreen
+            loading="lazy"
+          />
+        </AspectRatio>
+        {caption}
+      </figure>
+    );
+  }
 
   return (
     <figure className={className}>
@@ -56,12 +80,12 @@ export function Embed({
         title="Embed"
         width={size.width}
         height={size.height}
-        className={size.aspectVideo ? "aspect-video w-full" : "max-w-full"}
+        className="max-w-full"
         sandbox={NOTION_SANDBOX}
         allowFullScreen
         loading="lazy"
       />
-      <Caption value={block.embed.caption} />
+      {caption}
     </figure>
   );
 }

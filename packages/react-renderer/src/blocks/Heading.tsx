@@ -6,6 +6,7 @@ import type {
   Heading3BlockObjectResponse,
   Heading4BlockObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
+import { ChevronRight } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -70,8 +71,11 @@ export function Heading({
   if (payload.is_toggleable && block.children) {
     return (
       <Collapsible className="my-2">
-        <CollapsibleTrigger className="flex items-baseline gap-2 text-left">
-          <span aria-hidden>▸</span>
+        <CollapsibleTrigger className="group flex items-center gap-2 text-left">
+          <ChevronRight
+            aria-hidden
+            className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-90"
+          />
           <Tag className={merged}>{inner}</Tag>
         </CollapsibleTrigger>
         <CollapsibleContent className="ml-6">

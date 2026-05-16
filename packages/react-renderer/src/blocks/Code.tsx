@@ -1,4 +1,6 @@
 import type { CodeBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import { Badge } from "../components/ui/badge.js";
+import { Card, CardContent, CardHeader } from "../components/ui/card.js";
 import { cn } from "../lib/utils";
 import { RichText } from "../rich-text/RichText";
 import type { BlockComponentProps } from "../types";
@@ -29,37 +31,37 @@ export function Code({
   ).__cachedHtml;
 
   const language = block.code.language;
+  const source = cachedHtml ? null : plainText(block.code.rich_text);
 
-  if (cachedHtml) {
-    return (
-      <figure className={cn("my-3", className)}>
-        <div
-          // biome-ignore lint/security/noDangerouslySetInnerHtml: notion-shiki の pre-render 済み出力
-          dangerouslySetInnerHTML={{ __html: cachedHtml }}
-        />
-        {block.code.caption.length > 0 ? (
-          <figcaption className="mt-1 text-xs text-muted-foreground">
-            <RichText value={block.code.caption} />
-          </figcaption>
-        ) : null}
-      </figure>
-    );
-  }
-
-  const source = plainText(block.code.rich_text);
   return (
-    <div className={cn("my-3", className)}>
-      <pre
-        className="overflow-x-auto rounded-lg bg-muted p-4 text-sm"
-        data-language={language}
-      >
-        <code>{source}</code>
-      </pre>
+    <figure className={cn("my-3", className)}>
+      <Card className="gap-0 py-0">
+        <CardHeader className="flex flex-row items-center justify-between border-b px-4 py-2">
+          <Badge variant="secondary" className="font-mono text-xs">
+            {language}
+          </Badge>
+        </CardHeader>
+        <CardContent className="p-0">
+          {cachedHtml ? (
+            <div
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: notion-shiki の pre-render 済み出力
+              dangerouslySetInnerHTML={{ __html: cachedHtml }}
+            />
+          ) : (
+            <pre
+              className="overflow-x-auto p-4 text-sm"
+              data-language={language}
+            >
+              <code>{source}</code>
+            </pre>
+          )}
+        </CardContent>
+      </Card>
       {block.code.caption.length > 0 ? (
-        <p className="mt-1 text-xs text-muted-foreground">
+        <figcaption className="mt-1 text-xs text-muted-foreground">
           <RichText value={block.code.caption} />
-        </p>
+        </figcaption>
       ) : null}
-    </div>
+    </figure>
   );
 }

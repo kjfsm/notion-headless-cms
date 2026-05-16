@@ -1,6 +1,7 @@
 "use client";
 
 import type { ToggleBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import { ChevronRight } from "lucide-react";
 import {
   Collapsible,
   CollapsibleContent,
@@ -17,13 +18,11 @@ export function Toggle({
 }: BlockComponentProps<ToggleBlockObjectResponse>) {
   return (
     <Collapsible className={cn("my-2", className)}>
-      <CollapsibleTrigger className="group flex items-baseline gap-2 text-left">
-        <span
+      <CollapsibleTrigger className="group flex items-center gap-2 text-left">
+        <ChevronRight
           aria-hidden
-          className="transition-transform group-data-[state=open]:rotate-90"
-        >
-          ▸
-        </span>
+          className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-90"
+        />
         <span className="leading-7">
           <RichText value={block.toggle.rich_text} />
         </span>

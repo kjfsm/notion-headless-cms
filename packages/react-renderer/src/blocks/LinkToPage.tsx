@@ -3,6 +3,7 @@
 import type { LinkToPageBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { ExternalLink } from "lucide-react";
 import type { ElementType } from "react";
+import { Button } from "../components/ui/button.js";
 import { useNotionContext } from "../context";
 import { cn } from "../lib/utils";
 import type { BlockComponentProps } from "../types";
@@ -25,15 +26,16 @@ export function LinkToPage({
     React.AnchorHTMLAttributes<HTMLAnchorElement>
   >;
   return (
-    <LinkComp
-      href={href}
-      className={cn(
-        "my-2 inline-flex items-baseline gap-1 text-primary hover:underline",
-        className,
-      )}
+    <Button
+      asChild
+      variant="link"
+      size="sm"
+      className={cn("my-2 px-0", className)}
     >
-      <ExternalLink className="size-3.5 self-center" aria-hidden />
-      {id}
-    </LinkComp>
+      <LinkComp href={href}>
+        <ExternalLink aria-hidden />
+        {id}
+      </LinkComp>
+    </Button>
   );
 }
