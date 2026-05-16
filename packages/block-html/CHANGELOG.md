@@ -1,5 +1,14 @@
 # @notion-headless-cms/embeds
 
+## 1.0.4
+
+### Patch Changes
+
+- 6137936: pnpm catalog を使って依存バージョンを一元管理するよう整理
+- f7fd36a: 依存関係を pnpm up --latest で最新化（tsdown 0.22.0、turbo 2.9.14、biome 2.4.15 等）
+- Updated dependencies [f7fd36a]
+  - @notion-headless-cms/markdown-html@1.0.2
+
 ## 1.0.3
 
 ### Patch Changes
