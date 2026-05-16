@@ -56,6 +56,9 @@ export type ResolveImageUrlFn = (url: string, block: NotionBlock) => string;
 /** Notion 内部ページ ID をサイト内 URL に変換する関数。slug ベースルーティングなどに使う。 */
 export type ResolvePageUrlFn = (pageId: string) => string;
 
+/** Notion 内部ページ ID をタイトルに変換する関数。link_to_page の表示テキストに使う。 */
+export type ResolvePageTitleFn = (pageId: string) => string | undefined;
+
 /**
  * 各 block コンポーネントの共通プロップ。
  * 子ブロードの描画は Context 経由の `<NotionBlocks>` が担うため、
@@ -144,6 +147,8 @@ export interface ComponentOverrides {
     BlockComponentProps<MeetingNotesBlockObjectResponse>
   >;
   Unsupported?: ComponentType<BlockComponentProps>;
+  /** rich_text 内のインライン equation (`$...$`) を描画する slot。既定は lazy KaTeX。 */
+  InlineEquation?: ComponentType<{ expression: string }>;
 }
 
 export interface NotionRendererProps {
@@ -156,6 +161,8 @@ export interface NotionRendererProps {
   resolveImageUrl?: ResolveImageUrlFn;
   /** Notion ページ ID をサイト内 URL に変換する関数（#218）。 */
   resolvePageUrl?: ResolvePageUrlFn;
+  /** Notion ページ ID を表示名に変換する関数。link_to_page の本文に使う。 */
+  resolvePageTitle?: ResolvePageTitleFn;
   /** `<img>` を差し替えるコンポーネント。next/image などのフレームワーク最適化に使う（#219）。 */
   Image?: ElementType<ImgHTMLAttributes<HTMLImageElement>>;
   /** `<a>` を差し替えるコンポーネント。next/link などのフレームワーク最適化に使う（#219）。 */

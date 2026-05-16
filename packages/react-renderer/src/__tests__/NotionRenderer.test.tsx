@@ -1,7 +1,6 @@
 import type { ParagraphBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
-import { Equation as KatexEquation } from "../equation.js";
 import { NotionBlocks } from "../NotionBlocks.js";
 import { NotionRenderer } from "../NotionRenderer.js";
 import type { BlockComponentProps, NotionBlock } from "../types.js";
@@ -199,26 +198,13 @@ describe("NotionRenderer", () => {
     expect(container.textContent).toContain("Unsupported");
   });
 
-  // 既定の Equation は katex を含まないスタブ実装。
-  // bundle に katex が混入しないことの担保として、katex の出力（`katex` クラス
-  // を持つ span 要素）が描画されないことを確認する。
-  it("デフォルトの Equation は katex を呼ばずに生の式を出す", () => {
+  // 既定の Equation は SSR では <pre> フォールバックを返し、水和後に lazy KaTeX で
+  // 置き換える。テスト環境の初期 render では katex は未ロードなので原文を含む。
+  it("デフォルトの Equation は SSR では原文を <pre> で出す", () => {
     const { container } = render(
       <NotionRenderer blocks={[equation("e1", "E = mc^2")]} />,
     );
     expect(container.textContent).toContain("E = mc^2");
-    expect(container.querySelector(".katex")).toBeNull();
-  });
-
-  // ComponentOverrides.Equation が narrow 型になったため as キャスト不要になった。
-  it("components.Equation に ./equation の実装を差し込むと katex が動く", () => {
-    const { container } = render(
-      <NotionRenderer
-        blocks={[equation("e1", "E = mc^2")]}
-        components={{ Equation: KatexEquation }}
-      />,
-    );
-    expect(container.querySelector(".katex")).not.toBeNull();
   });
 
   describe("URL / DOM 差替（拡張ポイント）", () => {
@@ -320,6 +306,132 @@ describe("NotionRenderer", () => {
       );
       expect(container.querySelector(".shiki")).not.toBeNull();
       expect(container.textContent).toContain("注釈");
+    });
+  });
+
+  describe("Notion 拡張対応", () => {
+    const heading = (
+      id: string,
+      type: "heading_1" | "heading_2" | "heading_3",
+      text: string,
+    ): NotionBlock =>
+      ({
+        object: "block",
+        id,
+        type,
+        has_children: false,
+        [type]: {
+          rich_text: [
+            {
+              type: "text",
+              plain_text: text,
+              href: null,
+              text: { content: text, link: null },
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: "default",
+              },
+            },
+          ],
+          color: "default",
+          is_toggleable: false,
+        },
+      }) as unknown as NotionBlock;
+
+    const toc: NotionBlock = {
+      object: "block",
+      id: "toc",
+      type: "table_of_contents",
+      has_children: false,
+      table_of_contents: { color: "default" },
+    } as unknown as NotionBlock;
+
+    const numbered = (
+      id: string,
+      text: string,
+      children?: NotionBlock[],
+    ): NotionBlock =>
+      ({
+        object: "block",
+        id,
+        type: "numbered_list_item",
+        has_children: (children?.length ?? 0) > 0,
+        children,
+        numbered_list_item: {
+          rich_text: [
+            {
+              type: "text",
+              plain_text: text,
+              href: null,
+              text: { content: text, link: null },
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: "default",
+              },
+            },
+          ],
+          color: "default",
+        },
+      }) as unknown as NotionBlock;
+
+    it("paragraph の color が class に出る", () => {
+      const block = {
+        ...para("p", "x"),
+        paragraph: {
+          ...(para("p", "x") as unknown as { paragraph: object }).paragraph,
+          color: "blue_background",
+        },
+      } as unknown as NotionBlock;
+      const { container } = render(<NotionRenderer blocks={[block]} />);
+      const root = container.querySelector(".notion-renderer > div");
+      expect(root?.className).toContain("bg-blue-100");
+    });
+
+    it("heading に id={block.id} が出力される", () => {
+      const { container } = render(
+        <NotionRenderer blocks={[heading("h1id", "heading_2", "Title")]} />,
+      );
+      expect(container.querySelector("h2")?.id).toBe("h1id");
+    });
+
+    it("TableOfContents が headings を描画する", () => {
+      const { container } = render(
+        <NotionRenderer blocks={[heading("h-a", "heading_1", "Alpha"), toc]} />,
+      );
+      const links = container.querySelectorAll(
+        "[aria-label='table of contents'] a",
+      );
+      expect(links.length).toBe(1);
+      expect(links[0]?.getAttribute("href")).toBe("#h-a");
+      expect(links[0]?.textContent).toBe("Alpha");
+    });
+
+    it("入れ子 numbered list で list-style が切り替わる", () => {
+      const inner = numbered("ni", "child");
+      const outer = numbered("no", "parent", [inner]);
+      const { container } = render(<NotionRenderer blocks={[outer]} />);
+      const ols = container.querySelectorAll("ol");
+      expect(ols[0]?.className).toContain("list-decimal");
+      expect(ols[1]?.className).toContain("list-[lower-alpha]");
+    });
+
+    it("LinkToPage が resolvePageTitle を反映する", () => {
+      const block = linkToPageBlock("ltp", "page-x");
+      const { container } = render(
+        <NotionRenderer
+          blocks={[block]}
+          resolvePageTitle={(id) => `Title:${id}`}
+        />,
+      );
+      expect(container.textContent).toContain("Title:page-x");
     });
   });
 

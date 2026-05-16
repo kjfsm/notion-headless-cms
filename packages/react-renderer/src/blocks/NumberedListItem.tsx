@@ -1,6 +1,7 @@
 "use client";
 
 import type { NumberedListItemBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+import { notionBlockColorClass } from "../lib/notion-color.js";
 import { cn } from "../lib/utils.js";
 import { NotionBlocks } from "../NotionBlocks.js";
 import { RichText } from "../rich-text/RichText.js";
@@ -11,7 +12,13 @@ export function NumberedListItem({
   className,
 }: BlockComponentProps<NumberedListItemBlockObjectResponse>) {
   return (
-    <li className={cn("leading-7", className)}>
+    <li
+      className={cn(
+        "leading-7",
+        notionBlockColorClass(block.numbered_list_item.color),
+        className,
+      )}
+    >
       <RichText value={block.numbered_list_item.rich_text} />
       {block.children ? (
         <div className="ml-2">

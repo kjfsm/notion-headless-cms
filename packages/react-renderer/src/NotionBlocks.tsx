@@ -1,40 +1,57 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { type ReactNode, useMemo } from "react";
 import { BlockSwitch } from "./BlockSwitch.js";
-import { useNotionContext } from "./context.js";
+import { NotionContext, useNotionContext } from "./context.js";
 import { groupListItems } from "./lib/group-list-items.js";
 import type { NotionBlock } from "./types.js";
+
+// Notion 本家と同じく numbered list は入れ子深さで 1 → a → i → 1 を循環。
+const OL_STYLES = ["list-decimal", "list-[lower-alpha]", "list-[lower-roman]"];
 
 /**
  * ブロック配列を描画する。連続する `bulleted_list_item` / `numbered_list_item` は
  * 1 つの `<ul>` / `<ol>` にまとめてから子要素を `BlockSwitch` で描画する。
+ * `<ol>` の list-style は `listDepth` でローテートさせ、ネスト時に
+ * `decimal → lower-alpha → lower-roman` を循環する（Notion 本家挙動）。
  */
 export function NotionBlocks({ blocks }: { blocks: NotionBlock[] }): ReactNode {
-  // 副作用は無いが、Context スコープ外での呼び出しを Hook 規約で検出させる目的で読む
-  useNotionContext();
+  const ctx = useNotionContext();
+  const depth = ctx.listDepth ?? 0;
+  const olClass = OL_STYLES[depth % OL_STYLES.length] ?? "list-decimal";
+
+  // 子レベルでは listDepth + 1 を被せた Context を流す。
+  const nestedCtx = useMemo(
+    () => ({ ...ctx, listDepth: depth + 1 }),
+    [ctx, depth],
+  );
+
   const groups = groupListItems(blocks);
-  return groups.map((group, idx) => {
-    if (group.kind === "ul") {
-      return (
-        // biome-ignore lint/suspicious/noArrayIndexKey: グループ順序は安定
-        <ul key={`ul-${idx}`} className="my-2 list-disc pl-6">
-          {group.items.map((item) => (
-            <BlockSwitch key={item.id} block={item} />
-          ))}
-        </ul>
-      );
-    }
-    if (group.kind === "ol") {
-      return (
-        // biome-ignore lint/suspicious/noArrayIndexKey: グループ順序は安定
-        <ol key={`ol-${idx}`} className="my-2 list-decimal pl-6">
-          {group.items.map((item) => (
-            <BlockSwitch key={item.id} block={item} />
-          ))}
-        </ol>
-      );
-    }
-    return <BlockSwitch key={group.block.id} block={group.block} />;
-  });
+  return (
+    <NotionContext.Provider value={nestedCtx}>
+      {groups.map((group, idx) => {
+        if (group.kind === "ul") {
+          return (
+            // biome-ignore lint/suspicious/noArrayIndexKey: グループ順序は安定
+            <ul key={`ul-${idx}`} className="my-2 list-disc pl-6">
+              {group.items.map((item) => (
+                <BlockSwitch key={item.id} block={item} />
+              ))}
+            </ul>
+          );
+        }
+        if (group.kind === "ol") {
+          return (
+            // biome-ignore lint/suspicious/noArrayIndexKey: グループ順序は安定
+            <ol key={`ol-${idx}`} className={`my-2 pl-6 ${olClass}`}>
+              {group.items.map((item) => (
+                <BlockSwitch key={item.id} block={item} />
+              ))}
+            </ol>
+          );
+        }
+        return <BlockSwitch key={group.block.id} block={group.block} />;
+      })}
+    </NotionContext.Provider>
+  );
 }

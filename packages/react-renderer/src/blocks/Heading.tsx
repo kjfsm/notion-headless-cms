@@ -12,6 +12,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "../components/ui/collapsible.js";
+import { notionBlockColorClass } from "../lib/notion-color.js";
 import { cn } from "../lib/utils.js";
 import { NotionBlocks } from "../NotionBlocks.js";
 import { RichText } from "../rich-text/RichText.js";
@@ -65,7 +66,12 @@ export function Heading({
   className: extraClassName,
 }: BlockComponentProps<HeadingBlock>) {
   const { Tag, className, payload } = meta(block);
-  const merged = cn(className, extraClassName);
+  // block.id を anchor id にして TableOfContents のリンク先にする。
+  const merged = cn(
+    className,
+    notionBlockColorClass(payload.color),
+    extraClassName,
+  );
   const inner = <RichText value={payload.rich_text} />;
 
   if (payload.is_toggleable && block.children) {
@@ -76,7 +82,9 @@ export function Heading({
             aria-hidden
             className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-90"
           />
-          <Tag className={merged}>{inner}</Tag>
+          <Tag id={block.id} className={merged}>
+            {inner}
+          </Tag>
         </CollapsibleTrigger>
         <CollapsibleContent className="ml-6">
           <NotionBlocks blocks={block.children} />
@@ -85,5 +93,9 @@ export function Heading({
     );
   }
 
-  return <Tag className={merged}>{inner}</Tag>;
+  return (
+    <Tag id={block.id} className={merged}>
+      {inner}
+    </Tag>
+  );
 }

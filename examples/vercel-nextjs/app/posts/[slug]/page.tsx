@@ -2,20 +2,13 @@ import {
   type NotionBlock,
   NotionRenderer,
 } from "@notion-headless-cms/react-renderer";
-// Equation は "use client" を含むため Server Component (page.tsx) から直接 import し、
-// Next.js の client reference として `<NotionRenderer components={{ Equation }} />`
-// に渡す。next/dynamic で包むと RSC のシリアライズ境界で
-// "Functions cannot be passed to Client Components" エラーが発生するため避ける。
-// 直接 import でもルート単位で自動コードスプリットされるため、katex は post ページの
-// チャンクにだけ含まれる。
-import { Equation } from "@notion-headless-cms/react-renderer/equation";
 import { NotionRevalidator } from "@notion-headless-cms/react-renderer/next";
 import { resolveBlockImageUrls } from "@notion-headless-cms/react-renderer/server";
 import { notFound } from "next/navigation";
 import { cms } from "@/app/lib/cms";
 
-// ComponentOverrides.Equation が narrow 型（EquationBlockObjectResponse）に変わったため、
-// ./equation の Equation をキャストなしで直接渡せる（#217）。
+// v0.2 以降は KaTeX / mermaid が既定で動的 import されるため、明示的な
+// components={{ Equation }} 渡しは不要。`katex` を peer に入れているだけで動く。
 
 export const revalidate = 300;
 
@@ -55,7 +48,7 @@ export default async function PostPage({
           {post.publishedAt}
         </time>
       )}
-      <NotionRenderer blocks={blocks} components={{ Equation }} />
+      <NotionRenderer blocks={blocks} />
     </article>
   );
 }

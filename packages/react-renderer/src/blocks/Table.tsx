@@ -30,7 +30,7 @@ export function Table({
   const bodyRows = hasHeaderRow ? rows.slice(1) : rows;
 
   return (
-    <UiTable className={cn("my-3", className)}>
+    <UiTable className={cn("my-3 w-full", className)}>
       {hasHeaderRow ? (
         <TableHeader>
           <TableRow>
