@@ -77,7 +77,12 @@ describe("docs layout loader()", () => {
 
   it("ドキュメント一覧を返す", async () => {
     fakeCms.docs.list.mockResolvedValue([
-      { slug: "installation", name: "インストール", section: "はじめに", order: 3 },
+      {
+        slug: "installation",
+        name: "インストール",
+        section: "はじめに",
+        order: 3,
+      },
     ]);
     const result = await layoutLoader({ context: fakeContext } as never);
     const docs = (result as { docs: { slug: string }[] }).docs;

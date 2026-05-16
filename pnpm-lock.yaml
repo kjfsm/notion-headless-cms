@@ -329,12 +329,21 @@ importers:
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@notion-headless-cms/notion-katex':
+        specifier: workspace:*
+        version: link:../../packages/notion-katex
       '@notion-headless-cms/notion-orm':
         specifier: workspace:*
         version: link:../../packages/notion-orm
+      '@notion-headless-cms/notion-shiki':
+        specifier: workspace:*
+        version: link:../../packages/notion-shiki
       '@notion-headless-cms/notion-source':
         specifier: workspace:*
         version: link:../../packages/notion-source
+      '@notion-headless-cms/react-renderer':
+        specifier: workspace:*
+        version: link:../../packages/react-renderer
       '@notionhq/client':
         specifier: 'catalog:'
         version: 5.21.0
@@ -350,6 +359,12 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
+      dotenv:
+        specifier: 'catalog:'
+        version: 17.4.2
+      katex:
+        specifier: 'catalog:'
+        version: 0.16.46
       lucide-react:
         specifier: ^0.513.0
         version: 0.513.0(react@19.2.6)
@@ -362,6 +377,9 @@ importers:
       react-router:
         specifier: ^7.15.1
         version: 7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      shiki:
+        specifier: 'catalog:'
+        version: 4.0.2
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0
@@ -378,6 +396,9 @@ importers:
       '@notion-headless-cms/cli':
         specifier: workspace:*
         version: link:../../packages/cli
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.60.0
       '@react-router/dev':
         specifier: ^7.15.1
         version: 7.15.1(@types/node@25.8.0)(jiti@2.7.0)(lightningcss@1.32.0)(react-router@7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(tsx@4.22.0)(typescript@6.0.3)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0)(yaml@2.9.0))(wrangler@4.92.0(@cloudflare/workers-types@4.20260516.1))(yaml@2.9.0)
@@ -390,6 +411,9 @@ importers:
       '@types/react-dom':
         specifier: 'catalog:'
         version: 19.2.3(@types/react@19.2.14)
+      dotenv-cli:
+        specifier: ^11.0.0
+        version: 11.0.0
       tailwindcss:
         specifier: 'catalog:'
         version: 4.3.0
