@@ -41,13 +41,23 @@ export default function Doc({ loaderData }: Route.ComponentProps) {
           version: item.lastEditedTime,
         }}
       />
-      <h1 className="text-3xl font-bold text-gray-900 mb-6">
-        {item.title ?? item.slug}
-      </h1>
-      {item.description && (
-        <p className="text-muted-foreground mb-6">{item.description}</p>
-      )}
-      <div className="prose prose-gray max-w-none">
+      <header className="mb-8">
+        {item.section && (
+          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
+            {item.section}
+          </p>
+        )}
+        <h1 className="text-3xl font-bold tracking-tight text-foreground mb-3">
+          {item.title ?? item.slug}
+        </h1>
+        {item.description && (
+          <p className="text-base text-muted-foreground leading-relaxed">
+            {item.description}
+          </p>
+        )}
+        <div className="mt-6 border-b border-border" />
+      </header>
+      <div className="pt-2">
         <NotionRenderer blocks={blocks} />
       </div>
     </article>

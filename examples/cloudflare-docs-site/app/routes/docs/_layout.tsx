@@ -15,9 +15,13 @@ export default function DocsLayout({ loaderData }: Route.ComponentProps) {
 
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)]">
-      <DocsSidebar docs={docs} currentSlug={slug} />
-      <main className="flex-1 px-8 py-6 max-w-3xl">
-        <Outlet />
+      <div className="sticky top-14 h-[calc(100vh-3.5rem)] shrink-0">
+        <DocsSidebar docs={docs} currentSlug={slug} />
+      </div>
+      <main className="flex-1 min-w-0">
+        <div className="mx-auto max-w-3xl px-8 py-10 animate-fade-in-up">
+          <Outlet />
+        </div>
       </main>
     </div>
   );
