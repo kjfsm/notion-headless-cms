@@ -1,15 +1,15 @@
 // このファイルは nhc generate により自動生成されました。手動編集は nhc generate で上書きされます。
-// Config SHA: 56ee67817ce6da7240ec24c38db60126cbb22a81bf8d49c6c2529dc0ce1aad5b
+// Config SHA: 0492f48cf3c2b23b934482919372350e4d344db92440b4da202c20f338416e21
 
 import type { PropertyMap } from "@notion-headless-cms/core";
 import type { SchemaMap } from "@notion-headless-cms/notion-source";
 
 // ===========================================================
 // posts  (ブログ記事DB)
-// Notion DB ID: f38c6757-0ecd-83e5-9233-87bf3bf182d7
+// Notion DB ID: d8221462-5ae9-8396-bdac-8731f4ef685a
 // ===========================================================
 
-export const postsDataSourceId = "f38c6757-0ecd-83e5-9233-87bf3bf182d7";
+export const postsDataSourceId = "d8221462-5ae9-8396-bdac-8731f4ef685a";
 
 /** Notion DB "ブログ記事DB" のプロパティマップ。 */
 export const postsProperties = {
