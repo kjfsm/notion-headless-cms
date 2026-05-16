@@ -9,6 +9,8 @@ export default {
       vitest: {
         config: [],
       },
+      // shadcn は MCP サーバー経由で CLI として使用するため knip では検出できない
+      ignoreDependencies: ["shadcn"],
     },
     "packages/react-renderer": {
       // package.json の exports サブパス (./, ./server, ./equation, ./code, ./router, ./next)
