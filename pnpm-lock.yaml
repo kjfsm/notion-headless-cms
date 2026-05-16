@@ -26,10 +26,10 @@ catalogs:
       version: 17.4.2
     hono:
       specifier: ^4.12.18
-      version: 4.12.18
+      version: 4.12.19
     katex:
       specifier: ^0.16.46
-      version: 0.16.46
+      version: 0.16.47
     linkedom:
       specifier: ^0.18.12
       version: 0.18.12
@@ -100,7 +100,7 @@ importers:
         version: 4.1.6(vitest@4.1.6)
       knip:
         specifier: ^6.14.0
-        version: 6.14.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
+        version: 6.14.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)
       publint:
         specifier: ^0.3.21
         version: 0.3.21
@@ -148,7 +148,7 @@ importers:
         version: 6.3.3(@types/node@25.8.0)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.4)(tsx@4.22.0)(yaml@2.9.0)
       katex:
         specifier: 'catalog:'
-        version: 0.16.46
+        version: 0.16.47
       shiki:
         specifier: 'catalog:'
         version: 4.0.2
@@ -184,6 +184,118 @@ importers:
         specifier: 'catalog:'
         version: 4.92.0(@cloudflare/workers-types@4.20260516.1)
 
+  examples/cloudflare-docs-site:
+    dependencies:
+      '@notion-headless-cms/block-html':
+        specifier: workspace:*
+        version: link:../../packages/block-html
+      '@notion-headless-cms/cloudflare':
+        specifier: workspace:*
+        version: link:../../packages/cloudflare
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../../packages/core
+      '@notion-headless-cms/notion-katex':
+        specifier: workspace:*
+        version: link:../../packages/notion-katex
+      '@notion-headless-cms/notion-orm':
+        specifier: workspace:*
+        version: link:../../packages/notion-orm
+      '@notion-headless-cms/notion-shiki':
+        specifier: workspace:*
+        version: link:../../packages/notion-shiki
+      '@notion-headless-cms/notion-source':
+        specifier: workspace:*
+        version: link:../../packages/notion-source
+      '@notion-headless-cms/react-renderer':
+        specifier: workspace:*
+        version: link:../../packages/react-renderer
+      '@notionhq/client':
+        specifier: 'catalog:'
+        version: 5.21.0
+      '@radix-ui/react-separator':
+        specifier: ^1.1.4
+        version: 1.1.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@radix-ui/react-slot':
+        specifier: ^1.2.3
+        version: 1.2.4(@types/react@19.2.14)(react@19.2.6)
+      '@react-router/cloudflare':
+        specifier: ^7.15.1
+        version: 7.15.1(@cloudflare/workers-types@4.20260516.1)(react-router@7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(typescript@6.0.3)
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
+      dotenv:
+        specifier: 'catalog:'
+        version: 17.4.2
+      katex:
+        specifier: 'catalog:'
+        version: 0.16.47
+      lucide-react:
+        specifier: ^0.513.0
+        version: 0.513.0(react@19.2.6)
+      react:
+        specifier: 'catalog:'
+        version: 19.2.6
+      react-dom:
+        specifier: 'catalog:'
+        version: 19.2.6(react@19.2.6)
+      react-router:
+        specifier: ^7.15.1
+        version: 7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      shiki:
+        specifier: 'catalog:'
+        version: 4.0.2
+      tailwind-merge:
+        specifier: ^3.6.0
+        version: 3.6.0
+      zod:
+        specifier: 'catalog:'
+        version: 4.4.3
+    devDependencies:
+      '@cloudflare/vite-plugin':
+        specifier: ^1.37.1
+        version: 1.37.1(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0)(yaml@2.9.0))(workerd@1.20260515.1)(wrangler@4.92.0(@cloudflare/workers-types@4.20260516.1))
+      '@cloudflare/workers-types':
+        specifier: '*'
+        version: 4.20260516.1
+      '@notion-headless-cms/cli':
+        specifier: workspace:*
+        version: link:../../packages/cli
+      '@playwright/test':
+        specifier: 'catalog:'
+        version: 1.60.0
+      '@react-router/dev':
+        specifier: ^7.15.1
+        version: 7.15.1(@types/node@25.8.0)(jiti@2.7.0)(lightningcss@1.32.0)(react-router@7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(tsx@4.22.0)(typescript@6.0.3)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0)(yaml@2.9.0))(wrangler@4.92.0(@cloudflare/workers-types@4.20260516.1))(yaml@2.9.0)
+      '@tailwindcss/vite':
+        specifier: ^4.3.0
+        version: 4.3.0(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0)(yaml@2.9.0))
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.14
+      '@types/react-dom':
+        specifier: 'catalog:'
+        version: 19.2.3(@types/react@19.2.14)
+      dotenv-cli:
+        specifier: ^11.0.0
+        version: 11.0.0
+      tailwindcss:
+        specifier: 'catalog:'
+        version: 4.3.0
+      typescript:
+        specifier: 'catalog:'
+        version: 6.0.3
+      vite:
+        specifier: ^8.0.13
+        version: 8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0)(yaml@2.9.0)
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.6(@types/node@25.8.0)(@vitest/coverage-v8@4.1.6)(happy-dom@20.9.0)(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0)(yaml@2.9.0))
+      wrangler:
+        specifier: 'catalog:'
+        version: 4.92.0(@cloudflare/workers-types@4.20260516.1)
+
   examples/cloudflare-hono:
     dependencies:
       '@notion-headless-cms/cloudflare':
@@ -200,7 +312,7 @@ importers:
         version: link:../../packages/notion-source
       hono:
         specifier: 'catalog:'
-        version: 4.12.18
+        version: 4.12.19
       zod:
         specifier: 'catalog:'
         version: 4.4.3
@@ -261,7 +373,7 @@ importers:
         version: 17.4.2
       katex:
         specifier: 'catalog:'
-        version: 0.16.46
+        version: 0.16.47
       react:
         specifier: 'catalog:'
         version: 19.2.6
@@ -380,7 +492,7 @@ importers:
     dependencies:
       '@hono/node-server':
         specifier: ^2.0.2
-        version: 2.0.2(hono@4.12.18)
+        version: 2.0.2(hono@4.12.19)
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -395,7 +507,7 @@ importers:
         version: link:../../packages/notion-source
       hono:
         specifier: 'catalog:'
-        version: 4.12.18
+        version: 4.12.19
       zod:
         specifier: 'catalog:'
         version: 4.4.3
@@ -453,7 +565,7 @@ importers:
         version: 5.21.0
       katex:
         specifier: 'catalog:'
-        version: 0.16.46
+        version: 0.16.47
       next:
         specifier: ^16.2.6
         version: 16.2.6(@playwright/test@1.60.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -670,7 +782,7 @@ importers:
         version: link:../notion-orm
       katex:
         specifier: 'catalog:'
-        version: 0.16.46
+        version: 0.16.47
 
   packages/notion-orm:
     dependencies:
@@ -760,7 +872,7 @@ importers:
         version: 20.9.0
       katex:
         specifier: 'catalog:'
-        version: 0.16.46
+        version: 0.16.47
       next:
         specifier: ^16.2.6
         version: 16.2.6(@playwright/test@1.60.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
@@ -2333,6 +2445,19 @@ packages:
       '@types/react-dom':
         optional: true
 
+  '@radix-ui/react-separator@1.1.8':
+    resolution: {integrity: sha512-sDvqVY4itsKwwSMEe0jtKgfTh+72Sy3gPmQpjqcQneqQ4PFmr/1I0YA+2/puilhggCe2gJcx5EBAYFkWkdpa5g==}
+    peerDependencies:
+      '@types/react': '*'
+      '@types/react-dom': '*'
+      react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+      react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      '@types/react-dom':
+        optional: true
+
   '@radix-ui/react-slot@1.2.3':
     resolution: {integrity: sha512-aeNmHnBxbi2St0au6VBVC7JXFlhLlOnvIIlePNniyUNAClzmtAUEY8/pBiK3iHjufOlwA+c20/8jngo7xcrg8A==}
     peerDependencies:
@@ -3499,8 +3624,8 @@ packages:
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
 
-  electron-to-chromium@1.5.356:
-    resolution: {integrity: sha512-9NgFd7m5t5MCJ5rUSjJITUXAH9mEGlrlofnMf4YEr+pz6JlP7cWmTAH+JFmbPnaSW8koVTkuW7pacORWAnA5Yw==}
+  electron-to-chromium@1.5.357:
+    resolution: {integrity: sha512-NHlTIQDK8fmVwHwuIzmXYEJ1Ewq3D9wDNc0cWXxDGysP6Pb21giwGNkxiTifyKy/4SoPuN5l6GLP1W9Sv7zB2g==}
 
   emmet@2.4.11:
     resolution: {integrity: sha512-23QPJB3moh/U9sT4rQzGgeyyGIrcM+GH5uVYg2C6wZIxAIJq7Ng3QLT79tl8FUwDXhyq9SusfknOrofAKqvgyQ==}
@@ -3842,8 +3967,8 @@ packages:
   highlight.js@10.7.3:
     resolution: {integrity: sha512-tzcUFauisWKNHaRkN4Wjl/ZA07gENAjFl3J/c480dprkGTg5EQstgaNFqBfUqCq54kZRIEcreTsAgF/m2quD7A==}
 
-  hono@4.12.18:
-    resolution: {integrity: sha512-RWzP96k/yv0PQfyXnWjs6zot20TqfpfsNXhOnev8d1InAxubW93L11/oNUc3tQqn2G0bSdAOBpX+2uDFHV7kdQ==}
+  hono@4.12.19:
+    resolution: {integrity: sha512-xa3eYXYXx68XTT4hZ7dRzsXBhaq85ToSrlUJNoR0gwz/1Ap/CNwX47wfvV7pc/xWhjKVVkLT7zBJy8chhNguqQ==}
     engines: {node: '>=16.9.0'}
 
   hookable@6.1.1:
@@ -4008,16 +4133,16 @@ packages:
   jsonfile@4.0.0:
     resolution: {integrity: sha512-m6F1R3z8jjlf2imQHS2Qez5sjKWQzbuuhuJ/FKYFRZvPE3PuHcSMVZzfsLhGVOkfd20obL5SWEBew5ShlquNxg==}
 
-  katex@0.16.46:
-    resolution: {integrity: sha512-WHy4Coo+bGZyH7NwJKHkS04YFsFcarWbAEOAC3EMndzdN6VSZqklLLIgfxzyaW9jDoeGYJX9SWbJPKpecox0Uw==}
+  katex@0.16.47:
+    resolution: {integrity: sha512-Eeo8Ys1doU1z+x8AZsPpQu+p/QcZBI5PeOo7QGQdy2x2m0MU/hYagBbGOmXwr5KVbEfVuWv9LpnQWeehogurjg==}
     hasBin: true
 
   kleur@4.1.5:
     resolution: {integrity: sha512-o+NO+8WrRiQEE4/7nwRJhN1HWpVmJm511pBHUxPLtp0BUISzlBplORYSmTclCnJvQq2tKu/sgl3xVpkc7ZWuQQ==}
     engines: {node: '>=6'}
 
-  knip@6.14.0:
-    resolution: {integrity: sha512-yEI9ysdGQ3h77gLObvovH0KUYs6ITtJ1f6owmXRalOO32TbolYvHY7Z+2AEOXqw0ZWeh9219/agh2K/GmtfsxQ==}
+  knip@6.14.1:
+    resolution: {integrity: sha512-SN3Ly0ixzj5CQkY/rc4OPHpWrCC0XRIIjgdP76G9Cni5k72ur5jBYOyvJuF5oPTM14v8eHcMUgPbElHa+lnR0g==}
     engines: {node: ^20.19.0 || >=22.12.0}
     hasBin: true
 
@@ -4127,6 +4252,11 @@ packages:
 
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
+
+  lucide-react@0.513.0:
+    resolution: {integrity: sha512-CJZKq2g8Y8yN4Aq002GahSXbG2JpFv9kXwyiOAMvUBv7pxeOFHUWKB0mO7MiY4ZVFCV4aNjv2BJFq/z3DgKPQg==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
   lucide-react@1.16.0:
     resolution: {integrity: sha512-dYwyPzb4MEKpGUmNYk3WKWPnMrHs3FKM+q94kAnJrcDIqqn1hq2xY8scaS2ovsOCM5D51ey2gaRG3PBb1vgoYQ==}
@@ -4505,8 +4635,8 @@ packages:
     resolution: {integrity: sha512-tkAQEw8ysMzmkhgw8k+1U/iPhWNhykKnSk4Rd5zLoPJCuJaGRPo6YposrZgaxHKzDHdDWWZvE/Sk7hsL2X/CpQ==}
     engines: {node: '>=18'}
 
-  p-queue@9.2.0:
-    resolution: {integrity: sha512-dWgLE8AH0HjQ9fe74pUkKkvzzYT18Inp4zra3lKHnnwqGvcfcUBrvF2EAVX+envufDNBOzpPq/IBUONDbI7+3g==}
+  p-queue@9.3.0:
+    resolution: {integrity: sha512-7NED7xhQ74Ngp4JP/2e0VZHp7vSWfJfqeiR92jPgxsz6m0Se4P03YoTKa9dDXyZ3r6P616gUXttrB6nnHYKang==}
     engines: {node: '>=20'}
 
   p-timeout@7.0.1:
@@ -6545,9 +6675,9 @@ snapshots:
   '@esbuild/win32-x64@0.28.0':
     optional: true
 
-  '@hono/node-server@2.0.2(hono@4.12.18)':
+  '@hono/node-server@2.0.2(hono@4.12.19)':
     dependencies:
-      hono: 4.12.18
+      hono: 4.12.19
 
   '@img/colour@1.1.0': {}
 
@@ -6974,6 +7104,15 @@ snapshots:
   '@radix-ui/react-primitive@2.1.4(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
     dependencies:
       '@radix-ui/react-slot': 1.2.4(@types/react@19.2.14)(react@19.2.6)
+      react: 19.2.6
+      react-dom: 19.2.6(react@19.2.6)
+    optionalDependencies:
+      '@types/react': 19.2.14
+      '@types/react-dom': 19.2.3(@types/react@19.2.14)
+
+  '@radix-ui/react-separator@1.1.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+    dependencies:
+      '@radix-ui/react-primitive': 2.1.4(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       react: 19.2.6
       react-dom: 19.2.6(react@19.2.6)
     optionalDependencies:
@@ -7728,7 +7867,7 @@ snapshots:
       neotraverse: 0.6.18
       obug: 2.1.1
       p-limit: 7.3.0
-      p-queue: 9.2.0
+      p-queue: 9.3.0
       package-manager-detector: 1.6.0
       piccolore: 0.1.3
       picomatch: 4.0.4
@@ -7835,7 +7974,7 @@ snapshots:
     dependencies:
       baseline-browser-mapping: 2.10.29
       caniuse-lite: 1.0.30001792
-      electron-to-chromium: 1.5.356
+      electron-to-chromium: 1.5.357
       node-releases: 2.0.44
       update-browserslist-db: 1.2.3(browserslist@4.28.2)
 
@@ -8095,7 +8234,7 @@ snapshots:
 
   ee-first@1.1.1: {}
 
-  electron-to-chromium@1.5.356: {}
+  electron-to-chromium@1.5.357: {}
 
   emmet@2.4.11:
     dependencies:
@@ -8591,7 +8730,7 @@ snapshots:
 
   highlight.js@10.7.3: {}
 
-  hono@4.12.18: {}
+  hono@4.12.19: {}
 
   hookable@6.1.1: {}
 
@@ -8714,13 +8853,13 @@ snapshots:
     optionalDependencies:
       graceful-fs: 4.2.11
 
-  katex@0.16.46:
+  katex@0.16.47:
     dependencies:
       commander: 8.3.0
 
   kleur@4.1.5: {}
 
-  knip@6.14.0(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0):
+  knip@6.14.1(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0):
     dependencies:
       fdir: 6.5.0(picomatch@4.0.4)
       formatly: 0.3.0
@@ -8814,6 +8953,10 @@ snapshots:
   lru-cache@5.1.1:
     dependencies:
       yallist: 3.1.1
+
+  lucide-react@0.513.0(react@19.2.6):
+    dependencies:
+      react: 19.2.6
 
   lucide-react@1.16.0(react@19.2.6):
     dependencies:
@@ -9400,7 +9543,7 @@ snapshots:
 
   p-map@7.0.4: {}
 
-  p-queue@9.2.0:
+  p-queue@9.3.0:
     dependencies:
       eventemitter3: 5.0.4
       p-timeout: 7.0.1
