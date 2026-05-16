@@ -25,37 +25,42 @@ type HeadingBlock =
   | Heading4BlockObjectResponse;
 
 type HeadingMeta = {
-  className: string;
   Tag: "h1" | "h2" | "h3" | "h4";
+  /** 文字サイズ・太さ・ scroll-margin 等。マージンは含めない（外側コンテナで管理）。 */
+  size: string;
+  /** ブロック全体の上下マージン。toggle 時は Collapsible の外枠側に付ける。 */
+  margin: string;
   payload: Heading1BlockObjectResponse["heading_1"]; // shape は heading_1/2/3/4 共通
 };
 
-// 各 heading_N の payload は別キー名なので type narrowing で取り出す。
 function meta(block: HeadingBlock): HeadingMeta {
   switch (block.type) {
     case "heading_1":
       return {
         Tag: "h1",
-        className: "scroll-m-20 text-3xl font-bold tracking-tight mt-6 mb-2",
+        size: "scroll-m-20 text-3xl font-bold tracking-tight",
+        margin: "mt-6 mb-2",
         payload: block.heading_1,
       };
     case "heading_2":
       return {
         Tag: "h2",
-        className:
-          "scroll-m-20 text-2xl font-semibold tracking-tight mt-5 mb-2",
+        size: "scroll-m-20 text-2xl font-semibold tracking-tight",
+        margin: "mt-5 mb-2",
         payload: block.heading_2,
       };
     case "heading_3":
       return {
         Tag: "h3",
-        className: "scroll-m-20 text-xl font-semibold tracking-tight mt-4 mb-2",
+        size: "scroll-m-20 text-xl font-semibold tracking-tight",
+        margin: "mt-4 mb-2",
         payload: block.heading_3,
       };
     case "heading_4":
       return {
         Tag: "h4",
-        className: "scroll-m-20 text-lg font-semibold tracking-tight mt-3 mb-2",
+        size: "scroll-m-20 text-lg font-semibold tracking-tight",
+        margin: "mt-3 mb-2",
         payload: block.heading_4,
       };
   }
@@ -63,26 +68,27 @@ function meta(block: HeadingBlock): HeadingMeta {
 
 export function Heading({
   block,
-  className: extraClassName,
+  className: extra,
 }: BlockComponentProps<HeadingBlock>) {
-  const { Tag, className, payload } = meta(block);
-  // block.id を anchor id にして TableOfContents のリンク先にする。
-  const merged = cn(
-    className,
-    notionBlockColorClass(payload.color),
-    extraClassName,
-  );
+  const { Tag, size, margin, payload } = meta(block);
+  const color = notionBlockColorClass(payload.color);
   const inner = <RichText value={payload.rich_text} />;
 
   if (payload.is_toggleable && block.children) {
+    // toggle 時はマージンを Collapsible 側に寄せ、内側の h タグからは外す。
+    // Trigger は items-baseline で chevron と heading の baseline を揃え、
+    // 大きな heading 文字でもズレないようにする。
     return (
-      <Collapsible className="my-2">
-        <CollapsibleTrigger className="group flex items-center gap-2 text-left">
+      <Collapsible className={cn(margin, "block")}>
+        <CollapsibleTrigger className="group flex w-full items-baseline gap-2 text-left">
           <ChevronRight
             aria-hidden
-            className="size-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-90"
+            className="size-4 shrink-0 translate-y-[0.15em] text-muted-foreground transition-transform group-data-[state=open]:rotate-90"
           />
-          <Tag id={block.id} className={merged}>
+          <Tag
+            id={block.id}
+            className={cn("m-0 flex-1 min-w-0", size, color, extra)}
+          >
             {inner}
           </Tag>
         </CollapsibleTrigger>
@@ -94,7 +100,7 @@ export function Heading({
   }
 
   return (
-    <Tag id={block.id} className={merged}>
+    <Tag id={block.id} className={cn(margin, size, color, extra)}>
       {inner}
     </Tag>
   );
