@@ -1,7 +1,13 @@
 "use client";
 
 import type { ImageBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
-import { type ElementType, useCallback, useEffect, useState } from "react";
+import type { ElementType } from "react";
+import {
+  Dialog,
+  DialogContent,
+  DialogTitle,
+  DialogTrigger,
+} from "../components/ui/dialog.js";
 import { useNotionContext } from "../context";
 import { getFileUrl } from "../lib/notion-file";
 import { Caption } from "../rich-text/Caption";
@@ -18,26 +24,11 @@ export function Image({
   const Img = (ImageSlot ?? "img") as ElementType<
     React.ImgHTMLAttributes<HTMLImageElement>
   >;
-  const [open, setOpen] = useState(false);
-
-  const close = useCallback(() => setOpen(false), []);
-
-  // ESC キーでモーダルを閉じる
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-    };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
-  }, [open, close]);
 
   return (
-    <>
-      <figure className={className}>
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
+    <figure className={className}>
+      <Dialog>
+        <DialogTrigger
           className="block cursor-zoom-in border-0 bg-transparent p-0"
           aria-label="画像を拡大表示"
         >
@@ -47,26 +38,20 @@ export function Image({
             loading="lazy"
             className="h-auto max-w-full rounded-lg"
           />
-        </button>
-        <Caption value={block.image.caption} />
-      </figure>
-
-      {open && (
-        // biome-ignore lint/a11y/useKeyWithClickEvents: ESC キーは useEffect で処理済み
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="画像ライトボックス"
-          onClick={close}
-          className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-black/80 p-4"
+        </DialogTrigger>
+        <DialogContent
+          showCloseButton={false}
+          className="max-w-[calc(100%-2rem)] border-0 bg-transparent p-0 shadow-none sm:max-w-[90vw]"
         >
+          <DialogTitle className="sr-only">{alt || "画像"}</DialogTitle>
           <img
             src={src}
             alt={alt}
-            className="max-h-full max-w-full object-contain"
+            className="max-h-[90vh] max-w-full object-contain"
           />
-        </div>
-      )}
-    </>
+        </DialogContent>
+      </Dialog>
+      <Caption value={block.image.caption} />
+    </figure>
   );
 }

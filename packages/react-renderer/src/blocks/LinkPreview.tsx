@@ -3,7 +3,11 @@
 import type { LinkPreviewBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { Link as LinkIcon } from "lucide-react";
 import type { ElementType } from "react";
-import { Card, CardContent } from "../components/ui/card";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "../components/ui/hover-card.js";
 import { useNotionContext } from "../context";
 import { OgCard, type OgCardData } from "../embeds/OgCard";
 import { cn } from "../lib/utils";
@@ -29,22 +33,27 @@ export function LinkPreview({
     );
   }
 
+  // ogp 未取得時は inline リンク + HoverCard で URL のみ表示
   const LinkComp = (LinkSlot ?? "a") as ElementType<
     React.AnchorHTMLAttributes<HTMLAnchorElement>
   >;
   return (
-    <LinkComp
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className={cn("my-3 block", className)}
-    >
-      <Card className="transition-colors hover:bg-muted/40">
-        <CardContent className="flex items-center gap-2 p-3 text-sm">
-          <LinkIcon className="size-4 shrink-0" aria-hidden />
+    <HoverCard>
+      <HoverCardTrigger asChild>
+        <LinkComp
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={cn(
+            "my-2 inline-flex items-center gap-1 text-primary hover:underline",
+            className,
+          )}
+        >
+          <LinkIcon className="size-3.5" aria-hidden />
           <span className="truncate">{url}</span>
-        </CardContent>
-      </Card>
-    </LinkComp>
+        </LinkComp>
+      </HoverCardTrigger>
+      <HoverCardContent className="text-xs break-all">{url}</HoverCardContent>
+    </HoverCard>
   );
 }

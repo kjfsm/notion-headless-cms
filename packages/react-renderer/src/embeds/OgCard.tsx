@@ -1,7 +1,12 @@
 "use client";
 
 import type { ElementType } from "react";
-import { Card } from "../components/ui/card";
+import {
+  Card,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
 import { useNotionContext } from "../context";
 
 /**
@@ -30,7 +35,7 @@ function hostname(url: string): string {
 
 /**
  * Notion 本家のブックマークカード風レイアウト。
- * 左側にタイトル/説明/サイト名+URL、右側に OG 画像。
+ * 左側 CardHeader（タイトル/説明/サイト名+URL）と右側 OG 画像。
  * ogp 未指定または空でもホスト名 + URL のリンクカードとして崩れずに描画する。
  */
 export function OgCard({ url, ogp }: OgCardProps) {
@@ -53,22 +58,20 @@ export function OgCard({ url, ogp }: OgCardProps) {
       rel="noopener noreferrer"
       className="block no-underline"
     >
-      {/* min-h でカード高さの最低値を保証し、本文は line-clamp + break-words で
-          長文・長単語が overflow-hidden で見切れないようにする */}
-      <Card className="flex min-h-[6.5rem] flex-row items-stretch overflow-hidden p-0 transition-colors hover:bg-muted/40">
-        <div className="flex min-w-0 flex-1 flex-col gap-1 p-4">
-          <div className="line-clamp-2 break-words font-medium leading-snug">
+      <Card className="flex min-h-[6.5rem] flex-row items-stretch gap-0 overflow-hidden py-0 transition-colors hover:bg-muted/40">
+        <CardHeader className="flex min-w-0 flex-1 flex-col gap-1 px-4 py-4">
+          <CardTitle className="line-clamp-2 break-words text-sm font-medium leading-snug">
             {title}
-          </div>
+          </CardTitle>
           {description ? (
-            <div className="line-clamp-2 break-words text-xs text-muted-foreground">
+            <CardDescription className="line-clamp-2 break-words text-xs">
               {description}
-            </div>
+            </CardDescription>
           ) : null}
-          <div className="mt-auto truncate pt-2 text-xs text-muted-foreground/60">
+          <CardDescription className="mt-auto truncate pt-2 text-xs text-muted-foreground/60">
             {siteName} · {url}
-          </div>
-        </div>
+          </CardDescription>
+        </CardHeader>
         {image ? (
           <div className="ml-auto w-36 shrink-0 self-stretch bg-muted sm:w-48 md:w-64">
             <Img

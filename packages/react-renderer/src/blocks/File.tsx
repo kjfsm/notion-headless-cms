@@ -3,7 +3,12 @@
 import type { FileBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { FileIcon } from "lucide-react";
 import type { ElementType } from "react";
-import { Card, CardContent } from "../components/ui/card";
+import {
+  Item,
+  ItemContent,
+  ItemMedia,
+  ItemTitle,
+} from "../components/ui/item.js";
 import { useNotionContext } from "../context";
 import { getFileUrl } from "../lib/notion-file";
 import { cn } from "../lib/utils";
@@ -31,26 +36,20 @@ export function File({
     React.AnchorHTMLAttributes<HTMLAnchorElement>
   >;
   return (
-    <Card className={cn("my-3", className)}>
-      <CardContent className="flex items-center gap-3 p-3">
-        <FileIcon
-          className="size-5 shrink-0 text-muted-foreground"
-          aria-hidden
-        />
-        <LinkComp
-          href={href}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary underline-offset-2 hover:underline"
-        >
-          {fileName(block)}
+    <figure className={cn("my-3", className)}>
+      <Item variant="outline" asChild>
+        <LinkComp href={href} target="_blank" rel="noopener noreferrer">
+          <ItemMedia variant="icon">
+            <FileIcon aria-hidden />
+          </ItemMedia>
+          <ItemContent>
+            <ItemTitle>{fileName(block)}</ItemTitle>
+          </ItemContent>
         </LinkComp>
-      </CardContent>
+      </Item>
       {block.file.caption.length > 0 ? (
-        <CardContent className="pt-0">
-          <Caption value={block.file.caption} variant="block" />
-        </CardContent>
+        <Caption value={block.file.caption} variant="block" />
       ) : null}
-    </Card>
+    </figure>
   );
 }

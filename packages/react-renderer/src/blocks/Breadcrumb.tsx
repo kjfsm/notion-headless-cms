@@ -1,6 +1,12 @@
 "use client";
 
-import { ChevronRight } from "lucide-react";
+import {
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+  Breadcrumb as UiBreadcrumb,
+} from "../components/ui/breadcrumb.js";
 import { cn } from "../lib/utils";
 import type { BlockComponentProps } from "../types";
 
@@ -9,16 +15,14 @@ export function Breadcrumb({
   className,
 }: Pick<BlockComponentProps, "className"> = {}) {
   return (
-    <nav
-      aria-label="breadcrumb"
-      className={cn("my-2 text-sm text-muted-foreground", className)}
-    >
-      <span>…</span>
-      <ChevronRight
-        className="mx-1 inline-block size-3 align-middle"
-        aria-hidden
-      />
-      <span>page</span>
-    </nav>
+    <UiBreadcrumb className={cn("my-2", className)}>
+      <BreadcrumbList>
+        <BreadcrumbItem>…</BreadcrumbItem>
+        <BreadcrumbSeparator />
+        <BreadcrumbItem>
+          <BreadcrumbPage>page</BreadcrumbPage>
+        </BreadcrumbItem>
+      </BreadcrumbList>
+    </UiBreadcrumb>
   );
 }
