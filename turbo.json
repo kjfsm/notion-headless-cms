@@ -4,36 +4,43 @@
   "globalEnv": ["NODE_ENV", "CI"],
   "tasks": {
     "build": {
+      "outputLogs": "errors-only",
       "dependsOn": ["^build"],
       "inputs": ["src/**", "package.json", "tsconfig.json"],
       "outputs": ["dist/**"]
     },
     "typecheck": {
+      "outputLogs": "errors-only",
       "dependsOn": ["^build"],
       "inputs": ["src/**", "tsconfig.json"],
       "outputs": []
     },
     "test": {
+      "outputLogs": "errors-only",
       "dependsOn": ["^build"],
       "inputs": ["src/**", "app/**", "vitest.config.ts"],
       "outputs": []
     },
     "test:coverage": {
+      "outputLogs": "errors-only",
       "dependsOn": ["^build"],
       "inputs": ["src/**"],
       "outputs": ["coverage/**"]
     },
     "publint": {
+      "outputLogs": "errors-only",
       "dependsOn": ["build"],
       "inputs": ["dist/**", "package.json"],
       "outputs": []
     },
     "attw": {
+      "outputLogs": "errors-only",
       "dependsOn": ["build"],
       "inputs": ["dist/**", "package.json"],
       "outputs": []
     },
     "cf-typegen": {
+      "outputLogs": "errors-only",
       "inputs": ["wrangler.toml", "wrangler.jsonc"],
       "outputs": ["worker-configuration.d.ts"]
     },
@@ -53,6 +60,7 @@
       "cache": false
     },
     "generate": {
+      "outputLogs": "errors-only",
       "dependsOn": ["@notion-headless-cms/cli#build"],
       "inputs": ["nhc.config.ts", ".env", ".dev.vars"],
       "outputs": ["src/generated/nhc.ts", "app/generated/nhc.ts"],
