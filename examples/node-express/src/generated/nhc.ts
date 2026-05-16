@@ -1,23 +1,19 @@
 // このファイルは nhc generate により自動生成されました。手動編集は nhc generate で上書きされます。
-// Config SHA: 4487dfa0a225e4961a9d8e64d5f68f269f9b1f933210cc0fc5e70fa0d9656f4e
+// Config SHA: 56ee67817ce6da7240ec24c38db60126cbb22a81bf8d49c6c2529dc0ce1aad5b
 
 import type { PropertyMap } from "@notion-headless-cms/core";
 import type { SchemaMap } from "@notion-headless-cms/notion-source";
 
 // ===========================================================
 // posts  (ブログ記事DB)
-// Notion DB ID: 34a21462-5ae9-80a7-a17b-000b93010c9f
+// Notion DB ID: f38c6757-0ecd-83e5-9233-87bf3bf182d7
 // ===========================================================
 
-export const postsDataSourceId = "34a21462-5ae9-80a7-a17b-000b93010c9f";
+export const postsDataSourceId = "f38c6757-0ecd-83e5-9233-87bf3bf182d7";
 
 /** Notion DB "ブログ記事DB" のプロパティマップ。 */
 export const postsProperties = {
-  status: {
-    type: "status" as const,
-    notion: "ステータス",
-    options: ["下書き", "編集中", "公開済み"] as const,
-  },
+  status: { type: "status" as const, notion: "ステータス", options: ["下書き", "編集中", "公開済み"] as const },
   publishedAt: { type: "date" as const, notion: "公開日" },
   slug: { type: "richText" as const, notion: "URL" },
   author: { type: "select" as const, notion: "著者" },
