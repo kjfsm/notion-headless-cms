@@ -1,6 +1,6 @@
 {
   "name": "@notion-headless-cms/notion-katex",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Notion equation ブロックを fetch 時に KaTeX で pre-render し、Workers バンドルから katex を除外する拡張パッケージ",
   "keywords": [
     "notion",

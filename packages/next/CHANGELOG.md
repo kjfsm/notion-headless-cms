@@ -1,5 +1,15 @@
 # @notion-headless-cms/next
 
+## 1.0.4
+
+### Patch Changes
+
+- f7fd36a: 依存関係を pnpm up --latest で最新化（tsdown 0.22.0、turbo 2.9.14、biome 2.4.15 等）
+- Updated dependencies [f7fd36a]
+  - @notion-headless-cms/core@0.3.24
+  - @notion-headless-cms/markdown-html@1.0.2
+  - @notion-headless-cms/notion-source@0.1.7
+
 ## 1.0.3
 
 ### Patch Changes
