@@ -11,6 +11,7 @@ npm スコープ `@notion-headless-cms/*` で公開。
 4. **シークレット**: コードにハードコードしない。環境変数 / `wrangler secret` / `env()` ヘルパー経由（詳細: `.claude/rules/secrets.md`）
 5. **`.claude/` の編集は `.claude-next/` で作業してから一括コピー**する（本セッション中の反映事故を避け、差分レビューしやすくするため）
 6. **changeset の bump 種別**: 明示的な指示がない限り **`patch`** を使う（`major` / `minor` は指示があった場合のみ）
+7. **shadcn 生成ファイル (`**/components/ui/**`) は手で編集しない**。更新するときは `pnpm dlx shadcn@latest add <component> --overwrite` で再生成する。biome の検査対象からも除外済み
 
 ## 設計方針とコーディングの方向性
 
