@@ -122,21 +122,36 @@ importers:
 
   examples/cloudflare-astro:
     dependencies:
+      '@notion-headless-cms/block-html':
+        specifier: workspace:*
+        version: link:../../packages/block-html
       '@notion-headless-cms/cloudflare':
         specifier: workspace:*
         version: link:../../packages/cloudflare
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@notion-headless-cms/notion-katex':
+        specifier: workspace:*
+        version: link:../../packages/notion-katex
       '@notion-headless-cms/notion-orm':
         specifier: workspace:*
         version: link:../../packages/notion-orm
+      '@notion-headless-cms/notion-shiki':
+        specifier: workspace:*
+        version: link:../../packages/notion-shiki
       '@notion-headless-cms/notion-source':
         specifier: workspace:*
         version: link:../../packages/notion-source
       astro:
         specifier: ^6.3.3
         version: 6.3.3(@types/node@25.8.0)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.60.4)(tsx@4.22.0)(yaml@2.9.0)
+      katex:
+        specifier: 'catalog:'
+        version: 0.16.46
+      shiki:
+        specifier: 'catalog:'
+        version: 4.0.2
       zod:
         specifier: 'catalog:'
         version: 4.4.3
@@ -332,15 +347,27 @@ importers:
       '@notionhq/client':
         specifier: 'catalog:'
         version: 5.21.0
+      '@radix-ui/react-separator':
+        specifier: ^1.1.4
+        version: 1.1.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      '@radix-ui/react-slot':
+        specifier: ^1.2.3
+        version: 1.2.4(@types/react@19.2.14)(react@19.2.6)
       '@react-router/cloudflare':
         specifier: ^7.15.1
         version: 7.15.1(@cloudflare/workers-types@4.20260516.1)(react-router@7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6))(typescript@6.0.3)
+      clsx:
+        specifier: ^2.1.1
+        version: 2.1.1
       dotenv:
         specifier: 'catalog:'
         version: 17.4.2
       katex:
         specifier: 'catalog:'
         version: 0.16.46
+      lucide-react:
+        specifier: ^0.513.0
+        version: 0.513.0(react@19.2.6)
       react:
         specifier: 'catalog:'
         version: 19.2.6
@@ -353,6 +380,9 @@ importers:
       shiki:
         specifier: 'catalog:'
         version: 4.0.2
+      tailwind-merge:
+        specifier: ^3.6.0
+        version: 3.6.0
       zod:
         specifier: 'catalog:'
         version: 4.4.3
@@ -360,6 +390,9 @@ importers:
       '@cloudflare/vite-plugin':
         specifier: ^1.37.1
         version: 1.37.1(vite@8.0.13(@types/node@25.8.0)(esbuild@0.28.0)(jiti@2.7.0)(tsx@4.22.0)(yaml@2.9.0))(workerd@1.20260515.1)(wrangler@4.92.0(@cloudflare/workers-types@4.20260516.1))
+      '@cloudflare/workers-types':
+        specifier: '*'
+        version: 4.20260516.1
       '@notion-headless-cms/cli':
         specifier: workspace:*
         version: link:../../packages/cli
@@ -381,9 +414,6 @@ importers:
       dotenv-cli:
         specifier: ^11.0.0
         version: 11.0.0
-      react-router-auto-routes:
-        specifier: '*'
-        version: 0.8.4(typescript@6.0.3)
       tailwindcss:
         specifier: 'catalog:'
         version: 4.3.0
@@ -2415,6 +2445,19 @@ packages:
       '@types/react-dom':
         optional: true
 
+  '@radix-ui/react-separator@1.1.8':
+    resolution: {integrity: sha512-sDvqVY4itsKwwSMEe0jtKgfTh+72Sy3gPmQpjqcQneqQ4PFmr/1I0YA+2/puilhggCe2gJcx5EBAYFkWkdpa5g==}
+    peerDependencies:
+      '@types/react': '*'
+      '@types/react-dom': '*'
+      react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+      react-dom: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      '@types/react-dom':
+        optional: true
+
   '@radix-ui/react-slot@1.2.3':
     resolution: {integrity: sha512-aeNmHnBxbi2St0au6VBVC7JXFlhLlOnvIIlePNniyUNAClzmtAUEY8/pBiK3iHjufOlwA+c20/8jngo7xcrg8A==}
     peerDependencies:
@@ -4210,6 +4253,11 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
+  lucide-react@0.513.0:
+    resolution: {integrity: sha512-CJZKq2g8Y8yN4Aq002GahSXbG2JpFv9kXwyiOAMvUBv7pxeOFHUWKB0mO7MiY4ZVFCV4aNjv2BJFq/z3DgKPQg==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
   lucide-react@1.16.0:
     resolution: {integrity: sha512-dYwyPzb4MEKpGUmNYk3WKWPnMrHs3FKM+q94kAnJrcDIqqn1hq2xY8scaS2ovsOCM5D51ey2gaRG3PBb1vgoYQ==}
     peerDependencies:
@@ -4755,13 +4803,6 @@ packages:
   react-refresh@0.14.2:
     resolution: {integrity: sha512-jCvmsr+1IUSMUyzOkRcvnVbX3ZYC6g9TDrDbFuFmRDq7PD4yaGbLKNQL6k2jnArV8hjYxh7hVhAZB6s9HDGpZA==}
     engines: {node: '>=0.10.0'}
-
-  react-router-auto-routes@0.8.4:
-    resolution: {integrity: sha512-eGbPtJGJ2XWleKr9xFm0cqYxNUBbnyA7jVag+LSbs2TR6uqqID+n+2MmpgGf7gHskOX7lTWUuOQmZr+nHtEaZg==}
-    engines: {node: '>=20'}
-    hasBin: true
-    peerDependencies:
-      typescript: '>=5.0'
 
   react-router@7.15.1:
     resolution: {integrity: sha512-R8rl9HhgikFYoPJymnUtPXWbnDb3oget6lQnfIoupbt61aT9aOhRkDsY2XRhZRyX1Z/8a5sL74fXmFNm3NRK5A==}
@@ -7069,6 +7110,15 @@ snapshots:
       '@types/react': 19.2.14
       '@types/react-dom': 19.2.3(@types/react@19.2.14)
 
+  '@radix-ui/react-separator@1.1.8(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)':
+    dependencies:
+      '@radix-ui/react-primitive': 2.1.4(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
+      react: 19.2.6
+      react-dom: 19.2.6(react@19.2.6)
+    optionalDependencies:
+      '@types/react': 19.2.14
+      '@types/react-dom': 19.2.3(@types/react@19.2.14)
+
   '@radix-ui/react-slot@1.2.3(@types/react@19.2.14)(react@19.2.6)':
     dependencies:
       '@radix-ui/react-compose-refs': 1.1.2(@types/react@19.2.14)(react@19.2.6)
@@ -7772,7 +7822,7 @@ snapshots:
 
   ast-kit@3.0.0-beta.1:
     dependencies:
-      '@babel/parser': 8.0.0-rc.5
+      '@babel/parser': 8.0.0-rc.4
       estree-walker: 3.0.3
       pathe: 2.0.3
 
@@ -8904,6 +8954,10 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
+  lucide-react@0.513.0(react@19.2.6):
+    dependencies:
+      react: 19.2.6
+
   lucide-react@1.16.0(react@19.2.6):
     dependencies:
       react: 19.2.6
@@ -9634,11 +9688,6 @@ snapshots:
   react-is@17.0.2: {}
 
   react-refresh@0.14.2: {}
-
-  react-router-auto-routes@0.8.4(typescript@6.0.3):
-    dependencies:
-      picomatch: 4.0.4
-      typescript: 6.0.3
 
   react-router@7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6):
     dependencies:

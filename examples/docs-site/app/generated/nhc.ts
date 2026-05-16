@@ -46,8 +46,8 @@ export interface Doc {
   status: "未着手" | "進行中" | "完了" | null;
   /** Notion property: "スラッグ" */
   slug: string;
-  /** Notion property: "セクション" */
-  section: "はじめに" | "ガイド" | "APIリファレンス" | "レシピ" | null;
+  /** Notion property: "セクション" (select 型は string | null に推論される) */
+  section: string | null;
   /** Notion property: "順序" */
   order: number | null;
   /** Notion property: "説明" */
@@ -56,6 +56,8 @@ export interface Doc {
   name: string | null;
   /** Notion ページタイトル。 */
   title?: string | null;
+  /** 公開日時。 */
+  publishedAt?: string | null;
 }
 
 // ===========================================================

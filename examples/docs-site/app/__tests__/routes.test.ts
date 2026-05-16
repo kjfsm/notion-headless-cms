@@ -37,6 +37,7 @@ vi.mock("@notion-headless-cms/react-renderer/server", () => ({
 }));
 
 const { loader: indexLoader } = await import("../routes/index.js");
+const { loader: layoutLoader } = await import("../routes/docs/_layout.js");
 const { loader: docLoader } = await import("../routes/docs/$slug.js");
 const { action: warmAction } = await import("../routes/api/warm.js");
 
@@ -68,6 +69,25 @@ describe("index loader()", () => {
     });
     const result = await indexLoader({ context: fakeContext } as never);
     expect((result as { blocks: unknown[] }).blocks).toHaveLength(1);
+  });
+});
+
+describe("docs layout loader()", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("ドキュメント一覧を返す", async () => {
+    fakeCms.docs.list.mockResolvedValue([
+      {
+        slug: "installation",
+        name: "インストール",
+        section: "はじめに",
+        order: 3,
+      },
+    ]);
+    const result = await layoutLoader({ context: fakeContext } as never);
+    const docs = (result as { docs: { slug: string }[] }).docs;
+    expect(docs).toHaveLength(1);
+    expect(docs[0].slug).toBe("installation");
   });
 });
 

@@ -19,12 +19,16 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     blocks,
     item: {
       slug: doc.slug,
-      title: doc.title,
+      title: doc.title ?? doc.name,
       section: doc.section,
       description: doc.description,
       lastEditedTime: doc.lastEditedTime,
     },
   };
+}
+
+export function meta({ data: loaderData }: Route.MetaArgs) {
+  return [{ title: loaderData?.item.title ?? "ドキュメント" }];
 }
 
 export default function Doc({ loaderData }: Route.ComponentProps) {
@@ -37,9 +41,15 @@ export default function Doc({ loaderData }: Route.ComponentProps) {
           version: item.lastEditedTime,
         }}
       />
-      <h1>{item.title ?? item.slug}</h1>
-      {item.description && <p>{item.description}</p>}
-      <NotionRenderer blocks={blocks} />
+      <h1 className="text-3xl font-bold text-gray-900 mb-6">
+        {item.title ?? item.slug}
+      </h1>
+      {item.description && (
+        <p className="text-muted-foreground mb-6">{item.description}</p>
+      )}
+      <div className="prose prose-gray max-w-none">
+        <NotionRenderer blocks={blocks} />
+      </div>
     </article>
   );
 }
