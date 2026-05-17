@@ -3,6 +3,7 @@
 import type { ToDoBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { Checkbox } from "../components/ui/checkbox.js";
 import { Label } from "../components/ui/label.js";
+import { notionBlockColorClass } from "../lib/notion-color.js";
 import { cn } from "../lib/utils.js";
 import { NotionBlocks } from "../NotionBlocks.js";
 import { RichText } from "../rich-text/RichText.js";
@@ -15,7 +16,13 @@ export function ToDo({
   const checked = block.to_do.checked;
   const id = `todo-${block.id}`;
   return (
-    <div className={cn("my-1", className)}>
+    <div
+      className={cn(
+        "my-1",
+        notionBlockColorClass(block.to_do.color),
+        className,
+      )}
+    >
       <Label htmlFor={id} className="items-start gap-2 leading-7 font-normal">
         <Checkbox
           id={id}

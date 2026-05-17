@@ -13,16 +13,18 @@ export default {
       ignoreDependencies: ["shadcn"],
     },
     "packages/react-renderer": {
-      // package.json の exports サブパス (./, ./server, ./equation, ./code, ./router, ./next)
+      // package.json の exports サブパス (./, ./server, ./router, ./next, ./mermaid)
       entry: [
         "src/index.ts",
         "src/server.ts",
-        "src/equation.tsx",
-        "src/code.tsx",
         "src/router.tsx",
         "src/next.tsx",
+        "src/mermaid.tsx",
       ],
       project: ["src/**/*.{ts,tsx}"],
+      // mermaid は ./mermaid サブパスから動的 import される optional peer。
+      // knip の "Referenced optional peerDependencies" 通知を抑止する。
+      ignoreDependencies: ["mermaid"],
     },
     "packages/cli": {
       entry: ["src/index.ts", "src/cli.ts"],

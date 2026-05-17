@@ -69,7 +69,7 @@ return <NotionRenderer blocks={blocks} />;
 import { NotionRenderer, type ComponentOverrides } from "@notion-headless-cms/react-renderer";
 
 const components: ComponentOverrides = {
-  Code: MyCustomCode, // 既定の shiki ベース実装を上書き
+  Code: MyCustomCode, // 既定の Code 実装を上書き
 };
 
 <NotionRenderer blocks={blocks} components={components} />;
@@ -77,73 +77,30 @@ const components: ComponentOverrides = {
 
 ### 数式 (KaTeX) を使う
 
-メインエントリの `Equation` は **bundle に `katex` を混入させないためのスタブ**で、`<pre>` で式をそのまま表示するだけ。整形描画したい場合は `@notion-headless-cms/react-renderer/equation` サブパスから差し込む。
+v0.2 以降、block / inline equation は **既定で動的 import** されるため、`katex` を peer に入れるだけで自動的に整形される（サブパス `react-renderer/equation` は廃止）。
 
 ```bash
 pnpm add katex
 ```
 
-利用側プロジェクトの CSS に `katex/dist/katex.min.css` を読み込むこと（Tailwind v4 なら `@import "katex/dist/katex.min.css"` を `@source` より前に置く）。`katex` は `peerDependencies` (optional) のため、数式を使わないユースケースではインストール不要。
+利用側プロジェクトの CSS に `katex/dist/katex.min.css` を読み込むこと（Tailwind v4 なら `@import "katex/dist/katex.min.css"` を `@source` より前に置く）。`katex` は optional peer なので数式を使わない構成では未インストールでよく、equation ブロックが現れた瞬間にだけ chunk が fetch される。
 
-#### Next.js App Router / React Server Components
+### mermaid 図を使う（opt-in）
 
-`./equation` の `Equation` は `"use client"` 付きなので、**Server Component から直接 import** すれば Next.js が client reference として正しくシリアライズし、ルート単位で自動コードスプリットされる（`katex` は post ページの client chunk にのみ含まれる）。
+mermaid は約 1 MB と重く Cloudflare Workers の 3 MiB 上限を圧迫するため、**既定では含めず opt-in サブパス**で提供する。
+
+```bash
+pnpm add mermaid
+```
 
 ```tsx
-// app/posts/[slug]/page.tsx (Server Component)
-import { Equation } from "@notion-headless-cms/react-renderer/equation";
 import { NotionRenderer } from "@notion-headless-cms/react-renderer";
+import { MermaidCode } from "@notion-headless-cms/react-renderer/mermaid";
 
-export default async function Page() {
-  return <NotionRenderer blocks={blocks} components={{ Equation }} />;
-}
+<NotionRenderer blocks={blocks} components={{ Code: MermaidCode }} />;
 ```
 
-> **注**: `next/dynamic(() => import(".../equation"))` を Server Component で使うと、`Functions cannot be passed directly to Client Components` という RSC エラーになる。`next/dynamic` の戻り値（LoadableComponent 関数）は client reference として serialize できないため。次節の wrapper パターンを使うか、上記の直接 import で十分。
-
-#### Pages Router / Client Component (rnx 流の細粒度レイジー)
-
-ルート単位ではなく **「数式を実際に含むページでだけ katex chunk を fetch」** したい場合は、`"use client"` を付けた wrapper コンポーネント内で `next/dynamic` を使う。Pages Router でもそのまま動く。
-
-```tsx
-// components/notion-content.tsx
-"use client";
-
-import dynamic from "next/dynamic";
-import {
-  type NotionBlock,
-  NotionRenderer,
-} from "@notion-headless-cms/react-renderer";
-
-// 数式が render される瞬間まで katex を fetch しない（route 単位より細かい lazy）
-const Equation = dynamic(() =>
-  import("@notion-headless-cms/react-renderer/equation").then((m) => m.Equation),
-);
-
-export function NotionContent({ blocks }: { blocks: NotionBlock[] }) {
-  return <NotionRenderer blocks={blocks} components={{ Equation }} />;
-}
-```
-
-```tsx
-// app/posts/[slug]/page.tsx (Server Component)
-import { NotionContent } from "@/components/notion-content";
-
-export default async function Page() {
-  return <NotionContent blocks={blocks} />;
-}
-```
-
-#### 非 Next.js 環境（Vite / React Router 等）
-
-SSR 環境ではルート単位でコードスプリットされるため、`./equation` を直接 static import すれば十分。
-
-```tsx
-import { Equation } from "@notion-headless-cms/react-renderer/equation";
-import { NotionRenderer } from "@notion-headless-cms/react-renderer";
-
-<NotionRenderer blocks={blocks} components={{ Equation }} />;
-```
+`MermaidCode` は `language === "mermaid"` のときだけ動的 import で `mermaid` を読み SVG にレンダし、それ以外の言語は既定の `Code` に委譲する。
 
 ## Notion 更新の表示反映 (`/router`, `/next`)
 

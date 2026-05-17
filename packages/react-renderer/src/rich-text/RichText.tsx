@@ -2,7 +2,9 @@
 
 import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 import { Fragment } from "react";
+import { useNotionContext } from "../context.js";
 import { Annotated } from "./Annotation";
+import { InlineEquation as DefaultInlineEquation } from "./InlineEquation";
 import { Mention } from "./Mention";
 
 export interface RichTextProps {
@@ -23,8 +25,9 @@ export function RichText({ value }: RichTextProps) {
 }
 
 function RichTextItem({ item }: { item: RichTextItemResponse }) {
+  const { components } = useNotionContext();
+
   if (item.type === "mention") {
-    // mention 自身は色や bold を annotations で重ねがけできる
     return (
       <Annotated annotations={item.annotations} href={item.href}>
         <Mention item={item} />
@@ -33,11 +36,11 @@ function RichTextItem({ item }: { item: RichTextItemResponse }) {
   }
 
   if (item.type === "equation") {
+    // override が無ければ既定の lazy KaTeX を使う。
+    const InlineEquation = components.InlineEquation ?? DefaultInlineEquation;
     return (
       <Annotated annotations={item.annotations} href={item.href}>
-        <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.9em]">
-          {item.equation.expression}
-        </code>
+        <InlineEquation expression={item.equation.expression} />
       </Annotated>
     );
   }

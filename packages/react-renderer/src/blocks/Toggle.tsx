@@ -7,6 +7,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "../components/ui/collapsible.js";
+import { notionBlockColorClass } from "../lib/notion-color.js";
 import { cn } from "../lib/utils.js";
 import { NotionBlocks } from "../NotionBlocks.js";
 import { RichText } from "../rich-text/RichText.js";
@@ -17,7 +18,13 @@ export function Toggle({
   className,
 }: BlockComponentProps<ToggleBlockObjectResponse>) {
   return (
-    <Collapsible className={cn("my-2", className)}>
+    <Collapsible
+      className={cn(
+        "my-2",
+        notionBlockColorClass(block.toggle.color),
+        className,
+      )}
+    >
       <CollapsibleTrigger className="group flex items-center gap-2 text-left">
         <ChevronRight
           aria-hidden

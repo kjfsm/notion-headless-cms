@@ -1,9 +1,11 @@
+"use client";
+
 import type { CodeBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { Badge } from "../components/ui/badge.js";
 import { Card, CardContent, CardHeader } from "../components/ui/card.js";
-import { cn } from "../lib/utils";
-import { RichText } from "../rich-text/RichText";
-import type { BlockComponentProps } from "../types";
+import { cn } from "../lib/utils.js";
+import { RichText } from "../rich-text/RichText.js";
+import type { BlockComponentProps } from "../types.js";
 
 function plainText(
   richText: CodeBlockObjectResponse["code"]["rich_text"],
@@ -11,27 +13,32 @@ function plainText(
   return richText.map((rt) => rt.plain_text).join("");
 }
 
+// `"plain text"` 等の Notion 言語名を Shiki/Prism で扱いやすい形に揃える。
+function normalizeLanguage(lang: string): string {
+  const l = lang.trim().toLowerCase();
+  if (l === "" || l === "plain text" || l === "plain_text") return "text";
+  return lang;
+}
+
 /**
- * デフォルトの Code スタブ。bundle に shiki を混入させない。
+ * デフォルトの Code 描画。
+ * - `__cachedHtml`（notion-shiki が付与）があればそのまま使う（バンドルに shiki 不要）。
+ * - それ以外は素の `<pre>` を出す。
  *
- * `notion-shiki` enricher によって `block.code.__cachedHtml` が付与されている場合は
- * `dangerouslySetInnerHTML` でそのまま描画する（バンドルに shiki 不要）。
- * `__cachedHtml` がない場合はソースを等幅フォントの `<pre>` で素のまま表示する。
- *
- * shiki で動的に整形表示したい場合は `@notion-headless-cms/react-renderer/code`
- * から SyntaxHighlighter を import し、`<NotionRenderer components={{ Code: SyntaxHighlighter }} />` で差し込む。
+ * mermaid を SVG として描画したい場合は `@notion-headless-cms/react-renderer/mermaid`
+ * の `MermaidCode` を `<NotionRenderer components={{ Code: MermaidCode }} />` で
+ * 差し込む。mermaid は ~1 MB と重く CF Workers の 3 MiB 上限を直撃するため
+ * 既定では含めない（opt-in）。
  */
 export function Code({
   block,
   className,
 }: BlockComponentProps<CodeBlockObjectResponse>) {
-  // notion-shiki が fetch 時に付与した pre-rendered HTML があればそちらを使う
   const cachedHtml = (
     block.code as CodeBlockObjectResponse["code"] & { __cachedHtml?: string }
   ).__cachedHtml;
-
-  const language = block.code.language;
-  const source = cachedHtml ? null : plainText(block.code.rich_text);
+  const language = normalizeLanguage(block.code.language);
+  const source = plainText(block.code.rich_text);
 
   return (
     <figure className={cn("my-3", className)}>
@@ -44,7 +51,7 @@ export function Code({
         <CardContent className="p-0">
           {cachedHtml ? (
             <div
-              // biome-ignore lint/security/noDangerouslySetInnerHtml: notion-shiki の pre-render 済み出力
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: notion-shiki の整形済み HTML
               dangerouslySetInnerHTML={{ __html: cachedHtml }}
             />
           ) : (

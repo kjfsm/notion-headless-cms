@@ -32,14 +32,6 @@
       "types": "./dist/server.d.mts",
       "import": "./dist/server.mjs"
     },
-    "./equation": {
-      "types": "./dist/equation.d.mts",
-      "import": "./dist/equation.mjs"
-    },
-    "./code": {
-      "types": "./dist/code.d.mts",
-      "import": "./dist/code.mjs"
-    },
     "./router": {
       "types": "./dist/router.d.mts",
       "import": "./dist/router.mjs"
@@ -47,6 +39,10 @@
     "./next": {
       "types": "./dist/next.d.mts",
       "import": "./dist/next.mjs"
+    },
+    "./mermaid": {
+      "types": "./dist/mermaid.d.mts",
+      "import": "./dist/mermaid.mjs"
     }
   },
   "files": [
@@ -56,7 +52,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "tsdown src/index.ts src/server.ts src/equation.tsx src/code.tsx src/router.tsx src/next.tsx --format esm --dts --sourcemap --out-dir dist",
+    "build": "tsdown src/index.ts src/server.ts src/router.tsx src/next.tsx src/mermaid.tsx --format esm --dts --sourcemap --out-dir dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
@@ -70,11 +66,11 @@
   "peerDependencies": {
     "@notionhq/client": "^5.20.0",
     "katex": "^0.16.11",
+    "mermaid": "^11.0.0",
     "next": ">=14",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-router": ">=7",
-    "shiki": "^1.0.0"
+    "react-router": ">=7"
   },
   "peerDependenciesMeta": {
     "@notionhq/client": {
@@ -83,7 +79,7 @@
     "katex": {
       "optional": true
     },
-    "shiki": {
+    "mermaid": {
       "optional": true
     },
     "next": {
@@ -94,25 +90,11 @@
     }
   },
   "dependencies": {
-    "@base-ui/react": "^1.4.1",
-    "@hookform/resolvers": "^5.2.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "cmdk": "^1.1.1",
-    "date-fns": "^4.1.0",
-    "embla-carousel-react": "^8.6.0",
-    "input-otp": "^1.4.2",
     "lucide-react": "^1.16.0",
-    "next-themes": "^0.4.6",
     "radix-ui": "^1.4.3",
-    "react-day-picker": "^10.0.1",
-    "react-hook-form": "^7.76.0",
-    "react-resizable-panels": "^4",
-    "recharts": "3.8.0",
-    "sonner": "^2.0.7",
-    "tailwind-merge": "^3.6.0",
-    "vaul": "^1.1.2",
-    "zod": "catalog:"
+    "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
     "@notionhq/client": "catalog:",
@@ -124,7 +106,6 @@
     "next": "^16.2.6",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "react-router": "^7.15.1",
-    "shiki": "catalog:"
+    "react-router": "^7.15.1"
   }
 }
