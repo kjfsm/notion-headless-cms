@@ -75,15 +75,32 @@ const components: ComponentOverrides = {
 <NotionRenderer blocks={blocks} components={components} />;
 ```
 
-### 数式 (KaTeX) / mermaid 図を使う
+### 数式 (KaTeX) を使う
 
-v0.2 以降、block / inline equation は **既定で動的 import** されるため、`katex` を peer に入れるだけで自動的に整形される（サブパス `react-renderer/equation` は廃止）。同様に `code` ブロックの `language === "mermaid"` も既定で `mermaid` を動的 import して SVG にレンダする。
+v0.2 以降、block / inline equation は **既定で動的 import** されるため、`katex` を peer に入れるだけで自動的に整形される（サブパス `react-renderer/equation` は廃止）。
 
 ```bash
-pnpm add katex mermaid
+pnpm add katex
 ```
 
-利用側プロジェクトの CSS に `katex/dist/katex.min.css` を読み込むこと（Tailwind v4 なら `@import "katex/dist/katex.min.css"` を `@source` より前に置く）。`katex` / `mermaid` はいずれも optional peer なので、数式・mermaid を使わない構成では未インストールでよく、ブロックが現れた瞬間にだけ chunk が fetch される（route より細かい lazy）。
+利用側プロジェクトの CSS に `katex/dist/katex.min.css` を読み込むこと（Tailwind v4 なら `@import "katex/dist/katex.min.css"` を `@source` より前に置く）。`katex` は optional peer なので数式を使わない構成では未インストールでよく、equation ブロックが現れた瞬間にだけ chunk が fetch される。
+
+### mermaid 図を使う（opt-in）
+
+mermaid は約 1 MB と重く Cloudflare Workers の 3 MiB 上限を圧迫するため、**既定では含めず opt-in サブパス**で提供する。
+
+```bash
+pnpm add mermaid
+```
+
+```tsx
+import { NotionRenderer } from "@notion-headless-cms/react-renderer";
+import { MermaidCode } from "@notion-headless-cms/react-renderer/mermaid";
+
+<NotionRenderer blocks={blocks} components={{ Code: MermaidCode }} />;
+```
+
+`MermaidCode` は `language === "mermaid"` のときだけ動的 import で `mermaid` を読み SVG にレンダし、それ以外の言語は既定の `Code` に委譲する。
 
 ## Notion 更新の表示反映 (`/router`, `/next`)
 

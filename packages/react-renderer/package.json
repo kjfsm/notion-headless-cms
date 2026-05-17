@@ -39,6 +39,10 @@
     "./next": {
       "types": "./dist/next.d.mts",
       "import": "./dist/next.mjs"
+    },
+    "./mermaid": {
+      "types": "./dist/mermaid.d.mts",
+      "import": "./dist/mermaid.mjs"
     }
   },
   "files": [
@@ -48,7 +52,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "tsdown src/index.ts src/server.ts src/router.tsx src/next.tsx --format esm --dts --sourcemap --out-dir dist",
+    "build": "tsdown src/index.ts src/server.ts src/router.tsx src/next.tsx src/mermaid.tsx --format esm --dts --sourcemap --out-dir dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",

@@ -1,7 +1,6 @@
 "use client";
 
 import type { CodeBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
-import { useEffect, useId, useState } from "react";
 import { Badge } from "../components/ui/badge.js";
 import { Card, CardContent, CardHeader } from "../components/ui/card.js";
 import { cn } from "../lib/utils.js";
@@ -23,9 +22,13 @@ function normalizeLanguage(lang: string): string {
 
 /**
  * デフォルトの Code 描画。
- * - `language === "mermaid"`：クライアントで `mermaid` を動的 import して SVG にする。
  * - `__cachedHtml`（notion-shiki が付与）があればそのまま使う（バンドルに shiki 不要）。
  * - それ以外は素の `<pre>` を出す。
+ *
+ * mermaid を SVG として描画したい場合は `@notion-headless-cms/react-renderer/mermaid`
+ * の `MermaidCode` を `<NotionRenderer components={{ Code: MermaidCode }} />` で
+ * 差し込む。mermaid は ~1 MB と重く CF Workers の 3 MiB 上限を直撃するため
+ * 既定では含めない（opt-in）。
  */
 export function Code({
   block,
@@ -37,33 +40,6 @@ export function Code({
   const language = normalizeLanguage(block.code.language);
   const source = plainText(block.code.rich_text);
 
-  const isMermaid = language === "mermaid";
-  const mermaidSvg = useMermaidSvg(isMermaid ? source : null);
-
-  let body: React.ReactNode;
-  if (isMermaid && mermaidSvg) {
-    body = (
-      <div
-        className="flex justify-center p-4"
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: mermaid 由来 SVG
-        dangerouslySetInnerHTML={{ __html: mermaidSvg }}
-      />
-    );
-  } else if (!isMermaid && cachedHtml) {
-    body = (
-      <div
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: notion-shiki の整形済み HTML
-        dangerouslySetInnerHTML={{ __html: cachedHtml }}
-      />
-    );
-  } else {
-    body = (
-      <pre className="overflow-x-auto p-4 text-sm" data-language={language}>
-        <code>{source}</code>
-      </pre>
-    );
-  }
-
   return (
     <figure className={cn("my-3", className)}>
       <Card className="gap-0 py-0">
@@ -72,7 +48,21 @@ export function Code({
             {language}
           </Badge>
         </CardHeader>
-        <CardContent className="p-0">{body}</CardContent>
+        <CardContent className="p-0">
+          {cachedHtml ? (
+            <div
+              // biome-ignore lint/security/noDangerouslySetInnerHtml: notion-shiki の整形済み HTML
+              dangerouslySetInnerHTML={{ __html: cachedHtml }}
+            />
+          ) : (
+            <pre
+              className="overflow-x-auto p-4 text-sm"
+              data-language={language}
+            >
+              <code>{source}</code>
+            </pre>
+          )}
+        </CardContent>
       </Card>
       {block.code.caption.length > 0 ? (
         <figcaption className="mt-1 text-xs text-muted-foreground">
@@ -81,34 +71,4 @@ export function Code({
       ) : null}
     </figure>
   );
-}
-
-/** mermaid を動的 import で読み込み SVG 文字列を返す。失敗時は null（呼び側はコードで fallback）。 */
-function useMermaidSvg(source: string | null): string | null {
-  const reactId = useId();
-  const [svg, setSvg] = useState<string | null>(null);
-  useEffect(() => {
-    if (!source) {
-      setSvg(null);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      try {
-        // mermaid は optional peer。未インストールでも catch でフォールバックする。
-        const mermaid = (await import("mermaid")).default;
-        mermaid.initialize({ startOnLoad: false, securityLevel: "loose" });
-        // mermaid.render の id は英数字制約があるので reactId を正規化。
-        const id = `mermaid-${reactId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
-        const { svg } = await mermaid.render(id, source);
-        if (!cancelled) setSvg(svg);
-      } catch {
-        // peer に mermaid が無いか render 失敗時はコードフォールバック。
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [source, reactId]);
-  return svg;
 }
