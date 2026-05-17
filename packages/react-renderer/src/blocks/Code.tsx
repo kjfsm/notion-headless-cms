@@ -96,9 +96,7 @@ function useMermaidSvg(source: string | null): string | null {
     (async () => {
       try {
         // mermaid は optional peer。未インストールでも catch でフォールバックする。
-        const mermaid =
-          // @ts-expect-error optional peer
-          ((await import("mermaid")) as typeof import("mermaid")).default;
+        const mermaid = (await import("mermaid")).default;
         mermaid.initialize({ startOnLoad: false, securityLevel: "loose" });
         // mermaid.render の id は英数字制約があるので reactId を正規化。
         const id = `mermaid-${reactId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
