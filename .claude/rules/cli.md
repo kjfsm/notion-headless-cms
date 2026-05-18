@@ -66,5 +66,5 @@ paths:
 ## 変更時に連動して更新するもの
 
 - `packages/cli/README.md`
-- `docs/cli.md`
+- `docs/ja/cli.md`
 - `examples/*/nhc.config.ts` が最新 API で動くか

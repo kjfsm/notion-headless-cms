@@ -81,4 +81,4 @@ examples/      — 各ランタイム向けサンプル
 docs/          — ドキュメント
 ```
 
-詳細は [docs/development.md](docs/development.md) を参照してください。
+詳細は [docs/ja/development.md](docs/ja/development.md) を参照してください。

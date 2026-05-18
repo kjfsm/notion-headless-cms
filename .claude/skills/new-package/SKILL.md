@@ -69,7 +69,7 @@ pnpm changeset
 ### 8. ドキュメント
 
 - ルート `README.md` のパッケージ一覧に追加
-- 該当レシピ（`docs/recipes/`）に言及
+- 該当レシピ（`docs/ja/recipes/`）に言及
 
 ## テンプレート変数
 

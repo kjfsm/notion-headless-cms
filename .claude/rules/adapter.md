@@ -22,4 +22,4 @@ adapter は Next.js / Astro など**フレームワーク側の作法に合わ�
 2. **CMS ファクトリは提供しない**（`createCMS` を一本化しているため）
 3. 代わりに、そのフレームワークの規約に合った薄いグルー（middleware / route handler / integration プラグイン）を提供
 4. 依存は `@notion-headless-cms/core` と該当フレームワークのみ
-5. README と `docs/recipes/<framework>.md` を追加
+5. README と `docs/ja/recipes/<framework>.md` を追加

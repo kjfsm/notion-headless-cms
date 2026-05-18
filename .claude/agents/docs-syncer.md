@@ -16,9 +16,9 @@ model: haiku
 1. `git diff --name-only origin/main...HEAD` で変更ファイルを列挙
 2. 以下の対応表に従って更新必要箇所を判定
    - `packages/<name>/src/index.ts` 変更 → `packages/<name>/README.md`
-   - `packages/cli/src/**` 変更 → `docs/cli.md`
-   - 公開 API シグネチャ変更 → `docs/api/cms-methods.md` と `docs/quickstart.md`
-   - レシピ対象の挙動変更 → `docs/recipes/<topic>.md`
+   - `packages/cli/src/**` 変更 → `docs/ja/cli.md`
+   - 公開 API シグネチャ変更 → `docs/ja/api/cms-methods.md` と `docs/ja/quickstart.md`
+   - レシピ対象の挙動変更 → `docs/ja/recipes/<topic>.md`
 3. 未更新のドキュメントを一覧で報告
 4. 該当ファイルごとに「どこをどう書き換えるべきか」の簡潔な提案を添える
 
@@ -31,7 +31,7 @@ model: haiku
   - 理由: packages/<name>/src/index.ts に export 追加
   - 追記案: `new ApiName()` の使用例セクション
 
-- docs/api/cms-methods.md
+- docs/ja/api/cms-methods.md
   - 理由: ...
 ```
 
