@@ -1,32 +1,25 @@
 import type { ContentFetcher } from "@notion-headless-cms/notion-orm";
 import { fetchPageMarkdown } from "@notion-headless-cms/notion-orm";
 
-export interface MarkdownFetcherOptions {
-  /**
-   * Notion API バージョン (`Notion-Version` ヘッダ)。
-   * Markdown export (`pages/{id}.md`) は 2025-09-03 系で提供。
-   */
-  notionVersion?: string;
-}
-
-const DEFAULT_NOTION_VERSION = "2025-09-03";
+export type MarkdownFetcherOptions = Record<string, never>;
 
 /**
- * Notion Markdown export API (`GET /v1/pages/{id}.md`) を 1 リクエストで叩く取得戦略。
+ * Notion Markdown 取得 API (`GET /v1/pages/{id}/markdown`) を公式 SDK 経由で
+ * 1 リクエストで叩く取得戦略。
  * Cloudflare Workers Free プランの 50 subrequest/invocation 上限に引っかからない。
  *
- * - `loadMarkdown`: 1 subrequest で全文 markdown を返す。
+ * - `loadMarkdown`: 公式 SDK の `client.pages.retrieveMarkdown` を使う。
+ *   リトライ・レート制限・Notion-Version は notion-orm の Client 構築側で固定。
  * - `loadNotionBlocks`: 実装しない (`source/blocks_unsupported`)。
  *   React 描画には `@notion-headless-cms/fetch-markdown/react` の `<Renderer />` を使う。
  */
 export function markdownFetcher(
-  opts: MarkdownFetcherOptions = {},
+  _opts: MarkdownFetcherOptions = {},
 ): ContentFetcher {
-  const notionVersion = opts.notionVersion ?? DEFAULT_NOTION_VERSION;
   return {
     kind: "markdown",
-    async loadMarkdown(_client, pageId, ctx) {
-      return fetchPageMarkdown(ctx.token, pageId, notionVersion);
+    async loadMarkdown(client, pageId) {
+      return fetchPageMarkdown(client, pageId);
     },
   };
 }
