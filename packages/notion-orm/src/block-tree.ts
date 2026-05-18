@@ -58,6 +58,11 @@ export interface FetchBlockTreeOgpOptions extends OgpFetchOptions {
 /** `fetchBlockTree` の追加オプション。 */
 export interface FetchBlockTreeOptions {
   ogp?: FetchBlockTreeOgpOptions;
+  /**
+   * 同時に展開する子ブロックの最大数。デフォルト 3。
+   * Notion API のレート制限 (3 req/s) に抵触しないよう抑制する。
+   */
+  concurrency?: number;
 }
 
 /**
@@ -78,12 +83,31 @@ export async function fetchBlockTree(
   pageId: string,
   opts?: FetchBlockTreeOptions,
 ): Promise<NotionBlockTreeNode[]> {
-  const blocks = await getBlocks(client, pageId);
+  // セマフォをルートで生成し、全再帰レベルで共有することで
+  // ネストが深いページでも同時 API 呼び出し数をグローバルに制限する。
+  const sem = new Semaphore(opts?.concurrency ?? 3);
+  return fetchWithSemaphore(client, pageId, opts, sem);
+}
+
+async function fetchWithSemaphore(
+  client: Client,
+  pageId: string,
+  opts: FetchBlockTreeOptions | undefined,
+  sem: Semaphore,
+): Promise<NotionBlockTreeNode[]> {
+  await sem.acquire();
+  let blocks: BlockObjectResponse[];
+  try {
+    blocks = await getBlocks(client, pageId);
+  } finally {
+    sem.release();
+  }
+
   const tree = await Promise.all(
-    blocks.map(async (block) => expandChildren(client, block)),
+    blocks.map((block) => expandChildren(client, block, sem)),
   );
   if (opts?.ogp?.enabled) {
-    await enrichWithOgp(tree, opts.ogp);
+    await enrichWithOgp(tree, opts.ogp, sem);
   }
   return tree;
 }
@@ -91,12 +115,13 @@ export async function fetchBlockTree(
 async function expandChildren(
   client: Client,
   block: BlockObjectResponse,
+  sem: Semaphore,
 ): Promise<NotionBlockTreeNode> {
   if (!block.has_children) {
     return block as NotionBlockTreeNode;
   }
   // 子要素の OGP enrich は親側でまとめて行うため、再帰呼び出しでは ogp オプションを外す。
-  const children = await fetchBlockTree(client, block.id);
+  const children = await fetchWithSemaphore(client, block.id, undefined, sem);
   return { ...block, children } as NotionBlockTreeNode;
 }
 
@@ -106,6 +131,7 @@ async function expandChildren(
 async function enrichWithOgp(
   tree: NotionBlockTreeNode[],
   ogp: FetchBlockTreeOgpOptions,
+  sem: Semaphore,
 ): Promise<void> {
   const targets: Array<
     EmbedBlockWithOgp | BookmarkBlockWithOgp | LinkPreviewBlockWithOgp
@@ -124,6 +150,7 @@ async function enrichWithOgp(
             ? block.bookmark.url
             : block.link_preview.url;
       if (!url) return;
+      await sem.acquire();
       try {
         const data = await loadOgp(url, ogp, memo);
         if (data.image && ogp.imageCache) {
@@ -134,9 +161,44 @@ async function enrichWithOgp(
         ogp.imageCache?.logger?.warn?.(
           `[notion-orm] OG fetch failed for ${url}: ${(err as Error).message}`,
         );
+      } finally {
+        sem.release();
       }
     }),
   );
+}
+
+/**
+ * 同時実行数を制限するセマフォ。
+ * acquire() で空きスロットを取得し、release() で返却する。
+ * キューに積まれた待機 Promise は FIFO で解決される。
+ */
+class Semaphore {
+  private available: number;
+  private readonly waiters: Array<() => void> = [];
+
+  constructor(concurrency: number) {
+    this.available = concurrency;
+  }
+
+  acquire(): Promise<void> {
+    if (this.available > 0) {
+      this.available--;
+      return Promise.resolve();
+    }
+    return new Promise<void>((resolve) => {
+      this.waiters.push(resolve);
+    });
+  }
+
+  release(): void {
+    const next = this.waiters.shift();
+    if (next) {
+      next();
+    } else {
+      this.available++;
+    }
+  }
 }
 
 async function loadOgp(

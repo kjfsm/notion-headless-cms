@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:screenshots": "PLAYWRIGHT_HTML_OPEN=never playwright test",
     "typecheck": "tsc -b",
-    "test:e2e": "PLAYWRIGHT_HTML_OPEN=never playwright test e2e/navigation.spec.ts"
+    "test:e2e": "PLAYWRIGHT_HTML_OPEN=never playwright test e2e/navigation.spec.ts",
+    "warm": "tsx scripts/warm-kv.ts"
   },
   "dependencies": {
     "@notion-headless-cms/block-html": "workspace:*",
@@ -46,6 +47,7 @@
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
     "dotenv-cli": "^11.0.0",
+    "tsx": "catalog:",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vite": "^8.0.13",
