@@ -54,8 +54,8 @@ if (!pageId) {
     if (page.object !== "page") return false;
     const props = page.properties ?? {};
     const title =
-      props["名前"]?.title?.[0]?.plain_text ??
-      props["title"]?.title?.[0]?.plain_text ??
+      props.名前?.title?.[0]?.plain_text ??
+      props.title?.title?.[0]?.plain_text ??
       "";
     return title.includes("テスト");
   });
@@ -67,8 +67,8 @@ if (!pageId) {
 
   const props = page.properties;
   const title =
-    props["名前"]?.title?.[0]?.plain_text ??
-    props["title"]?.title?.[0]?.plain_text ??
+    props.名前?.title?.[0]?.plain_text ??
+    props.title?.title?.[0]?.plain_text ??
     "(タイトル不明)";
   console.log(`使用ページ: "${title}" (${pageId})`);
 }

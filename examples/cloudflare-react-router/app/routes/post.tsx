@@ -18,9 +18,9 @@ function serializeError(err: unknown, depth = 0): SerializedError {
   const e = err as Record<string, unknown>;
   return {
     message: err instanceof Error ? err.message : String(err),
-    code: typeof e["code"] === "string" ? e["code"] : null,
+    code: typeof e.code === "string" ? e.code : null,
     stack: err instanceof Error ? (err.stack ?? null) : null,
-    cause: e["cause"] != null ? serializeError(e["cause"], depth + 1) : null,
+    cause: e.cause != null ? serializeError(e.cause, depth + 1) : null,
   };
 }
 

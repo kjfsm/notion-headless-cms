@@ -93,11 +93,7 @@ export function Renderer(props: RendererProps): ReactNode {
 
   const file = processor.processSync(normalized);
   const tree = file.result as ReactNode;
-  return props.className ? (
-    <div className={props.className}>{tree}</div>
-  ) : (
-    <Fragment>{tree}</Fragment>
-  );
+  return props.className ? <div className={props.className}>{tree}</div> : tree;
 }
 
 // ──────────────────────────────────────────────────────────────────────────────
