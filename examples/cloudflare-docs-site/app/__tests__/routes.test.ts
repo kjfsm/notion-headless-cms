@@ -57,18 +57,16 @@ describe("index loader()", () => {
     expect((result as Response).status).toBe(302);
   });
 
-  it("home ページが存在する場合はブロックを返す", async () => {
+  it("home ページが存在する場合は markdown を返す", async () => {
     fakeCms.pages.find.mockResolvedValue({
       id: "id-1",
       slug: "home",
       title: "ホーム",
       lastEditedTime: "2024-01-01T00:00:00Z",
-      notionBlocks: async () => [
-        { object: "block", id: "b1", type: "paragraph" },
-      ],
+      markdown: async () => "# ホーム",
     });
     const result = await indexLoader({ context: fakeContext } as never);
-    expect((result as { blocks: unknown[] }).blocks).toHaveLength(1);
+    expect((result as { markdown: string }).markdown).toBe("# ホーム");
   });
 });
 
@@ -94,7 +92,7 @@ describe("docs layout loader()", () => {
 describe("doc loader()", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("ドキュメントの詳細とブロック木を返す", async () => {
+  it("ドキュメントの詳細と markdown を返す", async () => {
     fakeCms.docs.find.mockResolvedValue({
       id: "id-1",
       slug: "quickstart",
@@ -102,15 +100,15 @@ describe("doc loader()", () => {
       section: "はじめに",
       description: "5 分で始める",
       lastEditedTime: "2024-01-01T00:00:00Z",
-      notionBlocks: async () => [
-        { object: "block", id: "b1", type: "paragraph" },
-      ],
+      markdown: async () => "# クイックスタート",
     });
     const result = await docLoader({
       params: { slug: "quickstart" },
       context: fakeContext,
     } as never);
-    expect((result as { blocks: unknown[] }).blocks).toHaveLength(1);
+    expect((result as { markdown: string }).markdown).toBe(
+      "# クイックスタート",
+    );
   });
 
   it("存在しないスラグは例外を投げる", async () => {

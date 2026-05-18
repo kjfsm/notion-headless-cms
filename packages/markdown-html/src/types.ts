@@ -1,6 +1,14 @@
 import type { PluggableList } from "unified";
 
 /**
+ * remark / rehype プラグインリストの不透明型。
+ * core の `RendererPluginList` (`unknown[]`) と構造的に揃え、
+ * 関数パラメータの反変性で `core` から `markdown-html` のレンダラーへ
+ * そのまま代入できるようにする。実体は `unified` の `PluggableList`。
+ */
+export type RendererPluginList = unknown[];
+
+/**
  * カスタムレンダラー関数の型。
  * Markdownを受け取り、HTMLを返す。
  * core の RendererFn と構造的に互換。
@@ -10,8 +18,8 @@ export type RendererFn = (
   options?: {
     imageProxyBase?: string;
     cacheImage?: (notionUrl: string) => Promise<string>;
-    remarkPlugins?: PluggableList;
-    rehypePlugins?: PluggableList;
+    remarkPlugins?: RendererPluginList;
+    rehypePlugins?: RendererPluginList;
   },
 ) => Promise<string>;
 
