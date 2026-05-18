@@ -1,5 +1,5 @@
-import { Renderer } from "@notion-headless-cms/fetch-markdown/react";
-import { notionKatex } from "@notion-headless-cms/notion-katex";
+import { Renderer } from "@notion-headless-cms/fetch-blocks/react";
+import type { NotionBlock } from "@notion-headless-cms/react-renderer";
 import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
 import { data, isRouteErrorResponse } from "react-router";
 import { makeCms } from "../lib/cms";
@@ -29,11 +29,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
     const post = await cms.posts.find(params.slug ?? "");
     if (!post) throw data("Not Found", { status: 404 });
-    // markdownFetcher 戦略で取得した Notion enhanced markdown を loader が返し、
-    // ページ側で <Renderer> が React 木に変換する。
-    const markdown = await post.markdown();
+    const blocks = ((await post.notionBlocks()) ?? []) as NotionBlock[];
     return {
-      markdown,
+      blocks,
       item: {
         slug: post.slug,
         title: post.title,
@@ -49,7 +47,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 }
 
 export default function Post({ loaderData }: Route.ComponentProps) {
-  const { markdown, item } = loaderData;
+  const { blocks, item } = loaderData;
   return (
     <article>
       <NotionRevalidator
@@ -60,7 +58,7 @@ export default function Post({ loaderData }: Route.ComponentProps) {
       />
       <h1>{item.title ?? item.slug}</h1>
       {item.publishedAt && <time>{item.publishedAt}</time>}
-      <Renderer content={{ markdown }} extensions={[notionKatex()]} />
+      <Renderer blocks={blocks} />
     </article>
   );
 }

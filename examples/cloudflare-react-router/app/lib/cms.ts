@@ -3,12 +3,7 @@ import {
   createClient,
   notionSource,
 } from "@notion-headless-cms/cloudflare";
-import {
-  createNotionMarkdownRenderer,
-  markdownFetcher,
-} from "@notion-headless-cms/fetch-markdown";
-import { notionKatex } from "@notion-headless-cms/notion-katex";
-import { notionShiki } from "@notion-headless-cms/notion-shiki";
+import { blocksFetcher } from "@notion-headless-cms/fetch-blocks";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -26,9 +21,7 @@ export function makeCms(
       notion: notionSource({
         schema,
         token: env.NOTION_TOKEN,
-        // Cloudflare Workers Free プランの 50 subrequest 上限を回避するため、
-        // Notion Markdown export API を 1 リクエストで叩く戦略を使う。
-        fetch: markdownFetcher(),
+        fetch: blocksFetcher(),
         publishOptions: {
           posts: {
             publishedStatuses: ["公開済み"],
@@ -37,9 +30,6 @@ export function makeCms(
         },
       }),
     },
-    // post.html() を使う場合のサーバーサイド renderer。
-    // katex・shiki を含む非同期プラグインも動作する。
-    renderer: createNotionMarkdownRenderer([notionKatex(), notionShiki()]),
     ...cloudflarePreset({ env, ctx }),
   });
 }

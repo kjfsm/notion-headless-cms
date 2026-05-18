@@ -365,6 +365,9 @@ importers:
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
+      '@notion-headless-cms/fetch-blocks':
+        specifier: workspace:*
+        version: link:../../packages/fetch-blocks
       '@notion-headless-cms/fetch-markdown':
         specifier: workspace:*
         version: link:../../packages/fetch-markdown
