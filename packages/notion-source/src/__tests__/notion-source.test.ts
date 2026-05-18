@@ -55,15 +55,13 @@ describe("notionSource", () => {
     ]);
   });
 
-  it("blocks / enrichers / ogp を createNotionCollection に渡す", () => {
+  it("blocks / ogp を createNotionCollection に渡す", () => {
     const blocks = {};
-    const enrichers: never[] = [];
     const ogp = { enabled: true } as const;
     notionSource({
       schema,
       token: "tk",
       blocks,
-      enrichers,
       ogp,
     });
     const lastCall = vi.mocked(createNotionCollection).mock.calls.at(-1);
@@ -71,7 +69,6 @@ describe("notionSource", () => {
       token: "tk",
       dataSourceId: "ds-posts",
       blocks,
-      enrichers,
       ogp,
     });
   });

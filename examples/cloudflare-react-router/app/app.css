@@ -4,3 +4,171 @@
 
 /* react-renderer のクラスも Tailwind v4 のスキャン対象に含める */
 @source "../node_modules/@notion-headless-cms/react-renderer/dist";
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   fetch-markdown <Renderer> が出力する nhc-* クラスのデフォルトスタイル
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* テキスト色 */
+.nhc-color-gray {
+  color: #6b7280;
+}
+.nhc-color-brown {
+  color: #92400e;
+}
+.nhc-color-orange {
+  color: #ea580c;
+}
+.nhc-color-yellow {
+  color: #ca8a04;
+}
+.nhc-color-green {
+  color: #15803d;
+}
+.nhc-color-blue {
+  color: #1d4ed8;
+}
+.nhc-color-purple {
+  color: #7c3aed;
+}
+.nhc-color-pink {
+  color: #db2777;
+}
+.nhc-color-red {
+  color: #dc2626;
+}
+
+/* 背景色（インラインおよびブロック共通） */
+.nhc-color-gray_background {
+  background-color: #f3f4f6;
+}
+.nhc-color-brown_background {
+  background-color: #fef3c7;
+}
+.nhc-color-orange_background {
+  background-color: #ffedd5;
+}
+.nhc-color-yellow_background {
+  background-color: #fef9c3;
+}
+.nhc-color-green_background {
+  background-color: #dcfce7;
+}
+.nhc-color-blue_background {
+  background-color: #dbeafe;
+}
+.nhc-color-purple_background {
+  background-color: #ede9fe;
+}
+.nhc-color-pink_background {
+  background-color: #fce7f3;
+}
+.nhc-color-red_background {
+  background-color: #fee2e2;
+}
+
+/* 下線 */
+.nhc-underline {
+  text-decoration: underline;
+}
+
+/* callout */
+.nhc-callout {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 1rem;
+  margin-block: 0.75rem;
+  border-radius: 0.375rem;
+  background-color: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+.nhc-callout.nhc-color-gray_background {
+  background-color: #f3f4f6;
+  border-color: #d1d5db;
+}
+.nhc-callout.nhc-color-brown_background {
+  background-color: #fef3c7;
+  border-color: #fde68a;
+}
+.nhc-callout.nhc-color-orange_background {
+  background-color: #ffedd5;
+  border-color: #fed7aa;
+}
+.nhc-callout.nhc-color-yellow_background {
+  background-color: #fef9c3;
+  border-color: #fef08a;
+}
+.nhc-callout.nhc-color-green_background {
+  background-color: #dcfce7;
+  border-color: #bbf7d0;
+}
+.nhc-callout.nhc-color-blue_background {
+  background-color: #dbeafe;
+  border-color: #bfdbfe;
+}
+.nhc-callout.nhc-color-purple_background {
+  background-color: #ede9fe;
+  border-color: #ddd6fe;
+}
+.nhc-callout.nhc-color-pink_background {
+  background-color: #fce7f3;
+  border-color: #fbcfe8;
+}
+.nhc-callout.nhc-color-red_background {
+  background-color: #fee2e2;
+  border-color: #fecaca;
+}
+.nhc-callout-icon {
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  line-height: 1.5rem;
+}
+.nhc-callout-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* マルチカラム */
+.nhc-columns {
+  display: flex;
+  gap: 1.5rem;
+  margin-block: 0.75rem;
+}
+.nhc-column {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ページメンション */
+.nhc-mention {
+  display: inline;
+  background-color: #e0e7ff;
+  color: #3730a3;
+  border-radius: 0.25rem;
+  padding: 0.1rem 0.35rem;
+  font-size: 0.875em;
+  font-weight: 500;
+  text-decoration: none;
+}
+.nhc-mention-date {
+  background-color: #ede9fe;
+  color: #5b21b6;
+}
+
+/* ページ / データベースリンク */
+.nhc-link {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+/* ファイルリンク */
+.nhc-file {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+/* TOC プレースホルダ（本実装が入るまで非表示） */
+.nhc-toc[data-placeholder="true"] {
+  display: none;
+}

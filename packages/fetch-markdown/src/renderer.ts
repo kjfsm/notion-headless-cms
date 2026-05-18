@@ -2,6 +2,7 @@ import {
   type RendererFn,
   rehypeImageCache,
 } from "@notion-headless-cms/markdown-html";
+import type { ContentExtension } from "@notion-headless-cms/notion-orm";
 import rehypeRaw from "rehype-raw";
 import rehypeStringify from "rehype-stringify";
 import remarkGfm from "remark-gfm";
@@ -58,3 +59,38 @@ export const notionMarkdownRenderer: RendererFn = async (
   const file = await processor.process(normalized);
   return String(file);
 };
+
+/**
+ * `ContentExtension` の `getMarkdownPlugins()` をパイプラインへ注入した `RendererFn` を生成する。
+ * katex / shiki など非同期プラグインも含む拡張を CMS の `renderer` オプションで使う場合に利用する。
+ *
+ * @example
+ * ```ts
+ * import { createNotionMarkdownRenderer } from "@notion-headless-cms/fetch-markdown";
+ * import { notionKatex } from "@notion-headless-cms/notion-katex";
+ *
+ * createClient({ renderer: createNotionMarkdownRenderer([notionKatex()]) });
+ * ```
+ */
+export function createNotionMarkdownRenderer(
+  extensions: ContentExtension[],
+): RendererFn {
+  const extraRemark = extensions.flatMap(
+    (e) => e.getMarkdownPlugins?.()?.remarkPlugins ?? [],
+  );
+  const extraRehype = extensions.flatMap(
+    (e) => e.getMarkdownPlugins?.()?.rehypePlugins ?? [],
+  );
+  return (markdown, options = {}) =>
+    notionMarkdownRenderer(markdown, {
+      ...options,
+      remarkPlugins: [
+        ...(options.remarkPlugins ?? []),
+        ...(extraRemark as PluggableList),
+      ],
+      rehypePlugins: [
+        ...(options.rehypePlugins ?? []),
+        ...(extraRehype as PluggableList),
+      ],
+    });
+}

@@ -23,7 +23,7 @@ export { createNextHandler } from "./next-handler";
 
 /** `createCms()` に渡すオプション（Next.js 向け）。 */
 export interface CreateCmsOptions<S extends SchemaMap>
-  extends Pick<NotionSourceConfig<S>, "blocks" | "enrichers" | "ogp"> {
+  extends Pick<NotionSourceConfig<S>, "blocks" | "ogp"> {
   schema: S;
   token: string;
   publishOptions?: { [K in keyof S]?: NotionPublishOptions };
@@ -50,7 +50,6 @@ export function createCms<S extends SchemaMap>(opts: CreateCmsOptions<S>) {
         schema: opts.schema,
         token: opts.token,
         ...(opts.blocks ? { blocks: opts.blocks } : {}),
-        ...(opts.enrichers ? { enrichers: opts.enrichers } : {}),
         ...(opts.ogp ? { ogp: opts.ogp } : {}),
         publishOptions: opts.publishOptions,
       }),

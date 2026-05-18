@@ -16,10 +16,10 @@ function ErrorDetail({
   err: Record<string, unknown>;
   depth?: number;
 }) {
-  const message = String(err["message"] ?? "");
-  const code = err["code"] != null ? String(err["code"]) : null;
-  const stack = err["stack"] != null ? String(err["stack"]) : null;
-  const cause = err["cause"] as Record<string, unknown> | null | undefined;
+  const message = String(err.message ?? "");
+  const code = err.code != null ? String(err.code) : null;
+  const stack = err.stack != null ? String(err.stack) : null;
+  const cause = err.cause as Record<string, unknown> | null | undefined;
   return (
     <div style={{ marginLeft: depth * 16 }}>
       {code && <p>コード: {code}</p>}
@@ -90,7 +90,7 @@ export function ErrorBoundary() {
   }
 
   const message = error instanceof Error ? error.message : String(error);
-  const code = (error as Record<string, unknown>)["code"];
+  const code = (error as Record<string, unknown>).code;
   const stack = error instanceof Error ? error.stack : undefined;
 
   return (

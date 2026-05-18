@@ -50,9 +50,7 @@ describe("PostPage", () => {
       id: "id-1",
       slug: "hello",
       publishedAt: "2024-01-01",
-      notionBlocks: async () => [
-        { object: "block", id: "b1", type: "paragraph" },
-      ],
+      markdown: async () => "# Hello",
     } as never);
     await PostPage({ params: Promise.resolve({ slug: "hello" }) });
     expect(cms.posts.find).toHaveBeenCalledWith("hello");
