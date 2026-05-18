@@ -8,8 +8,10 @@ assets = { directory = "./build/client" }
 [observability]
 enabled = true
 
-[build]
-command = "pnpm build"
+# デプロイは Cloudflare GitHub App (Workers Builds) を使う。
+# ビルドコマンド / Root directory / 環境変数 / シークレットは Cloudflare ダッシュボード側で設定する。
+# 詳細は `apps/docs/README.md` の「Cloudflare Workers Builds セットアップ」を参照。
+# (ローカル `vite build` 経由では [build] セクションは無視されるため、ここには書かない。)
 
 # KV namespace は初回デプロイ前に作成して ID を設定してください:
 # wrangler kv namespace create DOC_CACHE
@@ -22,7 +24,7 @@ binding = "IMG_BUCKET"
 bucket_name = "nhc-docs-site-cache"
 preview_bucket_name = "nhc-docs-site-cache-preview"
 
-# ランタイムシークレットは初回デプロイ前に以下で設定してください:
-# wrangler secret put NOTION_TOKEN
-# wrangler secret put NOTION_WEBHOOK_SECRET  # /api/revalidate を有効化する場合のみ
+# シークレットは Cloudflare ダッシュボード (Workers > Settings > Variables and Secrets) から登録する:
+# - NOTION_TOKEN
+# - NOTION_WEBHOOK_SECRET  # /api/revalidate を有効化する場合のみ
 # KV / R2 バインディングは wrangler kv namespace create / wrangler r2 bucket create で作成する
