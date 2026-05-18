@@ -67,7 +67,7 @@ vitest、coverage 閾値 70%。モックパターン（DataSource / renderer / R
 - ワークスペース構成: `pnpm-workspace.yaml`
 - パッケージ固有ルール: `.claude/rules/<area>.md`（`paths:` 指定で該当パス編集時のみ自動注入）
 - 手順・ワークフロー: `.claude/skills/<name>/SKILL.md`（`/<name>` で明示呼び出し）
-- 設計背景: `docs/architecture.md`
+- 設計背景: `docs/ja/architecture.md`
 
 ## 共通コマンド
 

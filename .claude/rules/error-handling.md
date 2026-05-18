@@ -52,4 +52,4 @@ paths:
 
 1. 新コードの名前空間と kind を決める（`<namespace>/<kind>`）
 2. コアなら `BuiltInCMSErrorCode` に追加、サードパーティならパッケージ内で定数化
-3. `docs/api/cms-methods.md` や該当 README のエラー一覧に追記
+3. `docs/ja/api/cms-methods.md` や該当 README のエラー一覧に追記

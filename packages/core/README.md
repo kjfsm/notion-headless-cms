@@ -127,12 +127,12 @@ import { memoryCache } from "@notion-headless-cms/core/cache/memory";
 
 ## ランタイム別レシピ
 
-- [Node.js スクリプト](../../docs/recipes/nodejs-script.md)
-- [Cloudflare Workers + R2 + KV](../../docs/recipes/cloudflare-workers.md)
-- [Next.js App Router](../../docs/recipes/nextjs-app-router.md)
-- [カスタムデータソース](../../docs/recipes/custom-source.md)
+- [Node.js スクリプト](../../docs/ja/recipes/nodejs-script.md)
+- [Cloudflare Workers + R2 + KV](../../docs/ja/recipes/cloudflare-workers.md)
+- [Next.js App Router](../../docs/ja/recipes/nextjs-app-router.md)
+- [カスタムデータソース](../../docs/ja/recipes/custom-source.md)
 
 ## 詳細ドキュメント
 
-- [クイックスタート](../../docs/quickstart.md)
-- [CMS メソッド一覧](../../docs/api/cms-methods.md)
+- [クイックスタート](../../docs/ja/quickstart.md)
+- [CMS メソッド一覧](../../docs/ja/api/cms-methods.md)

@@ -196,16 +196,28 @@ flowchart LR
 
 ## レンダラの選択
 
-→ [`docs/choosing-a-renderer.md`](./docs/choosing-a-renderer.md)
+→ [`docs/ja/choosing-a-renderer.md`](./docs/ja/choosing-a-renderer.md)
 
 ---
 
 ## ドキュメント
 
-- [クイックスタート](./docs/quickstart.md)
-- [アーキテクチャ](./docs/architecture.md)
-- [レシピ集](./docs/recipes/)
-- [API リファレンス](./docs/api/)
+- [クイックスタート](./docs/ja/quickstart.md)
+- [アーキテクチャ](./docs/ja/architecture.md)
+- [レシピ集](./docs/ja/recipes/)
+- [API リファレンス](./docs/ja/api/)
+
+英語化に備えて `docs/{locale}/` の構造を採用しています。現在は `ja` のみ。
+
+### 公式ドキュメントサイト (dogfooding)
+
+[`apps/docs/`](./apps/docs/) は本ライブラリ自身で構築された公式サイトです。
+
+- ランディング・固定ページは Notion DB から `@notion-headless-cms/cloudflare` で配信（dogfooding）
+- ライブラリ本体の API リファレンス・レシピは `docs/ja/` 配下の md を静的レンダリング
+- Cloudflare Workers + R2 + KV、`/api/revalidate` で Notion Webhook 受信
+
+ローカル起動: `pnpm --filter @notion-headless-cms/docs dev`
 
 ---
 
@@ -232,7 +244,7 @@ const cms = createClient({
 });
 ```
 
-詳細は [`docs/architecture.md`](./docs/architecture.md) を参照してください。
+詳細は [`docs/ja/architecture.md`](./docs/ja/architecture.md) を参照してください。
 
 ---
 

@@ -111,6 +111,6 @@ Notion をデータソースに使うライブラリは複数あるが、機能�
 
 ## 関連ドキュメント
 
-- [`docs/architecture.md`](./architecture.md) — 設計思想
-- [`docs/quickstart.md`](./quickstart.md) — セットアップ
-- [`docs/cli.md`](./cli.md) — `introspect` / 型生成
+- [`docs/ja/architecture.md`](./architecture.md) — 設計思想
+- [`docs/ja/quickstart.md`](./quickstart.md) — セットアップ
+- [`docs/ja/cli.md`](./cli.md) — `introspect` / 型生成
