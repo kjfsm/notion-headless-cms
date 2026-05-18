@@ -1,5 +1,56 @@
 # @notion-headless-cms/cloudflare
 
+## 1.0.4
+
+### Patch Changes
+
+- 359bc6f: fetch 戦略両対応の `ContentExtension` インターフェースを導入し、enrichers を廃止。
+
+  ## 破壊的変更
+
+  - `blocksFetcher` / `notionSource` / `createCms` の `enrichers` オプションを削除。
+    拡張はすべて Renderer 側の `extensions` prop へ移動。
+  - `notionKatex()` / `notionShiki()` の戻り値が `BlockEnricher`（関数）から
+    `ContentExtension`（オブジェクト）に変更。
+
+  ## 新機能
+
+  - `notion-orm`: `ContentExtension` インターフェースをエクスポート。
+    `getMarkdownPlugins()` で unified プラグインを、`getBlockComponents()` で
+    React コンポーネント上書きを提供する統一 API。
+  - `react-renderer`: `NotionRenderer` に `extensions` prop を追加。
+    `getBlockComponents()` の戻り値が `components` とマージされる（直接指定が優先）。
+  - `fetch-markdown`: `Renderer` に `extensions` prop を追加（同期プラグイン向け）。
+    非同期プラグイン（shiki など）は `createNotionMarkdownRenderer(extensions)` を使う。
+  - `notion-katex`: `getMarkdownPlugins()` が `rehype-katex` を返す（markdown 戦略対応）。
+  - `notion-shiki`: `getMarkdownPlugins()` が `@shikijs/rehype` を返す（markdown 戦略対応）。
+
+  ## 移行方法
+
+  ```ts
+  // Before
+  notionSource({ schema, token, enrichers: [notionKatex(), notionShiki()] });
+
+  // After — fetch はデータ取得に専念
+  notionSource({ schema, token, fetch: blocksFetcher() });
+
+  // Renderer に extensions を渡す
+  const extensions = [notionKatex(), notionShiki()];
+  <NotionRenderer blocks={item.blocks} extensions={extensions} />
+  <Renderer content={item.content} extensions={extensions} />
+  ```
+
+- ac2cfcc: Cloudflare フリープランのサブリクエスト制限対策
+
+  - `notion-orm`: `fetchBlockTree` にグローバル Semaphore による並列数制限を追加（デフォルト `concurrency: 3`）。`Promise.all` 無制限並列を廃止し Notion API レート制限への抵触を解消。`loadMarkdown` にリクエスト内メモ化を追加し API 呼び出し数を削減。
+  - `cloudflare`: `restKvNamespace()` を追加。Cloudflare KV REST API を `KVNamespaceLike` として実装するアダプタで、Node.js warm スクリプトから KV へ事前書き込みできる。ウォームアップ後は Worker が Notion API を一切叩かなくなる。
+
+- Updated dependencies [359bc6f]
+- Updated dependencies [f6af509]
+  - @notion-headless-cms/notion-source@0.1.8
+  - @notion-headless-cms/core@0.3.25
+  - @notion-headless-cms/cache@0.0.18
+
 ## 1.0.3
 
 ### Patch Changes
