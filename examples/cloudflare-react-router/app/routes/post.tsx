@@ -1,4 +1,5 @@
 import { Renderer } from "@notion-headless-cms/fetch-markdown/react";
+import { notionKatex } from "@notion-headless-cms/notion-katex";
 import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
 import { data, isRouteErrorResponse } from "react-router";
 import { makeCms } from "../lib/cms";
@@ -59,7 +60,7 @@ export default function Post({ loaderData }: Route.ComponentProps) {
       />
       <h1>{item.title ?? item.slug}</h1>
       {item.publishedAt && <time>{item.publishedAt}</time>}
-      <Renderer content={{ markdown }} />
+      <Renderer content={{ markdown }} extensions={[notionKatex()]} />
     </article>
   );
 }

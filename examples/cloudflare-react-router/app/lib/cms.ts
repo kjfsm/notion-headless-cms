@@ -4,9 +4,11 @@ import {
   notionSource,
 } from "@notion-headless-cms/cloudflare";
 import {
+  createNotionMarkdownRenderer,
   markdownFetcher,
-  notionMarkdownRenderer,
 } from "@notion-headless-cms/fetch-markdown";
+import { notionKatex } from "@notion-headless-cms/notion-katex";
+import { notionShiki } from "@notion-headless-cms/notion-shiki";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -35,9 +37,9 @@ export function makeCms(
         },
       }),
     },
-    // markdownFetcher が返す Notion enhanced markdown を理解する renderer。
-    // post.html() を使う場合に必要。post.markdown() + <Renderer /> 経路では未使用。
-    renderer: notionMarkdownRenderer,
+    // post.html() を使う場合のサーバーサイド renderer。
+    // katex・shiki を含む非同期プラグインも動作する。
+    renderer: createNotionMarkdownRenderer([notionKatex(), notionShiki()]),
     ...cloudflarePreset({ env, ctx }),
   });
 }

@@ -29,8 +29,6 @@
 
 import { notionEmbed, youtubeProvider } from "@notion-headless-cms/block-html";
 import { createCms, restKvNamespace } from "@notion-headless-cms/cloudflare";
-import { notionKatex } from "@notion-headless-cms/notion-katex";
-import { notionShiki } from "@notion-headless-cms/notion-shiki";
 import { schema } from "../app/generated/nhc.js";
 
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
@@ -55,11 +53,12 @@ const embed = notionEmbed({
 
 const kv = restKvNamespace({ accountId, namespaceId, apiToken });
 
+// katex / shiki は ContentExtension として Renderer 側（ブラウザ）で適用される。
+// ウォームアップはコンテンツデータのキャッシュのみ担う。
 const cms = createCms({
   schema,
   token: notionToken,
   blocks: embed.blocks,
-  enrichers: [notionKatex({ displayMode: true }), notionShiki()],
   ogp: { enabled: true },
   publishOptions: {
     posts: {
