@@ -1,4 +1,4 @@
-import { Github } from "lucide-react";
+import { SiGithub } from "@icons-pack/react-simple-icons";
 import { Link } from "react-router";
 import { Button } from "~/components/ui/button";
 import { cn } from "~/lib/utils";
@@ -36,7 +36,7 @@ export function Header() {
               rel="noreferrer"
               aria-label="GitHub"
             >
-              <Github className="size-4" />
+              <SiGithub className="size-4" />
             </a>
           </Button>
         </div>

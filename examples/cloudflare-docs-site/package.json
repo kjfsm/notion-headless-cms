@@ -19,6 +19,7 @@
     "wrangler:dev": "rm -f .wrangler/deploy/config.json && pnpm run build && wrangler dev"
   },
   "dependencies": {
+    "@icons-pack/react-simple-icons": "^13.13.0",
     "@notion-headless-cms/block-html": "workspace:*",
     "@notion-headless-cms/cloudflare": "workspace:*",
     "@notion-headless-cms/core": "workspace:*",
@@ -29,14 +30,14 @@
     "@notion-headless-cms/notion-source": "workspace:*",
     "@notion-headless-cms/react-renderer": "workspace:*",
     "@notionhq/client": "catalog:",
-    "@radix-ui/react-separator": "^1.1.4",
-    "@radix-ui/react-slot": "^1.2.3",
+    "@radix-ui/react-separator": "^1.1.8",
+    "@radix-ui/react-slot": "^1.2.4",
     "@react-router/cloudflare": "^7.15.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "catalog:",
     "katex": "catalog:",
-    "lucide-react": "^0.513.0",
+    "lucide-react": "^1.16.0",
     "radix-ui": "^1.4.3",
     "react": "catalog:",
     "react-dom": "catalog:",
@@ -47,7 +48,6 @@
   },
   "devDependencies": {
     "@cloudflare/vite-plugin": "^1.37.1",
-    "@cloudflare/workers-types": "*",
     "@notion-headless-cms/cli": "workspace:*",
     "@playwright/test": "catalog:",
     "@react-router/dev": "^7.15.1",
