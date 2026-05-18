@@ -80,9 +80,9 @@ export default function DocPage({ loaderData }: Route.ComponentProps) {
         )}
         <div className="mt-6 border-b border-border" />
       </header>
+      {/* rehype で生成した HTML を埋め込む。コンテンツソースは git 管理下の md なので XSS リスクなし。 */}
       <div
         className="prose prose-neutral max-w-none dark:prose-invert pt-2"
-        // biome-ignore lint/security/noDangerouslySetInnerHtml: rehype で生成した HTML を安全に埋め込む。コンテンツソースは git 管理下の md。
         dangerouslySetInnerHTML={{ __html: html }}
       />
       <footer className="mt-12 border-t border-border pt-6 text-sm text-muted-foreground">
