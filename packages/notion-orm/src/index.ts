@@ -12,7 +12,9 @@ export type {
   NotionBlockTreeNode,
 } from "./block-tree.js";
 export { fetchBlockTree } from "./block-tree.js";
+export type { ContentFetcher, FetchContext } from "./content-fetcher.js";
 export { getPlainText, mapItem } from "./mapper";
+export { fetchPageMarkdown } from "./markdown-fetch.js";
 export type {
   NotionCollectionDefaultOptions,
   NotionCollectionMapItemOptions,

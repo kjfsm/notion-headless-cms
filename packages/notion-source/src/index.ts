@@ -2,6 +2,7 @@ import type { CMSAdapter } from "@notion-headless-cms/core/source-author";
 import type { BlockHandler } from "@notion-headless-cms/markdown-html";
 import type {
   BlockEnricher,
+  ContentFetcher,
   FetchBlockTreeOgpOptions,
 } from "@notion-headless-cms/notion-orm";
 import { createNotionCollection } from "@notion-headless-cms/notion-orm";
@@ -34,11 +35,29 @@ export interface NotionSourceConfig<S extends SchemaMap> {
   schema: S;
   /** Notion API トークン。 */
   token: string;
-  /** カスタムブロックハンドラーのマップ。 */
+  /**
+   * Notion 本文の取得戦略。`@notion-headless-cms/fetch-blocks` の `blocksFetcher()` か
+   * `@notion-headless-cms/fetch-markdown` の `markdownFetcher()` を渡す。
+   * 未指定の場合は `fetch-blocks` を動的 import でフォールバック (現行互換)。
+   *
+   * Cloudflare Workers Free プラン (50 subrequest 上限) で巨大ページを扱うなら
+   * `markdownFetcher()` を推奨。
+   */
+  fetch?: ContentFetcher;
+  /**
+   * カスタムブロックハンドラーのマップ。
+   * @deprecated `fetch: blocksFetcher({ blocks })` に移動してください。次のメジャーで削除予定。
+   */
   blocks?: Record<string, BlockHandler>;
-  /** ブロックツリーへ追加情報を付与する enricher のリスト。 */
+  /**
+   * ブロックツリーへ追加情報を付与する enricher のリスト。
+   * @deprecated `fetch: blocksFetcher({ enrichers })` に移動してください。次のメジャーで削除予定。
+   */
   enrichers?: readonly BlockEnricher[];
-  /** embed / bookmark / link_preview ブロックの OGP 取得設定。 */
+  /**
+   * embed / bookmark / link_preview ブロックの OGP 取得設定。
+   * @deprecated `fetch: blocksFetcher({ ogp })` に移動してください。次のメジャーで削除予定。
+   */
   ogp?: FetchBlockTreeOgpOptions;
   /** コレクションごとの公開ステータス設定。 */
   publishOptions?: { [K in keyof S]?: NotionPublishOptions };
@@ -58,6 +77,7 @@ export function notionSource<S extends SchemaMap>(
         token: opts.token,
         dataSourceId: entry.dataSourceId,
         properties: entry.properties,
+        ...(opts.fetch ? { content: opts.fetch } : {}),
         ...(opts.blocks ? { blocks: opts.blocks } : {}),
         ...(opts.enrichers ? { enrichers: opts.enrichers } : {}),
         ...(opts.ogp ? { ogp: opts.ogp } : {}),

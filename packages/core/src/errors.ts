@@ -15,6 +15,7 @@
  * | `source/fetch_item_failed` | `DataSource.findByProp()` 失敗 |
  * | `source/load_markdown_failed` | `DataSource.loadMarkdown()` 失敗 |
  * | `source/load_blocks_failed` | `DataSource.loadBlocks()` 失敗 |
+ * | `source/blocks_unsupported` | 選択した fetch 戦略が NotionBlockTree 取得を提供していない (markdown 戦略選択時など) |
  * | `cache/io_failed` | document / image キャッシュの I/O 失敗 |
  * | `cache/image_fetch_failed` | Notion 画像の HTTP 取得失敗 |
  * | `cache/image_invalid_content_type` | 画像レスポンスの Content-Type が不正 |
@@ -45,6 +46,7 @@ export type BuiltInCMSErrorCode =
   | "source/fetch_item_failed"
   | "source/load_markdown_failed"
   | "source/load_blocks_failed"
+  | "source/blocks_unsupported"
   | "cache/io_failed"
   | "cache/image_fetch_failed"
   | "cache/image_invalid_content_type"

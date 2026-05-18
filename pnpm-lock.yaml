@@ -714,6 +714,47 @@ importers:
         specifier: workspace:*
         version: link:../markdown-html
 
+  packages/fetch-blocks:
+    dependencies:
+      '@notion-headless-cms/markdown-html':
+        specifier: workspace:*
+        version: link:../markdown-html
+      '@notion-headless-cms/notion-orm':
+        specifier: workspace:*
+        version: link:../notion-orm
+    devDependencies:
+      '@notion-headless-cms/react-renderer':
+        specifier: workspace:*
+        version: link:../react-renderer
+      '@notionhq/client':
+        specifier: 'catalog:'
+        version: 5.21.0
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.14
+      react:
+        specifier: 'catalog:'
+        version: 19.2.6
+
+  packages/fetch-markdown:
+    dependencies:
+      '@notion-headless-cms/markdown-html':
+        specifier: workspace:*
+        version: link:../markdown-html
+      '@notion-headless-cms/notion-orm':
+        specifier: workspace:*
+        version: link:../notion-orm
+    devDependencies:
+      '@notionhq/client':
+        specifier: 'catalog:'
+        version: 5.21.0
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.2.14
+      react:
+        specifier: 'catalog:'
+        version: 19.2.6
+
   packages/markdown-html:
     dependencies:
       '@types/hast':

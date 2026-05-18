@@ -15,6 +15,7 @@ import {
   fetchBlockTree,
   type NotionBlockTreeNode,
 } from "./block-tree";
+import type { ContentFetcher } from "./content-fetcher";
 import {
   createClient,
   queryAllPages,
@@ -44,15 +45,28 @@ interface NotionCollectionCommonOptions {
    * 最初の API 呼び出し時に `client.search` で解決される (結果はキャッシュ)。
    */
   dbName?: string;
-  /** カスタムブロックハンドラーのマップ。 */
+  /**
+   * カスタムブロックハンドラーのマップ。
+   * @deprecated `content: blocksFetcher({ blocks })` に移動してください。次のメジャーで削除予定。
+   */
   blocks?: Record<string, BlockHandler>;
-  /** ブックマーク/埋め込みブロックの OGP 取得設定。省略時は OGP 非取得。 */
+  /**
+   * ブックマーク/埋め込みブロックの OGP 取得設定。省略時は OGP 非取得。
+   * @deprecated `content: blocksFetcher({ ogp })` に移動してください。次のメジャーで削除予定。
+   */
   ogp?: FetchBlockTreeOgpOptions;
   /**
    * `loadNotionBlocks()` 時にブロック木へ追加情報を付与する enricher のリスト。
    * `notion-katex` など拡張パッケージが返す enricher を渡す。
+   * @deprecated `content: blocksFetcher({ enrichers })` に移動してください。次のメジャーで削除予定。
    */
   enrichers?: readonly BlockEnricher[];
+  /**
+   * Notion 本文の取得戦略。`@notion-headless-cms/fetch-blocks` や
+   * `@notion-headless-cms/fetch-markdown` のファクトリ関数の戻り値を渡す。
+   * 未指定の場合は動的 import で `fetch-blocks` の `blocksFetcher()` にフォールバックする。
+   */
+  content?: ContentFetcher;
 }
 
 /** デフォルトマッパー利用時 (T = BaseContentItem) の入力。 */
@@ -102,9 +116,14 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
   private resolvedDataSourceId: string | undefined;
   private resolvingDataSourceId: Promise<string> | undefined;
   private readonly itemMapper: (page: NotionPage) => T;
-  private readonly blocksConfig: Record<string, BlockHandler> | undefined;
-  private readonly ogpOptions?: FetchBlockTreeOgpOptions;
-  private readonly enrichers: readonly BlockEnricher[];
+  private readonly token: string;
+  // 動的 fallback 用に保持。明示的に渡された場合は最初から content が入る。
+  private content: ContentFetcher | undefined;
+  private resolvingContent: Promise<ContentFetcher> | undefined;
+  // 旧トップレベルオプション (deprecated)。fallback の blocksFetcher() に渡して上位互換を保つ。
+  private readonly legacyBlocks: Record<string, BlockHandler> | undefined;
+  private readonly legacyOgp: FetchBlockTreeOgpOptions | undefined;
+  private readonly legacyEnrichers: readonly BlockEnricher[] | undefined;
   // buildCachedItemContent が loadMarkdown / loadBlocks を個別に呼ぶため、
   // 同一リクエスト内で同じページを2回 fetch しないようメモ化する。
   private readonly _markdownMemo = new Map<string, Promise<string>>();
@@ -119,11 +138,24 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
       });
     }
     this.client = createClient({ NOTION_TOKEN: opts.token });
+    this.token = opts.token;
     this.resolvedDataSourceId = opts.dataSourceId;
     this.dbName = opts.dbName;
-    this.blocksConfig = opts.blocks;
-    this.ogpOptions = opts.ogp;
-    this.enrichers = opts.enrichers ?? [];
+    this.content = opts.content;
+    this.legacyBlocks = opts.blocks;
+    this.legacyOgp = opts.ogp;
+    this.legacyEnrichers = opts.enrichers;
+    if (
+      !opts.content &&
+      (opts.blocks || opts.ogp || opts.enrichers) &&
+      typeof console !== "undefined"
+    ) {
+      // 1 リリースの猶予期間: トップレベルの blocks/ogp/enrichers は次メジャーで削除
+      console.warn(
+        "[notion-headless-cms] `blocks` / `ogp` / `enrichers` をトップレベルに渡す形は deprecated です。" +
+          " `content: blocksFetcher({ ... })` に移行してください。",
+      );
+    }
 
     if ("schema" in opts && opts.schema) {
       this.itemMapper = opts.schema.mapItem;
@@ -258,11 +290,11 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
   }
 
   private async _fetchMarkdown(item: T): Promise<string> {
-    const transformer = new Transformer(
-      this.blocksConfig ? { blocks: this.blocksConfig } : undefined,
-    );
+    const content = await this.getContent();
     try {
-      return await transformer.transform(this.client, item.id);
+      return await content.loadMarkdown(this.client, item.id, {
+        token: this.token,
+      });
     } catch (err) {
       if (isCMSError(err)) throw err;
       throw new CMSError({
@@ -284,14 +316,31 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
   }
 
   async loadNotionBlocks(item: T): Promise<NotionBlockTreeNode[]> {
-    try {
-      let blocks = await fetchBlockTree(this.client, item.id, {
-        ogp: this.ogpOptions,
+    const content = await this.getContent();
+    if (!content.loadNotionBlocks) {
+      throw new CMSError({
+        code: "source/blocks_unsupported",
+        message:
+          "選択した fetch 戦略 (" +
+          content.kind +
+          ") は NotionBlockTree 取得を提供していません。" +
+          " markdown 戦略で React 描画するには `@notion-headless-cms/fetch-markdown/react` の Renderer を使ってください。",
+        context: {
+          operation: "NotionCollection.loadNotionBlocks",
+          pageId: item.id,
+          slug: item.slug,
+          fetcherKind: content.kind,
+        },
+        nextSteps: [
+          "BlockObjectResponse ツリーが必要な場合は `content: blocksFetcher()` に切り替える",
+          "Markdown 経路を維持する場合は `<Renderer />` (fetch-markdown/react) を使う",
+        ],
       });
-      for (const enricher of this.enrichers) {
-        blocks = await enricher(blocks);
-      }
-      return blocks;
+    }
+    try {
+      return await content.loadNotionBlocks(this.client, item.id, {
+        token: this.token,
+      });
     } catch (err) {
       if (isCMSError(err)) throw err;
       throw new CMSError({
@@ -305,6 +354,40 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
         },
       });
     }
+  }
+
+  /**
+   * `content` が未指定の場合は、`@notion-headless-cms/fetch-blocks` を別途
+   * import せずとも動くよう、内部で同等の `blocks` 戦略を組み立てて返す。
+   * fetch-blocks への static 依存を持つと循環するため、notion-orm 内に閉じた実装。
+   */
+  private getContent(): Promise<ContentFetcher> {
+    if (this.content) return Promise.resolve(this.content);
+    if (this.resolvingContent) return this.resolvingContent;
+    const legacyBlocks = this.legacyBlocks;
+    const legacyOgp = this.legacyOgp;
+    const legacyEnrichers = this.legacyEnrichers ?? [];
+    const fetcher: ContentFetcher = {
+      kind: "blocks",
+      async loadMarkdown(client, pageId) {
+        const transformer = new Transformer(
+          legacyBlocks ? { blocks: legacyBlocks } : undefined,
+        );
+        return transformer.transform(client, pageId);
+      },
+      async loadNotionBlocks(client, pageId) {
+        let tree = await fetchBlockTree(client, pageId, {
+          ...(legacyOgp ? { ogp: legacyOgp } : {}),
+        });
+        for (const enricher of legacyEnrichers) {
+          tree = await enricher(tree);
+        }
+        return tree;
+      },
+    };
+    this.content = fetcher;
+    this.resolvingContent = Promise.resolve(fetcher);
+    return this.resolvingContent;
   }
 
   getLastModified(item: T): string {

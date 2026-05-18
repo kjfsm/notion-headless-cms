@@ -1,0 +1,71 @@
+{
+  "name": "@notion-headless-cms/fetch-markdown",
+  "version": "0.0.0",
+  "description": "Notion Markdown export API でページ本文を 1 リクエストで取得する fetch 戦略。Cloudflare Workers Free プラン (50 subrequest 上限) でも巨大ページが扱える。",
+  "keywords": [
+    "notion",
+    "headless-cms",
+    "fetcher",
+    "markdown",
+    "cloudflare-workers",
+    "typescript"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
+  "bugs": {
+    "url": "https://github.com/kjfsm/notion-headless-cms/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kjfsm/notion-headless-cms.git",
+    "directory": "packages/fetch-markdown"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./react": {
+      "types": "./dist/react.d.mts",
+      "import": "./dist/react.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts src/react.tsx --format esm --dts --sourcemap --out-dir dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
+    "publint": "publint --strict",
+    "attw": "attw --pack . --profile esm-only"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "dependencies": {
+    "@notion-headless-cms/markdown-html": "workspace:*",
+    "@notion-headless-cms/notion-orm": "workspace:*"
+  },
+  "peerDependencies": {
+    "@notionhq/client": "^5.20.0",
+    "react": "^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "react": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@notionhq/client": "catalog:",
+    "@types/react": "catalog:",
+    "react": "catalog:"
+  }
+}
