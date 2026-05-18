@@ -1,5 +1,12 @@
 # example-docs-site
 
+## 0.0.4
+
+### Patch Changes
+
+- Updated dependencies [6a1ee58]
+  - @notion-headless-cms/fetch-markdown@0.0.2
+
 ## 0.0.3
 
 ### Patch Changes

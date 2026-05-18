@@ -1,5 +1,11 @@
 # @notion-headless-cms/fetch-markdown
 
+## 0.0.2
+
+### Patch Changes
+
+- 6a1ee58: fix
+
 ## 0.0.1
 
 ### Patch Changes
