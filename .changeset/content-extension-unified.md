@@ -1,14 +1,14 @@
 ---
-"@notion-headless-cms/notion-orm": minor
-"@notion-headless-cms/fetch-markdown": minor
-"@notion-headless-cms/react-renderer": minor
-"@notion-headless-cms/fetch-blocks": major
-"@notion-headless-cms/notion-katex": major
-"@notion-headless-cms/notion-shiki": major
-"@notion-headless-cms/notion-source": major
-"@notion-headless-cms/node": major
-"@notion-headless-cms/next": major
-"@notion-headless-cms/cloudflare": major
+"@notion-headless-cms/notion-orm": patch
+"@notion-headless-cms/fetch-markdown": patch
+"@notion-headless-cms/react-renderer": patch
+"@notion-headless-cms/fetch-blocks": patch
+"@notion-headless-cms/notion-katex": patch
+"@notion-headless-cms/notion-shiki": patch
+"@notion-headless-cms/notion-source": patch
+"@notion-headless-cms/node": patch
+"@notion-headless-cms/next": patch
+"@notion-headless-cms/cloudflare": patch
 ---
 
 fetch 戦略両対応の `ContentExtension` インターフェースを導入し、enrichers を廃止。
