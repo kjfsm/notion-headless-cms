@@ -1,7 +1,6 @@
 import type { CMSAdapter } from "@notion-headless-cms/core/source-author";
 import type { BlockHandler } from "@notion-headless-cms/markdown-html";
 import type {
-  BlockEnricher,
   ContentFetcher,
   FetchBlockTreeOgpOptions,
 } from "@notion-headless-cms/notion-orm";
@@ -50,11 +49,6 @@ export interface NotionSourceConfig<S extends SchemaMap> {
    */
   blocks?: Record<string, BlockHandler>;
   /**
-   * ブロックツリーへ追加情報を付与する enricher のリスト。
-   * @deprecated `fetch: blocksFetcher({ enrichers })` に移動してください。次のメジャーで削除予定。
-   */
-  enrichers?: readonly BlockEnricher[];
-  /**
    * embed / bookmark / link_preview ブロックの OGP 取得設定。
    * @deprecated `fetch: blocksFetcher({ ogp })` に移動してください。次のメジャーで削除予定。
    */
@@ -79,7 +73,6 @@ export function notionSource<S extends SchemaMap>(
         properties: entry.properties,
         ...(opts.fetch ? { content: opts.fetch } : {}),
         ...(opts.blocks ? { blocks: opts.blocks } : {}),
-        ...(opts.enrichers ? { enrichers: opts.enrichers } : {}),
         ...(opts.ogp ? { ogp: opts.ogp } : {}),
       }),
       slugField: entry.slugField,

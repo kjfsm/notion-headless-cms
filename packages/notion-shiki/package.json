@@ -49,10 +49,13 @@
   },
   "peerDependencies": {
     "@notion-headless-cms/notion-orm": "workspace:*",
-    "shiki": "^1.0.0"
+    "shiki": "^4.0.0"
   },
   "devDependencies": {
     "@notion-headless-cms/notion-orm": "workspace:*",
     "shiki": "catalog:"
+  },
+  "dependencies": {
+    "@shikijs/rehype": "^4.0.2"
   }
 }

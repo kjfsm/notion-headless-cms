@@ -2,7 +2,10 @@ import type { ContentFetcher } from "@notion-headless-cms/notion-orm";
 import { fetchPageMarkdown } from "@notion-headless-cms/notion-orm";
 
 export { rehypeNotionTags } from "./rehype-notion-tags";
-export { notionMarkdownRenderer } from "./renderer";
+export {
+  createNotionMarkdownRenderer,
+  notionMarkdownRenderer,
+} from "./renderer";
 
 export type MarkdownFetcherOptions = Record<string, never>;
 

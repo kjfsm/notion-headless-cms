@@ -151,9 +151,20 @@ export interface ComponentOverrides {
   InlineEquation?: ComponentType<{ expression: string }>;
 }
 
+/**
+ * blocks 戦略向けレンダリング拡張インターフェース。
+ * notion-orm への依存を react-renderer に持ち込まないためローカル定義。
+ * `ContentExtension` と構造互換。
+ */
+export interface BlockExtension {
+  getBlockComponents?(): Record<string, unknown>;
+}
+
 export interface NotionRendererProps {
   blocks: NotionBlock[];
   components?: ComponentOverrides;
+  /** `getBlockComponents()` でコンポーネントを提供する拡張のリスト。直接指定の `components` が優先される。 */
+  extensions?: BlockExtension[];
   className?: string;
   /** block.type ごとにルート要素へ追加クラスを差し込む（tailwind-merge で衝突解決）。 */
   classNames?: BlockClassNames;

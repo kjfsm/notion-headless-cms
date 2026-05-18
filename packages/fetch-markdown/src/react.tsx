@@ -1,5 +1,6 @@
 "use client";
 
+import type { ContentExtension } from "@notion-headless-cms/notion-orm";
 import type { ComponentType, ReactNode } from "react";
 import { createElement, Fragment } from "react";
 import { jsx, jsxs } from "react/jsx-runtime";
@@ -9,6 +10,7 @@ import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import remarkParse from "remark-parse";
 import remarkRehype from "remark-rehype";
+import type { PluggableList } from "unified";
 import { unified } from "unified";
 import { preprocessNotionMarkdown } from "./preprocess";
 
@@ -35,6 +37,12 @@ export interface RendererProps {
   components?: RendererComponents;
   /** ラッパー `<div>` に付ける className。 */
   className?: string;
+  /**
+   * `getMarkdownPlugins()` で unified プラグインを提供する拡張のリスト。
+   * 同期プラグイン（`rehype-katex` など）に対応。非同期プラグイン（shiki など）は
+   * サーバーサイドで `createNotionMarkdownRenderer` を使うこと。
+   */
+  extensions?: ContentExtension[];
 }
 
 /**
@@ -55,15 +63,24 @@ export function Renderer(props: RendererProps): ReactNode {
     ...(props.components ?? {}),
   };
 
+  const extraRemark = (props.extensions ?? []).flatMap(
+    (e) => e.getMarkdownPlugins?.()?.remarkPlugins ?? [],
+  ) as PluggableList;
+  const extraRehype = (props.extensions ?? []).flatMap(
+    (e) => e.getMarkdownPlugins?.()?.rehypePlugins ?? [],
+  ) as PluggableList;
+
   const processor = unified()
     .use(remarkParse)
     .use(remarkGfm)
     .use(remarkMath)
+    .use(extraRemark)
     // 独自タグは raw HTML として markdown に紛れ込んでくる。
     // allowDangerousHtml + rehype-raw で hast に展開すれば、rehype-react が
     // タグ名で components マップを引いて React 要素を組み立てる。
     .use(remarkRehype, { allowDangerousHtml: true })
     .use(rehypeRaw)
+    .use(extraRehype)
     .use(rehypeReact, {
       Fragment,
       jsx: jsx as unknown as never,

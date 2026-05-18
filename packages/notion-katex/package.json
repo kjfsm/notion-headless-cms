@@ -54,5 +54,8 @@
   "devDependencies": {
     "@notion-headless-cms/notion-orm": "workspace:*",
     "katex": "catalog:"
+  },
+  "dependencies": {
+    "rehype-katex": "^7.0.1"
   }
 }

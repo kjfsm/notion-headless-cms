@@ -5,7 +5,7 @@ import { NotionContext } from "./context.js";
 import { extractHeadings } from "./lib/extract-headings.js";
 import { cn } from "./lib/utils.js";
 import { NotionBlocks } from "./NotionBlocks.js";
-import type { NotionRendererProps } from "./types.js";
+import type { ComponentOverrides, NotionRendererProps } from "./types.js";
 
 /**
  * Notion ブロック木 (`NotionBlockTreeNode[]`) を React で描画するエントリ。
@@ -15,6 +15,7 @@ import type { NotionRendererProps } from "./types.js";
 export function NotionRenderer({
   blocks,
   components,
+  extensions,
   className,
   classNames,
   resolveImageUrl,
@@ -24,9 +25,16 @@ export function NotionRenderer({
   Link: LinkSlot,
 }: NotionRendererProps) {
   const headings = useMemo(() => extractHeadings(blocks), [blocks]);
+  const mergedComponents = useMemo(() => {
+    const fromExt = Object.assign(
+      {},
+      ...(extensions ?? []).map((e) => e.getBlockComponents?.() ?? {}),
+    );
+    return { ...fromExt, ...(components ?? {}) } as ComponentOverrides;
+  }, [extensions, components]);
   const contextValue = useMemo(
     () => ({
-      components: components ?? {},
+      components: mergedComponents,
       classNames,
       resolveImageUrl,
       resolvePageUrl,
@@ -37,7 +45,7 @@ export function NotionRenderer({
       listDepth: 0,
     }),
     [
-      components,
+      mergedComponents,
       classNames,
       resolveImageUrl,
       resolvePageUrl,
