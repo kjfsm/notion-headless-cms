@@ -4,7 +4,7 @@ import {
 } from "@notion-headless-cms/react-renderer";
 import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
 import { resolveBlockImageUrls } from "@notion-headless-cms/react-renderer/server";
-import { data } from "react-router";
+import { data, isRouteErrorResponse } from "react-router";
 import { makeCms } from "../lib/cms";
 import type { Route } from "./+types/post";
 
@@ -26,8 +26,18 @@ export async function loader({ params, context }: Route.LoaderArgs) {
       },
     };
   } catch (err) {
+    // isRouteErrorResponse な data() は上のコードが投げるのでそのまま通す
+    if (isRouteErrorResponse(err)) throw err;
     console.error("[posts loader] エラー:", err);
-    throw err;
+    // ErrorBoundary へシリアライズ可能な形で渡す（CMSError.cause 等が非直列化可能なため）
+    throw data(
+      {
+        message: err instanceof Error ? err.message : String(err),
+        code: (err as Record<string, unknown>)["code"] ?? null,
+        stack: err instanceof Error ? (err.stack ?? null) : null,
+      },
+      { status: 500 },
+    );
   }
 }
 

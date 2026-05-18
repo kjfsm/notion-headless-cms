@@ -31,14 +31,28 @@ export function ErrorBoundary() {
   const error = useRouteError();
 
   if (isRouteErrorResponse(error)) {
+    // data() で投げた構造化エラー（{ message, code, stack }）と通常の data("Not Found") 両方を処理する
+    const d = error.data as Record<string, unknown> | string | null;
+    const message =
+      d && typeof d === "object"
+        ? String(d["message"] ?? error.statusText)
+        : String(d ?? error.statusText);
+    const code = d && typeof d === "object" ? d["code"] : null;
+    const stack = d && typeof d === "object" ? (d["stack"] as string) : null;
     return (
       <html lang="ja">
         <head>
           <title>{error.status} エラー</title>
         </head>
         <body>
-          <h1>{error.status}</h1>
-          <p>{String(error.data)}</p>
+          <h1>エラーが発生しました ({error.status})</h1>
+          {code != null && <p>コード: {String(code)}</p>}
+          <p>{message}</p>
+          {stack != null && (
+            <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.8em" }}>
+              {stack}
+            </pre>
+          )}
         </body>
       </html>
     );
