@@ -1,13 +1,11 @@
-import { notionEmbed, youtubeProvider } from "@notion-headless-cms/block-html";
 import { memoryCache } from "@notion-headless-cms/cache";
 import { nextCache } from "@notion-headless-cms/cache/next";
+import {
+  markdownFetcher,
+  notionMarkdownRenderer,
+} from "@notion-headless-cms/fetch-markdown";
 import { createClient, notionSource } from "@notion-headless-cms/next";
-import { notionShiki } from "@notion-headless-cms/notion-shiki";
 import { schema } from "@/app/generated/nhc";
-
-const embed = notionEmbed({
-  providers: [youtubeProvider({ display: "card" })],
-});
 
 // document は Next.js の unstable_cache + revalidateTag、image は in-process メモリ。
 export const cms = createClient({
@@ -15,10 +13,8 @@ export const cms = createClient({
     notion: notionSource({
       schema,
       token: process.env.NOTION_TOKEN ?? "",
-      blocks: embed.blocks,
-      // notion-shiki で fetch 時に code ブロックを shiki で pre-render する。
-      // Code スタブが __cachedHtml を読んで描画するため Next.js バンドルに shiki が不要になる。
-      enrichers: [notionShiki()],
+      // Notion Markdown export API を 1 リクエストで叩く戦略。
+      fetch: markdownFetcher(),
       publishOptions: {
         posts: {
           publishedStatuses: ["公開済み"],
@@ -27,8 +23,8 @@ export const cms = createClient({
       },
     }),
   },
-  renderer: embed.renderer,
+  // markdownFetcher が返す Notion enhanced markdown を理解する renderer。
+  renderer: notionMarkdownRenderer,
   cache: [nextCache({ tags: ["posts"] }), memoryCache()],
-  // 統合ハンドラ (/app/api/cms/[...path]/route.ts) のマウントパスに合わせる。
   imageProxyBase: "/api/cms/images",
 });

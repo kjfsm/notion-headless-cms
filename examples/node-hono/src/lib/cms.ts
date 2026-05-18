@@ -1,3 +1,4 @@
+import { markdownFetcher } from "@notion-headless-cms/fetch-markdown";
 import {
   createClient,
   nodePreset,
@@ -10,6 +11,8 @@ export const cms = createClient({
     notion: notionSource({
       schema,
       token: process.env.NOTION_TOKEN ?? "",
+      // Notion Markdown export API を 1 リクエストで叩く戦略。
+      fetch: markdownFetcher(),
       publishOptions: {
         posts: {
           publishedStatuses: ["公開済み"],

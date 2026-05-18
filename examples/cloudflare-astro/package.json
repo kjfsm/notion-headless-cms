@@ -20,6 +20,7 @@
     "@notion-headless-cms/block-html": "workspace:*",
     "@notion-headless-cms/cloudflare": "workspace:*",
     "@notion-headless-cms/core": "workspace:*",
+    "@notion-headless-cms/fetch-markdown": "workspace:*",
     "@notion-headless-cms/notion-katex": "workspace:*",
     "@notion-headless-cms/notion-orm": "workspace:*",
     "@notion-headless-cms/notion-shiki": "workspace:*",

@@ -1,11 +1,12 @@
-import { notionEmbed, youtubeProvider } from "@notion-headless-cms/block-html";
 import {
   cloudflarePreset,
   createClient,
   notionSource,
 } from "@notion-headless-cms/cloudflare";
-import { notionKatex } from "@notion-headless-cms/notion-katex";
-import { notionShiki } from "@notion-headless-cms/notion-shiki";
+import {
+  markdownFetcher,
+  notionMarkdownRenderer,
+} from "@notion-headless-cms/fetch-markdown";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -18,18 +19,12 @@ export function makeCms(
   env: Env,
   ctx: { waitUntil(p: Promise<unknown>): void },
 ) {
-  const embed = notionEmbed({
-    providers: [youtubeProvider({ display: "card" })],
-  });
-
   return createClient({
     sources: {
       notion: notionSource({
         schema,
         token: env.NOTION_TOKEN,
-        blocks: embed.blocks,
-        enrichers: [notionKatex({ displayMode: true }), notionShiki()],
-        ogp: { enabled: true },
+        fetch: markdownFetcher(),
         publishOptions: {
           docs: {
             publishedStatuses: ["完了"],
@@ -42,7 +37,7 @@ export function makeCms(
         },
       }),
     },
-    renderer: embed.renderer,
+    renderer: notionMarkdownRenderer,
     ...cloudflarePreset({ env, ctx }),
   });
 }

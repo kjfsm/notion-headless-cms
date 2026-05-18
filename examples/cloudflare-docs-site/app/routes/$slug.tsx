@@ -1,9 +1,5 @@
-import {
-  type NotionBlock,
-  NotionRenderer,
-} from "@notion-headless-cms/react-renderer";
+import { Renderer } from "@notion-headless-cms/fetch-markdown/react";
 import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
-import { resolveBlockImageUrls } from "@notion-headless-cms/react-renderer/server";
 import { data } from "react-router";
 import { makeCms } from "../lib/cms";
 import type { Route } from "./+types/$slug";
@@ -12,11 +8,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
   const page = await cms.pages.find(params.slug ?? "");
   if (!page) throw data("Not Found", { status: 404 });
-  const notionBlocks =
-    ((await page.notionBlocks()) as NotionBlock[] | undefined) ?? [];
-  const blocks = await resolveBlockImageUrls(notionBlocks, cms.cacheImage);
+  const markdown = await page.markdown();
   return {
-    blocks,
+    markdown,
     item: {
       slug: page.slug,
       title: page.title,
@@ -26,7 +20,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 }
 
 export default function Page({ loaderData }: Route.ComponentProps) {
-  const { blocks, item } = loaderData;
+  const { markdown, item } = loaderData;
   return (
     <main>
       <NotionRevalidator
@@ -36,7 +30,7 @@ export default function Page({ loaderData }: Route.ComponentProps) {
         }}
       />
       <h1>{item.title ?? item.slug}</h1>
-      <NotionRenderer blocks={blocks} />
+      <Renderer content={{ markdown }} />
     </main>
   );
 }

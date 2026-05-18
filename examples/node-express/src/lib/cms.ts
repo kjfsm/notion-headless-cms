@@ -1,4 +1,7 @@
-import { notionEmbed, youtubeProvider } from "@notion-headless-cms/block-html";
+import {
+  markdownFetcher,
+  notionMarkdownRenderer,
+} from "@notion-headless-cms/fetch-markdown";
 import {
   createClient,
   nodePreset,
@@ -11,16 +14,12 @@ if (!token) {
   throw new Error("NOTION_TOKEN env が設定されていません。");
 }
 
-const embed = notionEmbed({
-  providers: [youtubeProvider({ display: "card" })],
-});
-
 export const cms = createClient({
   sources: {
     notion: notionSource({
       schema,
       token,
-      blocks: embed.blocks,
+      fetch: markdownFetcher(),
       publishOptions: {
         posts: {
           publishedStatuses: ["公開済み"],
@@ -30,5 +29,5 @@ export const cms = createClient({
     }),
   },
   ...nodePreset(),
-  renderer: embed.renderer,
+  renderer: notionMarkdownRenderer,
 });

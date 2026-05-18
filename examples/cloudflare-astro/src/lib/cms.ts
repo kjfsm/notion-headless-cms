@@ -1,11 +1,12 @@
-import { notionEmbed, youtubeProvider } from "@notion-headless-cms/block-html";
 import {
   cloudflarePreset,
   createClient,
   notionSource,
 } from "@notion-headless-cms/cloudflare";
-import { notionKatex } from "@notion-headless-cms/notion-katex";
-import { notionShiki } from "@notion-headless-cms/notion-shiki";
+import {
+  markdownFetcher,
+  notionMarkdownRenderer,
+} from "@notion-headless-cms/fetch-markdown";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -14,24 +15,18 @@ export interface Env {
   IMG_BUCKET?: R2Bucket;
 }
 
-// ctx は `waitUntil` だけ要求する構造型で受ける。
-// Astro の Locals.cfContext などをそのまま渡せる。Workers では常に提供される。
 export function makeCms(
   env: Env,
   ctx: { waitUntil(p: Promise<unknown>): void },
 ) {
-  const embed = notionEmbed({
-    providers: [youtubeProvider({ display: "card" })],
-  });
-
   return createClient({
     sources: {
       notion: notionSource({
         schema,
         token: env.NOTION_TOKEN,
-        blocks: embed.blocks,
-        enrichers: [notionKatex({ displayMode: true }), notionShiki()],
-        ogp: { enabled: true },
+        // Cloudflare Workers Free プランの 50 subrequest 上限を回避するため、
+        // Notion Markdown export API を 1 リクエストで叩く戦略を使う。
+        fetch: markdownFetcher(),
         publishOptions: {
           posts: {
             publishedStatuses: ["公開済み"],
@@ -40,11 +35,8 @@ export function makeCms(
         },
       }),
     },
-    renderer: embed.renderer,
-    // swr.ttlMs は未指定。キャッシュは永続させ、Notion の lastEditedTime に
-    // 差分があったときだけ waitUntil の bg で差し替える。
-    // ctx を渡さないと bg が打ち切られて KV の古いキャッシュが残るため、
-    // Astro ページ側から Astro.locals.runtime.ctx を必ず渡すこと。
+    // markdownFetcher が返す Notion enhanced markdown を理解する renderer。
+    renderer: notionMarkdownRenderer,
     ...cloudflarePreset({ env, ctx }),
   });
 }

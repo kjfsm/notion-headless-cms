@@ -110,22 +110,29 @@ export async function buildCachedItemContent<T extends BaseContentItem>(
 
   // react-renderer など Notion 形式を直接消費する利用側のため、
   // DataSource が対応していれば BlockObjectResponse ツリーも取得・キャッシュする。
+  // markdown 戦略のように loadNotionBlocks 未対応の場合は `source/blocks_unsupported`
+  // を吸収して undefined にする (ページ描画は markdown 経路で代替する想定)。
   let notionBlocks: unknown[] | undefined;
   if (ctx.source.loadNotionBlocks) {
     try {
       notionBlocks = await ctx.source.loadNotionBlocks(item);
     } catch (err) {
-      if (isCMSError(err)) throw err;
-      throw new CMSError({
-        code: "source/load_blocks_failed",
-        message: "Failed to load Notion blocks from source.",
-        cause: err,
-        context: {
-          operation: "buildCachedItemContent:loadNotionBlocks",
-          pageId: item.id,
-          slug: item.slug,
-        },
-      });
+      if (isCMSError(err) && err.is("source/blocks_unsupported")) {
+        notionBlocks = undefined;
+      } else if (isCMSError(err)) {
+        throw err;
+      } else {
+        throw new CMSError({
+          code: "source/load_blocks_failed",
+          message: "Failed to load Notion blocks from source.",
+          cause: err,
+          context: {
+            operation: "buildCachedItemContent:loadNotionBlocks",
+            pageId: item.id,
+            slug: item.slug,
+          },
+        });
+      }
     }
   }
 

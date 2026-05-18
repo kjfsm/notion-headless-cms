@@ -1,11 +1,12 @@
-import { notionEmbed, youtubeProvider } from "@notion-headless-cms/block-html";
 import {
   cloudflarePreset,
   createClient,
   notionSource,
 } from "@notion-headless-cms/cloudflare";
-import { notionKatex } from "@notion-headless-cms/notion-katex";
-import { notionShiki } from "@notion-headless-cms/notion-shiki";
+import {
+  markdownFetcher,
+  notionMarkdownRenderer,
+} from "@notion-headless-cms/fetch-markdown";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -18,18 +19,14 @@ export function makeCms(
   env: Env,
   ctx: { waitUntil(p: Promise<unknown>): void },
 ) {
-  const embed = notionEmbed({
-    providers: [youtubeProvider({ display: "card" })],
-  });
-
   return createClient({
     sources: {
       notion: notionSource({
         schema,
         token: env.NOTION_TOKEN,
-        blocks: embed.blocks,
-        enrichers: [notionKatex({ displayMode: true }), notionShiki()],
-        ogp: { enabled: true },
+        // Cloudflare Workers Free プランの 50 subrequest 上限を回避するため、
+        // Notion Markdown export API を 1 リクエストで叩く戦略を使う。
+        fetch: markdownFetcher(),
         publishOptions: {
           posts: {
             publishedStatuses: ["公開済み"],
@@ -38,7 +35,9 @@ export function makeCms(
         },
       }),
     },
-    renderer: embed.renderer,
+    // markdownFetcher が返す Notion enhanced markdown を理解する renderer。
+    // post.html() を使う場合に必要。post.markdown() + <Renderer /> 経路では未使用。
+    renderer: notionMarkdownRenderer,
     ...cloudflarePreset({ env, ctx }),
   });
 }

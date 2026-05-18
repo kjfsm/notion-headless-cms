@@ -16,6 +16,7 @@
   "dependencies": {
     "@hono/node-server": "^2.0.2",
     "@notion-headless-cms/core": "workspace:*",
+    "@notion-headless-cms/fetch-markdown": "workspace:*",
     "@notion-headless-cms/node": "workspace:*",
     "@notion-headless-cms/notion-orm": "workspace:*",
     "@notion-headless-cms/notion-source": "workspace:*",

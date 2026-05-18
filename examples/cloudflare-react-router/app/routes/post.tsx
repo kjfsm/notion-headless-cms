@@ -1,9 +1,5 @@
-import {
-  type NotionBlock,
-  NotionRenderer,
-} from "@notion-headless-cms/react-renderer";
+import { Renderer } from "@notion-headless-cms/fetch-markdown/react";
 import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
-import { resolveBlockImageUrls } from "@notion-headless-cms/react-renderer/server";
 import { data, isRouteErrorResponse } from "react-router";
 import { makeCms } from "../lib/cms";
 import type { Route } from "./+types/post";
@@ -32,11 +28,11 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
     const post = await cms.posts.find(params.slug ?? "");
     if (!post) throw data("Not Found", { status: 404 });
-    const notionBlocks =
-      ((await post.notionBlocks()) as NotionBlock[] | undefined) ?? [];
-    const blocks = await resolveBlockImageUrls(notionBlocks, cms.cacheImage);
+    // markdownFetcher 戦略で取得した Notion enhanced markdown を loader が返し、
+    // ページ側で <Renderer> が React 木に変換する。
+    const markdown = await post.markdown();
     return {
-      blocks,
+      markdown,
       item: {
         slug: post.slug,
         title: post.title,
@@ -45,16 +41,14 @@ export async function loader({ params, context }: Route.LoaderArgs) {
       },
     };
   } catch (err) {
-    // isRouteErrorResponse な data() は上のコードが投げるのでそのまま通す
     if (isRouteErrorResponse(err)) throw err;
     console.error("[posts loader] エラー:", err);
-    // ErrorBoundary へシリアライズ可能な形で渡す（CMSError.cause 等が非直列化可能なため）
     throw data(serializeError(err), { status: 500 });
   }
 }
 
 export default function Post({ loaderData }: Route.ComponentProps) {
-  const { blocks, item } = loaderData;
+  const { markdown, item } = loaderData;
   return (
     <article>
       <NotionRevalidator
@@ -65,7 +59,7 @@ export default function Post({ loaderData }: Route.ComponentProps) {
       />
       <h1>{item.title ?? item.slug}</h1>
       {item.publishedAt && <time>{item.publishedAt}</time>}
-      <NotionRenderer blocks={blocks} />
+      <Renderer content={{ markdown }} />
     </article>
   );
 }
