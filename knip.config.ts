@@ -46,6 +46,28 @@ export default {
       entry: ["src/index.ts", "src/rehype/index.ts"],
       project: ["src/**/*.ts"],
     },
+    "packages/fetch-blocks": {
+      // package.json の exports サブパス (./, ./react)
+      entry: ["src/index.ts", "src/react.ts"],
+      project: ["src/**/*.{ts,tsx}"],
+    },
+    "packages/fetch-markdown": {
+      // package.json の exports サブパス (./, ./react)
+      entry: ["src/index.ts", "src/react.tsx"],
+      project: ["src/**/*.{ts,tsx}"],
+    },
+    "packages/notion-katex": {
+      entry: ["src/index.ts"],
+      project: ["src/**/*.ts"],
+      // katex は peerDependency。rehype-katex 経由で間接消費するため直接 import はない
+      ignoreDependencies: ["katex"],
+    },
+    "packages/notion-shiki": {
+      entry: ["src/index.ts"],
+      project: ["src/**/*.ts"],
+      // shiki は peerDependency。@shikijs/rehype 経由で間接消費するため直接 import はない
+      ignoreDependencies: ["shiki"],
+    },
     "packages/core": {
       entry: ["src/index.ts", "src/source-author.ts"],
       project: ["src/**/*.ts"],
