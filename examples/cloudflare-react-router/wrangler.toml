@@ -8,11 +8,6 @@ assets = { directory = "./build/client" }
 [observability]
 enabled = true
 
-# Notion API はページの子ブロックごとに 1 サブリクエストを消費するため、
-# 大きなページでデフォルト上限（50）を超えないよう引き上げる（Paid プラン必須）
-[limits]
-subrequests = 10_000
-
 [build]
 command = "pnpm build"
 
