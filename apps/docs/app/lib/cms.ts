@@ -3,10 +3,7 @@ import {
   createClient,
   notionSource,
 } from "@notion-headless-cms/cloudflare";
-import {
-  markdownFetcher,
-  notionMarkdownRenderer,
-} from "@notion-headless-cms/fetch-markdown";
+import { blocksFetcher } from "@notion-headless-cms/fetch-blocks";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -18,6 +15,8 @@ export interface Env {
 }
 
 // Notion からは "ランディング + 固定ページ" のみを取得する。
+// fetch-blocks 戦略で BlockObjectResponse ツリーを取得し、react-renderer で
+// callout / column / embed などを高忠実度に描画する。
 // 本体ドキュメントは docs/ 配下の md を直接配信するため、ここには出てこない。
 export function makeCms(
   env: Env,
@@ -28,7 +27,7 @@ export function makeCms(
       notion: notionSource({
         schema,
         token: env.NOTION_TOKEN,
-        fetch: markdownFetcher(),
+        fetch: blocksFetcher(),
         publishOptions: {
           pages: {
             publishedStatuses: ["完了"],
@@ -37,7 +36,6 @@ export function makeCms(
         },
       }),
     },
-    renderer: notionMarkdownRenderer,
     ...cloudflarePreset({ env, ctx }),
   });
 }

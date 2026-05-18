@@ -3,7 +3,8 @@ import { parseFrontmatter } from "./frontmatter";
 
 // Vite の import.meta.glob はビルド時に静的解析するため、`?raw` で生 md 文字列を取り込む。
 // Cloudflare Workers では fs アクセス不可なので、ここでバンドル時にすべて取り込む方針。
-const RAW_JA = import.meta.glob<string>("../../../../docs/ja/**/*.md", {
+// パスは load.ts (apps/docs/app/lib/markdown/) から見てリポジトリルートまで 5 階層上。
+const RAW_JA = import.meta.glob<string>("../../../../../docs/ja/**/*.md", {
   eager: true,
   query: "?raw",
   import: "default",

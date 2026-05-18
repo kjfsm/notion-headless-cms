@@ -54,16 +54,19 @@ describe("index loader()", () => {
     expect((result as Response).status).toBe(302);
   });
 
-  it("home ページが存在する場合は markdown を返す", async () => {
+  it("home ページが存在する場合は notionBlocks を返す", async () => {
     fakeCms.pages.find.mockResolvedValue({
       id: "id-1",
       slug: "home",
       title: "ホーム",
       lastEditedTime: "2024-01-01T00:00:00Z",
-      markdown: async () => "# ホーム",
+      notionBlocks: async () => [
+        { object: "block", id: "b1", type: "paragraph" },
+      ],
     });
     const result = await indexLoader({ context: fakeContext } as never);
-    expect((result as { markdown: string }).markdown).toBe("# ホーム");
+    const r = result as { blocks: unknown[] };
+    expect(r.blocks).toHaveLength(1);
   });
 });
 
