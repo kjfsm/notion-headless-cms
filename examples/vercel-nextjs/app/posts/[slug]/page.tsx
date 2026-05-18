@@ -1,14 +1,6 @@
-import {
-  type NotionBlock,
-  NotionRenderer,
-} from "@notion-headless-cms/react-renderer";
 import { NotionRevalidator } from "@notion-headless-cms/react-renderer/next";
-import { resolveBlockImageUrls } from "@notion-headless-cms/react-renderer/server";
 import { notFound } from "next/navigation";
 import { cms } from "@/app/lib/cms";
-
-// v0.2 以降は KaTeX / mermaid が既定で動的 import されるため、明示的な
-// components={{ Equation }} 渡しは不要。`katex` を peer に入れているだけで動く。
 
 export const revalidate = 300;
 
@@ -29,12 +21,11 @@ export default async function PostPage({
   const post = await cms.posts.find(slug);
   if (!post) notFound();
 
-  // notionBlocks() は cms キャッシュ (SWR) 経由で取得されるため、
-  // ページごとに毎回 Notion API を叩かない。画像 URL は cms.cacheImage で
-  // プロキシ URL へ事前解決し、Notion 署名 URL の期限切れを回避する。
-  const notionBlocks =
-    ((await post.notionBlocks()) as NotionBlock[] | undefined) ?? [];
-  const blocks = await resolveBlockImageUrls(notionBlocks, cms.cacheImage);
+  // markdownFetcher 戦略を使っているため Notion ブロックツリーは取れない。
+  // 代わりに post.html() を使う — lib/cms.ts の renderer (embed プロバイダ含む)
+  // を通った HTML 文字列が返る。Notion 画像 URL は renderer 側で
+  // imageProxyBase 経由のプロキシ URL に書き換えられている。
+  const html = await post.html();
 
   return (
     <article className="max-w-2xl mx-auto px-4 py-12">
@@ -48,7 +39,8 @@ export default async function PostPage({
           {post.publishedAt}
         </time>
       )}
-      <NotionRenderer blocks={blocks} />
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: cms renderer の出力を信頼する */}
+      <div dangerouslySetInnerHTML={{ __html: html }} />
     </article>
   );
 }

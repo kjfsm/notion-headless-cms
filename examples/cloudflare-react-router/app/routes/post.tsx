@@ -1,9 +1,4 @@
-import {
-  type NotionBlock,
-  NotionRenderer,
-} from "@notion-headless-cms/react-renderer";
 import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
-import { resolveBlockImageUrls } from "@notion-headless-cms/react-renderer/server";
 import { data, isRouteErrorResponse } from "react-router";
 import { makeCms } from "../lib/cms";
 import type { Route } from "./+types/post";
@@ -32,11 +27,12 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
     const post = await cms.posts.find(params.slug ?? "");
     if (!post) throw data("Not Found", { status: 404 });
-    const notionBlocks =
-      ((await post.notionBlocks()) as NotionBlock[] | undefined) ?? [];
-    const blocks = await resolveBlockImageUrls(notionBlocks, cms.cacheImage);
+    // markdownFetcher 戦略を使っているため Notion ブロックツリーは取れない。
+    // 代わりに post.html() を使う — cms.ts の renderer (embed プロバイダ含む)
+    // を通った HTML 文字列が返る。
+    const html = await post.html();
     return {
-      blocks,
+      html,
       item: {
         slug: post.slug,
         title: post.title,
@@ -54,7 +50,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 }
 
 export default function Post({ loaderData }: Route.ComponentProps) {
-  const { blocks, item } = loaderData;
+  const { html, item } = loaderData;
   return (
     <article>
       <NotionRevalidator
@@ -65,7 +61,8 @@ export default function Post({ loaderData }: Route.ComponentProps) {
       />
       <h1>{item.title ?? item.slug}</h1>
       {item.publishedAt && <time>{item.publishedAt}</time>}
-      <NotionRenderer blocks={blocks} />
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: cms renderer の出力を信頼する */}
+      <div dangerouslySetInnerHTML={{ __html: html }} />
     </article>
   );
 }

@@ -1,9 +1,4 @@
-import {
-  type NotionBlock,
-  NotionRenderer,
-} from "@notion-headless-cms/react-renderer";
 import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
-import { resolveBlockImageUrls } from "@notion-headless-cms/react-renderer/server";
 import { redirect } from "react-router";
 import { makeCms } from "../lib/cms";
 import type { Route } from "./+types/index";
@@ -12,11 +7,10 @@ export async function loader({ context }: Route.LoaderArgs) {
   const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
   const page = await cms.pages.find("home");
   if (!page) return redirect("/docs");
-  const notionBlocks =
-    ((await page.notionBlocks()) as NotionBlock[] | undefined) ?? [];
-  const blocks = await resolveBlockImageUrls(notionBlocks, cms.cacheImage);
+  // markdownFetcher 戦略のため、cms.ts の renderer を通った HTML を直接使う。
+  const html = await page.html();
   return {
-    blocks,
+    html,
     item: {
       slug: page.slug,
       title: page.title,
@@ -26,7 +20,7 @@ export async function loader({ context }: Route.LoaderArgs) {
 }
 
 export default function Index({ loaderData }: Route.ComponentProps) {
-  const { blocks, item } = loaderData;
+  const { html, item } = loaderData;
   return (
     <main>
       <NotionRevalidator
@@ -35,7 +29,8 @@ export default function Index({ loaderData }: Route.ComponentProps) {
           version: item.lastEditedTime,
         }}
       />
-      <NotionRenderer blocks={blocks} />
+      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: cms renderer の出力を信頼する */}
+      <div dangerouslySetInnerHTML={{ __html: html }} />
     </main>
   );
 }

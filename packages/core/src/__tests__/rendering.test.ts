@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { isCMSError } from "../errors";
+import { CMSError, isCMSError } from "../errors";
 import type { RenderContext } from "../rendering";
 import { buildCachedItemContent, buildCachedItemMeta } from "../rendering";
 import type { BaseContentItem } from "../types/index";
@@ -172,6 +172,40 @@ describe("buildCachedItemContent", () => {
         (err: unknown) =>
           isCMSError(err) && err.code === "source/load_blocks_failed",
       );
+    });
+
+    it("loadNotionBlocks が source/blocks_unsupported を投げた場合は notionBlocks=undefined で続行", async () => {
+      const item = makeItem();
+      const ctx = makeContext({
+        source: {
+          name: "mock",
+          async list() {
+            return [];
+          },
+          async loadMarkdown() {
+            return "# Hello";
+          },
+          async loadBlocks() {
+            return [];
+          },
+          async loadNotionBlocks() {
+            throw new CMSError({
+              code: "source/blocks_unsupported",
+              message: "not supported",
+              context: { operation: "test" },
+            });
+          },
+          getLastModified(i) {
+            return i.lastEditedTime;
+          },
+          getListVersion() {
+            return "";
+          },
+        },
+      });
+      const result = await buildCachedItemContent(item, ctx);
+      expect(result.notionBlocks).toBeUndefined();
+      expect(result.markdown).toBe("# Hello");
     });
   });
 
