@@ -4,8 +4,7 @@ import {
   createClient,
   notionSource,
 } from "@notion-headless-cms/cloudflare";
-import { notionKatex } from "@notion-headless-cms/notion-katex";
-import { notionShiki } from "@notion-headless-cms/notion-shiki";
+import { markdownFetcher } from "@notion-headless-cms/fetch-markdown";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -27,9 +26,11 @@ export function makeCms(
       notion: notionSource({
         schema,
         token: env.NOTION_TOKEN,
-        blocks: embed.blocks,
-        enrichers: [notionKatex({ displayMode: true }), notionShiki()],
-        ogp: { enabled: true },
+        // Cloudflare Workers Free プランの 50 subrequest 上限を回避するため、
+        // Notion Markdown export API を 1 リクエストで叩く戦略を使う。
+        // notionKatex / notionShiki などの enricher、`blocks` (notion-to-md カスタム)、
+        // `ogp` は block tree 戦略前提なので、md 戦略では適用されない。
+        fetch: markdownFetcher(),
         publishOptions: {
           posts: {
             publishedStatuses: ["公開済み"],
@@ -38,6 +39,7 @@ export function makeCms(
         },
       }),
     },
+    // markdown→HTML 変換は引き続き embed.renderer で行う (fetcher と直交)。
     renderer: embed.renderer,
     ...cloudflarePreset({ env, ctx }),
   });

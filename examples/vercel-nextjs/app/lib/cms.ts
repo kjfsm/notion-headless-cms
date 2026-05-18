@@ -1,8 +1,8 @@
 import { notionEmbed, youtubeProvider } from "@notion-headless-cms/block-html";
 import { memoryCache } from "@notion-headless-cms/cache";
 import { nextCache } from "@notion-headless-cms/cache/next";
+import { markdownFetcher } from "@notion-headless-cms/fetch-markdown";
 import { createClient, notionSource } from "@notion-headless-cms/next";
-import { notionShiki } from "@notion-headless-cms/notion-shiki";
 import { schema } from "@/app/generated/nhc";
 
 const embed = notionEmbed({
@@ -15,10 +15,11 @@ export const cms = createClient({
     notion: notionSource({
       schema,
       token: process.env.NOTION_TOKEN ?? "",
-      blocks: embed.blocks,
-      // notion-shiki で fetch 時に code ブロックを shiki で pre-render する。
-      // Code スタブが __cachedHtml を読んで描画するため Next.js バンドルに shiki が不要になる。
-      enrichers: [notionShiki()],
+      // Notion Markdown export API を 1 リクエストで叩く戦略。
+      // notion-shiki などの block-tree 前提の enricher は適用されないため、
+      // code ブロックのハイライトが必要なら markdown→HTML 側の renderer
+      // (rehype-shiki など) で行う。
+      fetch: markdownFetcher(),
       publishOptions: {
         posts: {
           publishedStatuses: ["公開済み"],

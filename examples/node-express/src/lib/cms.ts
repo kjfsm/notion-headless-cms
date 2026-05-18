@@ -1,4 +1,5 @@
 import { notionEmbed, youtubeProvider } from "@notion-headless-cms/block-html";
+import { markdownFetcher } from "@notion-headless-cms/fetch-markdown";
 import {
   createClient,
   nodePreset,
@@ -20,7 +21,10 @@ export const cms = createClient({
     notion: notionSource({
       schema,
       token,
-      blocks: embed.blocks,
+      // Notion Markdown export API を 1 リクエストで叩く戦略。
+      // `blocks: embed.blocks` (notion-to-md カスタムハンドラ) は block tree 戦略
+      // 前提なので md 戦略では適用されない。embed の HTML 化は renderer 側で行う。
+      fetch: markdownFetcher(),
       publishOptions: {
         posts: {
           publishedStatuses: ["公開済み"],
