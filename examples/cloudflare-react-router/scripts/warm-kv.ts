@@ -28,10 +28,7 @@
  */
 
 import { notionEmbed, youtubeProvider } from "@notion-headless-cms/block-html";
-import {
-  createCms,
-  restKvNamespace,
-} from "@notion-headless-cms/cloudflare";
+import { createCms, restKvNamespace } from "@notion-headless-cms/cloudflare";
 import { notionKatex } from "@notion-headless-cms/notion-katex";
 import { notionShiki } from "@notion-headless-cms/notion-shiki";
 import { schema } from "../app/generated/nhc.js";
@@ -86,7 +83,9 @@ const result = await cms.posts.cache.warm({
 
 process.stdout.write("\n");
 const elapsed = ((Date.now() - start) / 1000).toFixed(1);
-console.log(`完了 (${elapsed}s): ${result.ok} 件成功, ${result.failed.length} 件失敗`);
+console.log(
+  `完了 (${elapsed}s): ${result.ok} 件成功, ${result.failed.length} 件失敗`,
+);
 
 if (result.failed.length > 0) {
   console.error("\n失敗したアイテム:");

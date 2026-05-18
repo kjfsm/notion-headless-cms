@@ -9,7 +9,13 @@ import {
 } from "react-router";
 import "./app.css";
 
-function ErrorDetail({ err, depth = 0 }: { err: Record<string, unknown>; depth?: number }) {
+function ErrorDetail({
+  err,
+  depth = 0,
+}: {
+  err: Record<string, unknown>;
+  depth?: number;
+}) {
   const message = String(err["message"] ?? "");
   const code = err["code"] != null ? String(err["code"]) : null;
   const stack = err["stack"] != null ? String(err["stack"]) : null;
