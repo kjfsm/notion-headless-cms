@@ -105,6 +105,9 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
   private readonly blocksConfig: Record<string, BlockHandler> | undefined;
   private readonly ogpOptions?: FetchBlockTreeOgpOptions;
   private readonly enrichers: readonly BlockEnricher[];
+  // buildCachedItemContent が loadMarkdown / loadBlocks を個別に呼ぶため、
+  // 同一リクエスト内で同じページを2回 fetch しないようメモ化する。
+  private readonly _markdownMemo = new Map<string, Promise<string>>();
 
   constructor(opts: NotionCollectionOptions<T>) {
     if (!opts.dataSourceId && !opts.dbName) {
@@ -247,6 +250,14 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
   }
 
   async loadMarkdown(item: T): Promise<string> {
+    const memo = this._markdownMemo.get(item.id);
+    if (memo) return memo;
+    const promise = this._fetchMarkdown(item);
+    this._markdownMemo.set(item.id, promise);
+    return promise;
+  }
+
+  private async _fetchMarkdown(item: T): Promise<string> {
     const transformer = new Transformer(
       this.blocksConfig ? { blocks: this.blocksConfig } : undefined,
     );

@@ -58,6 +58,11 @@ export interface FetchBlockTreeOgpOptions extends OgpFetchOptions {
 /** `fetchBlockTree` の追加オプション。 */
 export interface FetchBlockTreeOptions {
   ogp?: FetchBlockTreeOgpOptions;
+  /**
+   * 同時に展開する子ブロックの最大数。デフォルト 3。
+   * Notion API のレート制限 (3 req/s) に抵触しないよう抑制する。
+   */
+  concurrency?: number;
 }
 
 /**
@@ -79,11 +84,14 @@ export async function fetchBlockTree(
   opts?: FetchBlockTreeOptions,
 ): Promise<NotionBlockTreeNode[]> {
   const blocks = await getBlocks(client, pageId);
-  const tree = await Promise.all(
-    blocks.map(async (block) => expandChildren(client, block)),
+  const concurrency = opts?.concurrency ?? 3;
+  const tree = await runChunked(
+    blocks,
+    (block) => expandChildren(client, block, concurrency),
+    concurrency,
   );
   if (opts?.ogp?.enabled) {
-    await enrichWithOgp(tree, opts.ogp);
+    await enrichWithOgp(tree, opts.ogp, concurrency);
   }
   return tree;
 }
@@ -91,12 +99,13 @@ export async function fetchBlockTree(
 async function expandChildren(
   client: Client,
   block: BlockObjectResponse,
+  concurrency: number,
 ): Promise<NotionBlockTreeNode> {
   if (!block.has_children) {
     return block as NotionBlockTreeNode;
   }
   // 子要素の OGP enrich は親側でまとめて行うため、再帰呼び出しでは ogp オプションを外す。
-  const children = await fetchBlockTree(client, block.id);
+  const children = await fetchBlockTree(client, block.id, { concurrency });
   return { ...block, children } as NotionBlockTreeNode;
 }
 
@@ -106,6 +115,7 @@ async function expandChildren(
 async function enrichWithOgp(
   tree: NotionBlockTreeNode[],
   ogp: FetchBlockTreeOgpOptions,
+  concurrency: number,
 ): Promise<void> {
   const targets: Array<
     EmbedBlockWithOgp | BookmarkBlockWithOgp | LinkPreviewBlockWithOgp
@@ -115,8 +125,9 @@ async function enrichWithOgp(
 
   const memo = createOgpFetcher({ ttlMs: ogp.ttlMs });
 
-  await Promise.all(
-    targets.map(async (block) => {
+  await runChunked(
+    targets,
+    async (block) => {
       const url =
         block.type === "embed"
           ? block.embed.url
@@ -135,8 +146,22 @@ async function enrichWithOgp(
           `[notion-orm] OG fetch failed for ${url}: ${(err as Error).message}`,
         );
       }
-    }),
+    },
+    concurrency,
   );
+}
+
+/** items を n 個ずつのチャンクに分けて順次 Promise.all する。 */
+async function runChunked<T, R>(
+  items: T[],
+  fn: (item: T) => Promise<R>,
+  n: number,
+): Promise<R[]> {
+  const results: R[] = [];
+  for (let i = 0; i < items.length; i += n) {
+    results.push(...(await Promise.all(items.slice(i, i + n).map(fn))));
+  }
+  return results;
 }
 
 async function loadOgp(
