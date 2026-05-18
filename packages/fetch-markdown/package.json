@@ -52,7 +52,16 @@
   },
   "dependencies": {
     "@notion-headless-cms/markdown-html": "workspace:*",
-    "@notion-headless-cms/notion-orm": "workspace:*"
+    "@notion-headless-cms/notion-orm": "workspace:*",
+    "rehype-raw": "^7.0.0",
+    "rehype-react": "^8.0.0",
+    "rehype-stringify": "catalog:",
+    "remark-gfm": "catalog:",
+    "remark-math": "^6.0.0",
+    "remark-parse": "catalog:",
+    "remark-rehype": "catalog:",
+    "unified": "catalog:",
+    "unist-util-visit": "^5.1.0"
   },
   "peerDependencies": {
     "@notionhq/client": "^5.20.0",
@@ -65,6 +74,7 @@
   },
   "devDependencies": {
     "@notionhq/client": "catalog:",
+    "@types/hast": "^3.0.4",
     "@types/react": "catalog:",
     "react": "catalog:"
   }

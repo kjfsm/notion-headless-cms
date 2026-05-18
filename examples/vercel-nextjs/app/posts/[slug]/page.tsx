@@ -1,3 +1,4 @@
+import { Renderer } from "@notion-headless-cms/fetch-markdown/react";
 import { NotionRevalidator } from "@notion-headless-cms/react-renderer/next";
 import { notFound } from "next/navigation";
 import { cms } from "@/app/lib/cms";
@@ -21,17 +22,12 @@ export default async function PostPage({
   const post = await cms.posts.find(slug);
   if (!post) notFound();
 
-  // markdownFetcher 戦略を使っているため Notion ブロックツリーは取れない。
-  // 代わりに post.html() を使う — lib/cms.ts の renderer (embed プロバイダ含む)
-  // を通った HTML 文字列が返る。Notion 画像 URL は renderer 側で
-  // imageProxyBase 経由のプロキシ URL に書き換えられている。
-  const html = await post.html();
+  // markdownFetcher 戦略で取得した Notion enhanced markdown。
+  // <Renderer> は同期 (processSync) で React 木に変換するため RSC でもそのまま動く。
+  const markdown = await post.markdown();
 
   return (
     <article className="max-w-2xl mx-auto px-4 py-12">
-      {/* ハイドレーション後に router.refresh() を呼び、Server Component を再評価
-          させる。サーバ側 SWR で差し替えられた最新内容を、クエリ無し・別 API
-          fetch 無しで RSC ストリームとして取り込む。 */}
       <NotionRevalidator />
       <h1 className="text-3xl font-bold mb-4">{post.slug}</h1>
       {post.publishedAt && (
@@ -39,8 +35,7 @@ export default async function PostPage({
           {post.publishedAt}
         </time>
       )}
-      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: cms renderer の出力を信頼する */}
-      <div dangerouslySetInnerHTML={{ __html: html }} />
+      <Renderer content={{ markdown }} />
     </article>
   );
 }

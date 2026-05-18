@@ -1,3 +1,4 @@
+import { Renderer } from "@notion-headless-cms/fetch-markdown/react";
 import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
 import { data } from "react-router";
 import { makeCms } from "../lib/cms";
@@ -7,10 +8,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
   const page = await cms.pages.find(params.slug ?? "");
   if (!page) throw data("Not Found", { status: 404 });
-  // markdownFetcher 戦略のため、cms.ts の renderer を通った HTML を直接使う。
-  const html = await page.html();
+  const markdown = await page.markdown();
   return {
-    html,
+    markdown,
     item: {
       slug: page.slug,
       title: page.title,
@@ -20,7 +20,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 }
 
 export default function Page({ loaderData }: Route.ComponentProps) {
-  const { html, item } = loaderData;
+  const { markdown, item } = loaderData;
   return (
     <main>
       <NotionRevalidator
@@ -30,8 +30,7 @@ export default function Page({ loaderData }: Route.ComponentProps) {
         }}
       />
       <h1>{item.title ?? item.slug}</h1>
-      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: cms renderer の出力を信頼する */}
-      <div dangerouslySetInnerHTML={{ __html: html }} />
+      <Renderer content={{ markdown }} />
     </main>
   );
 }
