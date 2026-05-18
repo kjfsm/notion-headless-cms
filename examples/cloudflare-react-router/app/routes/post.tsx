@@ -16,7 +16,8 @@ type SerializedError = {
 };
 
 function serializeError(err: unknown, depth = 0): SerializedError {
-  if (depth > 5) return { message: "(too deep)", code: null, stack: null, cause: null };
+  if (depth > 5)
+    return { message: "(too deep)", code: null, stack: null, cause: null };
   const e = err as Record<string, unknown>;
   return {
     message: err instanceof Error ? err.message : String(err),

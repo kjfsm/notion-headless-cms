@@ -45,7 +45,10 @@ export function restKvNamespace(opts: RestKvOptions): KVNamespaceLike {
   async function req(path: string, init?: RequestInit): Promise<Response> {
     return fetch(`${base}${path}`, {
       ...init,
-      headers: { ...(init?.headers as Record<string, string> | undefined), ...auth },
+      headers: {
+        ...(init?.headers as Record<string, string> | undefined),
+        ...auth,
+      },
     });
   }
 
@@ -53,7 +56,8 @@ export function restKvNamespace(opts: RestKvOptions): KVNamespaceLike {
     async get(key: string, _type: "text"): Promise<string | null> {
       const res = await req(`/values/${encodeURIComponent(key)}`);
       if (res.status === 404) return null;
-      if (!res.ok) throw new Error(`KV GET failed (${res.status}): ${await res.text()}`);
+      if (!res.ok)
+        throw new Error(`KV GET failed (${res.status}): ${await res.text()}`);
       return res.text();
     },
 
@@ -61,14 +65,22 @@ export function restKvNamespace(opts: RestKvOptions): KVNamespaceLike {
       const form = new FormData();
       form.append("value", value);
       // Content-Type は FormData が境界付きで自動設定するため明示しない
-      const res = await req(`/values/${encodeURIComponent(key)}`, { method: "PUT", body: form });
-      if (!res.ok) throw new Error(`KV PUT failed (${res.status}): ${await res.text()}`);
+      const res = await req(`/values/${encodeURIComponent(key)}`, {
+        method: "PUT",
+        body: form,
+      });
+      if (!res.ok)
+        throw new Error(`KV PUT failed (${res.status}): ${await res.text()}`);
     },
 
     async delete(key: string): Promise<void> {
-      const res = await req(`/values/${encodeURIComponent(key)}`, { method: "DELETE" });
+      const res = await req(`/values/${encodeURIComponent(key)}`, {
+        method: "DELETE",
+      });
       if (!res.ok && res.status !== 404)
-        throw new Error(`KV DELETE failed (${res.status}): ${await res.text()}`);
+        throw new Error(
+          `KV DELETE failed (${res.status}): ${await res.text()}`,
+        );
     },
 
     async list(listOpts?: { prefix?: string; cursor?: string }): Promise<{
@@ -80,7 +92,8 @@ export function restKvNamespace(opts: RestKvOptions): KVNamespaceLike {
       if (listOpts?.prefix) params.set("prefix", listOpts.prefix);
       if (listOpts?.cursor) params.set("cursor", listOpts.cursor);
       const res = await req(`/keys?${params}`);
-      if (!res.ok) throw new Error(`KV LIST failed (${res.status}): ${await res.text()}`);
+      if (!res.ok)
+        throw new Error(`KV LIST failed (${res.status}): ${await res.text()}`);
       const json = (await res.json()) as {
         success: boolean;
         result: { name: string }[];
