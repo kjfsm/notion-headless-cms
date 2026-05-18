@@ -14,7 +14,7 @@ disable-model-invocation: true
 2. 保留中 changeset があれば `Version Packages` PR を自動作成
 3. その PR をマージすると npm に自動公開（provenance 付き）
 
-手動操作は原則不要。以下は**トラブル時の診断**と**リリース前レビュー**の手順。
+**手動操作は原則不要**。以下は「リリース前レビュー」と「トラブル時の診断」の手順。
 
 ## リリース前チェックリスト
 
@@ -31,28 +31,13 @@ pnpm changeset status --since=origin/main
 
 ```bash
 pnpm install --frozen-lockfile
-pnpm build
-pnpm typecheck
-pnpm test
+pnpm verify    # build + typecheck + test + publint をまとめて実行
 ```
 
-### 3. 公開物の検査（publint + attw）
+### 3. 公開物の検査
 
-```bash
-pnpm -r --filter "./packages/*" exec publint
-pnpm -r --filter "./packages/*" exec --no-install attw --pack --profile node16
-```
-
-- `exports` の不整合、`types` 欠落、CJS/ESM 混在、`files` 漏れを検知
-- CI の `publint.yml` と同じチェック
-
-### 4. 公開対象パッケージの一覧
-
-```bash
-pnpm -r --filter "./packages/*" --workspace-concurrency=1 --parseable list --depth -1
-```
-
-`private: true` でないものが自動公開される。
+`/publish-preflight` を実行する。publint / attw / exports 経路 / engines / provenance を一括チェック。
+重複手順は本ファイルに書かず、必ずそちらに委ねる。
 
 ## 「Version Packages」 PR のレビュー観点
 
@@ -67,18 +52,12 @@ pnpm -r --filter "./packages/*" --workspace-concurrency=1 --parseable list --dep
 
 - GitHub Actions ログで `NPM_TOKEN` 有効性を確認（`gh run view --log`）
 - provenance エラーは `id-token: write` と `NPM_CONFIG_PROVENANCE=true` が `release.yml` にあるか確認
-- `publishConfig.access: "public"` が該当パッケージに設定されているか（`packages/*/package.json`）
+- `publishConfig.access: "public"` が該当パッケージに設定されているか
 
 ### Version Packages PR が作られない
 
 - 保留中 changeset が 0 件（`pnpm changeset status`）
-- Actions 権限: リポジトリの Settings > Actions > General で「Read and write permissions」
-
-## ブランチ保護
-
-main ブランチは以下を必須にすることを推奨（ユーザーに設定依頼）:
-
-- `lint` / `build-test` / `changeset-check` / `publint`
+- リポジトリ Settings > Actions > General が「Read and write permissions」
 
 ## 実行してはいけないこと
 
