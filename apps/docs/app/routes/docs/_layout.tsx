@@ -35,7 +35,7 @@ export default function DocsLayout({
   const currentSlug = (hasLocale ? segments.slice(1) : segments).join("/");
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)]">
+    <div className="flex min-h-[calc(100vh-3.5rem)] bg-white">
       <div className="sticky top-14 h-[calc(100vh-3.5rem)] shrink-0">
         <DocsSidebar
           docs={docs}
@@ -44,7 +44,7 @@ export default function DocsLayout({
         />
       </div>
       <main className="flex-1 min-w-0">
-        <div className="mx-auto max-w-3xl px-8 py-10 animate-fade-in-up">
+        <div className="mx-auto max-w-3xl px-8 py-12 animate-fade-in-up">
           <Outlet />
         </div>
       </main>

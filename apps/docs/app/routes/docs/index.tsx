@@ -32,27 +32,34 @@ export default function DocsIndex({ loaderData }: Route.ComponentProps) {
 
   return (
     <div>
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">ドキュメント</h1>
-        <p className="mt-2 text-muted-foreground">
+      <header className="mb-12">
+        <p className="mb-4 font-mono text-xs uppercase tracking-widest text-purple-500">
+          Documentation
+        </p>
+        <h1 className="text-4xl font-black tracking-tighter text-gray-900">
+          ドキュメント
+        </h1>
+        <p className="mt-3 text-gray-500 leading-relaxed">
           notion-headless-cms のセットアップ・API・運用ガイド。
         </p>
       </header>
       {Array.from(grouped.entries()).map(([category, items]) => (
-        <section key={category} className="mb-10">
-          <h2 className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+        <section key={category} className="mb-12">
+          <h2 className="mb-4 font-mono text-xs uppercase tracking-widest text-purple-500">
             {category}
           </h2>
-          <ul className="grid gap-3 sm:grid-cols-2">
+          <ul className="grid gap-4 sm:grid-cols-2">
             {items.map((item) => (
               <li key={item.slug}>
                 <Link
                   to={`/docs/${locale}/${item.slug}`}
-                  className="block rounded-md border border-border p-4 transition-colors hover:bg-accent"
+                  className="group block rounded-2xl border border-gray-200 bg-white p-6 transition hover:border-purple-400 hover:shadow-sm"
                 >
-                  <div className="font-medium">{item.title}</div>
+                  <div className="font-semibold tracking-tight text-gray-900 transition group-hover:text-purple-600">
+                    {item.title}
+                  </div>
                   {item.description && (
-                    <p className="mt-1 text-sm text-muted-foreground">
+                    <p className="mt-2 text-sm text-gray-500 leading-relaxed">
                       {item.description}
                     </p>
                   )}

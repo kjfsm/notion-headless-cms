@@ -64,33 +64,34 @@ export default function DocPage({ loaderData }: Route.ComponentProps) {
   const editUrl = `https://github.com/kjfsm/notion-headless-cms/edit/main/${filePath}`;
   return (
     <article>
-      <header className="mb-8">
+      <header className="mb-10">
         {category && (
-          <p className="mb-3 text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">
+          <p className="mb-4 font-mono text-xs uppercase tracking-widest text-purple-500">
             {category}
           </p>
         )}
-        <h1 className="text-3xl font-bold tracking-tight text-foreground mb-3">
+        <h1 className="mb-3 text-4xl font-black tracking-tighter text-gray-900">
           {title}
         </h1>
         {description && (
-          <p className="text-base text-muted-foreground leading-relaxed">
+          <p className="text-base text-gray-500 leading-relaxed">
             {description}
           </p>
         )}
-        <div className="mt-6 border-b border-border" />
+        <div className="mt-8 border-b border-gray-200" />
       </header>
       {/* rehype で生成した HTML を埋め込む。コンテンツソースは git 管理下の md なので XSS リスクなし。 */}
       <div
-        className="prose prose-neutral max-w-none dark:prose-invert pt-2"
+        className="prose prose-neutral max-w-none pt-2 prose-headings:tracking-tighter prose-headings:font-bold prose-a:text-purple-600 prose-a:no-underline hover:prose-a:underline prose-code:text-purple-600 prose-code:before:content-[''] prose-code:after:content-['']"
+        // biome-ignore lint/security/noDangerouslySetInnerHtml: コンテンツは git 管理下の md。
         dangerouslySetInnerHTML={{ __html: html }}
       />
-      <footer className="mt-12 border-t border-border pt-6 text-sm text-muted-foreground">
+      <footer className="mt-12 border-t border-gray-200 pt-6 text-sm text-gray-500">
         <a
           href={editUrl}
           target="_blank"
           rel="noreferrer"
-          className="hover:underline"
+          className="transition hover:text-purple-600"
         >
           GitHub でこのページを編集
         </a>
