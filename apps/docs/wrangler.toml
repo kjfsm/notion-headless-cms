@@ -2,7 +2,18 @@ name = "nhc-docs-site"
 main = "./workers/app.ts"
 compatibility_date = "2026-04-22"
 compatibility_flags = ["nodejs_compat"]
-assets = { directory = "./build/client" }
+
+# /docs 配下は react-router.config.ts の prerender で静的 HTML を出力する。
+# Cloudflare Workers の static assets が `build/client/docs/**/index.html` を
+# 直接配信し、見つからない URL（/, /:slug, /api/*）だけ main の Worker（SSR）へ
+# フォールバックさせるための設定。
+# - html_handling = "auto-trailing-slash": /docs → /docs/index.html を解決
+# - not_found_handling = "none": 該当ファイル無しは Worker SSR に流す
+[assets]
+directory = "./build/client"
+binding = "ASSETS"
+html_handling = "auto-trailing-slash"
+not_found_handling = "none"
 
 # Workers の組み込み観測機能を有効化（ダッシュボードでログ・メトリクスを閲覧可能）
 [observability]

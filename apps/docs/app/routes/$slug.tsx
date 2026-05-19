@@ -36,22 +36,24 @@ export function meta({ data: loaderData }: Route.MetaArgs) {
 export default function Page({ loaderData }: Route.ComponentProps) {
   const { blocks, item } = loaderData;
   return (
-    <main className="mx-auto max-w-3xl px-6 py-12 animate-fade-in-up">
+    <main className="mx-auto max-w-3xl px-6 py-16 animate-fade-in-up">
       <NotionRevalidator
         poll={{
           url: `/api/pages/${item.slug}/check`,
           version: item.lastEditedTime,
         }}
       />
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">
+      <header className="mb-10">
+        <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-gray-900">
           {item.title ?? item.slug}
         </h1>
         {item.description && (
-          <p className="mt-2 text-muted-foreground">{item.description}</p>
+          <p className="mt-3 text-gray-500 leading-relaxed">
+            {item.description}
+          </p>
         )}
       </header>
-      <article className="prose prose-neutral max-w-none dark:prose-invert">
+      <article className="prose prose-neutral max-w-none prose-headings:tracking-tighter prose-headings:font-bold prose-a:text-purple-600 prose-a:no-underline hover:prose-a:underline prose-code:text-purple-600">
         <Renderer blocks={blocks} />
       </article>
     </main>

@@ -6,9 +6,7 @@ import {
   Layers,
 } from "lucide-react";
 import { NavLink } from "react-router";
-import { Badge } from "~/components/ui/badge";
-import { Separator } from "~/components/ui/separator";
-import { cn } from "~/lib/utils";
+import { cn } from "../../lib/utils";
 
 export interface SidebarDocEntry {
   slug: string;
@@ -52,18 +50,20 @@ export function DocsSidebar({ docs, locale, currentSlug }: DocsSidebarProps) {
   ];
 
   return (
-    <aside className="w-64 shrink-0 border-r border-border bg-sidebar px-3 py-6 overflow-y-auto">
+    <aside className="w-64 shrink-0 border-r border-gray-100 bg-white px-4 py-8 overflow-y-auto">
       {orderedSections.map((section, sectionIndex) => {
         const items = grouped.get(section) ?? [];
         if (items.length === 0) return null;
         const SectionIcon = SECTION_ICONS[section] ?? FileText;
         return (
           <div key={section}>
-            {sectionIndex > 0 && <Separator className="my-4" />}
+            {sectionIndex > 0 && (
+              <div className="my-6 border-t border-gray-100" />
+            )}
 
-            <div className="mb-1 flex items-center gap-1.5 px-2 py-1">
-              <SectionIcon className="size-3.5 text-muted-foreground/60 shrink-0" />
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/70">
+            <div className="mb-2 flex items-center gap-2 px-2 py-1">
+              <SectionIcon className="size-3.5 text-purple-400 shrink-0" />
+              <h3 className="text-xs font-mono uppercase tracking-widest text-purple-500">
                 {section}
               </h3>
             </div>
@@ -82,19 +82,19 @@ export function DocsSidebar({ docs, locale, currentSlug }: DocsSidebarProps) {
                     <NavLink
                       to={`/docs/${locale}/${doc.slug}`}
                       className={cn(
-                        "group flex items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors",
-                        "border-l-2 pl-[6px]",
+                        "group flex items-center gap-2 rounded-full px-3 py-1.5 text-sm transition-colors",
+                        "border-l-2 pl-[10px]",
                         isActive
-                          ? "border-primary bg-accent text-accent-foreground font-medium"
-                          : "border-transparent text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                          ? "border-purple-500 bg-purple-50 text-purple-700 font-medium"
+                          : "border-transparent text-gray-500 hover:text-gray-900 hover:bg-gray-50",
                       )}
                     >
                       <ChevronRight
                         className={cn(
                           "size-3 shrink-0",
                           isActive
-                            ? "text-foreground"
-                            : "text-muted-foreground/40 group-hover:text-muted-foreground",
+                            ? "text-purple-500"
+                            : "text-gray-300 group-hover:text-gray-500",
                         )}
                       />
                       <span className="flex-1 truncate">{doc.title}</span>
@@ -106,9 +106,6 @@ export function DocsSidebar({ docs, locale, currentSlug }: DocsSidebarProps) {
           </div>
         );
       })}
-      <Badge variant="secondary" className="sr-only">
-        sidebar
-      </Badge>
     </aside>
   );
 }

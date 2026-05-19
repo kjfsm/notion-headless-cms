@@ -1,44 +1,38 @@
 import { SiGithub } from "@icons-pack/react-simple-icons";
 import { Link } from "react-router";
-import { Button } from "~/components/ui/button";
-import { cn } from "~/lib/utils";
 
+// バンドサイトと同じ「sticky + すりガラス + 太字ワードマーク」。
+// ロゴは font-black tracking-tighter、ホバーで purple-600 に振る。
 export function Header() {
   return (
-    <header
-      className={cn(
-        "sticky top-0 z-50 w-full",
-        "border-b border-border/60 bg-background/80 backdrop-blur-sm",
-      )}
-    >
+    <header className="sticky top-0 z-50 w-full border-b border-gray-100 bg-white/90 backdrop-blur">
       <div className="flex h-14 items-center px-6">
         <Link
           to="/"
-          className="mr-8 flex items-center gap-2 font-semibold text-foreground hover:opacity-80 transition-opacity"
+          className="mr-8 font-black tracking-tighter text-base text-gray-900 transition hover:text-purple-600"
         >
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded bg-foreground text-background text-xs font-bold">
-            N
-          </span>
-          notion-headless-cms
+          NOTION-HEADLESS-CMS
         </Link>
 
-        <nav className="flex items-center">
-          <Button variant="ghost" size="sm" asChild>
-            <Link to="/docs">ドキュメント</Link>
-          </Button>
+        <nav className="flex items-center gap-6">
+          <Link
+            to="/docs"
+            className="text-sm font-medium text-gray-500 transition hover:text-purple-600"
+          >
+            ドキュメント
+          </Link>
         </nav>
 
         <div className="ml-auto">
-          <Button variant="ghost" size="icon" asChild>
-            <a
-              href="https://github.com/kjfsm/notion-headless-cms"
-              target="_blank"
-              rel="noreferrer"
-              aria-label="GitHub"
-            >
-              <SiGithub className="size-4" />
-            </a>
-          </Button>
+          <a
+            href="https://github.com/kjfsm/notion-headless-cms"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="GitHub"
+            className="inline-flex size-9 items-center justify-center rounded-full text-gray-500 transition hover:bg-gray-100 hover:text-purple-600"
+          >
+            <SiGithub className="size-4" />
+          </a>
         </div>
       </div>
     </header>
