@@ -1,6 +1,6 @@
 import { Link } from "react-router";
-import { defaultLocale } from "~/lib/i18n/config";
-import { listDocEntries } from "~/lib/markdown/load";
+import { defaultLocale } from "../../lib/i18n/config";
+import { listDocEntries } from "../../lib/markdown/load";
 import type { Route } from "./+types/index";
 
 export async function loader() {

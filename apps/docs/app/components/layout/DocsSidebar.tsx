@@ -6,7 +6,7 @@ import {
   Layers,
 } from "lucide-react";
 import { NavLink } from "react-router";
-import { cn } from "~/lib/utils";
+import { cn } from "../../lib/utils";
 
 export interface SidebarDocEntry {
   slug: string;

@@ -1,7 +1,7 @@
 import { data } from "react-router";
-import { defaultLocale, isLocale } from "~/lib/i18n/config";
-import { getDocEntry } from "~/lib/markdown/load";
-import { renderDocMarkdown } from "~/lib/markdown/render";
+import { defaultLocale, isLocale } from "../../lib/i18n/config";
+import { getDocEntry } from "../../lib/markdown/load";
+import { renderDocMarkdown } from "../../lib/markdown/render";
 import type { Route } from "./+types/$";
 
 export async function loader({ params }: Route.LoaderArgs) {
