@@ -151,6 +151,32 @@ export const GET = handler;
 export const POST = handler;
 ```
 
+このハンドラは画像プロキシ (`/api/cms/images/:hash`) と Webhook (`/api/cms/revalidate`) の 2 ルートをまとめて受ける。Notion 画像 URL は約 1 時間で失効するため、`cms` 経由で生成された HTML 内の画像はこのプロキシ URL (`{imageProxyBase}/{sha256}`、デフォルト `/api/images`) に書き換えられ、キャッシュから配信される。
+
+ハンドラを使わず個別の route で受けたい場合のサンプル:
+
+```ts
+// app/api/cms/images/[hash]/route.ts
+import { cms } from "@/app/lib/cms";
+
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ hash: string }> },
+) {
+  const { hash } = await params;
+  const image = await cms.getCachedImage(hash);
+  if (!image) return new Response("Not Found", { status: 404 });
+  return new Response(image.data, {
+    headers: {
+      "content-type": image.contentType,
+      "cache-control": "public, max-age=31536000, immutable",
+    },
+  });
+}
+```
+
+`createClient({ imageProxyBase: "/api/cms/images" })` のように base を変えた場合は、route のパスも合わせて変更する。
+
 ---
 
 ## パッケージ構成

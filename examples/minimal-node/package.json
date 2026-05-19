@@ -1,0 +1,24 @@
+{
+  "name": "example-minimal-node",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env src/index.ts",
+    "generate": "nhc generate",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@notion-headless-cms/node": "workspace:*",
+    "@notion-headless-cms/notion-orm": "workspace:*",
+    "@notion-headless-cms/notion-source": "workspace:*",
+    "@notionhq/client": "catalog:",
+    "notion-to-md": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@notion-headless-cms/cli": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  }
+}

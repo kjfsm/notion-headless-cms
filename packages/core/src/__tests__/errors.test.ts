@@ -95,6 +95,60 @@ describe("CMSError", () => {
     });
     expect(err.code).toBe("my-adapter/custom_error");
   });
+
+  it("組み込みコードで nextSteps / docsUrl が自動補完される", () => {
+    const err = new CMSError({
+      code: "source/fetch_items_failed",
+      message: "fetch 失敗",
+      context: { operation: "list" },
+    });
+    expect(err.nextSteps?.length).toBeGreaterThan(0);
+    expect(err.docsUrl).toContain("docs/ja/errors/index.md");
+    expect(err.docsUrl).toContain("#source-fetch_items_failed");
+  });
+
+  it("呼び出し側が nextSteps を指定すると優先される", () => {
+    const custom = ["独自対処"] as const;
+    const err = new CMSError({
+      code: "source/fetch_items_failed",
+      message: "fetch 失敗",
+      context: { operation: "list" },
+      nextSteps: custom,
+    });
+    expect(err.nextSteps).toEqual(custom);
+  });
+
+  it("呼び出し側が docsUrl を指定すると優先される", () => {
+    const err = new CMSError({
+      code: "cache/io_failed",
+      message: "I/O 失敗",
+      context: { operation: "set" },
+      docsUrl: "https://example.com/custom",
+    });
+    expect(err.docsUrl).toBe("https://example.com/custom");
+  });
+
+  it("サードパーティコードでは自動補完されない", () => {
+    const err = new CMSError({
+      code: "my-adapter/custom_error",
+      message: "test",
+      context: { operation: "test" },
+    });
+    expect(err.nextSteps).toBeUndefined();
+    expect(err.docsUrl).toBeUndefined();
+  });
+
+  it("format() に nextSteps と docsUrl が含まれる", () => {
+    const err = new CMSError({
+      code: "source/fetch_items_failed",
+      message: "fetch 失敗",
+      context: { operation: "list" },
+    });
+    const out = err.format();
+    expect(out).toContain("fetch 失敗");
+    expect(out).toContain("次にやること:");
+    expect(out).toContain("詳細:");
+  });
 });
 
 describe("isCMSError", () => {

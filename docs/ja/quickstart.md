@@ -166,6 +166,35 @@ const news = await cms.news.list();   // NewsItem[]
 
 詳細は [CLI ドキュメント](./cli.md) と [マルチソースレシピ](./recipes/multi-source.md) を参照。
 
+## 画像プロキシ route を作る (Next.js)
+
+Notion の画像 URL は約 1 時間で失効する。`createClient` は画像を SHA256 ハッシュキーで永続キャッシュへ書き込み、`{imageProxyBase}/{hash}` 形式の URL に書き換える。
+`imageProxyBase` のデフォルトは `/api/images` で、その URL に対応する route を 1 つ用意するだけで画像が配信できる。
+
+```ts
+// app/api/cms/images/[hash]/route.ts
+import { cms } from "@/app/lib/cms";
+
+export async function GET(
+  _req: Request,
+  { params }: { params: Promise<{ hash: string }> },
+) {
+  const { hash } = await params;
+  const image = await cms.getCachedImage(hash);
+  if (!image) return new Response("Not Found", { status: 404 });
+  return new Response(image.data, {
+    headers: {
+      "content-type": image.contentType,
+      "cache-control": "public, max-age=31536000, immutable",
+    },
+  });
+}
+```
+
+`createClient({ imageProxyBase: "/api/cms/images" })` のように base を変えた場合は、route のパスも合わせて変更する。`@notion-headless-cms/next` の `createNextHandler(cms)` を使うと `/api/cms/images/:hash` ルートが自動でマウントされる（個別 route 不要）。
+
+詳細は [`api/cms-methods.md#cmscacheimage-の利用例`](./api/cms-methods.md#cmscacheimage-の利用例) と [Next.js App Router レシピ](./recipes/nextjs-app-router.md) を参照。
+
 ## 次のステップ
 
 - [CLI ツール（nhc）](./cli.md)
@@ -175,3 +204,4 @@ const news = await cms.news.list();   // NewsItem[]
 - [Node スクリプト](./recipes/nodejs-script.md)
 - [カスタムデータソース](./recipes/custom-source.md)
 - [CMS メソッド一覧](./api/cms-methods.md)
+- [エラーコード一覧](./errors/index.md)
