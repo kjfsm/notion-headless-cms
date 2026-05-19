@@ -91,6 +91,8 @@ export default {
         "shiki",
         // @tailwindcss/vite プラグイン経由で間接消費される（CSS 側で @tailwindcss/postcss 風に解決）
         "tailwindcss",
+        // app.css の @plugin ディレクティブ経由でロードされる。knip は CSS を解析しない
+        "@tailwindcss/typography",
       ],
     },
   },
