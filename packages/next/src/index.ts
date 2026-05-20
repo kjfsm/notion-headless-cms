@@ -20,6 +20,11 @@ export type {
 export { notionSource } from "@notion-headless-cms/notion-source";
 export type { NextHandlerOptions } from "./next-handler";
 export { createNextHandler } from "./next-handler";
+export type {
+  NextRevalidateResolver,
+  NextWebhookOptions,
+} from "./next-webhook";
+export { createNextWebhookHandler } from "./next-webhook";
 
 /** `createCms()` に渡すオプション（Next.js 向け）。 */
 export interface CreateCmsOptions<S extends SchemaMap>
