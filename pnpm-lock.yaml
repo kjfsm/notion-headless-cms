@@ -465,6 +465,9 @@ importers:
 
   examples/minimal-node:
     dependencies:
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@notion-headless-cms/node':
         specifier: workspace:*
         version: link:../../packages/node

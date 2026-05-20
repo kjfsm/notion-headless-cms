@@ -16,11 +16,10 @@ export async function GET(
   if (!image) {
     return new Response("Not Found", { status: 404 });
   }
-  return new Response(image.data, {
-    headers: {
-      "content-type": image.contentType,
-      // immutable: hash がコンテンツ依存なので URL が変われば内容も変わる。
-      "cache-control": "public, max-age=31536000, immutable",
-    },
+  const headers = new Headers({
+    // immutable: hash がコンテンツ依存なので URL が変われば内容も変わる。
+    "cache-control": "public, max-age=31536000, immutable",
   });
+  if (image.contentType) headers.set("content-type", image.contentType);
+  return new Response(image.data, { headers });
 }
