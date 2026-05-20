@@ -734,6 +734,9 @@ importers:
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core
+      '@notion-headless-cms/validate':
+        specifier: workspace:*
+        version: link:../validate
       '@notionhq/client':
         specifier: 'catalog:'
         version: 5.21.0
@@ -1046,6 +1049,15 @@ importers:
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core
+
+  packages/validate:
+    dependencies:
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../core
+      zod:
+        specifier: 'catalog:'
+        version: 4.4.3
 
 packages:
 

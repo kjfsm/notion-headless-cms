@@ -1,4 +1,5 @@
-import { CMSError } from "@notion-headless-cms/core";
+import { CMSError, isCMSError } from "@notion-headless-cms/core";
+import { validateCMSConfig } from "@notion-headless-cms/validate";
 import type { CMSConfig } from "./index.js";
 
 export async function loadConfig(configPath: string): Promise<CMSConfig> {
@@ -15,26 +16,21 @@ export async function loadConfig(configPath: string): Promise<CMSConfig> {
       : mod
   ) as CMSConfig;
 
-  if (
-    !config ||
-    typeof config.collections !== "object" ||
-    config.collections === null
-  ) {
-    throw new CMSError({
-      code: "cli/config_invalid",
-      message:
-        "設定ファイルが不正です。defineConfig() の戻り値 (collections を含む) を default export してください。",
-      context: { operation: "loadConfig", configPath },
-    });
-  }
-
-  if (!config.output) {
-    throw new CMSError({
-      code: "cli/config_invalid",
-      message:
-        '設定ファイルに output の指定が必要です。例: output: "./app/generated/nhc-schema.ts"',
-      context: { operation: "loadConfig", configPath },
-    });
+  // 旧来は手書きの分岐で defineConfig() の戻り値かどうかをざっくり判定していたが、
+  // フィールド単位で「何が足りないか」を伝えるため zod ベースの validateCMSConfig に置き換える。
+  // 失敗時の core/schema_invalid を CLI 文脈の cli/config_invalid に詰め直す。
+  try {
+    validateCMSConfig(config);
+  } catch (err) {
+    if (isCMSError(err) && err.code === "core/schema_invalid") {
+      throw new CMSError({
+        code: "cli/config_invalid",
+        message: err.message,
+        cause: err,
+        context: { operation: "loadConfig", configPath },
+      });
+    }
+    throw err;
   }
 
   return config;
