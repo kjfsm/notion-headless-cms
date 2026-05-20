@@ -55,21 +55,20 @@ describe("notionSource", () => {
     ]);
   });
 
-  it("blocks / ogp を createNotionCollection に渡す", () => {
-    const blocks = {};
-    const ogp = { enabled: true } as const;
+  it("fetch オプションを content として createNotionCollection に渡す", () => {
+    const fetcher = vi.fn() as unknown as Parameters<
+      typeof createNotionCollection
+    >[0]["content"];
     notionSource({
       schema,
       token: "tk",
-      blocks,
-      ogp,
+      fetch: fetcher,
     });
     const lastCall = vi.mocked(createNotionCollection).mock.calls.at(-1);
     expect(lastCall?.[0]).toMatchObject({
       token: "tk",
       dataSourceId: "ds-posts",
-      blocks,
-      ogp,
+      content: fetcher,
     });
   });
 });

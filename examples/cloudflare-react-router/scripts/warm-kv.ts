@@ -29,6 +29,7 @@
 
 import { notionEmbed, youtubeProvider } from "@notion-headless-cms/block-html";
 import { createCms, restKvNamespace } from "@notion-headless-cms/cloudflare";
+import { blocksFetcher } from "@notion-headless-cms/fetch-blocks";
 import { schema } from "../app/generated/nhc.js";
 
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
@@ -58,8 +59,7 @@ const kv = restKvNamespace({ accountId, namespaceId, apiToken });
 const cms = createCms({
   schema,
   token: notionToken,
-  blocks: embed.blocks,
-  ogp: { enabled: true },
+  fetch: blocksFetcher({ blocks: embed.blocks, ogp: { enabled: true } }),
   publishOptions: {
     posts: {
       publishedStatuses: ["公開済み"],

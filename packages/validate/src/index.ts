@@ -137,8 +137,6 @@ const notionSourceConfigSchema = z
       }),
     token: z.string().min(1, "notionSource.token は必須です"),
     fetch: z.unknown().optional(),
-    blocks: z.record(z.string(), z.unknown()).optional(),
-    ogp: z.unknown().optional(),
     publishOptions: z.record(z.string(), notionPublishOptionsSchema).optional(),
   })
   .passthrough();
