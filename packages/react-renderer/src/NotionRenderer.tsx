@@ -23,6 +23,8 @@ export function NotionRenderer({
   resolvePageTitle,
   Image: ImageSlot,
   Link: LinkSlot,
+  imageSizes,
+  imageSizesAttr,
 }: NotionRendererProps) {
   const headings = useMemo(() => extractHeadings(blocks), [blocks]);
   const mergedComponents = useMemo(() => {
@@ -43,6 +45,8 @@ export function NotionRenderer({
       Link: LinkSlot,
       headings,
       listDepth: 0,
+      imageSizes,
+      imageSizesAttr,
     }),
     [
       mergedComponents,
@@ -53,6 +57,8 @@ export function NotionRenderer({
       ImageSlot,
       LinkSlot,
       headings,
+      imageSizes,
+      imageSizesAttr,
     ],
   );
   return (
