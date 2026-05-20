@@ -2,7 +2,7 @@ import { noopDocOps, noopImgOps } from "./cache/noop";
 import { CollectionClientImpl, type CollectionContext } from "./collection";
 import { CMSError } from "./errors";
 import { createHandler, type HandlerOptions } from "./handler";
-import { mergeHooks, mergeLoggers } from "./hooks";
+import { mergeHooks, mergeLoggers, withTraceId } from "./hooks";
 import { buildCacheImageFn } from "./image";
 import type { RenderContext } from "./rendering";
 import type { RetryConfig } from "./retry";
@@ -10,6 +10,7 @@ import { DEFAULT_RETRY_CONFIG } from "./retry";
 import type {
   BaseContentItem,
   CacheAdapter,
+  CacheAdapterStats,
   CMSHooks,
   CollectionClient,
   CollectionsConfig,
@@ -37,8 +38,38 @@ export type CMSClient<C extends CollectionsConfig> = {
   [K in keyof C]: CollectionClient<InferCollectionItem<C[K]>>;
 } & CMSGlobalOps;
 
+/**
+ * `cms.stats()` が返す集約済みキャッシュ統計。
+ * 各 adapter の `stats()` 戻り値をそのまま配列で保持しつつ、ヒット率を算出する。
+ */
+export interface CMSStats {
+  /** クライアント単位の trace ID (`createClient` で発行)。 */
+  traceId: string;
+  /** ドキュメントキャッシュの集計 (`handles: ["document"]` の adapter の `stats()` 戻り値)。 */
+  document?: {
+    adapter: string;
+    hits: number;
+    misses: number;
+    entries?: number;
+    sizeBytes?: number;
+    /** 0〜1。`hits + misses === 0` のときは 0。 */
+    hitRate: number;
+  };
+  /** 画像キャッシュの集計 (`handles: ["image"]` の adapter の `stats()` 戻り値)。 */
+  image?: {
+    adapter: string;
+    hits: number;
+    misses: number;
+    entries?: number;
+    sizeBytes?: number;
+    hitRate: number;
+  };
+}
+
 export interface CMSGlobalOps {
   readonly collections: readonly string[];
+  /** クライアント単位の trace ID (`createClient` で発行)。 */
+  readonly traceId: string;
   invalidate(scope?: InvalidateScope): Promise<void>;
   /** Web Standard な Request/Response ベースのルートハンドラ (画像プロキシ + webhook)。 */
   handler(opts?: HandlerOptions): (req: Request) => Promise<Response>;
@@ -49,18 +80,27 @@ export interface CMSGlobalOps {
    */
   readonly cacheImage: ((url: string) => Promise<string>) | undefined;
   readonly imageProxyBase: string;
+  /**
+   * ドキュメント / 画像キャッシュのヒット・ミス・サイズを集約して返す。
+   * 各キャッシュアダプタの `stats()` を呼ぶだけで副作用はない。
+   * `stats()` を実装していない adapter は集計から除外される (noop など)。
+   */
+  stats(): Promise<CMSStats>;
 }
 
 interface ResolvedCache {
   doc: DocumentCacheOps;
   docName: string;
+  docAdapter: CacheAdapter | undefined;
   img: ImageCacheOps;
   imgName: string;
+  imgAdapter: CacheAdapter | undefined;
   hasImg: boolean;
 }
 
 /**
  * adapter の `handles` を見て先勝ちで document / image を割り当てる。未指定は両方 noop。
+ * `cms.stats()` から元 adapter の `stats()` を呼びたいので、解決元 adapter も保持する。
  */
 function resolveCache(
   cache: readonly CacheAdapter[] | undefined,
@@ -69,8 +109,10 @@ function resolveCache(
 
   let doc: DocumentCacheOps = noopDocOps;
   let docName = "noop-document";
+  let docAdapter: CacheAdapter | undefined;
   let img: ImageCacheOps = noopImgOps;
   let imgName = "noop-image";
+  let imgAdapter: CacheAdapter | undefined;
   let docFound = false;
   let imgFound = false;
 
@@ -78,16 +120,38 @@ function resolveCache(
     if (!docFound && adapter.handles.includes("document") && adapter.doc) {
       doc = adapter.doc;
       docName = adapter.name;
+      docAdapter = adapter;
       docFound = true;
     }
     if (!imgFound && adapter.handles.includes("image") && adapter.img) {
       img = adapter.img;
       imgName = adapter.name;
+      imgAdapter = adapter;
       imgFound = true;
     }
   }
 
-  return { doc, docName, img, imgName, hasImg: imgFound };
+  return {
+    doc,
+    docName,
+    docAdapter,
+    img,
+    imgName,
+    imgAdapter,
+    hasImg: imgFound,
+  };
+}
+
+/**
+ * 衝突しにくい短い trace ID を生成する。`{epoch36}-{rand36}` の 10〜12 文字程度。
+ * core はゼロ依存ルールに従い node:crypto を静的 import しないため、Math.random ベースで十分。
+ */
+function generateTraceId(): string {
+  const t = Date.now().toString(36);
+  const r = Math.floor(Math.random() * 36 ** 6)
+    .toString(36)
+    .padStart(6, "0");
+  return `${t}-${r}`;
 }
 
 const LOG_LEVEL_ORDER: Record<LogLevel, number> = {
@@ -186,13 +250,17 @@ export function createClient<S extends CMSSources = CMSSources>(
   const contentConfig = opts.content;
   const rendererFn: RendererFn | undefined = opts.renderer;
   const waitUntil = opts.waitUntil;
+  // plugin logger と createClient 引数の logger を合成し、その上でクライアント単位の
+  // traceId をログコンテキストに自動付与する。
   const baseLogger: Logger | undefined = mergeLoggers(
     opts.plugins ?? [],
     opts.logger,
   );
+  const traceId = generateTraceId();
+  const tracedLogger = withTraceId(baseLogger, traceId);
   const logger = opts.logLevel
-    ? applyLogLevel(baseLogger, opts.logLevel)
-    : baseLogger;
+    ? applyLogLevel(tracedLogger, opts.logLevel)
+    : tracedLogger;
   const hooks: CMSHooks<BaseContentItem> = mergeHooks(
     opts.plugins ?? [],
     opts.hooks,
@@ -255,6 +323,54 @@ export function createClient<S extends CMSSources = CMSSources>(
     collections: collectionNames,
     cacheImage,
     imageProxyBase,
+    traceId,
+    async stats(): Promise<CMSStats> {
+      const stats: CMSStats = { traceId };
+      // doc / img それぞれ、resolveCache が選んだ adapter にだけ stats() を要求する。
+      // 同じ adapter が両方を担当している場合 (memoryCache など) は 1 回呼ぶだけで足りる。
+      const adapterCache = new Map<CacheAdapter, Promise<CacheAdapterStats>>();
+      const ensure = (
+        adapter: CacheAdapter | undefined,
+      ): Promise<CacheAdapterStats> | undefined => {
+        if (!adapter?.stats) return undefined;
+        const cached = adapterCache.get(adapter);
+        if (cached) return cached;
+        const fresh = adapter.stats();
+        adapterCache.set(adapter, fresh);
+        return fresh;
+      };
+      const docPromise = ensure(cacheRes.docAdapter);
+      const imgPromise = ensure(cacheRes.imgAdapter);
+      const computeHitRate = (h: number, m: number): number =>
+        h + m === 0 ? 0 : h / (h + m);
+      if (docPromise) {
+        const docStats = await docPromise;
+        if (docStats.doc) {
+          stats.document = {
+            adapter: docStats.name ?? cacheRes.docName,
+            hits: docStats.doc.hits,
+            misses: docStats.doc.misses,
+            entries: docStats.doc.entries,
+            sizeBytes: docStats.doc.sizeBytes,
+            hitRate: computeHitRate(docStats.doc.hits, docStats.doc.misses),
+          };
+        }
+      }
+      if (imgPromise) {
+        const imgStats = await imgPromise;
+        if (imgStats.img) {
+          stats.image = {
+            adapter: imgStats.name ?? cacheRes.imgName,
+            hits: imgStats.img.hits,
+            misses: imgStats.img.misses,
+            entries: imgStats.img.entries,
+            sizeBytes: imgStats.img.sizeBytes,
+            hitRate: computeHitRate(imgStats.img.hits, imgStats.img.misses),
+          };
+        }
+      }
+      return stats;
+    },
     async invalidate(scope?: InvalidateScope): Promise<void> {
       logger?.debug?.("グローバルキャッシュを無効化", {
         operation: "invalidate",

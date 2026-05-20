@@ -4,7 +4,12 @@ export interface RetryConfig {
   baseDelayMs: number;
   /** true のとき指数バックオフにランダムジッターを加える（Thundering Herd 対策）。デフォルト: true */
   jitter?: boolean;
-  onRetry?: (attempt: number, status: number) => void;
+  /**
+   * リトライ前に呼ばれるフック。`attempt` は 1 始まり、`status` はリトライ対象の HTTP ステータス、
+   * `delayMs` は次回試行までの実際の待機時間 (ジッター反映後)。
+   * 既存呼び出しは `attempt` / `status` だけで動くよう `delayMs` は省略可。
+   */
+  onRetry?: (attempt: number, status: number, delayMs?: number) => void;
 }
 
 export const DEFAULT_RETRY_CONFIG: RetryConfig = {
@@ -37,10 +42,12 @@ export async function withRetry<T>(
       }
       lastError = err;
       if (attempt < config.maxRetries) {
-        config.onRetry?.(attempt + 1, status);
         const jitterFactor =
           config.jitter !== false ? 0.5 + Math.random() * 0.5 : 1;
         const delay = config.baseDelayMs * 2 ** attempt * jitterFactor;
+        // onRetry には attempt / status と次回待機時間 (ms) を渡す。
+        // 呼び出し側のロガーが `LogContext.backoffMs` として記録できる。
+        config.onRetry?.(attempt + 1, status, delay);
         await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }

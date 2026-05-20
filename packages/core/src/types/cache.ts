@@ -50,6 +50,32 @@ export interface ImageCacheOps {
 }
 
 /**
+ * 1 領域 (document / image) ぶんのキャッシュ統計。
+ * `CacheAdapter.stats()` の戻り値 / `cms.stats()` の集約形に使う。
+ */
+export interface CacheAreaStats {
+  /** キャッシュヒット回数 (起動から累積)。 */
+  hits: number;
+  /** キャッシュミス回数 (起動から累積)。 */
+  misses: number;
+  /** 保持エントリ数。集計不可な adapter は省略可。 */
+  entries?: number;
+  /** 保持データの合計バイト数。集計不可な adapter は省略可。 */
+  sizeBytes?: number;
+}
+
+/**
+ * `CacheAdapter.stats()` が返す統計。document / image を併せ持つ adapter は両方を返す。
+ * adapter が `handles` に含めていない領域は省略する。
+ */
+export interface CacheAdapterStats {
+  /** adapter 名 (`CacheAdapter.name` と同値)。`cms.stats()` 側で識別用に保持する。 */
+  name?: string;
+  doc?: CacheAreaStats;
+  img?: CacheAreaStats;
+}
+
+/**
  * 統一キャッシュアダプタ。`handles` で担当領域を申告し、
  * `doc` / `img` のいずれか（または両方）を実装する。
  *
@@ -61,10 +87,18 @@ export interface ImageCacheOps {
  * cache: r2Cache({ bucket })                      // image のみ
  * cache: kvCache({ namespace })                   // document のみ
  * cache: [kvCache({ ns }), r2Cache({ bucket })]   // 個別に組み合わせ
+ *
+ * オプションの `stats()` を実装すると `cms.stats()` 経由でヒット率・サイズが取得できる。
+ * 未実装の adapter はそのまま動作する。
  */
 export interface CacheAdapter {
   readonly name: string;
   readonly handles: readonly ("document" | "image")[];
   doc?: DocumentCacheOps;
   img?: ImageCacheOps;
+  /**
+   * キャッシュ統計を返す任意のフック。
+   * adapter が hit/miss を集計していない場合は実装しない (cms.stats() 側で無視される)。
+   */
+  stats?(): Promise<CacheAdapterStats>;
 }

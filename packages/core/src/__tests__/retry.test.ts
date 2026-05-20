@@ -44,7 +44,12 @@ describe("withRetry", () => {
     const err = Object.assign(new Error("rate limit"), { status: 429 });
     const fn = vi.fn().mockRejectedValueOnce(err).mockResolvedValue("ok");
     await withRetry(fn, { ...config, onRetry });
-    expect(onRetry).toHaveBeenCalledWith(1, 429);
+    // 第 3 引数の delayMs は jitter で確定値にならないので number で検証する。
+    expect(onRetry).toHaveBeenCalledTimes(1);
+    const args = onRetry.mock.calls[0] ?? [];
+    expect(args[0]).toBe(1);
+    expect(args[1]).toBe(429);
+    expect(typeof args[2]).toBe("number");
   });
 
   it("jitter が有効のときランダム係数が delay に加わる", async () => {
