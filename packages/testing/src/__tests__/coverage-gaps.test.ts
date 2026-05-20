@@ -22,8 +22,10 @@ const meta = (slug: string): CachedItemMeta<BaseContentItem> => ({
   cachedAt: 0,
 });
 const content = (slug: string): CachedItemContent => ({
-  bodyHtml: `<p>${slug}</p>`,
-  bodyMd: `# ${slug}`,
+  html: `<p>${slug}</p>`,
+  markdown: `# ${slug}`,
+  blocks: [],
+  notionUpdatedAt: "2024-01-01",
   cachedAt: 0,
 });
 const list = (slugs: string[]): CachedItemList<BaseContentItem> => ({
