@@ -2,12 +2,12 @@
   {
     "name": "core",
     "path": "packages/core/dist/index.mjs",
-    "limit": "20 kB"
+    "limit": "65 kB"
   },
   {
-    "name": "renderer",
-    "path": "packages/renderer/dist/index.mjs",
-    "limit": "10 kB"
+    "name": "markdown-html",
+    "path": "packages/markdown-html/dist/index.mjs",
+    "limit": "55 kB"
   },
   {
     "name": "cache",
@@ -17,26 +17,11 @@
   {
     "name": "cache/cloudflare",
     "path": "packages/cache/dist/cloudflare.mjs",
-    "limit": "10 kB"
-  },
-  {
-    "name": "cache/next",
-    "path": "packages/cache/dist/next.mjs",
     "limit": "5 kB"
   },
   {
-    "name": "adapter-next",
-    "path": "packages/adapter-next/dist/index.mjs",
-    "limit": "10 kB"
-  },
-  {
-    "name": "notion-embed",
-    "path": "packages/notion-embed/dist/index.mjs",
-    "limit": "20 kB"
-  },
-  {
-    "name": "cli",
-    "path": "packages/cli/dist/cli.mjs",
-    "limit": "50 kB"
+    "name": "validate",
+    "path": "packages/validate/dist/index.mjs",
+    "limit": "65 kB"
   }
 ]

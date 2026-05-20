@@ -63,6 +63,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
+    "bench": "vitest bench --run",
     "publint": "publint --strict",
     "attw": "attw --pack . --profile esm-only"
   },
