@@ -11,4 +11,5 @@ export default defineWorkspace([
   "packages/notion-shiki",
   "packages/cli",
   "packages/react-renderer",
+  "packages/testing",
 ]);
