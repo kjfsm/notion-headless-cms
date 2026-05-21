@@ -7,7 +7,7 @@ export default defineConfig({
   collections: {
     posts: {
       // DB_NAME 環境変数で上書き可能。未設定時は "ブログ記事DB" にフォールバック。
-      dbName: env("DB_NAME") || "ブログ記事DB",
+      dbName: "ブログ記事DB",
       slugField: "slug",
       statusField: "status",
       publishedStatuses: ["公開済み"],

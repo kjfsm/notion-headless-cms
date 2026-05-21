@@ -10,6 +10,9 @@ enabled = true
 [build]
 command = "pnpm build"
 
+[secrets]
+required = ["NOTION_TOKEN"]
+
 [[kv_namespaces]]
 binding = "DOC_CACHE"
 id = "d949487218794cbe8e8d3cdaee119790"
