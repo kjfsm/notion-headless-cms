@@ -1,5 +1,61 @@
 # @notion-headless-cms/next
 
+## 1.1.0
+
+### Minor Changes
+
+- e2c8bee: M4: deprecated 削除と publishOptions のフォールバック規則明文化 (Issue #333)
+
+  ## Breaking
+
+  - `notionSource({ blocks, ogp })` を削除した (v0.3.25 で `@deprecated` 化されていた)
+  - カスタムブロックハンドラと OGP 取得は `fetch: blocksFetcher({ blocks, ogp })` に統一
+  - `createCms()` (node / next / cloudflare) からも `blocks` / `ogp` を削除し、`fetch` に集約
+  - `@notion-headless-cms/validate` の `validateNotionSourceConfig` も `blocks` / `ogp` の許可をやめた
+
+  ## 移行ガイド
+
+  ```diff
+  - notionSource({
+  -   schema,
+  -   token,
+  -   blocks: embed.blocks,
+  -   ogp: { enabled: true },
+  - })
+  + notionSource({
+  +   schema,
+  +   token,
+  +   fetch: blocksFetcher({ blocks: embed.blocks, ogp: { enabled: true } }),
+  + })
+  ```
+
+  `@notion-headless-cms/fetch-blocks` を依存に追加すること。
+
+  ## docs
+
+  - `packages/notion-source/README.md` に `publishedStatuses` / `accessibleStatuses` のフォールバック規則を追記
+    - `accessibleStatuses` 未指定時は閲覧チェックが行われない
+    - `publishedStatuses` 未指定時は `list()` が全件返す
+    - `publishedStatuses` は `accessibleStatuses` の部分集合となるよう運用するのを推奨
+
+### Patch Changes
+
+- 68c543f: M6: Webhook → revalidate の補助ヘルパーを追加 (Issue #333)
+
+  - `createNextWebhookHandler(cms, { secret, revalidate })` を `@notion-headless-cms/next` から公開
+    - `cms.handler({ webhookSecret })` を内部で再利用しつつ、ペイロード処理後に Next.js の `revalidateTag` / `revalidatePath` まで 1 リクエストで完結
+    - `revalidate` には固定値 `{ tags, paths }` または webhook ペイロードから決まる `InvalidateScope` を受ける関数 (`NextRevalidateResolver`) を渡せる
+  - low-level の `createNextHandler` / `cms.handler` / `cms.invalidate` は引き続き利用可能
+  - `examples/vercel-nextjs` に `app/api/cms/webhook/[collection]/route.ts` を追加し、新ヘルパーを使う例を示す
+
+- Updated dependencies [c55a06a]
+- Updated dependencies [8e73f8e]
+- Updated dependencies [64b7d32]
+- Updated dependencies [e2c8bee]
+- Updated dependencies [ac2c402]
+  - @notion-headless-cms/core@0.4.0
+  - @notion-headless-cms/notion-source@0.2.0
+
 ## 1.0.5
 
 ### Patch Changes

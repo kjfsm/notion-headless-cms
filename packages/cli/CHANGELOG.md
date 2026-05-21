@@ -1,5 +1,36 @@
 # @notion-headless-cms/cli
 
+## 1.1.0
+
+### Minor Changes
+
+- c55a06a: DX とドキュメント差分の解消 (Issue #332)
+
+  - **core**: 組み込みエラーコード 27 種類すべてに `docsUrl` (docs/ja/errors/index.md へのアンカー) と `nextSteps` の既定値を `CMSError` コンストラクタで自動補完するように。呼び出し側で明示指定した値は引き続き優先される
+  - **cli**: `nhc generate` / `nhc init` に `--verbose` / `--debug` フラグを追加。verbose 時は CMSError の `nextSteps` / `docsUrl` を、debug 時はスタックトレースと cause を出力。help に「よくある詰まり所」セクションを追加し、進捗表示も拡充
+  - **testing**: 新規パッケージ `@notion-headless-cms/testing` を公開。`createFakeNotionSource({ items })` / `createFakeCache()` / `createFixtureClient(opts)` / `fakeRenderer` を提供。`@notion-headless-cms/core` 以外への依存ゼロ
+
+### Patch Changes
+
+- d414823: M1: zod 検証パッケージ `@notion-headless-cms/validate` を新設 (Issue #333)
+
+  - 新規パッケージ `@notion-headless-cms/validate` を opt-in で公開
+    - `validateCreateClientOptions(opts)` — `createClient({...})` の引数を実行時検証
+    - `validateNotionSourceConfig(opts)` — `notionSource({...})` の引数を実行時検証
+    - `validateCMSConfig(config)` — `nhc.config.ts` の `defineConfig()` 戻り値を検証
+  - いずれも失敗時は `CMSError(code: "core/schema_invalid")` を投げ、不正フィールド名と原因をまとめて表示する
+  - `packages/core` には zod の依存を追加しない (ゼロ依存ルールの維持)
+  - CLI の `loadConfig()` を zod 化し、`output` / `collections[*].databaseId|dbName` などの不足をフィールド単位で報告する
+
+- Updated dependencies [c55a06a]
+- Updated dependencies [d414823]
+- Updated dependencies [8e73f8e]
+- Updated dependencies [64b7d32]
+- Updated dependencies [e2c8bee]
+- Updated dependencies [ac2c402]
+  - @notion-headless-cms/core@0.4.0
+  - @notion-headless-cms/validate@0.1.1
+
 ## 1.0.35
 
 ### Patch Changes
