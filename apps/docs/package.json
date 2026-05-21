@@ -17,7 +17,7 @@
     "test:screenshots": "PLAYWRIGHT_HTML_OPEN=never playwright test",
     "test:e2e": "PLAYWRIGHT_HTML_OPEN=never playwright test e2e/navigation.spec.ts",
     "typecheck": "tsc -b",
-    "wrangler:dev": "rm -f .wrangler/deploy/config.json && pnpm run build && wrangler dev"
+    "wrangler:dev": "wrangler dev"
   },
   "dependencies": {
     "@icons-pack/react-simple-icons": "^13.13.0",
