@@ -1,5 +1,45 @@
 # @notion-headless-cms/core
 
+## 0.4.0
+
+### Minor Changes
+
+- c55a06a: DX とドキュメント差分の解消 (Issue #332)
+
+  - **core**: 組み込みエラーコード 27 種類すべてに `docsUrl` (docs/ja/errors/index.md へのアンカー) と `nextSteps` の既定値を `CMSError` コンストラクタで自動補完するように。呼び出し側で明示指定した値は引き続き優先される
+  - **cli**: `nhc generate` / `nhc init` に `--verbose` / `--debug` フラグを追加。verbose 時は CMSError の `nextSteps` / `docsUrl` を、debug 時はスタックトレースと cause を出力。help に「よくある詰まり所」セクションを追加し、進捗表示も拡充
+  - **testing**: 新規パッケージ `@notion-headless-cms/testing` を公開。`createFakeNotionSource({ items })` / `createFakeCache()` / `createFixtureClient(opts)` / `fakeRenderer` を提供。`@notion-headless-cms/core` 以外への依存ゼロ
+
+### Patch Changes
+
+- 8e73f8e: M2: 可観測性の最小セットを追加 (Issue #333)
+
+  - `LogContext` に `traceId` / `backoffMs` を追加
+  - `createClient` がクライアント単位の `traceId` を発行し、`withTraceId` で全ログコンテキストに自動付与する (ネスト操作・SWR・retry 経由でも同じ ID が流れる)
+  - `cms.traceId` を `CMSGlobalOps` に公開
+  - `mergeLoggers` の plugin / direct logger 合成を明文化 (`cms.ts` 内で `withTraceId` を後段に挟む構成へ更新)
+  - `RetryConfig.onRetry` のシグネチャに `delayMs` を追加し、ジッター反映後の実際の待機時間を `LogContext.backoffMs` として出せる
+  - `CacheAdapter.stats?(): Promise<CacheAdapterStats>` を optional として追加
+  - `cms.stats(): Promise<CMSStats>` を新設。doc/img それぞれヒット率・エントリ数・(画像のみ) 合計バイトを返す
+  - `memoryCache()` が hit/miss/entries/sizeBytes を集計するように
+  - `LogContext` / `CacheAdapterStats` / `CacheAreaStats` を index から re-export
+
+- 64b7d32: M3: キャッシュ層拡張ポイントの整理 (Issue #333)
+
+  - `CacheAdapter` / `DocumentCacheOps` / `ImageCacheOps` の JSDoc を強化
+    - `handles` 判定の先勝ちルールを明文化
+    - `cms.cacheImage` (= `RenderContext.cacheImage`) と `ImageCacheOps` の責務境界を明示 (adapter から `cacheImage` を呼ばないこと)
+    - エラー処理・並列書き込み・fail-soft のガイドラインを追加
+  - `docs/ja/recipes/custom-cache.md` に `createFakeCache()` を使ったユニットテストの章を追加し、`handles` 判定と画像プロキシ責務境界の節を追記
+
+- ac2c402: M7: ベンチマークと bundle size 計測の土台を整備 (Issue #333)
+
+  - `.size-limit.json` を現行パッケージ構成 (core / markdown-html / cache / cache-cloudflare / validate) に合わせて更新。廃止された `renderer` / `adapter-next` / `notion-embed` エントリを削除
+  - `pnpm size` が正常終了する状態に (next の `@opentelemetry/api` 解決問題を避けるため、`next` 経由のエントリは現状除外)
+  - `@notion-headless-cms/core` に `bench` スクリプト (`vitest bench --run`) を追加
+  - `packages/core/src/__tests__/cache.bench.ts` を新規追加。最低限の SWR list/find と `stats()` 集計の回帰検知をカバー
+  - 上記により `pnpm size` / `pnpm --filter @notion-headless-cms/core bench` を CI から呼び出せるようになった
+
 ## 0.3.25
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@notion-headless-cms/notion-shiki",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "Notion code ブロックを fetch 時に shiki で pre-render し、Workers バンドルから shiki を除外する拡張パッケージ",
   "keywords": [
     "notion",

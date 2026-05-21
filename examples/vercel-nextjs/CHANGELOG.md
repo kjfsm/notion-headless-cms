@@ -1,5 +1,25 @@
 # example-vercel-nextjs
 
+## 0.0.56
+
+### Patch Changes
+
+- Updated dependencies [c55a06a]
+- Updated dependencies [8e73f8e]
+- Updated dependencies [64b7d32]
+- Updated dependencies [e2c8bee]
+- Updated dependencies [21a4ecf]
+- Updated dependencies [68c543f]
+- Updated dependencies [ac2c402]
+  - @notion-headless-cms/core@0.4.0
+  - @notion-headless-cms/notion-source@0.2.0
+  - @notion-headless-cms/next@1.1.0
+  - @notion-headless-cms/react-renderer@0.1.12
+  - @notion-headless-cms/cache@0.0.19
+  - @notion-headless-cms/notion-orm@0.1.31
+  - @notion-headless-cms/fetch-markdown@0.0.3
+  - @notion-headless-cms/notion-shiki@0.1.5
+
 ## 0.0.55
 
 ### Patch Changes
