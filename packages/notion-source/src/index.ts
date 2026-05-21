@@ -1,9 +1,5 @@
 import type { CMSAdapter } from "@notion-headless-cms/core/source-author";
-import type { BlockHandler } from "@notion-headless-cms/markdown-html";
-import type {
-  ContentFetcher,
-  FetchBlockTreeOgpOptions,
-} from "@notion-headless-cms/notion-orm";
+import type { ContentFetcher } from "@notion-headless-cms/notion-orm";
 import { createNotionCollection } from "@notion-headless-cms/notion-orm";
 import type { CollectionsFromSchema, SchemaMap } from "./schema-types.js";
 
@@ -23,9 +19,17 @@ declare module "@notion-headless-cms/core" {
 
 /** `notionSource()` のコレクション別パブリッシュオプション。 */
 export interface NotionPublishOptions {
-  /** `list()` のデフォルト絞り込みに使う公開ステータス値。 */
+  /**
+   * `list()` のデフォルト絞り込みに使う公開ステータス値。
+   * 同コレクション内で `accessibleStatuses` も指定する場合は、
+   * `accessibleStatuses` の部分集合になるよう指定すること (詳細: docs/ja/recipes/multi-source.md)。
+   */
   publishedStatuses?: readonly string[];
-  /** `get()` の閲覧可否判定に使うステータス値。 */
+  /**
+   * `get()` の閲覧可否判定に使うステータス値。
+   * 未指定時は `publishedStatuses` で代用される (= 同じ集合)。
+   * 明示すると「下書きでも URL 直叩きでは閲覧可」のような分離が可能。
+   */
   accessibleStatuses?: readonly string[];
 }
 
@@ -41,18 +45,10 @@ export interface NotionSourceConfig<S extends SchemaMap> {
    *
    * Cloudflare Workers Free プラン (50 subrequest 上限) で巨大ページを扱うなら
    * `markdownFetcher()` を推奨。
+   *
+   * カスタムブロックハンドラ / OGP 取得は `blocksFetcher({ blocks, ogp })` 内で指定する。
    */
   fetch?: ContentFetcher;
-  /**
-   * カスタムブロックハンドラーのマップ。
-   * @deprecated `fetch: blocksFetcher({ blocks })` に移動してください。次のメジャーで削除予定。
-   */
-  blocks?: Record<string, BlockHandler>;
-  /**
-   * embed / bookmark / link_preview ブロックの OGP 取得設定。
-   * @deprecated `fetch: blocksFetcher({ ogp })` に移動してください。次のメジャーで削除予定。
-   */
-  ogp?: FetchBlockTreeOgpOptions;
   /** コレクションごとの公開ステータス設定。 */
   publishOptions?: { [K in keyof S]?: NotionPublishOptions };
 }
@@ -72,8 +68,6 @@ export function notionSource<S extends SchemaMap>(
         dataSourceId: entry.dataSourceId,
         properties: entry.properties,
         ...(opts.fetch ? { content: opts.fetch } : {}),
-        ...(opts.blocks ? { blocks: opts.blocks } : {}),
-        ...(opts.ogp ? { ogp: opts.ogp } : {}),
       }),
       slugField: entry.slugField,
       ...(entry.statusField ? { statusField: entry.statusField } : {}),

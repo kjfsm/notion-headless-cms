@@ -465,6 +465,9 @@ importers:
 
   examples/minimal-node:
     dependencies:
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../../packages/core
       '@notion-headless-cms/node':
         specifier: workspace:*
         version: link:../../packages/node
@@ -734,6 +737,9 @@ importers:
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core
+      '@notion-headless-cms/validate':
+        specifier: workspace:*
+        version: link:../validate
       '@notionhq/client':
         specifier: 'catalog:'
         version: 5.21.0
@@ -894,9 +900,6 @@ importers:
       next:
         specifier: '>=14.0.0'
         version: 16.2.6(@babel/core@7.29.0)(@playwright/test@1.60.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      react:
-        specifier: '>=18.0.0'
-        version: 19.2.6
       zod:
         specifier: ^4.0.0
         version: 4.4.3
@@ -1046,6 +1049,15 @@ importers:
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core
+
+  packages/validate:
+    dependencies:
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../core
+      zod:
+        specifier: 'catalog:'
+        version: 4.4.3
 
 packages:
 

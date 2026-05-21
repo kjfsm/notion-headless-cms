@@ -48,10 +48,17 @@ const cms = createClient({
 |---|---|---|
 | `schema` | ✓ | CLI 生成の `nhc.schema.ts` から import する `SchemaMap` |
 | `token` | ✓ | Notion API トークン |
-| `blocks` | – | カスタムブロックハンドラーのマップ（`@notion-headless-cms/notion-embed` の `embed.blocks` 等） |
-| `enrichers` | – | `BlockEnricher` のリスト（`@notion-headless-cms/notion-katex` 等） |
-| `ogp` | – | bookmark / embed / link_preview ブロックの OGP 取得設定 |
+| `fetch` | – | 本文取得戦略 (`blocksFetcher(...)` / `markdownFetcher(...)`)。カスタムブロックハンドラ・OGP 取得は `blocksFetcher({ blocks, ogp })` 内で指定する |
 | `publishOptions` | – | コレクション別の `publishedStatuses` / `accessibleStatuses` |
+
+#### `publishOptions` のフォールバック規則
+
+- `publishedStatuses` は `cms.posts.list()` のデフォルト絞り込みに使われる
+- `accessibleStatuses` は `cms.posts.get(slug)` / `find(slug)` の閲覧可否判定に使われる
+- **`accessibleStatuses` 未指定**: 単独で `cms.get` を呼んだ場合の閲覧チェックは行われない (常に閲覧可)。`publishedStatuses` の値で代用したい場合は明示的にコピーする
+- **`publishedStatuses` 未指定**: `list()` の絞り込みが無効になり全件返す。CLI の `nhc init` テンプレでは「`公開済み`」相当を入れる前提
+- `publishedStatuses` が `accessibleStatuses` の部分集合になるよう運用するのを推奨 (公開記事は閲覧可と一致させる)
+- どちらも `notionSource({ publishOptions })` で `notion` ソースごとに上書き可能。`nhc.config.ts` に書かれた値は生成物には埋め込まれないため、ランタイムでは `notionSource` 側の値が常に正
 
 ### `SchemaMap`
 

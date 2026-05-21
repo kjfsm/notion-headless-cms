@@ -50,6 +50,7 @@
   },
   "dependencies": {
     "@notion-headless-cms/core": "workspace:*",
+    "@notion-headless-cms/validate": "workspace:*",
     "@notionhq/client": "catalog:",
     "commander": "^14.0.3",
     "dotenv": "catalog:",

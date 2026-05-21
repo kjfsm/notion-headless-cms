@@ -1,6 +1,8 @@
 import type {
   BaseContentItem,
   CacheAdapter,
+  CacheAdapterStats,
+  CacheAreaStats,
   CachedItemContent,
   CachedItemList,
   CachedItemMeta,
@@ -46,17 +48,26 @@ class MemoryDocumentOps implements DocumentCacheOps {
   private metas = new Map<string, CachedItemMeta<BaseContentItem>>();
   private contents = new Map<string, CachedItemContent>();
   private readonly maxItems: number | undefined;
+  /** `cms.stats()` 用のヒット/ミス集計 (list+meta+content の合計)。 */
+  hits = 0;
+  misses = 0;
 
   constructor(options?: MemoryDocumentOptions) {
     this.maxItems = options?.maxItems;
   }
 
+  /** 保持エントリ数 (list / meta / content の合計)。stats() で使う。 */
+  totalEntries(): number {
+    return this.lists.size + this.metas.size + this.contents.size;
+  }
+
   getList<T extends BaseContentItem>(
     collection: string,
   ): Promise<CachedItemList<T> | null> {
-    return Promise.resolve(
-      (this.lists.get(collection) as CachedItemList<T> | undefined) ?? null,
-    );
+    const entry = this.lists.get(collection) as CachedItemList<T> | undefined;
+    if (entry) this.hits++;
+    else this.misses++;
+    return Promise.resolve(entry ?? null);
   }
 
   setList<T extends BaseContentItem>(
@@ -73,7 +84,12 @@ class MemoryDocumentOps implements DocumentCacheOps {
   ): Promise<CachedItemMeta<T> | null> {
     const key = itemKey(collection, slug);
     const entry = this.metas.get(key) as CachedItemMeta<T> | undefined;
-    if (entry) touch(this.metas, key);
+    if (entry) {
+      touch(this.metas, key);
+      this.hits++;
+    } else {
+      this.misses++;
+    }
     return Promise.resolve(entry ?? null);
   }
 
@@ -95,7 +111,12 @@ class MemoryDocumentOps implements DocumentCacheOps {
   ): Promise<CachedItemContent | null> {
     const key = itemKey(collection, slug);
     const entry = this.contents.get(key);
-    if (entry) touch(this.contents, key);
+    if (entry) {
+      touch(this.contents, key);
+      this.hits++;
+    } else {
+      this.misses++;
+    }
     return Promise.resolve(entry ?? null);
   }
 
@@ -165,6 +186,9 @@ class MemoryImageOps implements ImageCacheOps {
   private totalBytes = 0;
   private readonly maxItems: number | undefined;
   private readonly maxSizeBytes: number | undefined;
+  /** `cms.stats()` 用のヒット/ミス集計。 */
+  hits = 0;
+  misses = 0;
 
   constructor(options?: MemoryImageOptions) {
     this.maxItems = options?.maxItems;
@@ -173,8 +197,18 @@ class MemoryImageOps implements ImageCacheOps {
 
   get(hash: string): Promise<StorageBinary | null> {
     const entry = this.store.get(hash);
-    if (entry) touch(this.store, hash);
+    if (entry) {
+      touch(this.store, hash);
+      this.hits++;
+    } else {
+      this.misses++;
+    }
     return Promise.resolve(entry ?? null);
+  }
+
+  /** stats() 用に、現在の保持エントリ数と合計バイト数を返す。 */
+  snapshot(): { entries: number; sizeBytes: number } {
+    return { entries: this.store.size, sizeBytes: this.totalBytes };
   }
 
   set(hash: string, data: ArrayBuffer, contentType: string): Promise<void> {
@@ -207,14 +241,33 @@ class MemoryImageOps implements ImageCacheOps {
  * インメモリのキャッシュアダプタ。document + image 両方を担当する。
  * プロセス再起動でクリアされるため、ローカル開発・SSG ビルド・テスト用途。
  *
+ * `stats()` でヒット率・エントリ数・画像合計バイト数を返す。
+ *
  * @example
  * cache: [memoryCache({ maxItems: 1000 })]
  */
 export function memoryCache(options?: MemoryCacheOptions): CacheAdapter {
+  const doc = new MemoryDocumentOps(options);
+  const img = new MemoryImageOps(options);
   return {
     name: "memory",
     handles: ["document", "image"] as const,
-    doc: new MemoryDocumentOps(options),
-    img: new MemoryImageOps(options),
+    doc,
+    img,
+    async stats(): Promise<CacheAdapterStats> {
+      const imgSnap = img.snapshot();
+      const docArea: CacheAreaStats = {
+        hits: doc.hits,
+        misses: doc.misses,
+        entries: doc.totalEntries(),
+      };
+      const imgArea: CacheAreaStats = {
+        hits: img.hits,
+        misses: img.misses,
+        entries: imgSnap.entries,
+        sizeBytes: imgSnap.sizeBytes,
+      };
+      return { name: "memory", doc: docArea, img: imgArea };
+    },
   };
 }

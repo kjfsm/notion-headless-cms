@@ -1,5 +1,7 @@
 export type {
   CacheAdapter,
+  CacheAdapterStats,
+  CacheAreaStats,
   DocumentCacheOps,
   ImageCacheOps,
 } from "./cache";
@@ -46,5 +48,5 @@ export type {
   WebhookConfig,
 } from "./data-source";
 export type { CMSHooks, MaybePromise } from "./hooks";
-export type { Logger } from "./logger";
+export type { LogContext, Logger } from "./logger";
 export type { CMSPlugin } from "./plugin";

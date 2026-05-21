@@ -511,8 +511,12 @@ export class CollectionClientImpl<T extends BaseContentItem>
         }),
       {
         ...this.ctx.retryConfig,
-        onRetry: (attempt, status) => {
-          this.ctx.logger?.warn?.("list() リトライ中", { attempt, status });
+        onRetry: (attempt, status, delayMs) => {
+          this.ctx.logger?.warn?.("list() リトライ中", {
+            attempt,
+            status,
+            backoffMs: delayMs,
+          });
         },
       },
     );
@@ -530,11 +534,12 @@ export class CollectionClientImpl<T extends BaseContentItem>
   private async fetchRaw(slug: string): Promise<T | null> {
     const retryOpts = {
       ...this.ctx.retryConfig,
-      onRetry: (attempt: number, status: number) => {
+      onRetry: (attempt: number, status: number, delayMs?: number) => {
         this.ctx.logger?.warn?.("find() リトライ中", {
           attempt,
           status,
           slug,
+          backoffMs: delayMs,
         });
       },
     };

@@ -15,6 +15,12 @@ import type {
   ResolvePageUrlFn,
 } from "./types.js";
 
+/**
+ * レスポンシブ画像生成に使う幅 (px) のリスト。
+ * `Image` ブロックが proxy URL を受け取った場合、`?w={width}` を付けた `srcSet` を生成する。
+ */
+export type ImageSizes = readonly number[];
+
 export interface NotionRendererContextValue {
   components: ComponentOverrides;
   classNames?: BlockClassNames;
@@ -27,6 +33,13 @@ export interface NotionRendererContextValue {
   headings?: ExtractedHeading[];
   /** numbered_list の入れ子深さ。`<ol>` の list-style ローテーションに使う。 */
   listDepth?: number;
+  /**
+   * `srcSet` 生成に使う幅 (px) のリスト。指定すると `Image` ブロックは
+   * `?w={width}` クエリ付きの URL を `srcSet` として出力する。
+   */
+  imageSizes?: ImageSizes;
+  /** `Image` ブロックに渡す `sizes` 属性 (`srcSet` と組合せて使う)。 */
+  imageSizesAttr?: string;
 }
 
 export const NotionContext = createContext<NotionRendererContextValue>({

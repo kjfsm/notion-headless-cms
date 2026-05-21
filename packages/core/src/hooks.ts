@@ -138,3 +138,26 @@ export function mergeLoggers(
   }
   return merged;
 }
+
+/**
+ * 既存 Logger をラップし、全ログコンテキストに `traceId` を自動で付与する。
+ * 呼び出し側が明示的に traceId を渡した場合はその値を優先する。
+ *
+ * `createClient` がクライアント単位の trace ID を発行し、ネストした操作
+ * (list / find / SWR 再生成 / retry) で同じ ID をログに伝搬するために使う。
+ */
+export function withTraceId(
+  logger: Logger | undefined,
+  traceId: string,
+): Logger | undefined {
+  if (!logger) return undefined;
+  const wrapped: Logger = {};
+  for (const level of ["debug", "info", "warn", "error"] as const) {
+    const fn = logger[level];
+    if (!fn) continue;
+    wrapped[level] = (message, context) => {
+      fn(message, { traceId, ...(context ?? {}) });
+    };
+  }
+  return wrapped;
+}

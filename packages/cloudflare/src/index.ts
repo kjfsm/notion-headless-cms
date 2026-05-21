@@ -37,7 +37,7 @@ export { notionSource } from "@notion-headless-cms/notion-source";
 
 /** `createCms()` に渡すオプション（Cloudflare Workers 向け）。 */
 export interface CreateCmsOptions<S extends SchemaMap>
-  extends Pick<NotionSourceConfig<S>, "blocks" | "ogp"> {
+  extends Pick<NotionSourceConfig<S>, "fetch"> {
   schema: S;
   token: string;
   publishOptions?: { [K in keyof S]?: NotionPublishOptions };
@@ -67,8 +67,7 @@ export function createCms<S extends SchemaMap>(opts: CreateCmsOptions<S>) {
       notion: notionSource({
         schema: opts.schema,
         token: opts.token,
-        ...(opts.blocks ? { blocks: opts.blocks } : {}),
-        ...(opts.ogp ? { ogp: opts.ogp } : {}),
+        ...(opts.fetch ? { fetch: opts.fetch } : {}),
         publishOptions: opts.publishOptions,
       }),
     },

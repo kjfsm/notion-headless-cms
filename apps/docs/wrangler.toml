@@ -19,6 +19,9 @@ not_found_handling = "none"
 [observability]
 enabled = true
 
+[secrets]
+required = ["NOTION_TOKEN"]
+
 # デプロイは Cloudflare GitHub App (Workers Builds) を使う。
 # ビルドコマンド / Root directory / 環境変数 / シークレットは Cloudflare ダッシュボード側で設定する。
 # 詳細は `apps/docs/README.md` の「Cloudflare Workers Builds セットアップ」を参照。

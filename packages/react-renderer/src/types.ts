@@ -178,4 +178,12 @@ export interface NotionRendererProps {
   Image?: ElementType<ImgHTMLAttributes<HTMLImageElement>>;
   /** `<a>` を差し替えるコンポーネント。next/link などのフレームワーク最適化に使う（#219）。 */
   Link?: ElementType<AnchorHTMLAttributes<HTMLAnchorElement>>;
+  /**
+   * レスポンシブ画像生成に使う幅 (px) のリスト。指定すると `Image` ブロックが
+   * `?w={width}` クエリ付きの `srcSet` を出力する。画像プロキシ側で派生キーをサポートしている前提。
+   * 例: `[400, 800, 1200]`
+   */
+  imageSizes?: readonly number[];
+  /** `<img sizes="...">` 属性。`imageSizes` と組み合わせて使う。 */
+  imageSizesAttr?: string;
 }

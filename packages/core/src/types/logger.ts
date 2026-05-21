@@ -8,6 +8,8 @@ export interface LogContext {
   pageId?: string;
   durationMs?: number;
   attempt?: number;
+  /** リトライ間の待機時間 (ms)。`withRetry` の遅延出力で使う。 */
+  backoffMs?: number;
   status?: number;
   error?: string;
   collection?: string;
@@ -16,6 +18,12 @@ export interface LogContext {
   cachedAt?: number;
   /** 画像キャッシュの SHA256 ハッシュキー。ストレージと対応付け用 */
   imageHash?: string;
+  /**
+   * 単一の `createClient` 呼び出しに紐づくトレース ID。
+   * `createClient` 内で発行され、ネストされた操作 (list / find / SWR 再生成 / retry など) の
+   * 全ログコンテキストに同じ値が伝搬する。複数 CMS クライアントを並走させた際の追跡用。
+   */
+  traceId?: string;
   [key: string]: unknown;
 }
 

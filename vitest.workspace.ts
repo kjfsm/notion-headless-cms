@@ -12,4 +12,5 @@ export default defineWorkspace([
   "packages/cli",
   "packages/react-renderer",
   "packages/testing",
+  "packages/validate",
 ]);

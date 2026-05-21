@@ -172,3 +172,58 @@ cache: [{
   img: myImgOps,
 }]
 ```
+
+## `handles` 判定と画像プロキシの責務境界
+
+`createClient({ cache })` は配列を先頭から走査し、
+
+- `handles.includes("document")` を満たす最初の adapter → document 担当
+- `handles.includes("image")` を満たす最初の adapter → image 担当
+
+を割り当てる。たとえば `[kvCache(...), r2Cache(...)]` を渡すと、KV が document、R2 が image を受け持ち、`memoryCache()` のように両方申告した adapter は単独で両領域を担当する。
+
+画像 URL は Notion 側で約 1 時間で失効するため、core は
+
+1. URL を SHA256 ハッシュに変換
+2. `ImageCacheOps.set(hash, bytes, contentType)` で保存
+3. `{imageProxyBase}/{hash}` のプロキシ URL を返す
+
+という一連の処理を `cms.cacheImage(url)` (= `RenderContext.cacheImage`) にまとめて公開している。**`ImageCacheOps` 実装側はこの関数を呼ばない**こと。`hash` をキーにしたバイナリの保存・取得のみを担当するのが約束。
+
+## テスト: `createFakeCache()` でユニットテスト
+
+`@notion-headless-cms/testing` の `createFakeCache()` は in-memory の `CacheAdapter` を返す。Notion API や永続ストレージを叩かずに、独自の hooks や invalidate 動線を検証するときに使う。
+
+```ts
+import { describe, expect, it } from "vitest";
+import { createFakeCache, createFixtureClient } from "@notion-headless-cms/testing";
+
+describe("私のアプリのキャッシュ動線", () => {
+  it("invalidate で hit がリセットされる", async () => {
+    const cache = createFakeCache();
+    const cms = createFixtureClient({
+      items: [
+        { id: "1", slug: "first", title: "first", lastEditedTime: "2024-01-01" },
+      ],
+      cache: [cache], // 第三者の adapter を差し込みたいときも同じ形
+    });
+
+    await cms.posts.list(); // miss
+    await cms.posts.list(); // hit
+
+    const before = await cms.stats();
+    expect(before.document?.hits).toBeGreaterThan(0);
+
+    await cms.invalidate();
+    await cms.posts.list();
+
+    const after = await cms.stats();
+    expect(after.document?.misses).toBeGreaterThanOrEqual(
+      (before.document?.misses ?? 0) + 1,
+    );
+  });
+});
+```
+
+独自 adapter を実装した場合も、`createFakeCache()` と `createFixtureClient()` の組み合わせで「core が期待する読み書きシーケンス」を再現できる。fake は core のテストで使っているものと同じパターンなので、本番アダプタとの差分が `get` / `set` の本物実装だけに収まるよう設計するとよい。
+
