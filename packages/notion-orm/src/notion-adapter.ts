@@ -47,18 +47,18 @@ interface NotionCollectionCommonOptions {
   dbName?: string;
   /**
    * カスタムブロックハンドラーのマップ。
-   * @deprecated `content: blocksFetcher({ blocks })` に移動してください。次のメジャーで削除予定。
+   * @deprecated `content: blocksFetcher({ blocks })` に移動してください。v1.0.0 で削除予定。`docs/ja/migration/blocks-ogp-enrichers.md` を参照。
    */
   blocks?: Record<string, BlockHandler>;
   /**
    * ブックマーク/埋め込みブロックの OGP 取得設定。省略時は OGP 非取得。
-   * @deprecated `content: blocksFetcher({ ogp })` に移動してください。次のメジャーで削除予定。
+   * @deprecated `content: blocksFetcher({ ogp })` に移動してください。v1.0.0 で削除予定。`docs/ja/migration/blocks-ogp-enrichers.md` を参照。
    */
   ogp?: FetchBlockTreeOgpOptions;
   /**
    * `loadNotionBlocks()` 時にブロック木へ追加情報を付与する enricher のリスト。
    * `notion-katex` など拡張パッケージが返す enricher を渡す。
-   * @deprecated `content: blocksFetcher({ enrichers })` に移動してください。次のメジャーで削除予定。
+   * @deprecated `content: blocksFetcher({ enrichers })` に移動してください。v1.0.0 で削除予定。`docs/ja/migration/blocks-ogp-enrichers.md` を参照。
    */
   enrichers?: readonly BlockEnricher[];
   /**
