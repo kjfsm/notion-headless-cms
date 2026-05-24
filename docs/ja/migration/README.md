@@ -8,6 +8,10 @@
 - [`createNotionCollection({ blocks, ogp, enrichers })` → `content: blocksFetcher({...})`](./blocks-ogp-enrichers.md)
 - [`createCms` (各ランタイムパッケージ) → `createClient`](./createCms-to-createClient.md)
 
+## 他システムからの移行
+
+- [Contentful → @notion-headless-cms (DataSourceAdapter 自作)](./contentful.md)
+
 ## 関連
 
 - バージョン整列方針: 詳細は `docs/ja/release/1.0-checklist.md` (準備中)
