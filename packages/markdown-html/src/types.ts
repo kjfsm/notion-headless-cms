@@ -15,10 +15,12 @@ export type RendererPluginList = unknown[];
  *
  * @example
  * ```ts
- * const render: RendererFn = async (md, opts) => {
- *   return await import("@my/mdx").then((m) => m.render(md, opts));
+ * // remark-rehype の代わりに自前パイプラインを差し替える
+ * const render: RendererFn = async (md, _opts) => {
+ *   const html = myMarkdownToHtml(md);
+ *   return html;
  * };
- * createClient({ renderer: render, ... });
+ * createClient({ renderer: render });
  * ```
  */
 export type RendererFn = (
