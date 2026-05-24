@@ -80,6 +80,43 @@ export interface CollectionDef<T extends BaseContentItem = BaseContentItem> {
 }
 
 /**
+ * `CollectionDef` の strict 版。`slugField` / `statusField` が `keyof T & string` で
+ * 型ガードされており、誤フィールド名は型エラーになる (Issue #314 / M3)。
+ * CLI 生成スキーマや `defineCollection<T>()` 経由で利用される。
+ */
+export interface StrictCollectionDef<T extends BaseContentItem>
+  extends Omit<CollectionDef<T>, "slugField" | "statusField"> {
+  /** slug として使う TS フィールド名。`keyof T` で型ガードされる。 */
+  slugField: keyof T & string;
+  /** ステータスとして使う TS フィールド名。`keyof T` で型ガードされる。 */
+  statusField?: keyof T & string;
+}
+
+/**
+ * 型推論ヘルパー: `T` を明示してコレクション定義を作る。`slugField` / `statusField` は
+ * `keyof T & string` で補完・型ガードされ、誤フィールド名 (例: `"slag"`) で型エラーになる
+ * (Issue #314 / M3)。CLI 生成 `nhc.schema.ts` で利用される。
+ *
+ * @example
+ * ```ts
+ * type PostItem = BaseContentItem & { authorName?: string };
+ * const posts = defineCollection<PostItem>({
+ *   source: notionSource(...),
+ *   slugField: "slug",     // OK
+ *   statusField: "status", // OK
+ *   // statusField: "stat", // 型エラー
+ * });
+ * ```
+ */
+export function defineCollection<T extends BaseContentItem>(
+  def: StrictCollectionDef<T>,
+): CollectionDef<T> {
+  // StrictCollectionDef は CollectionDef の slugField/statusField を絞ったサブ型なので
+  // 構造的に CollectionDef<T> へ代入可能。型システム上は再構成のため as 経由。
+  return def as unknown as CollectionDef<T>;
+}
+
+/**
  * `createClient({ collections })` の map 型。
  * キーがコレクション名、値が `CollectionDef<T>`。
  */
