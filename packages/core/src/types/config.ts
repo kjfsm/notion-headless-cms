@@ -46,7 +46,20 @@ export interface SWRConfig {
   ttlMs?: number;
 }
 
-/** レートリミット・リトライ設定。 */
+/**
+ * `RateLimiterConfig` のデフォルト値 (Issue #313 / M2)。
+ * 型からだけでは見えない既定値を表面化することで、IDE 補完と
+ * preset の対称化 (`nodePreset` / `cloudflarePreset` / `nextPreset`) で
+ * 同じ既定が適用されることを保証する。
+ */
+export const DEFAULT_RATE_LIMITER: Required<RateLimiterConfig> = {
+  maxConcurrent: 3,
+  retryOn: [429, 502, 503],
+  maxRetries: 4,
+  baseDelayMs: 1000,
+};
+
+/** レートリミット・リトライ設定。既定値は {@link DEFAULT_RATE_LIMITER}。 */
 export interface RateLimiterConfig {
   /** 同時実行数の上限。デフォルト: 3 */
   maxConcurrent?: number;

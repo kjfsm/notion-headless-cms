@@ -32,7 +32,7 @@ export type {
   StrictCollectionDef,
   SWRConfig,
 } from "./config";
-export { defineCollection } from "./config";
+export { DEFAULT_RATE_LIMITER, defineCollection } from "./config";
 export type {
   BaseContentItem,
   CachedItemContent,

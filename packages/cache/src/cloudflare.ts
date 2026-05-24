@@ -8,6 +8,7 @@ import type {
   ImageCacheOps,
   InvalidateScope,
   StorageBinary,
+  SWRConfig,
 } from "@notion-headless-cms/core";
 import type { KVNamespaceLike, R2BucketLike, R2ObjectLike } from "./types";
 
@@ -403,6 +404,11 @@ export interface CloudflarePresetOptions {
   ctx: CloudflareExecutionContextLike;
   /** キャッシュキーのプレフィックス。デフォルト: '' */
   prefix?: string;
+  /**
+   * SWR（Stale-While-Revalidate）設定。デフォルト: ttlMs 5 分。
+   * Issue #313 (M2) で preset 契約を `{ cache, swr, waitUntil }` に対称化した。
+   */
+  swr?: SWRConfig;
 }
 
 /** テスト用オプション。`ctx` なしで呼べる（本番 Workers では使わないこと）。 */
@@ -428,6 +434,7 @@ export interface CloudflarePresetTestOptions {
  */
 export function cloudflarePreset(opts: CloudflarePresetOptions): {
   cache: CacheAdapter[];
+  swr: SWRConfig;
   waitUntil: (p: Promise<unknown>) => void;
 } {
   const cache = cloudflareCache(
@@ -437,7 +444,7 @@ export function cloudflarePreset(opts: CloudflarePresetOptions): {
   const ctx = opts.ctx;
   // ExecutionContext.waitUntil は `this` を必要とするため、参照を切り出すには再ラップする
   const waitUntil = (p: Promise<unknown>) => ctx.waitUntil(p);
-  return { cache, waitUntil };
+  return { cache, swr: opts.swr ?? { ttlMs: 5 * 60_000 }, waitUntil };
 }
 
 /**
@@ -448,11 +455,12 @@ cloudflarePreset.forTest = (
   opts: CloudflarePresetTestOptions,
 ): {
   cache: CacheAdapter[];
+  swr: SWRConfig;
   waitUntil?: (p: Promise<unknown>) => void;
 } => {
   const cache = cloudflareCache(
     { docCache: opts.env.DOC_CACHE, imgBucket: opts.env.IMG_BUCKET },
     { prefix: opts.prefix },
   );
-  return { cache };
+  return { cache, swr: { ttlMs: 5 * 60_000 } };
 };

@@ -80,7 +80,7 @@ export type {
   WarmResult,
   WebhookConfig,
 } from "./types/index";
-export { defineCollection } from "./types/index";
+export { DEFAULT_RATE_LIMITER, defineCollection } from "./types/index";
 export { definePlugin } from "./types/plugin";
 // ── データソース拡張ポイント (source-author サブパスからも export) ───
 export type { CMSSources } from "./types/sources";

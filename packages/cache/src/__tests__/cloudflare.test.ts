@@ -124,12 +124,23 @@ describe("cloudflarePreset", () => {
     expect(waitUntil).toBeUndefined();
   });
 
-  it("createClient へスプレッドできる cache / waitUntil キーを返す", () => {
+  it("createClient へスプレッドできる cache / swr / waitUntil キーを返す", () => {
+    // Issue #313 (M2) で nodePreset / nextPreset と契約を揃えるため swr を含める。
     const result = cloudflarePreset({
       env: { DOC_CACHE: inMemoryKV() },
       ctx: { waitUntil: vi.fn() },
     });
-    expect(Object.keys(result).sort()).toEqual(["cache", "waitUntil"]);
+    expect(Object.keys(result).sort()).toEqual(["cache", "swr", "waitUntil"]);
+    expect(result.swr).toEqual({ ttlMs: 5 * 60_000 });
+  });
+
+  it("opts.swr で SWR 設定を上書きできる", () => {
+    const result = cloudflarePreset({
+      env: { DOC_CACHE: inMemoryKV() },
+      ctx: { waitUntil: vi.fn() },
+      swr: { ttlMs: 30_000 },
+    });
+    expect(result.swr).toEqual({ ttlMs: 30_000 });
   });
 
   it("prefix を伝播する", async () => {
