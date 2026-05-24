@@ -29,6 +29,7 @@
     "format": "biome check --write",
     "lint": "biome ci",
     "knip": "knip",
+    "lint:boundary": "node scripts/check-internal-boundary.mjs",
     "size": "size-limit",
     "changeset": "changeset",
     "version": "changeset version",

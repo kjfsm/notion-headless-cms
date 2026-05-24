@@ -29,6 +29,8 @@ jobs:
       - run: pnpm --filter @notion-headless-cms/docs exec react-router typegen
       - run: pnpm lint
       - run: pnpm knip
+      # Issue #315 (M4): packages/*/src/internal/** への外部 import を CI で禁止
+      - run: pnpm lint:boundary
 
   verify:
     # build / typecheck / test:coverage / publint / attw を turbo 1 コマンドで並列実行。
