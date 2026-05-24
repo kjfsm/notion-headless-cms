@@ -7,6 +7,19 @@ import type { BlockHandler, TransformerConfig } from "./types";
  * Notion Block → Markdown 変換クラス。
  * notion-to-md v3 をラップし、registerBlock でカスタムブロックハンドラーを登録できる。
  * converter オプションで代替実装に差し替え可能。
+ *
+ * @example
+ * ```ts
+ * const transformer = new Transformer({
+ *   blocks: {
+ *     callout: (block) => `> ${block.callout.rich_text.map((t) => t.plain_text).join("")}`,
+ *   },
+ * });
+ * const md = await transformer.transform(notionClient, pageId);
+ * ```
+ *
+ * @see {@link createTransformer} 同等のファクトリ関数。
+ * @see {@link BlockHandler} カスタムハンドラーの型。
  */
 export class Transformer {
   private readonly customHandlers: Map<string, BlockHandler> = new Map();
@@ -48,7 +61,15 @@ export class Transformer {
   }
 }
 
-/** 設定済みの Transformer インスタンスを生成するファクトリ関数。 */
+/**
+ * 設定済みの {@link Transformer} インスタンスを生成するファクトリ関数。
+ * `new Transformer(...)` の薄いラッパで、import 文を 1 行に保てる。
+ *
+ * @example
+ * ```ts
+ * const t = createTransformer({ blocks: { equation: handleEquation } });
+ * ```
+ */
 export function createTransformer(config?: TransformerConfig): Transformer {
   return new Transformer(config);
 }

@@ -11,6 +11,24 @@ import type { ComponentOverrides, NotionRendererProps } from "./types.js";
  * Notion ブロック木 (`NotionBlockTreeNode[]`) を React で描画するエントリ。
  * `components` / `classNames` を Context に注入して各ブロックコンポーネントへ伝搬する。
  * TOC のために heading_1..4 を抽出して Context へ流す。
+ *
+ * @example
+ * ```tsx
+ * import { NotionRenderer } from "@notion-headless-cms/react-renderer";
+ *
+ * export function Article({ blocks }: { blocks: NotionBlock[] }) {
+ *   return (
+ *     <NotionRenderer
+ *       blocks={blocks}
+ *       className="prose dark:prose-invert"
+ *       imageSizes={[400, 800, 1200]}
+ *     />
+ *   );
+ * }
+ * ```
+ *
+ * @see {@link NotionThemeProvider} ダークモード切替を組み合わせる場合。
+ * @see {@link NotionBlocks} 既に Context が確立されている子ツリー描画用。
  */
 export function NotionRenderer({
   blocks,
