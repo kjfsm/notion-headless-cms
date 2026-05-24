@@ -66,7 +66,11 @@ export function nextPreset(opts: NextPresetOptions = {}): {
   };
 }
 
-/** `createCms()` に渡すオプション（Next.js 向け）。 */
+/**
+ * `createCms()` に渡すオプション（Next.js 向け）。
+ * @deprecated v1.0.0 で削除予定。`CreateClientOptions` を直接使ってください。
+ * 詳細は `docs/ja/migration/createCms-to-createClient.md`。
+ */
 export interface CreateCmsOptions<S extends SchemaMap>
   extends Pick<NotionSourceConfig<S>, "fetch"> {
   schema: S;
@@ -76,17 +80,20 @@ export interface CreateCmsOptions<S extends SchemaMap>
 
 /**
  * Next.js App Router 向け高レベル API。`notionSource` + `memoryCache` + `createClient` をまとめて呼ぶ。
- * 永続キャッシュが必要な場合は `createClient` を直接使い、`cache-next` アダプタを組み込むこと。
  *
- * @example
- * import { createCms } from "@notion-headless-cms/next";
- * import { schema } from "./generated/nhc.js";
+ * @deprecated v1.0.0 で削除予定 (Issue #312 / M1)。`createClient` + `nextPreset` を直接使ってください。
+ * 詳細は `docs/ja/migration/createCms-to-createClient.md`。
  *
- * export const cms = createCms({
- *   schema,
- *   token: process.env.NOTION_TOKEN!,
- *   publishOptions: { posts: { publishedStatuses: ["公開済み"] } },
+ * @example 推奨される置き換え
+ * ```ts
+ * import { createClient, nextPreset, notionSource } from "@notion-headless-cms/next";
+ * import { schema } from "./generated/nhc";
+ *
+ * export const cms = createClient({
+ *   sources: { notion: notionSource({ schema, token: process.env.NOTION_TOKEN! }) },
+ *   ...nextPreset(),
  * });
+ * ```
  */
 export function createCms<S extends SchemaMap>(opts: CreateCmsOptions<S>) {
   return createClient({
