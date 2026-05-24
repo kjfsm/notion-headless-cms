@@ -35,7 +35,11 @@ export type {
 } from "@notion-headless-cms/notion-source";
 export { notionSource } from "@notion-headless-cms/notion-source";
 
-/** `createCms()` に渡すオプション（Cloudflare Workers 向け）。 */
+/**
+ * `createCms()` に渡すオプション（Cloudflare Workers 向け）。
+ * @deprecated v1.0.0 で削除予定。`CreateClientOptions` を直接使ってください。
+ * 詳細は `docs/ja/migration/createCms-to-createClient.md`。
+ */
 export interface CreateCmsOptions<S extends SchemaMap>
   extends Pick<NotionSourceConfig<S>, "fetch"> {
   schema: S;
@@ -50,16 +54,23 @@ export interface CreateCmsOptions<S extends SchemaMap>
 /**
  * Cloudflare Workers 向け高レベル API。`notionSource` + `cloudflarePreset` + `createClient` をまとめて呼ぶ。
  *
- * @example
- * import { createCms } from "@notion-headless-cms/cloudflare";
- * import { schema } from "./generated/nhc.js";
+ * @deprecated v1.0.0 で削除予定 (Issue #312 / M1)。`createClient` を直接使ってください。
+ * 詳細は `docs/ja/migration/createCms-to-createClient.md`。
+ *
+ * @example 推奨される置き換え
+ * ```ts
+ * import { createClient, cloudflarePreset, notionSource } from "@notion-headless-cms/cloudflare";
+ * import { schema } from "./generated/nhc";
  *
  * export default {
  *   async fetch(req: Request, env: Env, ctx: ExecutionContext) {
- *     const cms = createCms({ schema, token: env.NOTION_TOKEN, env, ctx });
- *     // ...
+ *     const cms = createClient({
+ *       sources: { notion: notionSource({ schema, token: env.NOTION_TOKEN }) },
+ *       ...cloudflarePreset({ env, ctx }),
+ *     });
  *   },
  * };
+ * ```
  */
 export function createCms<S extends SchemaMap>(opts: CreateCmsOptions<S>) {
   return createClient({

@@ -19,7 +19,11 @@ export type {
 } from "@notion-headless-cms/notion-source";
 export { notionSource } from "@notion-headless-cms/notion-source";
 
-/** `createCms()` に渡すオプション。 */
+/**
+ * `createCms()` に渡すオプション。
+ * @deprecated v1.0.0 で削除予定。`CreateClientOptions` を直接使ってください。
+ * 詳細は `docs/ja/migration/createCms-to-createClient.md`。
+ */
 export interface CreateCmsOptions<S extends SchemaMap>
   extends Pick<NotionSourceConfig<S>, "fetch"> {
   schema: S;
@@ -30,15 +34,19 @@ export interface CreateCmsOptions<S extends SchemaMap>
 /**
  * Node.js 向け高レベル API。`notionSource` + `nodePreset` + `createClient` をまとめて呼ぶ。
  *
- * @example
- * import { createCms } from "@notion-headless-cms/node";
- * import { schema } from "./generated/nhc.js";
+ * @deprecated v1.0.0 で削除予定 (Issue #312 / M1)。`createClient` を直接使ってください。
+ * 詳細は `docs/ja/migration/createCms-to-createClient.md`。
  *
- * export const cms = createCms({
- *   schema,
- *   token: process.env.NOTION_TOKEN!,
- *   publishOptions: { posts: { publishedStatuses: ["公開済み"] } },
+ * @example 推奨される置き換え
+ * ```ts
+ * import { createClient, nodePreset, notionSource } from "@notion-headless-cms/node";
+ * import { schema } from "./generated/nhc";
+ *
+ * export const cms = createClient({
+ *   sources: { notion: notionSource({ schema, token: process.env.NOTION_TOKEN! }) },
+ *   ...nodePreset(),
  * });
+ * ```
  */
 export function createCms<S extends SchemaMap>(opts: CreateCmsOptions<S>) {
   return createClient({

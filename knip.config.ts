@@ -11,6 +11,9 @@ export default {
       },
       // shadcn は MCP サーバー経由で CLI として使用するため knip では検出できない
       ignoreDependencies: ["shadcn"],
+      // e2e-nightly.yml が playwright を CI 内で `pnpm exec playwright install` する。
+      // playwright 本体は examples / apps/docs の devDependencies 経由で解決される。
+      ignoreBinaries: ["playwright"],
     },
     "packages/react-renderer": {
       // package.json の exports サブパス (./, ./server, ./router, ./next, ./mermaid)
@@ -77,6 +80,13 @@ export default {
     "packages/*": {
       entry: ["src/index.ts"],
       project: ["src/**/*.ts"],
+    },
+    "packages/testing": {
+      // package.json の exports サブパス (./, ./contract)
+      entry: ["src/index.ts", "src/contract.ts"],
+      project: ["src/**/*.ts"],
+      // vitest は ./contract サブパスから使う optional peerDep
+      ignoreDependencies: ["vitest"],
     },
     "apps/docs": {
       // workers/app.ts / app/root.tsx / app/routes.ts / app/routes/** /

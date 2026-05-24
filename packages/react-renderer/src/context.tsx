@@ -21,6 +21,12 @@ import type {
  */
 export type ImageSizes = readonly number[];
 
+/**
+ * `NotionRenderer` がツリー全体に提供する Context の値。
+ * カスタムブロックコンポーネントから `useNotionContext()` で参照する。
+ *
+ * @see {@link useNotionContext}
+ */
 export interface NotionRendererContextValue {
   components: ComponentOverrides;
   classNames?: BlockClassNames;
@@ -46,4 +52,18 @@ export const NotionContext = createContext<NotionRendererContextValue>({
   components: {},
 });
 
+/**
+ * `NotionRenderer` の Context にアクセスする hook。
+ * カスタムブロックコンポーネントから `components` / `classNames` / `resolveImageUrl` などを取得する。
+ *
+ * @example
+ * ```tsx
+ * function MyCodeBlock({ block, className }: BlockComponentProps) {
+ *   const { Link } = useNotionContext();
+ *   return <pre className={className}><code>...</code></pre>;
+ * }
+ * ```
+ *
+ * @see {@link NotionRendererContextValue}
+ */
 export const useNotionContext = () => useContext(NotionContext);

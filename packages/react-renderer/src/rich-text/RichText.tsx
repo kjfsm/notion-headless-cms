@@ -7,11 +7,23 @@ import { Annotated } from "./Annotation";
 import { InlineEquation as DefaultInlineEquation } from "./InlineEquation";
 import { Mention } from "./Mention";
 
+/** {@link RichText} の props。Notion `rich_text` 配列 (annotations 含む) を受け取る。 */
 export interface RichTextProps {
   value: ReadonlyArray<RichTextItemResponse>;
 }
 
-/** rich_text 配列を React のインライン要素として描画する。 */
+/**
+ * Notion `rich_text` 配列を React のインライン要素として描画する。
+ * bold / italic / strikethrough / underline / color / equation / mention を扱う。
+ * カスタムブロックコンポーネント内で段落以外の rich_text を描画する際に利用する。
+ *
+ * @example
+ * ```tsx
+ * function CustomCallout({ block }: BlockComponentProps<CalloutBlockObjectResponse>) {
+ *   return <aside><RichText value={block.callout.rich_text} /></aside>;
+ * }
+ * ```
+ */
 export function RichText({ value }: RichTextProps) {
   return (
     <>

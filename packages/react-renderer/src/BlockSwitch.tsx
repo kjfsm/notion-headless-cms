@@ -10,6 +10,7 @@ import type {
   NotionBlock,
 } from "./types.js";
 
+/** {@link BlockSwitch} の props。`block` 1 個を Context 経由で対応コンポーネントに振り分ける。 */
 export interface BlockSwitchProps {
   block: NotionBlock;
 }
@@ -18,7 +19,21 @@ export interface BlockSwitchProps {
 // 型整合は block.type による narrowing で保証し、要素を作る側はプロップを共通形にキャスト。
 type AnyBlockComponent = ComponentType<BlockComponentProps>;
 
-/** `block.type` から対応するコンポーネントを Context 経由で引き当てて描画する。 */
+/**
+ * `block.type` から対応するコンポーネントを Context 経由で引き当てて描画する。
+ * カスタムコンポーネントは `NotionRenderer` の `components` props で渡す。
+ *
+ * @example
+ * ```tsx
+ * <NotionRenderer
+ *   blocks={blocks}
+ *   components={{ Code: MyCustomCodeBlock }}
+ * />
+ * // 内部で <BlockSwitch block={...} /> が MyCustomCodeBlock を引き当てる
+ * ```
+ *
+ * @see {@link NotionRenderer} カスタムコンポーネント注入を含むトップレベル API。
+ */
 export function BlockSwitch({ block }: BlockSwitchProps) {
   const { components, classNames } = useNotionContext();
   const C = pickComponent(block, components) as AnyBlockComponent;

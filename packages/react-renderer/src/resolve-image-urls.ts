@@ -1,5 +1,12 @@
 import type { NotionBlock } from "./types";
 
+/**
+ * Notion の署名 URL を永続キャッシュ URL に置換する関数。
+ * 通常は `cms.cacheImage` を渡す。1 時間で失効する Notion 署名 URL を
+ * SHA256 ハッシュキーで R2 / KV / 任意ストレージに保存し、安定 URL を返す。
+ *
+ * @see {@link resolveBlockImageUrls}
+ */
 export type CacheImageFn = (url: string) => Promise<string>;
 
 /**
@@ -12,6 +19,14 @@ export type CacheImageFn = (url: string) => Promise<string>;
  *
  * Notion 署名 URL は約 1 時間で失効するため、サーバー側で事前にプロキシ URL に
  * 差し替えてから React コンポーネントに渡すことで、レンダリングを同期保てる。
+ *
+ * @example
+ * ```ts
+ * const stableBlocks = await resolveBlockImageUrls(blocks, cms.cacheImage);
+ * return <NotionRenderer blocks={stableBlocks} />;
+ * ```
+ *
+ * @see {@link CacheImageFn}
  */
 export async function resolveBlockImageUrls(
   blocks: NotionBlock[],

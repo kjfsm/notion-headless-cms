@@ -29,8 +29,10 @@ export type {
   RendererFn,
   RendererPluginList,
   RenderOptions,
+  StrictCollectionDef,
   SWRConfig,
 } from "./config";
+export { DEFAULT_RATE_LIMITER, defineCollection } from "./config";
 export type {
   BaseContentItem,
   CachedItemContent,

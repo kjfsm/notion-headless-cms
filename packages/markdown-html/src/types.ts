@@ -9,9 +9,19 @@ import type { PluggableList } from "unified";
 export type RendererPluginList = unknown[];
 
 /**
- * カスタムレンダラー関数の型。
- * Markdownを受け取り、HTMLを返す。
- * core の RendererFn と構造的に互換。
+ * カスタムレンダラー関数の型。Markdown を受け取り、HTML を返す。
+ * core の RendererFn と構造的に互換 (反変性で代入可能)。
+ * Notion 以外の MDX レンダラーや HTML サニタイザを噛ませたい場合に使う。
+ *
+ * @example
+ * ```ts
+ * // remark-rehype の代わりに自前パイプラインを差し替える
+ * const render: RendererFn = async (md, _opts) => {
+ *   const html = myMarkdownToHtml(md);
+ *   return html;
+ * };
+ * createClient({ renderer: render });
+ * ```
  */
 export type RendererFn = (
   markdown: string,
@@ -23,7 +33,14 @@ export type RendererFn = (
   },
 ) => Promise<string>;
 
-/** renderMarkdown のオプション。 */
+/**
+ * {@link renderMarkdown} の引数オプション。
+ *
+ * - `imageProxyBase` / `cacheImage` で Notion 署名 URL を永続キャッシュに置換
+ * - `remarkPlugins` / `rehypePlugins` で拡張
+ * - `render` でパイプライン全体を差し替え
+ * - `allowDangerousHtml` で生 HTML を通すか選択 (既定 false)
+ */
 export interface RendererOptions {
   /** 画像プロキシのベースURL。デフォルト: '/api/images' */
   imageProxyBase?: string;

@@ -102,6 +102,19 @@ function getProcessor(
  * `cacheImage` 指定時は Notion の画像 URL をプロキシキーに書き換える。
  * `render` 指定時はパイプライン全体をユーザー実装に差し替える (notion-embed など)。
  * 同一構成では freeze 済み processor を再利用する。
+ *
+ * @example
+ * ```ts
+ * import { renderMarkdown } from "@notion-headless-cms/markdown-html";
+ *
+ * const html = await renderMarkdown("# Hello", {
+ *   imageProxyBase: "/api/images",
+ *   cacheImage: cms.cacheImage,
+ * });
+ * ```
+ *
+ * @see {@link RendererOptions} 各オプションの詳細。
+ * @see {@link Transformer} Notion → Markdown の前段変換クラス。
  */
 export async function renderMarkdown(
   markdown: string,

@@ -9,7 +9,16 @@ interface ImageCachePluginOptions {
 
 /**
  * rehype プラグイン: img 要素の src を Notion 画像キャッシュ経由のプロキシ URL に書き換える。
- * cacheImage が未指定の場合は何もしない。
+ * `cacheImage` が未指定の場合は何もしない。Notion 署名 URL の 1 時間失効問題を回避するため、
+ * サーバー側で事前にプロキシ URL に差し替えるのが目的。
+ *
+ * @example
+ * ```ts
+ * import { unified } from "unified";
+ * unified().use(rehypeImageCache, { imageProxyBase: "/api/images", cacheImage });
+ * ```
+ *
+ * @see {@link renderMarkdown} 通常はこちら経由で間接的に利用する。
  */
 export const rehypeImageCache: Plugin<[ImageCachePluginOptions], Root> = (
   options,

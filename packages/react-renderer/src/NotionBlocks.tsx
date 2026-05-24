@@ -14,6 +14,18 @@ const OL_STYLES = ["list-decimal", "list-[lower-alpha]", "list-[lower-roman]"];
  * 1 つの `<ul>` / `<ol>` にまとめてから子要素を `BlockSwitch` で描画する。
  * `<ol>` の list-style は `listDepth` でローテートさせ、ネスト時に
  * `decimal → lower-alpha → lower-roman` を循環する（Notion 本家挙動）。
+ *
+ * `NotionRenderer` の内側、既に `NotionContext` が確立された状態で使う。
+ * トップレベルでは {@link NotionRenderer} を使う。
+ *
+ * @example
+ * ```tsx
+ * function Toggle({ children }: { children: NotionBlock[] }) {
+ *   return <details><NotionBlocks blocks={children} /></details>;
+ * }
+ * ```
+ *
+ * @see {@link NotionRenderer} Context を確立するトップレベルエントリ。
  */
 export function NotionBlocks({ blocks }: { blocks: NotionBlock[] }): ReactNode {
   const ctx = useNotionContext();

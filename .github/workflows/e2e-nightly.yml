@@ -1,0 +1,50 @@
+name: E2E Nightly Matrix
+
+# Issue #317 (M6): node / cloudflare / next / sveltekit など全 examples
+# (および apps/docs) の Playwright e2e を毎日まわす。
+
+on:
+  schedule:
+    # 毎日 03:00 UTC (12:00 JST) に実行
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # examples / apps を 1 つずつ独立した job で流すと、特定の environment 由来の
+        # 失敗 (Notion 接続不可・wrangler login 等) を切り分けやすい。
+        target:
+          - examples/cloudflare-astro
+          - examples/cloudflare-hono
+          - examples/cloudflare-react-router
+          - examples/node-express
+          - examples/node-hono
+          - examples/vercel-nextjs
+          - apps/docs
+    steps:
+      - uses: actions/checkout@v6
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24.x"
+          cache: "pnpm"
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - name: Playwright ブラウザのインストール
+        run: pnpm exec playwright install --with-deps chromium
+      - name: ${{ matrix.target }} の e2e
+        # filter で対象 1 つに絞ってから turbo に流す。
+        # 内部で playwright test を起動する想定。
+        run: pnpm --filter "./${{ matrix.target }}" test:e2e
+      - if: failure()
+        uses: actions/upload-artifact@v5
+        with:
+          name: playwright-report-${{ matrix.target }}
+          path: ${{ matrix.target }}/playwright-report
+          retention-days: 7
