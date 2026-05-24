@@ -59,6 +59,9 @@ jobs:
             ${{ runner.os }}-turbo-
       - run: pnpm install --frozen-lockfile --prefer-offline
       - run: pnpm verify:ci
+      # Issue #318 (M7): release gate に size-limit を追加。バンドルサイズの
+      # リグレッションを PR 単位で検出する。
+      - run: pnpm size
       - uses: codecov/codecov-action@v6
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

@@ -1,0 +1,48 @@
+name: Publish Dry Run (Nightly)
+
+# Issue #318 (M7): main の現在のスナップショットで毎日 publish dry-run を回し、
+# 認証・provenance OIDC・tarball 整合性のリグレッションを早期検出する。
+# release-dry-run.yml が Version Packages PR 限定なのに対して、こちらは main 任意時点。
+
+on:
+  schedule:
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  dry-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          registry-url: "https://registry.npmjs.org"
+          cache: "pnpm"
+      - uses: actions/cache/restore@v5
+        with:
+          path: .turbo
+          key: ${{ runner.os }}-turbo-${{ github.ref }}-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-turbo-refs/heads/main-
+            ${{ runner.os }}-turbo-
+      - run: pnpm install --frozen-lockfile --prefer-offline
+      - run: pnpm turbo build --filter="./packages/*"
+      # publint --strict と attw --pack で型・パッケージ整合性を release gate と
+      # 同じ基準で再検査する。
+      - run: pnpm publint
+      - run: pnpm attw
+      - run: pnpm size
+      # 最後に publish --dry-run で provenance / 認証パスを検証
+      - run: pnpm -r --filter="./packages/*" publish --dry-run --no-git-checks
