@@ -337,8 +337,26 @@ export class CollectionClientImpl<T extends BaseContentItem>
       html: async () => (await loadPayload()).html,
       markdown: async () => (await loadPayload()).markdown,
       blocks: async () => (await loadPayload()).blocks,
-      notionBlocks: async () => (await loadPayload()).notionBlocks,
+      notionBlocks: async () => {
+        const notionBlocks = (await loadPayload()).notionBlocks;
+        // markdown 戦略やフェッチャ未設定だと常に undefined になり、
+        // React レンダリング側で原因が分からない無言失敗になるため一度だけ案内する。
+        if (notionBlocks === undefined) this.warnMissingNotionBlocks();
+        return notionBlocks;
+      },
     }) as ItemWithContent<T>;
+  }
+
+  // notionBlocks() が undefined を返したときの案内を CollectionClient 単位で一度だけ出す。
+  private notionBlocksWarned = false;
+
+  private warnMissingNotionBlocks(): void {
+    if (this.notionBlocksWarned) return;
+    this.notionBlocksWarned = true;
+    this.ctx.logger?.warn?.(
+      "notionBlocks() が undefined を返しました。React レンダリング (<Renderer blocks=... />) には BlockObjectResponse ツリーが必要です。notionSource({ fetch: blocksFetcher() }) を設定してください。",
+      { collection: this.ctx.collection, operation: "notionBlocks" },
+    );
   }
 
   private async fetchList(): Promise<T[]> {
