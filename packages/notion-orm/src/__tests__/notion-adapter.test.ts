@@ -561,3 +561,86 @@ describe("createNotionCollection - properties オプション（新形式）", (
     expect(item).toBeNull();
   });
 });
+
+describe("parseWebhook", () => {
+  const adapter = createNotionCollection({
+    token: "test-token",
+    dataSourceId: "test-db-id",
+    collectionName: "posts",
+  });
+
+  const post = (url: string, init?: RequestInit) =>
+    new Request(url, { method: "POST", ...init });
+
+  it("secret 未設定なら検証せずコレクション全体を無効化する", async () => {
+    const scope = await adapter.parseWebhook?.(
+      post("http://localhost/revalidate/posts"),
+      {},
+    );
+    expect(scope).toEqual({ collection: "posts" });
+  });
+
+  it("body に slug があればそのスラッグだけを無効化する", async () => {
+    const scope = await adapter.parseWebhook?.(
+      post("http://localhost/revalidate/posts", {
+        body: JSON.stringify({ slug: "hello" }),
+      }),
+      {},
+    );
+    expect(scope).toEqual({ collection: "posts", slug: "hello" });
+  });
+
+  it("secret 設定時、クエリ secret が一致すれば通る", async () => {
+    const scope = await adapter.parseWebhook?.(
+      post("http://localhost/revalidate/posts?secret=s3cr3t"),
+      { secret: "s3cr3t" },
+    );
+    expect(scope).toEqual({ collection: "posts" });
+  });
+
+  it("secret 設定時、X-Webhook-Secret ヘッダでも通る", async () => {
+    const scope = await adapter.parseWebhook?.(
+      post("http://localhost/revalidate/posts", {
+        headers: { "x-webhook-secret": "s3cr3t" },
+      }),
+      { secret: "s3cr3t" },
+    );
+    expect(scope).toEqual({ collection: "posts" });
+  });
+
+  it("secret 不一致なら webhook/signature_invalid を投げる", async () => {
+    await expect(
+      adapter.parseWebhook?.(
+        post("http://localhost/revalidate/posts?secret=wrong"),
+        {
+          secret: "s3cr3t",
+        },
+      ),
+    ).rejects.toSatisfy(
+      (err: unknown) => isCMSError(err) && err.is("webhook/signature_invalid"),
+    );
+  });
+
+  it("不正な JSON body は webhook/payload_invalid を投げる", async () => {
+    await expect(
+      adapter.parseWebhook?.(
+        post("http://localhost/revalidate/posts", { body: "{ not json" }),
+        {},
+      ),
+    ).rejects.toSatisfy(
+      (err: unknown) => isCMSError(err) && err.is("webhook/payload_invalid"),
+    );
+  });
+
+  it("collectionName 未指定なら DataSource 名 notion を使う", async () => {
+    const noName = createNotionCollection({
+      token: "test-token",
+      dataSourceId: "test-db-id",
+    });
+    const scope = await noName.parseWebhook?.(
+      post("http://localhost/revalidate/notion"),
+      {},
+    );
+    expect(scope).toEqual({ collection: "notion" });
+  });
+});

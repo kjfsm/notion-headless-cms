@@ -287,6 +287,16 @@ export default defineConfig({ notionToken: env("NOTION_TOKEN"), collections: {} 
 
 ---
 
+## cloudflare/
+
+### cloudflare-warm_env_missing
+
+**原因**: `readRestKvEnv()`（KV プリウォーム用）が必要な環境変数を見つけられない。`CLOUDFLARE_ACCOUNT_ID` / `KV_NAMESPACE_ID` / `CLOUDFLARE_API_TOKEN` のいずれかが未設定。
+
+**対処**: warm スクリプト実行時に 3 つの環境変数をすべて渡す（`.dev.vars` 経由でも可）。`readRestKvEnv(env)` に明示的なオブジェクトを渡して上書きすることもできる。
+
+---
+
 ## サードパーティ拡張
 
 `CMSErrorCode = BuiltInCMSErrorCode | (string & {})` のため、任意の文字列コードを定義できる。サードパーティアダプタは `<package-namespace>/<kind>` 形式（例: `cache-redis/connection_failed`）を使う。

@@ -1,4 +1,8 @@
-import type { KVNamespaceLike } from "@notion-headless-cms/cache/cloudflare";
+import {
+  type KVNamespaceLike,
+  kvCache,
+} from "@notion-headless-cms/cache/cloudflare";
+import { type CacheAdapter, CMSError } from "@notion-headless-cms/core";
 
 /** Cloudflare KV REST API に接続するための認証情報。 */
 export interface RestKvOptions {
@@ -104,4 +108,83 @@ export function restKvNamespace(opts: RestKvOptions): KVNamespaceLike {
       return { keys: json.result, list_complete: !cursor, cursor };
     },
   };
+}
+
+/** `restKvCache()` のオプション。`prefix` で複数サイトの相乗りキーを分離できる。 */
+export interface RestKvCacheOptions extends RestKvOptions {
+  /** キャッシュキーの接頭辞 (例: `"blog:"`)。 */
+  prefix?: string;
+}
+
+/**
+ * Cloudflare KV REST API をドキュメントキャッシュ (`CacheAdapter`) として返す。
+ * Node.js の warm スクリプトで `createClient({ cache: [restKvCache(...)] })` に渡し、
+ * `cms.<collection>.cache.warm()` を実行すると、Workers が読むのと同じ KV に書き込める。
+ *
+ * @example
+ * import { restKvCache, readRestKvEnv } from "@notion-headless-cms/cloudflare";
+ * import { createClient, nodePreset } from "@notion-headless-cms/node"; // ※ renderer 注入のため
+ * import { notionSource } from "@notion-headless-cms/notion-source";
+ * import { schema } from "../app/generated/nhc.js";
+ *
+ * const cms = createClient({
+ *   sources: { notion: notionSource({ schema, token: process.env.NOTION_TOKEN! }) },
+ *   cache: [restKvCache(readRestKvEnv())],
+ * });
+ * await cms.posts.cache.warm({ onProgress: (d, t) => console.log(`${d}/${t}`) });
+ */
+export function restKvCache(opts: RestKvCacheOptions): CacheAdapter {
+  const namespace = restKvNamespace(opts);
+  return kvCache(
+    opts.prefix ? { namespace, prefix: opts.prefix } : { namespace },
+  );
+}
+
+/**
+ * warm スクリプト向けに、Cloudflare KV REST 認証情報を環境変数から読み取る。
+ * 不足があれば `cloudflare/warm_env_missing` の `CMSError` を投げる。
+ *
+ * 期待する環境変数:
+ * - `CLOUDFLARE_ACCOUNT_ID`
+ * - `KV_NAMESPACE_ID`
+ * - `CLOUDFLARE_API_TOKEN`
+ */
+export function readRestKvEnv(
+  env: Record<string, string | undefined> = defaultProcessEnv(),
+): RestKvOptions {
+  const accountId = env.CLOUDFLARE_ACCOUNT_ID;
+  const namespaceId = env.KV_NAMESPACE_ID;
+  const apiToken = env.CLOUDFLARE_API_TOKEN;
+  const missing = [
+    !accountId && "CLOUDFLARE_ACCOUNT_ID",
+    !namespaceId && "KV_NAMESPACE_ID",
+    !apiToken && "CLOUDFLARE_API_TOKEN",
+  ].filter((v): v is string => typeof v === "string");
+  if (missing.length > 0) {
+    throw new CMSError({
+      code: "cloudflare/warm_env_missing",
+      message: `KV warm に必要な環境変数が未設定です: ${missing.join(", ")}`,
+      context: { operation: "readRestKvEnv", missing: missing.join(", ") },
+    });
+  }
+  // missing が空なので非 undefined が保証される。
+  return {
+    accountId: accountId as string,
+    namespaceId: namespaceId as string,
+    apiToken: apiToken as string,
+  };
+}
+
+/**
+ * Node 実行時の `process.env` を型依存なしで取得する。
+ * cloudflare パッケージは Workers 向けで `@types/node` を含めないため、
+ * `globalThis` 経由で参照する (Workers 上では空オブジェクトになる)。
+ */
+function defaultProcessEnv(): Record<string, string | undefined> {
+  const proc = (
+    globalThis as {
+      process?: { env?: Record<string, string | undefined> };
+    }
+  ).process;
+  return proc?.env ?? {};
 }

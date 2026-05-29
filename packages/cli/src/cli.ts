@@ -64,6 +64,11 @@ program
   .command("init")
   .description("nhc.config.ts のテンプレートを生成します")
   .option("-o, --output <path>", "出力先ファイルパス", "nhc.config.ts")
+  .option(
+    "-t, --template <name>",
+    "ランタイム別テンプレート (node / cloudflare-react-router / cloudflare-hono / next)",
+    "node",
+  )
   .option("-f, --force", "既存ファイルを上書きする")
   .option("-s, --silent", "ログ出力を抑制する")
   .option("-v, --verbose", "詳細ログを出力する")

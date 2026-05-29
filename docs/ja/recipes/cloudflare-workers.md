@@ -185,14 +185,23 @@ NOTION_TOKEN=secret_xxx
 
 ## Webhook によるキャッシュ無効化
 
-`cms.handler({ webhookSecret })` にリクエストを投げると、DataSource の `parseWebhook` が `{ collection, slug? }` を返し、該当スコープが `cache.invalidate()` される。
+`cms.handler({ webhookSecret })` にリクエストを投げると、DataSource の `parseWebhook` が `{ collection, slug? }` を返し、該当スコープが `cache.invalidate()` される。`notion-source` には既定の `parseWebhook` 実装が入っている。
+
+ルートは `POST {basePath}/revalidate/:collection`（既定 `basePath` なら `/revalidate/posts`）。collection は URL から決まる。
 
 ```ts
 const handler = cms.handler({ webhookSecret: env.NOTION_WEBHOOK_SECRET });
-if (url.pathname === "/api/revalidate") {
+// POST /api/revalidate/posts?secret=xxx
+if (url.pathname.startsWith("/api/revalidate/")) {
   return handler(request);
 }
 ```
+
+`notion-source` の既定 `parseWebhook` の挙動:
+
+- **シークレット検証**: `webhookSecret` を渡した場合、リクエストは `?secret=<値>` クエリ / `X-Webhook-Secret` ヘッダ / `Authorization: Bearer <値>` のいずれかで一致させる。Notion の Automation Webhook は送信先 URL を自由に設定できるためクエリが実用的。不一致は `webhook/signature_invalid`（401）。
+- **対象の絞り込み**: リクエスト body が `{ "slug": "..." }` を含めばそのスラッグだけ、無ければコレクション全体を無効化する。不正な JSON は `webhook/payload_invalid`（400）。
+- **独自方式**: Notion の HMAC 署名検証など別方式が必要なら、`DataSource.parseWebhook` を自前実装で差し替える。
 
 ## 画像配信ルート
 

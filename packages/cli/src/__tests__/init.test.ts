@@ -88,4 +88,29 @@ describe("runInit", () => {
     expect(content).toContain("dbName");
     expect(content).toContain("publishedStatuses");
   });
+
+  it("template: cloudflare-react-router は output を app/generated にし dotenv を入れない", async () => {
+    const outputPath = path.join(tmpDir, "nhc.config.ts");
+    await runInit({ output: outputPath, template: "cloudflare-react-router" });
+
+    const content = await fs.readFile(outputPath, "utf-8");
+    expect(content).toContain('output: "./app/generated/nhc.ts"');
+    expect(content).not.toContain('import "dotenv/config"');
+  });
+
+  it("template: 未知の名前はエラーをスローする", async () => {
+    const outputPath = path.join(tmpDir, "nhc.config.ts");
+    await expect(
+      runInit({ output: outputPath, template: "does-not-exist" }),
+    ).rejects.toThrow("未知のテンプレート");
+  });
+
+  it("template 指定時は次のステップに example への導線を出す", async () => {
+    const outputPath = path.join(tmpDir, "nhc.config.ts");
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    await runInit({ output: outputPath, template: "cloudflare-react-router" });
+    const logged = logSpy.mock.calls.map((c) => String(c[0])).join("\n");
+    expect(logged).toContain("examples/cloudflare-react-router");
+    logSpy.mockRestore();
+  });
 });
