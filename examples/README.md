@@ -12,6 +12,8 @@
 | [cloudflare-sveltekit](./cloudflare-sveltekit/) | Cloudflare Workers | SvelteKit | R2 |
 | [vercel-nextjs](./vercel-nextjs/) | Vercel (Edge/Node) | Next.js App Router | ISR |
 | [node-express](./node-express/) | Node.js | Express | メモリ |
+| [node-hono](./node-hono/) | Node.js | Hono | メモリ |
+| [minimal-node](./minimal-node/) | Node.js | なし（素のスクリプト） | メモリ |
 
 ## 共通の Notion DB 設定
 
@@ -36,9 +38,11 @@ cd my-blog
 # 2. 依存関係をインストール
 pnpm install   # または npm install / yarn install
 
-# 3. 環境変数を設定
-cp .env.example .env
-# .env を編集して NOTION_TOKEN と NOTION_DATA_SOURCE_ID を入力
+# 3. 環境変数を設定（example のランタイムで異なる）
+#   Node.js 系 (node-express / node-hono / minimal-node / vercel-nextjs):
+cp .env.example .env          # .env を編集して NOTION_TOKEN を入力
+#   Cloudflare 系 (cloudflare-*):
+cp .dev.vars.example .dev.vars # .dev.vars を編集して NOTION_TOKEN を入力（wrangler dev が自動読込）
 
 # 4. スキーマを生成（Notion DB の構造変更時に再実行）
 pnpm generate
@@ -46,6 +50,10 @@ pnpm generate
 # 5. 開発サーバーを起動
 pnpm dev
 ```
+
+> **DB の指定方法**: 多くの example は `nhc.config.ts` の `dbName`（DB 名）で Notion DB を検索して
+> ID を自動解決する。`NOTION_DATA_SOURCE_ID`（DB ID 直指定）を使うのは一部の Node.js 系 example のみ。
+> どちらを使うかは各 example の `nhc.config.ts` / `.env(.example)` を参照。
 
 > モノレポのルートで `pnpm generate` を実行すると、`examples/*` 全部の `nhc generate` を一括で走らせることもできます。
 

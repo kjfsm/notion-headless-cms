@@ -1327,6 +1327,40 @@ describe("CollectionClient — コンテンツアクセサ", () => {
     await result?.html();
     expect(loadMarkdown).toHaveBeenCalledTimes(1);
   });
+
+  it("notionBlocks() が undefined のとき blocksFetcher 設定を一度だけ警告する", async () => {
+    const item: BaseContentItem = {
+      id: "1",
+      slug: "no-blocks",
+      lastEditedTime: "2024-01-01T00:00:00Z",
+    };
+    const warn = vi.fn();
+    const cms = createClient({
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              // loadNotionBlocks を持たない source → notionBlocks は常に undefined
+              source: makeMockSource({
+                async list() {
+                  return [item];
+                },
+              }),
+              slugField: "slug",
+            },
+          },
+        },
+      },
+      renderer: mockRenderer,
+      logger: { warn },
+    });
+    const result = await cms.posts.find("no-blocks");
+    expect(await result?.notionBlocks()).toBeUndefined();
+    expect(await result?.notionBlocks()).toBeUndefined();
+    // 無言失敗を避けるための案内。ノイズ防止のため一度だけ。
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn.mock.calls[0]?.[0]).toContain("blocksFetcher");
+  });
 });
 
 describe("CollectionClient — check()", () => {

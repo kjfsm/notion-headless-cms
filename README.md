@@ -76,11 +76,22 @@ export const cms = createClient({
 
 ### 5. データ取得
 
+本文は **`async` メソッド** で取得する（`title` などのメタデータはプロパティ）。
+用途に応じて 4 つの取り出し方がある。
+
 ```ts
 const posts = await cms.posts.list();
 const post = await cms.posts.find("my-first-post");
-console.log(post?.title, post?.content); // HTML が入っています
+
+const html = await post?.html(); // HTML 文字列（Hono / Express / Astro 等）
+// 他の取り出し方:
+//   await post?.markdown()     // Markdown 文字列
+//   await post?.blocks()       // 内部ブロック配列
+//   await post?.notionBlocks() // BlockObjectResponse ツリー（React レンダリング用）
 ```
+
+> React (React Router / Next.js) で描画する場合は `notionBlocks()` を使う。
+> `notionBlocks()` を使うには `notionSource({ fetch: blocksFetcher() })` の設定が必要（下記「React Router」参照）。
 
 ---
 
@@ -116,6 +127,114 @@ export function makeCms(
 ```
 
 > **注意**: `ctx` (ExecutionContext) は必須です。省略すると SWR のバックグラウンド更新がレスポンス送信後に打ち切られ、キャッシュが更新されません。
+
+### React Router (Cloudflare Workers)
+
+React Router v7 (Framework mode) + Cloudflare Workers なら、loader でデータを取り、
+`react-renderer` で Notion ブロックを React として描画できる。最短構成は次の 4 ファイル。
+
+```bash
+pnpm add @notion-headless-cms/cloudflare @notion-headless-cms/fetch-blocks \
+  @notion-headless-cms/react-renderer @notion-headless-cms/cli
+pnpm add @notionhq/client zod notion-to-md
+```
+
+```ts
+// app/lib/cms.ts — env / ctx を受け取って CMS を作る
+import {
+  cloudflarePreset,
+  createClient,
+  notionSource,
+} from "@notion-headless-cms/cloudflare";
+import { blocksFetcher } from "@notion-headless-cms/fetch-blocks";
+import { schema } from "../generated/nhc";
+
+export interface Env {
+  NOTION_TOKEN: string;
+  DOC_CACHE?: KVNamespace;
+  IMG_BUCKET?: R2Bucket;
+}
+
+export function makeCms(env: Env, ctx: ExecutionContext) {
+  return createClient({
+    sources: {
+      notion: notionSource({
+        schema,
+        token: env.NOTION_TOKEN,
+        fetch: blocksFetcher(), // notionBlocks() を有効化（React 描画に必須）
+        publishOptions: { posts: { publishedStatuses: ["公開済み"] } },
+      }),
+    },
+    ...cloudflarePreset({ env, ctx }),
+  });
+}
+```
+
+```ts
+// workers/app.ts — env / ctx を loader に橋渡しする
+import { createRequestHandler } from "react-router";
+
+const requestHandler = createRequestHandler(
+  () => import("virtual:react-router/server-build"),
+  import.meta.env.MODE,
+);
+
+export default {
+  async fetch(request, env, ctx) {
+    return requestHandler(request, { cloudflare: { env, ctx } });
+  },
+} satisfies ExportedHandler<Env>;
+```
+
+```tsx
+// app/routes/post.tsx — loader で取得し、React として描画
+import { Renderer } from "@notion-headless-cms/fetch-blocks/react";
+import type { NotionBlock } from "@notion-headless-cms/react-renderer";
+import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
+import { makeCms } from "../lib/cms";
+import type { Route } from "./+types/post";
+
+export async function loader({ params, context }: Route.LoaderArgs) {
+  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
+  const post = await cms.posts.find(params.slug ?? "");
+  if (!post) throw new Response("Not Found", { status: 404 });
+  const blocks = ((await post.notionBlocks()) ?? []) as NotionBlock[];
+  return { blocks, title: post.title, lastEditedTime: post.lastEditedTime };
+}
+
+export default function Post({ loaderData }: Route.ComponentProps) {
+  const { blocks, title } = loaderData;
+  return (
+    <article>
+      {/* Notion を更新したら静かに loader を再走させる */}
+      <NotionRevalidator />
+      <h1>{title}</h1>
+      <Renderer blocks={blocks} />
+    </article>
+  );
+}
+```
+
+```ts
+// app/routes/images.ts — 画像プロキシ（Notion の署名 URL 失効対策）
+import { makeCms } from "../lib/cms";
+import type { Route } from "./+types/images";
+
+export async function loader({ params, context }: Route.LoaderArgs) {
+  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
+  const object = await cms.getCachedImage(params.hash ?? "");
+  if (!object) return new Response("Not Found", { status: 404 });
+  const headers = new Headers();
+  if (object.contentType) headers.set("content-type", object.contentType);
+  headers.set("cache-control", "public, max-age=31536000, immutable");
+  return new Response(object.data, { headers });
+}
+```
+
+ルート定義（`app/routes.ts`）に `/posts/:slug` と `/api/images/:hash` を登録する。
+
+完全に動く例 → [`examples/cloudflare-react-router/`](./examples/cloudflare-react-router/)、
+詳しい解説（KV ポーリング再検証・warm・キャッシュ戦略）→ [`docs/ja/recipes/react-router.md`](./docs/ja/recipes/react-router.md)。
 
 ### Next.js (App Router)
 
@@ -199,7 +318,8 @@ export async function GET(
 | `@notion-headless-cms/cache` | キャッシュアダプタ (memory / cloudflare / next) |
 | `@notion-headless-cms/markdown-html` | Markdown → HTML レンダラ |
 | `@notion-headless-cms/block-html` | Notion ブロック拡張 HTML レンダラ |
-| `@notion-headless-cms/react-renderer` | BlockObjectResponse → React コンポーネント |
+| `@notion-headless-cms/fetch-blocks` | BlockObjectResponse ツリー取得（`notionBlocks()` 用）+ React `Renderer` |
+| `@notion-headless-cms/react-renderer` | BlockObjectResponse → React コンポーネント / 再検証フック |
 | `@notion-headless-cms/cli` | `nhc generate` スキーマ生成 CLI |
 
 ---
@@ -231,7 +351,8 @@ flowchart LR
 
 - [クイックスタート](./docs/ja/quickstart.md)
 - [アーキテクチャ](./docs/ja/architecture.md)
-- [レシピ集](./docs/ja/recipes/)
+- [改善ロードマップ](./docs/ja/improvements.md)
+- [レシピ集](./docs/ja/recipes/) — [Cloudflare Workers](./docs/ja/recipes/cloudflare-workers.md) / [React Router](./docs/ja/recipes/react-router.md) / [Next.js](./docs/ja/recipes/nextjs-app-router.md)
 - [API リファレンス](./docs/ja/api/)
 
 英語化に備えて `docs/{locale}/` の構造を採用しています。現在は `ja` のみ。

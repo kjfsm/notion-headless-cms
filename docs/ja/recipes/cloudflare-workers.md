@@ -122,42 +122,8 @@ Notion を更新したとき、画面を**静かに切り替える**には:
 
 ### React Router v7
 
-`<NotionRevalidator />` を 1 つ置くだけ。内部で `useRevalidator` を呼び loader を再走させる。
-
-```tsx
-import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
-
-export default function Post({ loaderData }) {
-  return (
-    <article>
-      <NotionRevalidator />
-      {/* ... */}
-    </article>
-  );
-}
-```
-
-**KV ポーリングで確実に最新化したい場合**は `poll` オプションを使う。`peekVersion` エンドポイントをポーリングし、SWR バックグラウンド更新が完了したタイミングで自動的に loader を再走させる。
-
-```ts
-// app/routes/check.ts
-export async function loader({ params, context }: Route.LoaderArgs) {
-  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
-  return Response.json(await cms.posts.peekVersion(params.slug ?? ""));
-}
-```
-
-```tsx
-// app/routes/post.tsx
-<NotionRevalidator
-  poll={{
-    url: `/api/posts/${item.slug}/check`,
-    version: item.lastEditedTime,
-  }}
-/>
-```
-
-ポーリングは `notionUpdatedAt` の変化（更新あり → revalidate）または `cachedAt` の変化（確認完了・更新なし → 停止）を検出した時点で自動停止する。既定タイムアウトは 30 秒。
+React で描画する場合（loader + `<Renderer>` + `<NotionRevalidator>`）は専用レシピにまとめた。
+→ [`react-router.md`](./react-router.md)
 
 ### Hono / Astro / Express など素 HTML
 

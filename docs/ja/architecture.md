@@ -13,21 +13,25 @@ CLAUDE.md と `.claude/rules/` は**事実**を述べる。ここではその**�
 
 ```
 Notion DB
-  └─ @notion-headless-cms/notion-orm（ユーザーは直接 import しない・notion-source 経由で利用 / fetchBlockTree のみ公開 API として直接利用可）
-       ├─ @notion-headless-cms/renderer（Markdown→HTML / SSR-only / 非 React 向け）
-       ├─ @notion-headless-cms/react-renderer（BlockObjectResponse→React / shadcn/ui + Tailwind v4 / React アプリ向け）
-       ├─ @notion-headless-cms/notion-source（CMSAdapter 実装 / `createClient({ sources: { notion } })` で組み込む）
-       └─ @notion-headless-cms/core（CMS 統合・キャッシュ・フック）
-            ├─ @notion-headless-cms/cache-r2（cloudflarePreset）
-            ├─ @notion-headless-cms/cache-kv
-            ├─ @notion-headless-cms/cache-next
-            └─ @notion-headless-cms/adapter-next
+  └─ @notion-headless-cms/notion-orm（ユーザーは直接 import しない・notion-source 経由で利用）
+       ├─ @notion-headless-cms/fetch-blocks   （BlockObjectResponse ツリー取得 + React Renderer）
+       ├─ @notion-headless-cms/fetch-markdown （Notion Markdown API で本文取得 / サブリクエスト節約）
+       ├─ @notion-headless-cms/markdown-html  （Markdown→HTML / SSR-only / 非 React 向け）
+       ├─ @notion-headless-cms/react-renderer （BlockObjectResponse→React / shadcn/ui + Tailwind v4）
+       ├─ @notion-headless-cms/notion-source  （CMSAdapter 実装 / `createClient({ sources: { notion } })` で組み込む）
+       └─ @notion-headless-cms/core           （CMS 統合・キャッシュ・フック・nodePreset）
+            └─ @notion-headless-cms/cache      （memory + サブパス /cloudflare（KV+R2, cloudflarePreset）/next）
+
+メタパッケージ（利用側はこれ 1 つで揃う）:
+  @notion-headless-cms/node       = core + notion-source + nodePreset
+  @notion-headless-cms/cloudflare = core + notion-source + cloudflarePreset
+  @notion-headless-cms/next       = core + notion-source + Next.js グルー（createNextHandler 等）
 ```
 
 ### なぜこの形か
 
 - `core` を Notion 固有知識から隔離することで、将来 `source-contentful` などへの差し替えを可能にする
-- `renderer` を差し替え可能にしたかった（remark → marked / markdown-it）
+- `markdown-html`（Markdown→HTML レンダラ）を差し替え可能にしたかった（remark → marked / markdown-it）
 - `react-renderer` は `renderer` (HTML) とは並列の出力経路。Markdown 中継せず Notion ブロックを直接 React に変換するため、rich_text annotations や mention 等の情報を失わずに描画できる。React アプリ向けに分離し、SSR-only / 非 React フレームワーク (Astro / Hono / Express) は `notion-embed` の HTML 出力を継続利用
 - アダプタが「ランタイム固有の面倒」を引き受け、core はランタイム中立を保つ
 - v0.3.0 で `adapter-node` / `adapter-cloudflare` を廃止して preset 方式に変えた理由は、ユーザーが `createClient` 一本で書けるようにするため（フレームワーク連携 adapter と役割を分離）
@@ -111,7 +115,7 @@ Notion 画像 URL は**期限付き**（署名 URL）。1 時間で失効する�
 
 `@cloudflare/workers-types` を実依存に入れない理由:
 
-- cache-r2 を Node.js テストで動かせる
+- `@notion-headless-cms/cache`（`/cloudflare` サブパス）を Node.js テストで動かせる
 - 将来 `R2Bucket` が変わっても、必要な最小メソッドのみ互換を保てば良い
 - ユーザーは `R2Bucket` をそのまま渡せる（構造的サブタイプ）
 
@@ -127,6 +131,8 @@ Notion 画像 URL は**期限付き**（署名 URL）。1 時間で失効する�
 ## 今後の拡張ポイント
 
 - `source-*` プラグイン化（`@notion-headless-cms/source-contentful` 等）
+- `notion-source` の `parseWebhook` 実装（Webhook 即時無効化の有効化。core の `cms.handler({ webhookSecret })` 側は実装済み）
 - `DocumentCacheAdapter<T>` ジェネリクスで任意メタデータ対応
-- Webhook 受信の統一ルートハンドラ（現状は adapter-next のみ）
 - 画像変換（resize / format 変換）の CDN 統合
+
+> 改善ロードマップの全体像は [`docs/ja/improvements.md`](./improvements.md) を参照。
