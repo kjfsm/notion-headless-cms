@@ -90,8 +90,9 @@ const html = await post?.html(); // HTML 文字列（Hono / Express / Astro 等�
 //   await post?.notionBlocks() // BlockObjectResponse ツリー（React レンダリング用）
 ```
 
-> React (React Router / Next.js) で描画する場合は `notionBlocks()` を使う。
-> `notionBlocks()` を使うには `notionSource({ fetch: blocksFetcher() })` の設定が必要（下記「React Router」参照）。
+> React (React Router / Next.js) で描画する場合は `notionBlocks()` を使う（下記「React Router」参照）。
+> `notionBlocks()` は既定（blocks 戦略）で利用可能で、追加設定は不要。`markdownFetcher()` を
+> 選んだ場合のみ無効になる（その場合は markdown→React の `Renderer` を使う）。
 
 ---
 
@@ -146,7 +147,6 @@ import {
   createClient,
   notionSource,
 } from "@notion-headless-cms/cloudflare";
-import { blocksFetcher } from "@notion-headless-cms/fetch-blocks";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -161,7 +161,8 @@ export function makeCms(env: Env, ctx: ExecutionContext) {
       notion: notionSource({
         schema,
         token: env.NOTION_TOKEN,
-        fetch: blocksFetcher(), // notionBlocks() を有効化（React 描画に必須）
+        // fetch は省略可（既定で blocks 戦略 = notionBlocks() が使える）。
+        // OGP 取得やカスタムブロックを足すときだけ fetch: blocksFetcher({ ... }) を渡す。
         publishOptions: { posts: { publishedStatuses: ["公開済み"] } },
       }),
     },

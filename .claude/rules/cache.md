@@ -1,30 +1,35 @@
 ---
-description: cache-* パッケージの構造型インターフェース原則
+description: cache パッケージの構造型インターフェース原則
 paths:
-  - "packages/cache-r2/**"
-  - "packages/cache-next/**"
+  - "packages/cache/**"
 ---
 
-# cache-* パッケージ
+# @notion-headless-cms/cache パッケージ
+
+キャッシュ実装は単一の `@notion-headless-cms/cache` に集約され、ランタイム別の
+実装はサブパスで提供する（`/cloudflare`・`/next`）。`memoryCache` はルートから提供。
 
 ## インターフェース
 
-- 実装すべき型は `core/src/types/cache.ts` の `DocumentCacheAdapter<T>` / `ImageCacheAdapter`
+- 実装すべき型は `core/src/types/cache.ts` の `CacheAdapter`（`DocumentCacheOps` / `ImageCacheOps`）
 - `core` の公開型として `@notion-headless-cms/core` からもインポート可能
 - 新しいキャッシュ実装（Redis / D1 など）はこのインターフェースを実装するだけで差し替え可能
 
-## cache-r2（Cloudflare R2）
+## /cloudflare サブパス（R2 / KV）
 
-- `r2Cache({ bucket })` で `DocumentCacheAdapter` & `ImageCacheAdapter` を返す
-- **構造型 `R2BucketLike` を受け取る**ため `@cloudflare/workers-types` への**実依存は持たない**
+`@notion-headless-cms/cache/cloudflare` から:
+
+- `r2Cache({ bucket })` — R2 を画像キャッシュ（必要なら doc も）として返す
+- `kvCache({ namespace, prefix? })` — KV をドキュメントキャッシュとして返す
+- `cloudflareCache({ docCache, imgBucket }, { prefix? })` / `cloudflarePreset({ env, ctx })` — まとめて配線
+- **構造型 `R2BucketLike` / `KVNamespaceLike` を受け取る**ため `@cloudflare/workers-types` への**実依存は持たない**
   - 必要最小限の API のみ要求する型
-  - `@cloudflare/workers-types` の `R2Bucket` は構造的に互換
+  - `@cloudflare/workers-types` の `R2Bucket` / `KVNamespace` は構造的に互換
 
-## cache-next（Next.js ISR）
+## /next サブパス（Next.js ISR）
 
-- `nextCache({ revalidate?, tags? })` で `DocumentCacheAdapter` を返す
-- 内部で `next/cache` の `unstable_cache` と `revalidateTag` を利用
-- `next` は `peerDependencies`
+`@notion-headless-cms/cache/next` から `nextCache(...)` を提供。内部で `next/cache` を利用し、
+`next` は `peerDependencies`。
 
 ## エラー
 
@@ -33,5 +38,5 @@ paths:
 
 ## テスト
 
-- R2 は fake bucket（in-memory Map）でテスト。`__tests__/r2-cache.test.ts` を参考
-- Next.js は `unstable_cache` をモックしてテスト
+- R2 / KV は fake（in-memory Map）でテスト。`packages/cache/src/__tests__/` を参考
+- Next.js は `next/cache` をモックしてテスト

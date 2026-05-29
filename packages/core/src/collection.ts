@@ -354,7 +354,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
     if (this.notionBlocksWarned) return;
     this.notionBlocksWarned = true;
     this.ctx.logger?.warn?.(
-      "notionBlocks() が undefined を返しました。React レンダリング (<Renderer blocks=... />) には BlockObjectResponse ツリーが必要です。notionSource({ fetch: blocksFetcher() }) を設定してください。",
+      "notionBlocks() が undefined を返しました。BlockObjectResponse ツリーは blocks 戦略でのみ得られます (notionSource の fetch 未指定の既定でも有効)。markdownFetcher を使用中の場合は markdown→React の Renderer を使うか、blocksFetcher() に切り替えてください。",
       { collection: this.ctx.collection, operation: "notionBlocks" },
     );
   }

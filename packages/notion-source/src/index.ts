@@ -67,6 +67,8 @@ export function notionSource<S extends SchemaMap>(
         token: opts.token,
         dataSourceId: entry.dataSourceId,
         properties: entry.properties,
+        // parseWebhook が返す InvalidateScope.collection に使う論理名。
+        collectionName: name,
         ...(opts.fetch ? { content: opts.fetch } : {}),
       }),
       slugField: entry.slugField,

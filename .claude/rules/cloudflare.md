@@ -1,8 +1,8 @@
 ---
-description: Cloudflare Workers / R2 / KV 関連の実装慣行（cache-r2 / cloudflarePreset / examples/cloudflare-*）
+description: Cloudflare Workers / R2 / KV 関連の実装慣行（cache の /cloudflare サブパス / cloudflarePreset / examples/cloudflare-*）
 paths:
-  - "packages/cache-r2/**"
-  - "packages/cache-kv/**"
+  - "packages/cache/**"
+  - "packages/cloudflare/**"
   - "examples/cloudflare-*/**"
   - "**/wrangler.toml"
   - "**/wrangler.jsonc"
@@ -36,19 +36,25 @@ paths:
 
 ## このリポジトリの Cloudflare 対応
 
-v0.3.0 以降、ランタイム別ファクトリ（旧 `adapter-cloudflare` / `createCloudflareCMS`）は廃止された。現状:
+v0.3.0 以降、ランタイム別ファクトリ（旧 `adapter-cloudflare` / `createCloudflareCMS`）は廃止された。キャッシュ実装は `@notion-headless-cms/cache`（`/cloudflare` サブパス）に集約。現状:
 
-### `cloudflarePreset` (cache-r2)
+### `cloudflarePreset`（cache の /cloudflare サブパス）
 
-- `createCMS({ ...cloudflarePreset({ env }), dataSources })` で使う
+- `createClient({ sources: { notion: notionSource(...) }, ...cloudflarePreset({ env, ctx }) })` で使う
 - `env.DOC_CACHE` (KV) と `env.IMG_BUCKET` (R2) を自動検出
+- `ctx`（ExecutionContext）を渡すと SWR バックグラウンド更新が `waitUntil` で配線される
 - 詳細: `.claude/rules/cache.md` / `.claude/rules/package-boundaries.md`
 
-### cache-r2
+### cache（/cloudflare サブパス）
 
-- `r2Cache({ bucket })` で `DocumentCacheAdapter` + `ImageCacheAdapter` を返す
-- 構造型 `R2BucketLike` を受け取るため `@cloudflare/workers-types` に**実依存しない**
-- ユーザーは `env.IMG_BUCKET` をそのまま渡せる（構造的サブタイプで互換）
+- `r2Cache({ bucket })` / `kvCache({ namespace })` で `CacheAdapter` を返す
+- 構造型 `R2BucketLike` / `KVNamespaceLike` を受け取るため `@cloudflare/workers-types` に**実依存しない**
+- ユーザーは `env.IMG_BUCKET` / `env.DOC_CACHE` をそのまま渡せる（構造的サブタイプで互換）
+
+### @notion-headless-cms/cloudflare（メタパッケージ）
+
+- `createClient` / `cloudflarePreset` / `notionSource` を再 export
+- `restKvNamespace` / `restKvCache` / `readRestKvEnv` — Node の warm スクリプトから KV REST API 経由で書き込む
 
 ### examples/cloudflare-*
 

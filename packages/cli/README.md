@@ -92,9 +92,13 @@ export default defineConfig({
 
 ```
 Options:
-  -o, --output <path>   出力先 (デフォルト: nhc.config.ts)
-  -f, --force           既存ファイルを上書き
+  -o, --output <path>    出力先 (デフォルト: nhc.config.ts)
+  -t, --template <name>  ランタイム別テンプレート (node / cloudflare-react-router / cloudflare-hono / next)
+  -f, --force            既存ファイルを上書き
 ```
+
+`--template` はランタイムに合った `output` パスと「次のステップ」(依存・binding・example 導線) を出力する。
+例: `nhc init --template cloudflare-react-router`
 
 ### `nhc generate`
 

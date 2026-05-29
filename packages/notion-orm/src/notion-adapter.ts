@@ -3,7 +3,9 @@ import type {
   CMSSchemaProperties,
   ContentBlock,
   DataSource,
+  InvalidateScope,
   PropertyMap,
+  WebhookConfig,
 } from "@notion-headless-cms/core";
 import { CMSError, isCMSError } from "@notion-headless-cms/core";
 import type { BlockHandler } from "@notion-headless-cms/markdown-html";
@@ -67,6 +69,12 @@ interface NotionCollectionCommonOptions {
    * 未指定の場合は動的 import で `fetch-blocks` の `blocksFetcher()` にフォールバックする。
    */
   content?: ContentFetcher;
+  /**
+   * このコレクションの論理名 (例: `"posts"`)。`parseWebhook` が返す
+   * `InvalidateScope.collection` に使う。`notionSource()` がスキーマのキーを渡す。
+   * 未指定時は DataSource 名 (`"notion"`) を使う。
+   */
+  collectionName?: string;
 }
 
 /** デフォルトマッパー利用時 (T = BaseContentItem) の入力。 */
@@ -111,6 +119,8 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
   readonly name = "notion";
   /** properties オプション使用時のみ設定。core 側の `findByProp` 高速化に使われる。 */
   readonly properties?: PropertyMap;
+  /** parseWebhook が返す InvalidateScope.collection に使う論理名。 */
+  private readonly collectionName: string | undefined;
   private readonly client: ReturnType<typeof createClient>;
   private readonly dbName: string | undefined;
   private resolvedDataSourceId: string | undefined;
@@ -142,6 +152,7 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
     this.resolvedDataSourceId = opts.dataSourceId;
     this.dbName = opts.dbName;
     this.content = opts.content;
+    this.collectionName = opts.collectionName;
     this.legacyBlocks = opts.blocks;
     this.legacyOgp = opts.ogp;
     this.legacyEnrichers = opts.enrichers;
@@ -397,6 +408,89 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
   getListVersion(items: T[]): string {
     return items.map((item) => `${item.id}:${item.lastEditedTime}`).join("|");
   }
+
+  /**
+   * Webhook リクエストを検証し、無効化スコープを返す。
+   *
+   * collection はハンドラ側で URL から決まり (`POST {basePath}/revalidate/:collection`)、
+   * この DataSource が呼ばれる時点で確定している。ここでは:
+   *
+   * 1. `config.secret` が設定されていれば共有シークレットを検証する。
+   *    提示方法は `?secret=<値>` クエリ / `X-Webhook-Secret` ヘッダ / `Authorization: Bearer <値>` の
+   *    いずれか。Notion の Automation Webhook は送信先 URL を自由に設定できるためクエリが実用的。
+   * 2. body を解析する。`{ "slug": "..." }` を含むペイロードならそのスラッグだけを無効化し、
+   *    それ以外 (空 body / page id のみ等) はコレクション全体を無効化する (安全側)。
+   *
+   * Notion の HMAC 署名検証など独自方式が必要な場合は、`DataSource.parseWebhook` を
+   * 自前実装で差し替える (このメソッドは optional インターフェースの既定実装)。
+   */
+  async parseWebhook(
+    req: Request,
+    config: WebhookConfig,
+  ): Promise<InvalidateScope> {
+    const collection = this.collectionName ?? this.name;
+
+    if (config.secret) {
+      const provided = extractWebhookSecret(req);
+      if (!provided || !timingSafeEqual(provided, config.secret)) {
+        throw new CMSError({
+          code: "webhook/signature_invalid",
+          message: "Webhook secret が一致しません。",
+          context: { operation: "NotionCollection.parseWebhook", collection },
+        });
+      }
+    }
+
+    // body が空ならコレクション全体を無効化する (Notion 標準 Webhook には slug が無い)。
+    const raw = await req.text().catch(() => "");
+    if (!raw.trim()) return { collection };
+
+    let payload: unknown;
+    try {
+      payload = JSON.parse(raw);
+    } catch (err) {
+      throw new CMSError({
+        code: "webhook/payload_invalid",
+        message: "Webhook ペイロードが JSON として解析できません。",
+        cause: err,
+        context: { operation: "NotionCollection.parseWebhook", collection },
+      });
+    }
+
+    // 明示的に slug を送ってくれた場合のみ対象を絞る。それ以外は全体無効化。
+    if (
+      payload &&
+      typeof payload === "object" &&
+      "slug" in payload &&
+      typeof (payload as { slug: unknown }).slug === "string" &&
+      (payload as { slug: string }).slug.length > 0
+    ) {
+      return { collection, slug: (payload as { slug: string }).slug };
+    }
+    return { collection };
+  }
+}
+
+/** Webhook リクエストから提示シークレットを取り出す (クエリ / ヘッダ / Bearer)。 */
+function extractWebhookSecret(req: Request): string | undefined {
+  const url = new URL(req.url);
+  const fromQuery = url.searchParams.get("secret");
+  if (fromQuery) return fromQuery;
+  const header = req.headers.get("x-webhook-secret");
+  if (header) return header;
+  const auth = req.headers.get("authorization");
+  if (auth?.startsWith("Bearer ")) return auth.slice("Bearer ".length);
+  return undefined;
+}
+
+/** 長さ非依存に近い文字列比較。タイミング攻撃の表面積を小さくする。 */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
 }
 
 /**

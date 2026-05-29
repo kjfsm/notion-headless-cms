@@ -4,8 +4,8 @@ import type {
 } from "@notion-headless-cms/cache/cloudflare";
 import { cloudflarePreset } from "@notion-headless-cms/cache/cloudflare";
 
-export type { RestKvOptions } from "./rest-kv";
-export { restKvNamespace } from "./rest-kv";
+export type { RestKvCacheOptions, RestKvOptions } from "./rest-kv";
+export { readRestKvEnv, restKvCache, restKvNamespace } from "./rest-kv";
 
 import { createClient } from "@notion-headless-cms/core";
 import type {

@@ -69,7 +69,6 @@ import {
   createClient,
   notionSource,
 } from "@notion-headless-cms/cloudflare";
-import { blocksFetcher } from "@notion-headless-cms/fetch-blocks";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -84,9 +83,9 @@ export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void })
       notion: notionSource({
         schema,
         token: env.NOTION_TOKEN,
-        // notionBlocks() を有効化（React 描画に必須）。
-        // 付け忘れると notionBlocks() が undefined を返し、warn でも案内される。
-        fetch: blocksFetcher(),
+        // fetch は省略可。既定で blocks 戦略になり notionBlocks() がそのまま使える。
+        // OGP 取得やカスタムブロックが必要なときだけ fetch: blocksFetcher({ ... }) を渡す。
+        // 大きなページで CF Free のサブリクエスト上限が厳しいときは markdownFetcher() を検討。
         publishOptions: {
           posts: { publishedStatuses: ["公開済み"] },
         },

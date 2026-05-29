@@ -35,10 +35,31 @@ npx nhc init
 
 ```
 オプション:
-  -o, --output <path>   出力先ファイルパス（デフォルト: nhc.config.ts）
-  -f, --force           既存ファイルを上書きする
-  -s, --silent          ログ出力を抑制する
+  -o, --output <path>    出力先ファイルパス（デフォルト: nhc.config.ts）
+  -t, --template <name>  ランタイム別テンプレート（デフォルト: node）
+  -f, --force            既存ファイルを上書きする
+  -s, --silent           ログ出力を抑制する
 ```
+
+### `--template` でランタイムに合わせる
+
+`--template` を指定すると、ランタイムに合った `output` パスと「次のステップ」（追加すべき依存・
+binding・対応する example への導線）を出力する。
+
+| テンプレート | 想定 | `output` |
+|---|---|---|
+| `node`（既定） | Node.js (Express / Hono など) | `src/generated/nhc.schema.ts` |
+| `cloudflare-react-router` | Workers + React Router v7 | `./app/generated/nhc.ts` |
+| `cloudflare-hono` | Workers + Hono | `./src/generated/nhc.ts` |
+| `next` | Next.js App Router | `./app/generated/nhc.ts` |
+
+```bash
+npx nhc init --template cloudflare-react-router
+# → app/generated/nhc.ts 向けの config と、CF Workers + RR のセットアップ手順を表示
+```
+
+> フルスタックの雛形（ルート・`wrangler.toml`・`workers/app.ts` など）が欲しい場合は、対応する
+> `examples/*` をコピーするのが早い。`--template` はその入口（config と手順）を用意する。
 
 生成されるテンプレート:
 

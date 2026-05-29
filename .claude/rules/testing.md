@@ -46,14 +46,14 @@ const makeMockSource = (items: BaseContentItem[] = []): DataSource => ({
 core のテストでは renderer を必ずモック（`core` はゼロ依存なので import はダミー）:
 
 ```ts
-vi.mock("@notion-headless-cms/renderer", () => ({
+vi.mock("@notion-headless-cms/markdown-html", () => ({
 	renderMarkdown: vi.fn().mockResolvedValue("<p>rendered</p>"),
 }));
 ```
 
 ## パターン 3: R2 fake bucket
 
-`packages/cache-r2/src/__tests__/` を参考。`Map` ベースの fake:
+`packages/cache/src/__tests__/` を参考。`Map` ベースの fake:
 
 ```ts
 const makeFakeBucket = () => {
