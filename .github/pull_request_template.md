@@ -20,9 +20,7 @@
 - [ ] `@notion-headless-cms/markdown-html`
 - [ ] `@notion-headless-cms/block-html`
 - [ ] `@notion-headless-cms/react-renderer`
-- [ ] `@notion-headless-cms/node`
-- [ ] `@notion-headless-cms/cloudflare`
-- [ ] `@notion-headless-cms/next`
+- [ ] `@notion-headless-cms/client`
 - [ ] `@notion-headless-cms/cli`
 - [ ] `@notion-headless-cms/testing`
 - [ ] docs のみ
