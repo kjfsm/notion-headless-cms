@@ -102,6 +102,39 @@ describe("createCMS", () => {
     });
   });
 
+  it("published のみ指定なら accessibleStatuses は省略される", () => {
+    createCMS({
+      schema,
+      token: "t",
+      collections: { posts: { published: ["公開済み"] } },
+    });
+    expect(
+      (lastCall(notionSourceMock).publishOptions as Record<string, unknown>)
+        .posts,
+    ).toEqual({ publishedStatuses: ["公開済み"] });
+  });
+
+  it("accessible のみ指定なら publishedStatuses は省略される", () => {
+    createCMS({
+      schema,
+      token: "t",
+      collections: { posts: { accessible: ["下書き", "公開済み"] } },
+    });
+    expect(
+      (lastCall(notionSourceMock).publishOptions as Record<string, unknown>)
+        .posts,
+    ).toEqual({ accessibleStatuses: ["下書き", "公開済み"] });
+  });
+
+  it("runtime に cache のみ指定したら swr/waitUntil は createClient に渡らない", () => {
+    const cache = ["KV"] as unknown as readonly CacheAdapter[];
+    createCMS({ schema, token: "t", runtime: { cache } });
+    const opts = lastCall(createClientMock);
+    expect(opts.cache).toEqual(["KV"]);
+    expect(opts.swr).toBeUndefined();
+    expect(opts.waitUntil).toBeUndefined();
+  });
+
   it("token と schema を notionSource にそのまま渡す", () => {
     createCMS({ schema, token: "secret-token" });
     expect(lastCall(notionSourceMock).token).toBe("secret-token");
