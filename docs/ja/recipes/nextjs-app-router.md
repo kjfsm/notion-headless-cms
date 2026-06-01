@@ -10,10 +10,8 @@ order: 1
 ## インストール
 
 ```bash
-pnpm add @notion-headless-cms/core @notion-headless-cms/notion-source \
-  @notion-headless-cms/cache @notion-headless-cms/adapter-next \
-  @notionhq/client zod \
-  unified remark-parse remark-gfm remark-rehype rehype-stringify
+pnpm add @notion-headless-cms/client @notion-headless-cms/cache \
+  @notionhq/client zod notion-to-md
 pnpm add -D @notion-headless-cms/cli
 ```
 
@@ -31,22 +29,20 @@ NOTION_TOKEN=secret_xxx npx nhc generate
 // app/lib/cms.ts
 import { memoryCache } from "@notion-headless-cms/cache";
 import { nextCache } from "@notion-headless-cms/cache/next";
-import { createClient } from "@notion-headless-cms/core";
-import { notionSource } from "@notion-headless-cms/notion-source";
+import { createCMS } from "@notion-headless-cms/client";
 import { schema } from "@/app/generated/nhc.schema";
 
 // document は Next.js の unstable_cache + revalidateTag、image は in-process メモリ。
-export const cms = createClient({
-  sources: {
-    notion: notionSource({
-      schema,
-      token: process.env.NOTION_TOKEN!,
-      publishOptions: {
-        posts: { publishedStatuses: ["公開済み"] },
-      },
-    }),
+export const cms = createCMS({
+  schema,
+  token: process.env.NOTION_TOKEN!,
+  content: "html",
+  runtime: {
+    cache: [nextCache({ revalidate: 300, tags: ["posts"] }), memoryCache()],
   },
-  cache: [nextCache({ revalidate: 300, tags: ["posts"] }), memoryCache()],
+  collections: {
+    posts: { published: ["公開済み"] },
+  },
 });
 ```
 
@@ -91,7 +87,7 @@ export default async function PostPage({
   const { slug } = await params;
   const post = await cms.posts.find(slug);
   if (!post) return <div>Not Found</div>;
-  const html = await post.render();
+  const html = await post.html();
   return (
     <article>
       <h1>{post.slug}</h1>
@@ -108,7 +104,7 @@ Notion を更新したとき、画面を**静かに切り替える**には `<Not
 
 ```tsx
 // app/posts/[slug]/page.tsx
-import { NotionRevalidator } from "@notion-headless-cms/react-renderer/next";
+import { NotionRevalidator } from "@notion-headless-cms/client/react";
 import { cms } from "@/lib/cms";
 
 export default async function Page({ params }) {
@@ -132,7 +128,7 @@ export default async function Page({ params }) {
 ```ts
 // app/api/cms/[...route]/route.ts
 import { cms } from "@/lib/cms";
-import { createNextHandler } from "@notion-headless-cms/adapter-next";
+import { createNextHandler } from "@notion-headless-cms/client/next";
 
 export const { GET, POST } = createNextHandler(cms, {
   webhookSecret: process.env.REVALIDATE_SECRET,

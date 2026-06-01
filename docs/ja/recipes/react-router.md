@@ -21,9 +21,8 @@ React Router v7（Framework mode）を Cloudflare Workers 上で動かし、load
 ## インストール
 
 ```bash
-pnpm add @notion-headless-cms/cloudflare @notion-headless-cms/fetch-blocks \
-  @notion-headless-cms/react-renderer
-pnpm add @notionhq/client zod notion-to-md
+pnpm add @notion-headless-cms/client
+pnpm add @notionhq/client zod notion-to-md react react-dom react-router
 pnpm add -D @notion-headless-cms/cli
 ```
 
@@ -64,11 +63,8 @@ binding が未設定でも `cloudflarePreset` は空のキャッシュ配列を�
 
 ```ts
 // app/lib/cms.ts
-import {
-  cloudflarePreset,
-  createClient,
-  notionSource,
-} from "@notion-headless-cms/cloudflare";
+import { createCMS } from "@notion-headless-cms/client";
+import { cloudflarePreset } from "@notion-headless-cms/client/cloudflare";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -78,21 +74,17 @@ export interface Env {
 }
 
 export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void }) {
-  return createClient({
-    sources: {
-      notion: notionSource({
-        schema,
-        token: env.NOTION_TOKEN,
-        // fetch は省略可。既定で blocks 戦略になり notionBlocks() がそのまま使える。
-        // OGP 取得やカスタムブロックが必要なときだけ fetch: blocksFetcher({ ... }) を渡す。
-        // 大きなページで CF Free のサブリクエスト上限が厳しいときは markdownFetcher() を検討。
-        publishOptions: {
-          posts: { publishedStatuses: ["公開済み"] },
-        },
-      }),
-    },
+  return createCMS({
+    schema,
+    token: env.NOTION_TOKEN,
+    // content: "react" は blocks 取得戦略。loader で notionBlocks() を React 描画する。
+    // 大きなページで CF Free のサブリクエスト上限が厳しいときは content: "html" を検討。
+    content: "react",
     // ctx を渡さないと SWR のバックグラウンド更新が打ち切られ、古いキャッシュが残る。
-    ...cloudflarePreset({ env, ctx }),
+    runtime: cloudflarePreset({ env, ctx }),
+    collections: {
+      posts: { published: ["公開済み"] },
+    },
   });
 }
 ```
@@ -167,14 +159,14 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
 ## 記事ページ（React 描画）
 
-`post.notionBlocks()` が BlockObjectResponse ツリーを返す。`@notion-headless-cms/fetch-blocks/react`
+`post.notionBlocks()` が BlockObjectResponse ツリーを返す。`@notion-headless-cms/client/react`
 の `Renderer` に渡すだけで shadcn/ui ベースのコンポーネントとして描画される。
 
 ```tsx
 // app/routes/post.tsx
-import { Renderer } from "@notion-headless-cms/fetch-blocks/react";
-import type { NotionBlock } from "@notion-headless-cms/react-renderer";
-import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
+import { Renderer } from "@notion-headless-cms/client/react";
+import type { NotionBlock } from "@notion-headless-cms/client/react";
+import { NotionRevalidator } from "@notion-headless-cms/client/react";
 import { data } from "react-router";
 import { makeCms } from "../lib/cms";
 import type { Route } from "./+types/post";
@@ -206,7 +198,7 @@ export default function Post({ loaderData }: Route.ComponentProps) {
 
 ## 表示の自動更新（`<NotionRevalidator>`）
 
-`@notion-headless-cms/react-renderer/router` の `NotionRevalidator` は内部で
+`@notion-headless-cms/client/react` の `NotionRevalidator` は内部で
 `useRevalidator()` を呼び、loader を再走させる。2 つのモードがある。
 
 ### マウント時に一度だけ再検証

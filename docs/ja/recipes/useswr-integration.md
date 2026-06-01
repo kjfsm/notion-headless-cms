@@ -7,7 +7,7 @@ order: 4
 
 # useSWR とのクライアントサイド連携
 
-> **先に検討する**: 単純な「ページを開いたら最新化したい」「タブに戻ったら最新化したい」だけなら、`@notion-headless-cms/react-renderer/router` の `<NotionRevalidator />`（React Router）か `@notion-headless-cms/react-renderer/next`（Next.js App Router）の方が短く済む。フレームワークの loader / RSC の再評価機構をそのまま使うため、別 API ルートを立てなくてよい。useSWR との連携は **クライアント側で独立したクエリキャッシュを持ちたい** / **`mutate` で局所的に再取得したい** といったケース向け。
+> **先に検討する**: 単純な「ページを開いたら最新化したい」「タブに戻ったら最新化したい」だけなら、`@notion-headless-cms/client/react` の `<NotionRevalidator />`（React Router）か `@notion-headless-cms/client/react`（Next.js App Router）の方が短く済む。フレームワークの loader / RSC の再評価機構をそのまま使うため、別 API ルートを立てなくてよい。useSWR との連携は **クライアント側で独立したクエリキャッシュを持ちたい** / **`mutate` で局所的に再取得したい** といったケース向け。
 
 `@notion-headless-cms/core` の `cms.posts.find()` / `cms.posts.list()` は
 Server Component / SSR での直接呼び出しを前提とした設計だが、
@@ -37,7 +37,7 @@ export async function GET(
   const { slug } = await params;
   const post = await cms.posts.find(slug);
   if (!post) return new Response("Not Found", { status: 404 });
-  const html = await post.render();
+  const html = await post.html();
   return Response.json({ ...post, html });
 }
 ```
@@ -124,7 +124,7 @@ export default async function Page({ params }: { params: Promise<{ slug: string 
   const { slug } = await params;
   const post = await cms.posts.find(slug);
   if (!post) notFound();
-  const html = await post.render();
+  const html = await post.html();
 
   return (
     <article>

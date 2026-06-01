@@ -54,28 +54,21 @@ export default defineConfig({
 NOTION_TOKEN=secret_xxx npx nhc generate
 ```
 
-生成された `nhc.schema.ts` には DB 構造（`schema` 定数）だけが入る。ランタイム設定（トークン・キャッシュ・publishedStatuses）は `createClient` 側で組み立てる。
+生成された `nhc.schema.ts` には DB 構造（`schema` 定数）だけが入る。ランタイム設定（トークン・content モード・公開ポリシー・ランタイム）は `createCMS` 側で組み立てる。
 
-## 最小構成（インメモリキャッシュ付き）
+## 最小構成（Node・既定ランタイム）
 
 ```ts
-import { memoryCache } from "@notion-headless-cms/cache";
-import { createClient } from "@notion-headless-cms/core";
-import { notionSource } from "@notion-headless-cms/notion-source";
+import { createCMS } from "@notion-headless-cms/client";
 import { schema } from "./app/generated/nhc.schema"; // nhc generate の出力
 
-const cms = createClient({
-  sources: {
-    notion: notionSource({
-      schema,
-      token: process.env.NOTION_TOKEN!,
-      publishOptions: {
-        posts: { publishedStatuses: ["公開済み"] },
-      },
-    }),
+const cms = createCMS({
+  schema,
+  token: process.env.NOTION_TOKEN!,
+  content: "html",
+  collections: {
+    posts: { published: ["公開済み"] },
   },
-  cache: [memoryCache()],
-  swr: { ttlMs: 5 * 60_000 }, // 5分 TTL
 });
 
 // 一覧取得
@@ -84,35 +77,29 @@ const posts = await cms.posts.list();
 // スラッグで取得 → 本文を HTML / Markdown で取り出す
 const post = await cms.posts.find("my-first-post");
 if (post) {
-  console.log(await post.render());                        // HTML 文字列
-  console.log(await post.render({ format: "markdown" })); // Markdown 文字列
+  console.log(await post.html());     // HTML 文字列
+  console.log(await post.markdown()); // Markdown 文字列
 }
 ```
 
-`memoryCache()` はインプロセス LRU キャッシュ。完全にキャッシュを切る場合は `createClient` の `cache` オプションを省略するか `undefined` を渡す。
-
-`@notion-headless-cms/notion-source` を `import` するだけで `sources.notion` キーが補完候補に現れる（module augmentation = Fastify プラグインと同じパターン）。
+`runtime` を省略すると Node 既定（インメモリ LRU キャッシュ + 5 分 TTL）になる。
+キャッシュを細かく制御したいときは `runtime: { cache: [...], swr: { ttlMs } }` を渡す。
 
 ## Cloudflare Workers の場合
 
 ```ts
-import { cloudflareCache } from "@notion-headless-cms/cache/cloudflare";
-import { createClient } from "@notion-headless-cms/core";
-import { notionSource } from "@notion-headless-cms/notion-source";
+import { createCMS } from "@notion-headless-cms/client";
+import { cloudflarePreset } from "@notion-headless-cms/client/cloudflare";
 import { schema } from "./app/generated/nhc.schema";
 
 export default {
-  async fetch(req: Request, env: Env) {
-    const cms = createClient({
-      sources: {
-        notion: notionSource({
-          schema,
-          token: env.NOTION_TOKEN,
-          publishOptions: { posts: { publishedStatuses: ["公開済み"] } },
-        }),
-      },
-      cache: cloudflareCache(env),
-      swr: { ttlMs: 5 * 60_000 },
+  async fetch(req: Request, env: Env, ctx: ExecutionContext) {
+    const cms = createCMS({
+      schema,
+      token: env.NOTION_TOKEN,
+      content: "html",
+      runtime: cloudflarePreset({ env, ctx }),
+      collections: { posts: { published: ["公開済み"] } },
     });
     const posts = await cms.posts.list();
     return Response.json(posts);
@@ -120,7 +107,7 @@ export default {
 };
 ```
 
-`cloudflareCache` は `env.DOC_CACHE` (KV) / `env.IMG_BUCKET` (R2) を自動検出して `kvCache` + `r2Cache` の配列を返す。binding が設定されていない場合は対応するアダプタをスキップする。
+`cloudflarePreset` は `env.DOC_CACHE` (KV) / `env.IMG_BUCKET` (R2) を自動検出して KV + R2 のキャッシュを配線する。`ctx`（ExecutionContext）を渡すと SWR のバックグラウンド更新が `waitUntil` で配線される。
 
 ## 複数の DB を扱う場合
 
@@ -133,31 +120,25 @@ import { defineConfig, env } from "@notion-headless-cms/cli";
 export default defineConfig({
   notionToken: env("NOTION_TOKEN"),
   collections: {
-    posts: { dbName: "ブログ記事DB", publishedStatuses: ["公開済み"] },
-    news: { dbName: "ニュースDB", publishedStatuses: ["公開済み"] },
+    posts: { dbName: "ブログ記事DB" },
+    news: { dbName: "ニュースDB" },
   },
   output: "./app/generated/nhc.schema.ts",
 });
 ```
 
 ```ts
-import { memoryCache } from "@notion-headless-cms/cache";
-import { createClient } from "@notion-headless-cms/core";
-import { notionSource } from "@notion-headless-cms/notion-source";
+import { createCMS } from "@notion-headless-cms/client";
 import { schema } from "./app/generated/nhc.schema";
 
-const cms = createClient({
-  sources: {
-    notion: notionSource({
-      schema,
-      token: process.env.NOTION_TOKEN!,
-      publishOptions: {
-        posts: { publishedStatuses: ["公開済み"] },
-        news: { publishedStatuses: ["公開済み"] },
-      },
-    }),
+const cms = createCMS({
+  schema,
+  token: process.env.NOTION_TOKEN!,
+  content: "html",
+  collections: {
+    posts: { published: ["公開済み"] },
+    news: { published: ["公開済み"] },
   },
-  cache: [memoryCache()],
 });
 
 const posts = await cms.posts.list(); // PostsItem[]
@@ -168,7 +149,7 @@ const news = await cms.news.list();   // NewsItem[]
 
 ## 画像プロキシ route を作る (Next.js)
 
-Notion の画像 URL は約 1 時間で失効する。`createClient` は画像を SHA256 ハッシュキーで永続キャッシュへ書き込み、`{imageProxyBase}/{hash}` 形式の URL に書き換える。
+Notion の画像 URL は約 1 時間で失効する。`createCMS` は画像を SHA256 ハッシュキーで永続キャッシュへ書き込み、`{imageProxyBase}/{hash}` 形式の URL に書き換える。
 `imageProxyBase` のデフォルトは `/api/images` で、その URL に対応する route を 1 つ用意するだけで画像が配信できる。
 
 ```ts
@@ -191,7 +172,7 @@ export async function GET(
 }
 ```
 
-`createClient({ imageProxyBase: "/api/cms/images" })` のように base を変えた場合は、route のパスも合わせて変更する。`@notion-headless-cms/next` の `createNextHandler(cms)` を使うと `/api/cms/images/:hash` ルートが自動でマウントされる（個別 route 不要）。
+`createCMS({ imageProxyBase: "/api/cms/images" })` のように base を変えた場合は、route のパスも合わせて変更する。`@notion-headless-cms/client/next` の `createNextHandler(cms)` を使うと `/api/cms/images/:hash` ルートが自動でマウントされる（個別 route 不要）。
 
 詳細は [`api/cms-methods.md#cmscacheimage-の利用例`](./api/cms-methods.md#cmscacheimage-の利用例) と [Next.js App Router レシピ](./recipes/nextjs-app-router.md) を参照。
 

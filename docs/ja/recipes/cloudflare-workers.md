@@ -52,9 +52,8 @@ wrangler secret put NOTION_TOKEN
 `cloudflarePreset({ env, ctx })` を `createClient` に展開すると、KV + R2 のキャッシュアダプタと `waitUntil` が一括で配線される。
 
 ```ts
-import { cloudflarePreset } from "@notion-headless-cms/cache/cloudflare";
-import { createClient } from "@notion-headless-cms/core";
-import { notionSource } from "@notion-headless-cms/notion-source";
+import { createCMS } from "@notion-headless-cms/client";
+import { cloudflarePreset } from "@notion-headless-cms/client/cloudflare";
 import { schema } from "./generated/nhc.schema";
 
 interface Env {
@@ -63,18 +62,15 @@ interface Env {
   IMG_BUCKET?: R2Bucket;
 }
 
-function makeCms(env: Env, ctx?: ExecutionContext) {
-  return createClient({
-    sources: {
-      notion: notionSource({
-        schema,
-        token: env.NOTION_TOKEN,
-        publishOptions: { posts: { publishedStatuses: ["公開済み"] } },
-      }),
-    },
+function makeCms(env: Env, ctx: ExecutionContext) {
+  return createCMS({
+    schema,
+    token: env.NOTION_TOKEN,
+    content: "html",
     // cache (KV+R2) と waitUntil を一括注入。
     // ctx を渡さないと SWR の bg 更新が打ち切られて古いキャッシュが残る。
-    ...cloudflarePreset({ env, ctx }),
+    runtime: cloudflarePreset({ env, ctx }),
+    collections: { posts: { published: ["公開済み"] } },
   });
 }
 
