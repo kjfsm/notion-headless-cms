@@ -1,4 +1,3 @@
-import type { NotionBlock } from "@notion-headless-cms/client/react";
 import { NotionRevalidator, Renderer } from "@notion-headless-cms/client/react";
 import { Link, redirect } from "react-router";
 import { makeCms } from "../lib/cms";
@@ -10,7 +9,7 @@ export async function loader({ context }: Route.LoaderArgs) {
   if (!page) return redirect("/docs");
   // fetch-blocks 戦略で Notion BlockObjectResponse ツリーを取得し、
   // react-renderer の <Renderer> で callout / column / embed を React コンポーネントに展開する。
-  const blocks = ((await page.notionBlocks()) ?? []) as NotionBlock[];
+  const blocks = await page.notionBlocks();
   return {
     blocks,
     item: {

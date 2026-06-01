@@ -101,6 +101,20 @@ export default {
 };
 ```
 
+## content モードと subrequest 制限の選び方
+
+Cloudflare Workers **Free プラン**は 1 invocation あたり 50 サブリクエストの上限がある。
+`content` モードはこの制限に直結するので、ページ規模で選ぶ。
+
+| content | 取得戦略 | Notion API 消費 | 向き |
+|---|---|---|---|
+| `"html"` | Markdown export API（1 リクエスト） | **ページあたり 1** | 大きい / ネストが深いページ、CF Free |
+| `"react"` | blocks.children.list（再帰） | ブロック階層に比例（数十〜） | React 高忠実度描画、Paid / 小〜中ページ |
+
+- まず `content: "html"` を既定にし、React で callout / column / embed を厳密に描画したいときだけ `"react"` にする。
+- `"react"` で大きなページを扱い subrequest が逼迫するなら、**KV プリウォーム**（`@notion-headless-cms/client/cloudflare` の `restKvCache` / `readRestKvEnv`）を併用し、Workers は KV（内部リクエスト）だけ読む構成にする。
+- カスタムブロックハンドラや OGP・並列度（`concurrency`）の調整が必要なら、escape hatch（`createClient` + `notionSource({ fetch: blocksFetcher({ concurrency, blocks, ogp }) })`）で個別に組み立てる。既定 `concurrency` は 3（Notion の 3 req/s に合わせた値）。
+
 ## キャッシュ戦略: 永続キャッシュ + 更新検知
 
 `swr.ttlMs` は**指定しない**のが推奨。

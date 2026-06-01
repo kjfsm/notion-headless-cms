@@ -164,9 +164,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
 ```tsx
 // app/routes/post.tsx
-import { Renderer } from "@notion-headless-cms/client/react";
-import type { NotionBlock } from "@notion-headless-cms/client/react";
-import { NotionRevalidator } from "@notion-headless-cms/client/react";
+import { NotionRevalidator, Renderer } from "@notion-headless-cms/client/react";
 import { data } from "react-router";
 import { makeCms } from "../lib/cms";
 import type { Route } from "./+types/post";
@@ -175,7 +173,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
   const post = await cms.posts.find(params.slug ?? "");
   if (!post) throw data("Not Found", { status: 404 });
-  const blocks = ((await post.notionBlocks()) ?? []) as NotionBlock[];
+  const blocks = await post.notionBlocks(); // NotionBlock[]（キャスト不要）
   return {
     blocks,
     item: { slug: post.slug, title: post.title, lastEditedTime: post.lastEditedTime },

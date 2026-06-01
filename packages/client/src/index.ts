@@ -19,6 +19,7 @@ import type {
   SchemaMap,
 } from "@notion-headless-cms/notion-source";
 import { notionSource } from "@notion-headless-cms/notion-source";
+import type { NotionBlock } from "@notion-headless-cms/react-renderer";
 
 // 上級者向けの逃がし口（escape hatch）。createCMS で足りない場合に直接組み立てる。
 export type {
@@ -67,10 +68,11 @@ type HtmlItem<T> = T & {
 /** `"react"` モードのアイテムに生える本文アクセサ。 */
 type ReactItem<T> = T & {
   /**
-   * Notion BlockObjectResponse ツリーを返す。`@notion-headless-cms/react-renderer`
-   * の `<Renderer />` に渡す。`"react"` モードでは常に取得できる（`undefined` にならない）。
+   * Notion BlockObjectResponse ツリーを返す。`@notion-headless-cms/client/react`
+   * の `<Renderer blocks={...} />` にそのまま渡せる（キャスト不要）。
+   * `"react"` モードでは常に取得できる（`undefined` にならない）。
    */
-  notionBlocks(): Promise<unknown[]>;
+  notionBlocks(): Promise<NotionBlock[]>;
 };
 
 /** content モードに応じて本文アクセサを切り替える。 */

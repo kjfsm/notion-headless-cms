@@ -40,6 +40,16 @@ order: 2
 
 ---
 
+### 第 3 弾（v2 コンセプト再設計）
+- **単一エントリ `createCMS`（`@notion-headless-cms/client`）**: `createClient` + `notionSource`
+  + preset の合成を 1 呼び出しに集約。メタパッケージ（node/cloudflare/next）を廃止し
+  `./next` `./cloudflare` `./react` サブパスに統合（RFC: `rfc/v2-usability-redesign.md`）。
+- **content モード `"html"` / `"react"`**: 取得戦略と renderer を内部結線し不整合フットガンを排除。
+  アクセサ型も mode で分岐し `notionBlocks()` を `NotionBlock[]`（react モード・非 undefined）に型付け。
+- **status 値の型安全**: `published` / `accessible` を schema の status options で型付け。
+- **取得戦略と subrequest 制限の指針**（P4 を content モードの選び方として明文化、
+  `recipes/cloudflare-workers.md`）。
+
 ## 提案（未実装）
 
 ### DX
@@ -62,9 +72,4 @@ order: 2
 - **課題**: `fetchAndCacheImage` は原寸保存。LCP/転送量の最適化余地。
 - **提案**: 配信時の幅・フォーマット変換、または Cloudflare Images 連携。
 - **影響範囲**: `packages/core/src/image.ts` + cache。 **想定工数**: 大。 **リスク**: 中。
-
-#### P4. `blocksFetcher` の並列度チューニング指針
-- **課題**: 既定 `concurrency: 3`。CF Free のサブリクエスト上限との兼ね合い。
-- **提案**: 環境別の推奨値と `markdownFetcher`（1 リクエスト取得）との使い分けを明文化。
-  KV プリウォーム（実装済み）と合わせて運用指針を整える。
-- **影響範囲**: ドキュメント中心。 **想定工数**: 小。 **リスク**: 低。
+- （P4「取得戦略と並列度の指針」は第 3 弾で content モードの選び方として明文化済み）
