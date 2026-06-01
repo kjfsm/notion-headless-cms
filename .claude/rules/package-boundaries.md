@@ -19,7 +19,9 @@ Notion DB
        └─ @notion-headless-cms/core（CMS 統合・キャッシュ・クエリ・フック・nodePreset）
             └─ @notion-headless-cms/cache（memory + サブパス /cloudflare（r2Cache/kvCache/cloudflarePreset）/next）
 
-メタパッケージ: @notion-headless-cms/{node,cloudflare,next}
+利用側の単一エントリ（v2〜）: @notion-headless-cms/client（createCMS）
+  + サブパス /cloudflare（cloudflarePreset/restKvCache）/next（createNextHandler/nextPreset）/react（Renderer/NotionRevalidator）
+  旧メタパッケージ node / cloudflare / next は廃止し client に集約した。
 ```
 
 ## 重要なルール
@@ -39,14 +41,15 @@ Notion DB
 - **Node.js**: `nodePreset` は `core` に相乗り。`memoryDocumentCache` + `memoryImageCache` を既定で有効化
 - **Cloudflare Workers**: `cloudflarePreset` は `@notion-headless-cms/cache`（`/cloudflare` サブパス）に相乗り。env binding (`DOC_CACHE` / `IMG_BUCKET`) を解決
 
-## 廃止されたパッケージ (v0.3.0)
+## 廃止されたパッケージ
 
-- `@notion-headless-cms/adapter-node` → `nodePreset()` (core)
-- `@notion-headless-cms/adapter-cloudflare` → `cloudflarePreset({ env })`（cache の /cloudflare サブパス）
+- v0.3.0: `@notion-headless-cms/adapter-node` → `nodePreset()` (core)
+- v0.3.0: `@notion-headless-cms/adapter-cloudflare` → `cloudflarePreset({ env })`（cache の /cloudflare サブパス）
+- v2: メタパッケージ `@notion-headless-cms/{node,cloudflare,next}` → `@notion-headless-cms/client`（createCMS）+ サブパス
 
 ## フレームワークグルーの定義
 
-フレームワーク固有のグルー（route handler / integration プラグイン）は各メタパッケージに同梱する。現行は `@notion-headless-cms/next`（`createNextHandler` / `createNextWebhookHandler`）。
+フレームワーク固有のグルー（route handler / integration プラグイン）は `@notion-headless-cms/client` のサブパスに置く。現行は `@notion-headless-cms/client/next`（`createNextHandler` / `createNextWebhookHandler`）と `@notion-headless-cms/client/react`（`Renderer` / `NotionRevalidator`）。
 
 ## 違反パターンと修正例
 
@@ -108,7 +111,7 @@ import { Client } from "@notionhq/client";
 違反: 依存方向の逆転
 
 ```ts
-import type { NextEnv } from "@notion-headless-cms/next";
+import type { SomeType } from "@notion-headless-cms/client";
 ```
 
 修正: 型を core 側に置くか、各パッケージで独自定義する。

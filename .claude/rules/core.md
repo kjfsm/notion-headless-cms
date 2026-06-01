@@ -9,7 +9,7 @@ paths:
 ## ゼロ依存の原則
 
 - `@notionhq/client` / `unified` / `zod` / `@notion-headless-cms/markdown-html` を**静的 import しない**
-- renderer は `CreateClientOptions.renderer`（`RendererFn`）で注入。メタパッケージ (`@notion-headless-cms/node` 等) が自動注入する
+- renderer は `CreateClientOptions.renderer`（`RendererFn`）で注入。`@notion-headless-cms/client` の `createCMS`（content モード）が自動注入する
 - 何も指定しない場合のみ、動的 `import("@notion-headless-cms/markdown-html")` でフォールバック（オプショナル peerDep）
 
 ## SWR（Stale-While-Revalidate）
