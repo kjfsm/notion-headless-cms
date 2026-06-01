@@ -1,109 +1,48 @@
 # CLAUDE.md
 
-Notion をヘッドレス CMS として利用する TypeScript ライブラリ群のモノレポ。
-npm スコープ `@notion-headless-cms/*` で公開。
+Notion をヘッドレス CMS として利用する TypeScript ライブラリ群の pnpm モノレポ（npm スコープ `@notion-headless-cms/*`）。
+このリポジトリの詳細・設計方針・コマンドは **`.claude/project.md`** を参照（作業開始時に必ず読む）。
+
+> コンパクション時: 変更中ファイル一覧・実行すべきテストコマンド・タスク状態を必ず保持すること。
+
+---
 
 ## 絶対ルール
 
-1. **言語**: コメント・コミットメッセージ・PR 概要はすべて**日本語**
-2. **変更後**: 必ず `pnpm typecheck && pnpm test`。失敗を残したままコミットしない
-3. **core はゼロ依存**: `packages/core` は `@notionhq/client` / `unified` / `zod` / `@notion-headless-cms/renderer` に静的 import で依存しない（詳細: `.claude/rules/core.md`）
-4. **シークレット**: コードにハードコードしない。環境変数 / `wrangler secret` / `env()` ヘルパー経由（詳細: `.claude/rules/secrets.md`）
-5. **`.claude/` の編集は `.claude-next/` で作業してから一括コピー**する（本セッション中の反映事故を避け、差分レビューしやすくするため）
-6. **changeset の bump 種別**: 明示的な指示がない限り **`patch`** を使う（`major` / `minor` は指示があった場合のみ）
-7. **shadcn 生成ファイル (`**/components/ui/**`) は手で編集しない**。更新するときは `pnpm dlx shadcn@latest add <component> --overwrite` で再生成する。biome の検査対象からも除外済み
+スタックに依存しない最優先ルール。全リポジトリで同一文面。
 
-## 設計方針とコーディングの方向性
+1. **言語**: コメント・コミットメッセージ・PR タイトル・PR 概要・AI とのやり取りはすべて**日本語**。ブランチ名は英語のみ（日本語禁止）。識別子・型名・ログ・JSX 表示テキストは英語のまま触らない。
+2. **変更後は必ず `pnpm typecheck && pnpm test` を通す**。失敗を残したままコミットしない。
+3. **`main` への直 push 禁止**。必ずブランチを切って PR を出す。
+4. **シークレットをコード／Git にハードコードしない**。`.dev.vars` / `.env` は commit せず、ログにも出さない。
+5. **pre-commit / pre-deploy フックを `--no-verify`（`--no-gpg-sign` 等）でスキップしない**。フックが落ちたら根本原因（型・lint・テスト）を直す。
+6. **自動生成ファイルを手編集しない**（具体パスは `.claude/project.md` を参照）。
 
-### パッケージ構成
+---
 
-```
-Notion DB
-  └─ notion-orm（Notion API 取得・Markdown 変換・fetchBlockTree。ユーザーは直接 import しない）
-       ├─ fetch-blocks（BlockObjectResponse ツリー取得 + React Renderer）
-       ├─ fetch-markdown（Notion Markdown API で本文取得）
-       ├─ markdown-html（Markdown → HTML、remark/rehype ベース）
-       ├─ react-renderer（BlockObjectResponse → React、shadcn/ui + Tailwind v4）
-       ├─ notion-source（CMSAdapter 実装。`createClient({ sources: { notion: notionSource(...) } })` で組み込む）
-       └─ core（CMS エンジン・キャッシュ・SWR・フック・nodePreset）
-            └─ cache（memory + サブパス /cloudflare（R2/KV + cloudflarePreset）/next（ISR））
+## このリポジトリ固有の絶対ルール
 
-メタパッケージ（利用側はこれ 1 つ）: node / cloudflare / next
-```
+1. **`packages/core` はゼロ依存**: `@notionhq/client` / `unified` / `zod` / `@notion-headless-cms/renderer` に静的 import で依存しない（詳細: `.claude/rules/core.md`）。
+2. **`.claude/` の編集は `.claude-next/` で作業してから一括コピー**する（手順: `.claude/project.md` の「`.claude/` 編集フロー」）。
+3. **changeset の bump 種別**: 明示的な指示がない限り **`patch`** を使う（`major` / `minor` は指示があった場合のみ）。
+4. **shadcn 生成ファイル (`**/components/ui/**`) は手編集せず再生成**する（`pnpm dlx shadcn@latest add <component> --overwrite`）。
 
-すべて `@notion-headless-cms/` スコープ。`cli` は別途 introspect・型生成ツール。
+---
 
-### 核心設計原則
+## 参照先（索引）
 
-- **core を Notion 固有知識から隔離**: `DataSourceAdapter` インターフェースのみ定義し、実装は `notion-orm` 側に置く。将来の Contentful 等への差し替えを可能にするため
-- **preset パターン（v0.3.0〜）**: `nodePreset()` (core) / `cloudflarePreset({ env })`（cache の /cloudflare サブパス）で `createClient` 一本に統一。廃止されたアダプタ（`adapter-node` / `adapter-cloudflare`）は参照しない
-- **拡張可能な sources（module augmentation）**: core は空の `CMSSources` インターフェースを公開し、`@notion-headless-cms/notion-source` などのアダプターパッケージが `declare module "@notion-headless-cms/core" { interface CMSSources { notion?: CMSAdapter } }` で宣言マージしてキーを追加する（Fastify プラグインと同じパターン）。CLI は DB 構造（`schema`）のみを生成し、ランタイム設定は `createClient({ sources: { notion: notionSource({ schema, token, publishOptions }) } })` で組み立てる
-- **構造型による抽象化**: `R2BucketLike` など、型だけ定義してランタイムパッケージへの直接依存を排除（テスト容易性向上）
-- **`internal/` は非公開**: `packages/*/src/internal/**` を他パッケージから import 禁止。公開したければ `src/index.ts` で re-export する
+- **プロジェクト固有の詳細**（設計方針・パッケージ構成・全コマンド・編集フロー・リリース）→ **`.claude/project.md`**
+- **パッケージ別の詳細規約**（編集対象のパスに応じて自動注入）→ **`.claude/rules/`**
+- **手順・ワークフロー**（`/<name>` で明示呼び出し）→ **`.claude/skills/`**
+- **設計背景** → **`docs/ja/architecture.md`**
 
-### コードスタイル要点
-
-- **Biome**: インデントはスペース 2 幅、クォートはダブル (`"`)。`pnpm format` で自動修正
-- **型インポート**: `import type { ... }` を必ず使う（`verbatimModuleSyntax: true`）
-- **モジュール**: ES Modules のみ。`require()` / CommonJS は禁止
-- **コメント**: 日本語・WHY のみ。コードで自明なことは書かない（詳細: `.claude/rules/coding-style.md`）
-
-### エラー処理
-
-すべて `CMSError` に統一。生の `Error` は throw しない。コードは `<namespace>/<kind>` の二段形式（例: `source/fetch_items_failed`, `cache/io_failed`）。詳細は `.claude/rules/error-handling.md`。
-
-### SWR とキャッシュの注意点
-
-- TTL 切れはブロッキングフェッチ（キャッシュが stale でも返さない—ユーザー要件）
-- Notion 画像 URL は約 1 時間で失効 → `fetchAndCacheImage` で SHA256 ハッシュキーに永続化し、プロキシ経由で配信する
-- `peerDependencies` は利用側でインストール。パッケージ間依存は `workspace:*`
-
-### テスト
-
-vitest、coverage 閾値 70%。モックパターン（DataSource / renderer / R2 / fetch / fakeTimers）は `.claude/rules/testing.md` を参照。
-
-## 詳細ドキュメントの場所
-
-- 全体構成・セットアップ: `README.md`
-- ワークスペース構成: `pnpm-workspace.yaml`
-- パッケージ固有ルール: `.claude/rules/<area>.md`（`paths:` 指定で該当パス編集時のみ自動注入）
-- 手順・ワークフロー: `.claude/skills/<name>/SKILL.md`（`/<name>` で明示呼び出し）
-- 設計背景: `docs/ja/architecture.md`
-
-## 共通コマンド
-
-- `pnpm build` / `pnpm typecheck` / `pnpm test` / `pnpm format` / `pnpm lint`
-- `pnpm changeset` — changeset 作成（`/changeset-flow` で補助）
-- 個別: `pnpm --filter @notion-headless-cms/<pkg> <script>`
-
-## `.claude/` 編集フロー
-
-```bash
-# 1. 作業フォルダを用意（最初だけ）
-cp -r .claude .claude-next
-
-# 2. .claude-next/ 配下で編集
-$EDITOR .claude-next/rules/xxx.md
-
-# 3. diff を確認
-diff -r .claude .claude-next
-
-# 4. 問題なければ一括コピー
-rsync -a --delete .claude-next/ .claude/
-# または: rm -rf .claude && cp -r .claude-next .claude
-```
-
-- `.claude-next/` は `.gitignore` に追加しておくか、コピー後に削除する
-- 本セッションからは **`.claude/` への直接書き込みを避ける**
-
-## リリース
-
-main マージで `release.yml` が "Version Packages" PR を作成。その PR をマージすると npm に公開される。
+---
 
 ## 自己更新ルール
 
-同じ指摘を 2 回以上受けた事項は以下の優先順位でドキュメントに追記する:
+同じ指摘を 2 回以上受けた事項は、以下の優先順位でドキュメントに追記する。
 
-1. **パス固有の事実** → `.claude/rules/<area>.md`
-2. **手順・テンプレ・ワークフロー** → `.claude/skills/<name>/SKILL.md`
-3. **全セッションで必要な絶対ルール** → この `CLAUDE.md`
+1. **パス固有の事実** → `.claude/rules/<area>.md`（`paths:` 指定で該当パス編集時のみ自動注入）
+2. **手順・テンプレ・ワークフロー** → `.claude/skills/<name>/SKILL.md`（`/<name>` で明示呼び出し）
+3. **決定的に弾きたい挙動** → `.claude/hooks/*.sh`（PreToolUse 等で 100% 実行）
+4. **全セッションで必要な絶対ルール** → この `CLAUDE.md` ／ **プロジェクト固有の常識** → `.claude/project.md`
