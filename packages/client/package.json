@@ -48,9 +48,7 @@
     "@notion-headless-cms/core": "workspace:*",
     "@notion-headless-cms/notion-source": "workspace:*",
     "@notion-headless-cms/fetch-markdown": "workspace:*",
-    "@notion-headless-cms/fetch-blocks": "workspace:*"
-  },
-  "peerDependencies": {
+    "@notion-headless-cms/fetch-blocks": "workspace:*",
     "@notionhq/client": "^5.20.0",
     "notion-to-md": "^3.1.0",
     "zod": "^4.0.0"

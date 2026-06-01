@@ -156,5 +156,18 @@ async function _typeChecks() {
     // @ts-expect-error react モードに html は存在しない
     await reactPost.html();
   }
+
+  // published/accessible は schema の status options で型付けされる
+  createCMS({
+    schema,
+    token: "t",
+    collections: { posts: { published: ["公開済み"], accessible: ["下書き"] } },
+  });
+  createCMS({
+    schema,
+    token: "t",
+    // @ts-expect-error "存在しない" は status options に無い
+    collections: { posts: { published: ["存在しない"] } },
+  });
 }
 void _typeChecks;

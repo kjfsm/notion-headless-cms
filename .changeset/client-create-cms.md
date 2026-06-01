@@ -8,3 +8,5 @@
 - **content モード**: `"html"` / `"react"` の単一決定で取得戦略（markdownFetcher / blocksFetcher）と renderer を内部結線し、戦略と renderer の不整合フットガンを排除
 - **型分岐**: content モードに応じてアイテム本文アクセサを切り替え（`"html"` は `html()`/`markdown()`、`"react"` は `notionBlocks()`）。`notionBlocks()` の `undefined` フットガンを型で排除
 - **runtime フィールド**: `nodePreset()` / `cloudflarePreset({ env, ctx })` / `nextPreset()` の戻り値をそのまま渡せる。省略時は node 既定
+- **status 値の型安全**: `published` / `accessible` は schema の status options から literal union で型付けされ、typo がコンパイルエラーになる
+- **単一インストール**: `@notionhq/client` / `zod` / `notion-to-md` を依存に取り込み、`pnpm add @notion-headless-cms/client` だけで動く

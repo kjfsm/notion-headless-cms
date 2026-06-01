@@ -14,6 +14,7 @@ import {
 } from "@notion-headless-cms/fetch-markdown";
 import type {
   CMSItemFromSchema,
+  CollectionSchemaEntry,
   NotionPublishOptions,
   SchemaMap,
 } from "@notion-headless-cms/notion-source";
@@ -69,12 +70,28 @@ export type CMSClientFor<S extends SchemaMap, M extends ContentMode> = {
   [K in keyof S]: ModeCollectionClient<CMSItemFromSchema<S[K]>, M>;
 } & CMSGlobalOps;
 
+/**
+ * schema エントリの statusField から status の許容値（literal union）を引く。
+ * status プロパティの options が schema に載っているので、published/accessible を
+ * 型安全にできる（typo はコンパイルエラー）。options が無ければ string にフォールバック。
+ */
+type StatusValuesOf<E extends CollectionSchemaEntry> = E extends {
+  statusField: infer SF extends string;
+  properties: infer P;
+}
+  ? SF extends keyof P
+    ? P[SF] extends { options: readonly (infer O extends string)[] }
+      ? O
+      : string
+    : string
+  : string;
+
 /** コレクション単位の振る舞い（公開ポリシー）。値の住所は createCMS のみ。 */
-export interface CollectionBehavior {
+export interface CollectionBehavior<V extends string = string> {
   /** `list()` の既定絞り込みに使う公開ステータス値。 */
-  published?: readonly string[];
+  published?: readonly V[];
   /** `find()` の閲覧可否判定に使うステータス値。未指定なら published と同じ。 */
-  accessible?: readonly string[];
+  accessible?: readonly V[];
 }
 
 /**
@@ -102,8 +119,8 @@ export interface CreateCMSOptions<
   token: string;
   /** 本文モード。省略時は `"html"`。 */
   content?: M;
-  /** コレクション別の公開ポリシー。 */
-  collections?: { [K in keyof S]?: CollectionBehavior };
+  /** コレクション別の公開ポリシー。published/accessible は schema の status 値で型付けされる。 */
+  collections?: { [K in keyof S]?: CollectionBehavior<StatusValuesOf<S[K]>> };
   /** ランタイム配線。省略時は `nodePreset()`。 */
   runtime?: RuntimeConfig;
   /** 画像プロキシのベース URL。既定 `/api/images`。 */
