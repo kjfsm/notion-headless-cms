@@ -91,3 +91,17 @@ rsync -a --delete .claude-next/ .claude/
 ## リリース
 
 main マージで `release.yml` が "Version Packages" PR を作成。その PR をマージすると npm に公開される。
+
+### ローカルから手動公開する（緊急フォールバック）
+
+新規 scope パッケージの初回公開など、CI の npm トークンに作成権限がまだ無く CI 公開が 404 で落ちる場合のフォールバック。各公開パッケージに `release:local`（= `pnpm publish --no-provenance --no-git-checks`）を用意してある。
+
+```bash
+# 公開したいパッケージ dir 内で「直接」実行する
+pnpm --filter <パッケージ名> run release:local
+# 例: pnpm --filter @notion-headless-cms/client run release:local
+```
+
+- **`pnpm -r publish` / `pnpm --filter ... publish` で publish 自体を回さないこと**。再帰・フィルタ publish では `--no-provenance` が下層へ転送されず、`publishConfig.provenance: true` が優先されて `provider: null`（provenance はローカルでは生成不可）で失敗する（pnpm 既知挙動: pnpm/pnpm#6607・#11728）。**各パッケージ dir 内で直接 `pnpm publish` する形（= `release:local` を `--filter ... run` で呼ぶ）なら `--no-provenance` が効く**。
+- 2FA OTP を求められたら認証アプリのコードを入力する（ブラウザ認証フローが開くこともある）。
+- provenance 無しで公開されるのはこの版のみ。次バージョン以降は CI が `NPM_CONFIG_PROVENANCE=true` + OIDC で provenance 付き公開に戻す。

@@ -57,7 +57,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
     "publint": "publint --strict",
-    "attw": "attw --pack . --profile esm-only"
+    "attw": "attw --pack . --profile esm-only",
+    "release:local": "pnpm publish --no-provenance --no-git-checks"
   },
   "publishConfig": {
     "access": "public",
