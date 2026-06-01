@@ -1,5 +1,12 @@
 # @notion-headless-cms/renderer
 
+## 1.0.3
+
+### Patch Changes
+
+- 3aa3f1e: `RendererFn` の JSDoc `@example` を、未掲載パッケージ名 (`@my/mdx`) の動的 import を含まない自前変換関数の例に差し替え (knip の unlisted dependencies 警告解消)。挙動・公開 API シグネチャに変更なし。
+- 2d6b5b8: 公開 API の JSDoc に `@example` と `@see` を追加し、IDE ホバーで使い方と関連 API へジャンプできるようにした (Issue #305 / S1)。`NotionRenderer` / `NotionBlocks` / `BlockSwitch` / `useNotionContext` / `resolveBlockImageUrls` / `RichText` / `Caption` / `renderMarkdown` / `Transformer` / `createTransformer` / `BlockHandler` / `RendererFn` / `RendererOptions` / `BlockConverter` / `rehypeImageCache` が対象。
+
 ## 1.0.2
 
 ### Patch Changes

@@ -1,5 +1,26 @@
 # @notion-headless-cms/testing
 
+## 0.3.0
+
+### Minor Changes
+
+- 8005ace: `@notion-headless-cms/testing/contract` サブパスを新設し、`runCacheAdapterContract` / `runDataSourceContract` を export (Issue #317 / M6)。サードパーティ実装の品質保証パスとして利用できる。`vitest` は optional peerDependency として宣言。
+
+  加えて root `pnpm e2e:matrix` script と `.github/workflows/e2e-nightly.yml` (examples + apps/docs を target にした nightly matrix Playwright e2e) を追加、README に nightly バッジを掲載。
+
+### Patch Changes
+
+- Updated dependencies [6478628]
+- Updated dependencies [e9698a3]
+- Updated dependencies [054e3d6]
+- Updated dependencies [12ddf52]
+- Updated dependencies [f7f0493]
+- Updated dependencies [4183d36]
+- Updated dependencies [3f8bd02]
+- Updated dependencies [355f3e1]
+- Updated dependencies [6e1cec6]
+  - @notion-headless-cms/core@0.5.0
+
 ## 0.2.0
 
 ### Minor Changes
