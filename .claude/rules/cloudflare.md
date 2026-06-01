@@ -40,7 +40,7 @@ v0.3.0 以降、ランタイム別ファクトリ（旧 `adapter-cloudflare` / `
 
 ### `cloudflarePreset`（cache の /cloudflare サブパス）
 
-- `createClient({ sources: { notion: notionSource(...) }, ...cloudflarePreset({ env, ctx }) })` で使う
+- `createCMS({ schema, token, content, runtime: cloudflarePreset({ env, ctx }) })` で使う（`@notion-headless-cms/client/cloudflare`）
 - `env.DOC_CACHE` (KV) と `env.IMG_BUCKET` (R2) を自動検出
 - `ctx`（ExecutionContext）を渡すと SWR バックグラウンド更新が `waitUntil` で配線される
 - 詳細: `.claude/rules/cache.md` / `.claude/rules/package-boundaries.md`
@@ -51,9 +51,9 @@ v0.3.0 以降、ランタイム別ファクトリ（旧 `adapter-cloudflare` / `
 - 構造型 `R2BucketLike` / `KVNamespaceLike` を受け取るため `@cloudflare/workers-types` に**実依存しない**
 - ユーザーは `env.IMG_BUCKET` / `env.DOC_CACHE` をそのまま渡せる（構造的サブタイプで互換）
 
-### @notion-headless-cms/cloudflare（メタパッケージ）
+### @notion-headless-cms/client/cloudflare（サブパス）
 
-- `createClient` / `cloudflarePreset` / `notionSource` を再 export
+- `cloudflarePreset` を再 export（`createCMS({ runtime: cloudflarePreset({ env, ctx }) })` で使う）
 - `restKvNamespace` / `restKvCache` / `readRestKvEnv` — Node の warm スクリプトから KV REST API 経由で書き込む
 
 ### examples/cloudflare-*

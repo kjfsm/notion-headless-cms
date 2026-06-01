@@ -18,14 +18,15 @@ Notion DB
        ├─ @notion-headless-cms/fetch-markdown （Notion Markdown API で本文取得 / サブリクエスト節約）
        ├─ @notion-headless-cms/markdown-html  （Markdown→HTML / SSR-only / 非 React 向け）
        ├─ @notion-headless-cms/react-renderer （BlockObjectResponse→React / shadcn/ui + Tailwind v4）
-       ├─ @notion-headless-cms/notion-source  （CMSAdapter 実装 / `createClient({ sources: { notion } })` で組み込む）
+       ├─ @notion-headless-cms/notion-source  （CMSAdapter 実装 / createCMS が内部で組み込む）
        └─ @notion-headless-cms/core           （CMS 統合・キャッシュ・フック・nodePreset）
             └─ @notion-headless-cms/cache      （memory + サブパス /cloudflare（KV+R2, cloudflarePreset）/next）
 
-メタパッケージ（利用側はこれ 1 つで揃う）:
-  @notion-headless-cms/node       = core + notion-source + nodePreset
-  @notion-headless-cms/cloudflare = core + notion-source + cloudflarePreset
-  @notion-headless-cms/next       = core + notion-source + Next.js グルー（createNextHandler 等）
+利用側の単一エントリ（これ 1 つ + サブパスで揃う）:
+  @notion-headless-cms/client            = createCMS（core + notion-source + fetch-* + preset を集約）
+  @notion-headless-cms/client/cloudflare = cloudflarePreset / restKvCache
+  @notion-headless-cms/client/next       = createNextHandler / nextPreset
+  @notion-headless-cms/client/react      = Renderer / NotionRevalidator
 ```
 
 ### なぜこの形か
@@ -35,7 +36,8 @@ Notion DB
 - `react-renderer` は `renderer` (HTML) とは並列の出力経路。Markdown 中継せず Notion ブロックを直接 React に変換するため、rich_text annotations や mention 等の情報を失わずに描画できる。React アプリ向けに分離し、SSR-only / 非 React フレームワーク (Astro / Hono / Express) は `notion-embed` の HTML 出力を継続利用
 - アダプタが「ランタイム固有の面倒」を引き受け、core はランタイム中立を保つ
 - v0.3.0 で `adapter-node` / `adapter-cloudflare` を廃止して preset 方式に変えた理由は、ユーザーが `createClient` 一本で書けるようにするため（フレームワーク連携 adapter と役割を分離）
-- v2.0 で空の `CMSSources` インターフェースと `notion-source` パッケージを導入した理由は、生成物に Notion 固有のラッパー実装を埋め込まずに済ませるため。`declare module` でアダプターパッケージが `sources.<key>` を宣言マージできるので、Fastify プラグインのように `import` するだけで型が拡張される。生成物はスキーマだけを持ち、ランタイム設定は `createClient` 側で組み立てる
+- v2.0 で空の `CMSSources` インターフェースと `notion-source` パッケージを導入した理由は、生成物に Notion 固有のラッパー実装を埋め込まずに済ませるため。`declare module` でアダプターパッケージが `sources.<key>` を宣言マージできるので、Fastify プラグインのように `import` するだけで型が拡張される。生成物はスキーマだけを持ち、ランタイム設定は `createCMS` / `createClient` 側で組み立てる
+- v2 でメタパッケージ（node / cloudflare / next）を廃止し `@notion-headless-cms/client` の `createCMS` + サブパスに集約した理由は、ランタイム選択・取得戦略・renderer の組み合わせを 1 か所に閉じ、二重定義と不整合フットガンを無くすため（RFC: `rfc/v2-usability-redesign.md`）。`createClient` / `notionSource` / preset は client が re-export する escape hatch として残す
 
 ## SWR（Stale-While-Revalidate）
 

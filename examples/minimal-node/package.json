@@ -9,8 +9,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@notion-headless-cms/client": "workspace:*",
     "@notion-headless-cms/core": "workspace:*",
-    "@notion-headless-cms/node": "workspace:*",
     "@notion-headless-cms/notion-orm": "workspace:*",
     "@notion-headless-cms/notion-source": "workspace:*",
     "@notionhq/client": "catalog:",

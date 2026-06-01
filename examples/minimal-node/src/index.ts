@@ -1,19 +1,10 @@
-import {
-  createClient,
-  nodePreset,
-  notionSource,
-} from "@notion-headless-cms/node";
+import { createCMS } from "@notion-headless-cms/client";
 import { schema } from "./generated/nhc.js";
 
-const cms = createClient({
-  sources: {
-    notion: notionSource({
-      schema,
-      token: process.env.NOTION_TOKEN ?? "",
-      publishOptions: { posts: { publishedStatuses: ["公開済み"] } },
-    }),
-  },
-  ...nodePreset(),
+const cms = createCMS({
+  schema,
+  token: process.env.NOTION_TOKEN ?? "",
+  collections: { posts: { published: ["公開済み"] } },
 });
 
 const posts = await cms.posts.list();

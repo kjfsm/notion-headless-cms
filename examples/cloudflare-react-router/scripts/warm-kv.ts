@@ -28,8 +28,12 @@
  */
 
 import { notionEmbed, youtubeProvider } from "@notion-headless-cms/block-html";
-import { createCms, restKvNamespace } from "@notion-headless-cms/cloudflare";
-import { blocksFetcher } from "@notion-headless-cms/fetch-blocks";
+import {
+  blocksFetcher,
+  createClient,
+  notionSource,
+} from "@notion-headless-cms/client";
+import { restKvCache } from "@notion-headless-cms/client/cloudflare";
 import { schema } from "../app/generated/nhc.js";
 
 const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
@@ -52,23 +56,24 @@ const embed = notionEmbed({
   providers: [youtubeProvider({ display: "card" })],
 });
 
-const kv = restKvNamespace({ accountId, namespaceId, apiToken });
-
 // katex / shiki は ContentExtension として Renderer 側（ブラウザ）で適用される。
 // ウォームアップはコンテンツデータのキャッシュのみ担う。
-const cms = createCms({
-  schema,
-  token: notionToken,
-  fetch: blocksFetcher({ blocks: embed.blocks, ogp: { enabled: true } }),
-  publishOptions: {
-    posts: {
-      publishedStatuses: ["公開済み"],
-      accessibleStatuses: ["下書き", "編集中", "公開済み"],
-    },
+// カスタム blocksFetcher（embed + OGP）が必要なので escape hatch（createClient）で組み立てる。
+const cms = createClient({
+  sources: {
+    notion: notionSource({
+      schema,
+      token: notionToken,
+      fetch: blocksFetcher({ blocks: embed.blocks, ogp: { enabled: true } }),
+      publishOptions: {
+        posts: {
+          publishedStatuses: ["公開済み"],
+          accessibleStatuses: ["下書き", "編集中", "公開済み"],
+        },
+      },
+    }),
   },
-  env: { DOC_CACHE: kv },
-  // waitUntil はウォームアップ後に完了するため no-op で十分
-  ctx: { waitUntil: (p: Promise<unknown>) => p.catch(console.error) },
+  cache: [restKvCache({ accountId, namespaceId, apiToken })],
 });
 
 console.log("KV ウォームアップ開始...");

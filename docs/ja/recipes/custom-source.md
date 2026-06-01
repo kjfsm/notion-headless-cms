@@ -70,7 +70,7 @@ const cms = createClient({
 
 const posts = await cms.posts.list();
 const post = await cms.posts.find("my-post");
-if (post) console.log(await post.render());
+if (post) console.log(await post.html());
 ```
 
 ### 方法 2: `CMSAdapter` パッケージを作って `sources` に渡す（推奨）

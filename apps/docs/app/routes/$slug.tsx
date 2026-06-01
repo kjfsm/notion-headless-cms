@@ -1,6 +1,4 @@
-import { Renderer } from "@notion-headless-cms/fetch-blocks/react";
-import type { NotionBlock } from "@notion-headless-cms/react-renderer";
-import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
+import { NotionRevalidator, Renderer } from "@notion-headless-cms/client/react";
 import { data } from "react-router";
 import { makeCms } from "../lib/cms";
 import type { Route } from "./+types/$slug";
@@ -9,7 +7,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
   const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
   const page = await cms.pages.find(params.slug ?? "");
   if (!page) throw data("Not Found", { status: 404 });
-  const blocks = ((await page.notionBlocks()) ?? []) as NotionBlock[];
+  const blocks = await page.notionBlocks();
   return {
     blocks,
     item: {

@@ -14,20 +14,22 @@ Notion DB
        ├─ fetch-markdown（Notion Markdown API で本文取得）
        ├─ markdown-html（Markdown → HTML、remark/rehype ベース）
        ├─ react-renderer（BlockObjectResponse → React、shadcn/ui + Tailwind v4）
-       ├─ notion-source（CMSAdapter 実装。`createClient({ sources: { notion: notionSource(...) } })` で組み込む）
+       ├─ notion-source（CMSAdapter 実装。createCMS / createClient が内部で組み込む）
        └─ core（CMS エンジン・キャッシュ・SWR・フック・nodePreset）
             └─ cache（memory + サブパス /cloudflare（R2/KV + cloudflarePreset）/next（ISR））
 
-メタパッケージ（利用側はこれ 1 つ）: node / cloudflare / next
+利用側の単一エントリ（v2〜・これ 1 つ + サブパスで揃う）:
+  client（createCMS）/ client/cloudflare / client/next / client/react
 ```
 
 すべて `@notion-headless-cms/` スコープ。`cli` は別途 introspect・型生成ツール。
+v2 で旧メタパッケージ（node / cloudflare / next）は廃止し `client` に集約した。
 
 ### 核心設計原則
 
 - **core を Notion 固有知識から隔離**: `DataSourceAdapter` インターフェースのみ定義し、実装は `notion-orm` 側に置く。将来の Contentful 等への差し替えを可能にするため
-- **preset パターン（v0.3.0〜）**: `nodePreset()` (core) / `cloudflarePreset({ env })`（cache の /cloudflare サブパス）で `createClient` 一本に統一。廃止されたアダプタ（`adapter-node` / `adapter-cloudflare`）は参照しない
-- **拡張可能な sources（module augmentation）**: core は空の `CMSSources` インターフェースを公開し、`@notion-headless-cms/notion-source` などのアダプターパッケージが `declare module "@notion-headless-cms/core" { interface CMSSources { notion?: CMSAdapter } }` で宣言マージしてキーを追加する（Fastify プラグインと同じパターン）。CLI は DB 構造（`schema`）のみを生成し、ランタイム設定は `createClient({ sources: { notion: notionSource({ schema, token, publishOptions }) } })` で組み立てる
+- **単一エントリ `createCMS`（v2〜）**: `@notion-headless-cms/client` の `createCMS({ schema, token, content, collections, runtime })` で `createClient` + `notionSource` + preset を 1 呼び出しに集約。`content: "html" | "react"` が取得戦略 + renderer を内部結線する。`createClient` / `notionSource` / `nodePreset` は client が re-export する escape hatch。廃止されたアダプタ（`adapter-node` / `adapter-cloudflare`）やメタパッケージ（node / cloudflare / next）は参照しない
+- **拡張可能な sources（module augmentation）**: core は空の `CMSSources` インターフェースを公開し、`@notion-headless-cms/notion-source` などのアダプターパッケージが `declare module "@notion-headless-cms/core" { interface CMSSources { notion?: CMSAdapter } }` で宣言マージしてキーを追加する（Fastify プラグインと同じパターン）。CLI は DB 構造（`schema`）のみを生成し、token / 公開ポリシー等の振る舞いは `createCMS` 側で組み立てる
 - **構造型による抽象化**: `R2BucketLike` など、型だけ定義してランタイムパッケージへの直接依存を排除（テスト容易性向上）
 - **`internal/` は非公開**: `packages/*/src/internal/**` を他パッケージから import 禁止。公開したければ `src/index.ts` で re-export する（詳細: `.claude/rules/package-boundaries.md`）
 

@@ -141,7 +141,7 @@ if (result === null) {
   // 変更なし
 } else {
   // 更新あり: result.item で新しいアイテムにアクセスできる
-  const html = await result.item.render();
+  const html = await result.item.html();
 }
 ```
 
@@ -157,7 +157,7 @@ if (result === null) {
 const result = await cms.posts.check(slug, clientVersion);
 if (result === null) return new Response("Not Found", { status: 404 });
 if (!result.stale) return Response.json({ stale: false });
-const html = await result.item.render();
+const html = await result.item.html();
 return Response.json({ stale: true, html, version: result.item.updatedAt });
 
 // クライアント: マウント時に1回だけ更新チェック
@@ -274,7 +274,7 @@ const handler = cms.handler({ basePath: "/api/cms", webhookSecret: env.SECRET })
 app.all("/api/cms/*", (c) => handler(c.req.raw));
 
 // Next.js App Router の場合は adapter-next の createNextHandler を使う
-import { createNextHandler } from "@notion-headless-cms/adapter-next";
+import { createNextHandler } from "@notion-headless-cms/client/next";
 export const { GET, POST } = createNextHandler(cms, { webhookSecret: process.env.SECRET });
 ```
 

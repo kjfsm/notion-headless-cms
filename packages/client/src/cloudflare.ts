@@ -4,6 +4,14 @@ import {
 } from "@notion-headless-cms/cache/cloudflare";
 import { type CacheAdapter, CMSError } from "@notion-headless-cms/core";
 
+export type {
+  CloudflareExecutionContextLike,
+  CloudflarePresetEnv,
+  CloudflarePresetOptions,
+  CloudflarePresetTestOptions,
+} from "@notion-headless-cms/cache/cloudflare";
+export { cloudflarePreset } from "@notion-headless-cms/cache/cloudflare";
+
 /** Cloudflare KV REST API に接続するための認証情報。 */
 export interface RestKvOptions {
   /** Cloudflare アカウント ID。 */
@@ -25,7 +33,7 @@ export interface RestKvOptions {
  *
  * @example
  * // scripts/warm-kv.ts
- * import { createCms, restKvNamespace } from "@notion-headless-cms/cloudflare";
+ * import { createCMS, restKvNamespace } from "@notion-headless-cms/client/cloudflare";
  * import { schema } from "../app/generated/nhc.js";
  *
  * const kv = restKvNamespace({
@@ -34,11 +42,10 @@ export interface RestKvOptions {
  *   apiToken: process.env.CLOUDFLARE_API_TOKEN!,
  * });
  *
- * const cms = createCms({
+ * const cms = createCMS({
  *   schema,
  *   token: process.env.NOTION_TOKEN!,
- *   env: { DOC_CACHE: kv },
- *   ctx: { waitUntil: (p) => p.catch(console.error) },
+ *   runtime: { cache: [restKvCache({ accountId, namespaceId, apiToken })] },
  * });
  * await cms.posts.cache.warm({ onProgress: (done, total) => console.log(`${done}/${total}`) });
  */
@@ -118,18 +125,17 @@ export interface RestKvCacheOptions extends RestKvOptions {
 
 /**
  * Cloudflare KV REST API をドキュメントキャッシュ (`CacheAdapter`) として返す。
- * Node.js の warm スクリプトで `createClient({ cache: [restKvCache(...)] })` に渡し、
+ * Node.js の warm スクリプトで `createCMS({ runtime: { cache: [restKvCache(...)] } })` に渡し、
  * `cms.<collection>.cache.warm()` を実行すると、Workers が読むのと同じ KV に書き込める。
  *
  * @example
- * import { restKvCache, readRestKvEnv } from "@notion-headless-cms/cloudflare";
- * import { createClient, nodePreset } from "@notion-headless-cms/node"; // ※ renderer 注入のため
- * import { notionSource } from "@notion-headless-cms/notion-source";
+ * import { createCMS, restKvCache, readRestKvEnv } from "@notion-headless-cms/client/cloudflare";
  * import { schema } from "../app/generated/nhc.js";
  *
- * const cms = createClient({
- *   sources: { notion: notionSource({ schema, token: process.env.NOTION_TOKEN! }) },
- *   cache: [restKvCache(readRestKvEnv())],
+ * const cms = createCMS({
+ *   schema,
+ *   token: process.env.NOTION_TOKEN!,
+ *   runtime: { cache: [restKvCache(readRestKvEnv())] },
  * });
  * await cms.posts.cache.warm({ onProgress: (d, t) => console.log(`${d}/${t}`) });
  */
@@ -177,8 +183,8 @@ export function readRestKvEnv(
 
 /**
  * Node 実行時の `process.env` を型依存なしで取得する。
- * cloudflare パッケージは Workers 向けで `@types/node` を含めないため、
- * `globalThis` 経由で参照する (Workers 上では空オブジェクトになる)。
+ * Workers 向けに `@types/node` を含めないため、`globalThis` 経由で参照する
+ * (Workers 上では空オブジェクトになる)。
  */
 function defaultProcessEnv(): Record<string, string | undefined> {
   const proc = (

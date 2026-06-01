@@ -7,7 +7,7 @@
 //
 // 既存の `app/api/cms/[...path]/route.ts` は createNextHandler の low-level 経路として
 // 残しているので、画像プロキシや他用途のキャッチオールが必要なら併用可能。
-import { createNextWebhookHandler } from "@notion-headless-cms/next";
+import { createNextWebhookHandler } from "@notion-headless-cms/client/next";
 import { cms } from "@/app/lib/cms";
 
 export const POST = createNextWebhookHandler(cms, {

@@ -1,9 +1,5 @@
-import {
-  cloudflarePreset,
-  createClient,
-  notionSource,
-} from "@notion-headless-cms/cloudflare";
-import { markdownFetcher } from "@notion-headless-cms/fetch-markdown";
+import { createCMS } from "@notion-headless-cms/client";
+import { cloudflarePreset } from "@notion-headless-cms/client/cloudflare";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -18,24 +14,19 @@ export function makeCms(
   env: Env,
   ctx: { waitUntil(p: Promise<unknown>): void },
 ) {
-  return createClient({
-    sources: {
-      notion: notionSource({
-        schema,
-        token: env.NOTION_TOKEN,
-        // Cloudflare Workers Free プランの 50 subrequest 上限を回避するため、
-        // Notion Markdown export API を 1 リクエストで叩く戦略を使う。
-        fetch: markdownFetcher(),
-        publishOptions: {
-          posts: {
-            publishedStatuses: ["公開済み"],
-            accessibleStatuses: ["下書き", "編集中", "公開済み"],
-          },
-        },
-      }),
+  return createCMS({
+    schema,
+    token: env.NOTION_TOKEN,
+    // content:"html" は Notion Markdown export API（1 リクエスト）+ HTML renderer を内部結線し、
+    // Cloudflare Workers Free プランの 50 subrequest 上限を回避する。
+    content: "html",
+    // cloudflarePreset は swr.ttlMs を持たず永続キャッシュ。差分があれば waitUntil の bg で差し替える。
+    runtime: cloudflarePreset({ env, ctx }),
+    collections: {
+      posts: {
+        published: ["公開済み"],
+        accessible: ["下書き", "編集中", "公開済み"],
+      },
     },
-    // swr.ttlMs は未指定。キャッシュは永続させ、Notion の lastEditedTime に
-    // 差分があったときだけ waitUntil の bg で差し替える。ctx がないと bg が打ち切られる。
-    ...cloudflarePreset({ env, ctx }),
   });
 }
