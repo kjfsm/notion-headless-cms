@@ -1,5 +1,25 @@
 # @notion-headless-cms/source-notion
 
+## 0.1.32
+
+### Patch Changes
+
+- 6478628: `notion-source` の Webhook 対応を実装。`NotionCollection.parseWebhook` を追加し、`cms.handler({ webhookSecret })` 経由で Notion Webhook によるキャッシュ無効化が機能するようにした。シークレットは `?secret=` クエリ / `X-Webhook-Secret` ヘッダ / `Authorization: Bearer` のいずれかで検証し、body の `slug` で対象を絞れる（無ければコレクション全体を無効化）。`notionSource()` が各コレクションに `collectionName` を渡して `InvalidateScope.collection` を埋める。
+- bb22f7d: `createNotionCollection` の `blocks` / `ogp` / `enrichers` の @deprecated に削除予定バージョン (v1.0.0) を明記し、`docs/ja/migration/blocks-ogp-enrichers.md` への参照を追加 (Issue #310 / S6)。
+- Updated dependencies [6478628]
+- Updated dependencies [e9698a3]
+- Updated dependencies [3aa3f1e]
+- Updated dependencies [054e3d6]
+- Updated dependencies [12ddf52]
+- Updated dependencies [f7f0493]
+- Updated dependencies [4183d36]
+- Updated dependencies [3f8bd02]
+- Updated dependencies [2d6b5b8]
+- Updated dependencies [355f3e1]
+- Updated dependencies [6e1cec6]
+  - @notion-headless-cms/core@0.5.0
+  - @notion-headless-cms/markdown-html@1.0.3
+
 ## 0.1.31
 
 ### Patch Changes

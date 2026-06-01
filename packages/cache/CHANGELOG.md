@@ -1,5 +1,29 @@
 # @notion-headless-cms/cache
 
+## 0.1.0
+
+### Minor Changes
+
+- 054e3d6: `nodePreset` / `cloudflarePreset` のシグネチャを `{ cache, swr, ...(waitUntil) }` 共通契約に対称化 (Issue #313 / M2)。
+
+  - `cloudflarePreset` に `swr` を追加 (デフォルト ttlMs 5 分)、新 `opts.swr` で上書き可能
+  - `DEFAULT_RATE_LIMITER` 定数を core から export し、`RateLimiterConfig` のデフォルト値 (`maxConcurrent: 3`, `retryOn: [429, 502, 503]`, `maxRetries: 4`, `baseDelayMs: 1000`) を IDE 補完可能にした
+
+  （`nextPreset` は v2 で `@notion-headless-cms/client/next` に集約済み）
+
+### Patch Changes
+
+- Updated dependencies [6478628]
+- Updated dependencies [e9698a3]
+- Updated dependencies [054e3d6]
+- Updated dependencies [12ddf52]
+- Updated dependencies [f7f0493]
+- Updated dependencies [4183d36]
+- Updated dependencies [3f8bd02]
+- Updated dependencies [355f3e1]
+- Updated dependencies [6e1cec6]
+  - @notion-headless-cms/core@0.5.0
+
 ## 0.0.19
 
 ### Patch Changes

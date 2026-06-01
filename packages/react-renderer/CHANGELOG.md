@@ -1,5 +1,11 @@
 # @notion-headless-cms/react-renderer
 
+## 0.1.13
+
+### Patch Changes
+
+- 2d6b5b8: 公開 API の JSDoc に `@example` と `@see` を追加し、IDE ホバーで使い方と関連 API へジャンプできるようにした (Issue #305 / S1)。`NotionRenderer` / `NotionBlocks` / `BlockSwitch` / `useNotionContext` / `resolveBlockImageUrls` / `RichText` / `Caption` / `renderMarkdown` / `Transformer` / `createTransformer` / `BlockHandler` / `RendererFn` / `RendererOptions` / `BlockConverter` / `rehypeImageCache` が対象。
+
 ## 0.1.12
 
 ### Patch Changes

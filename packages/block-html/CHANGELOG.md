@@ -1,5 +1,13 @@
 # @notion-headless-cms/embeds
 
+## 1.0.5
+
+### Patch Changes
+
+- Updated dependencies [3aa3f1e]
+- Updated dependencies [2d6b5b8]
+  - @notion-headless-cms/markdown-html@1.0.3
+
 ## 1.0.4
 
 ### Patch Changes

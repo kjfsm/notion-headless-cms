@@ -1,5 +1,31 @@
 # @notion-headless-cms/core
 
+## 0.5.0
+
+### Minor Changes
+
+- 054e3d6: `nodePreset` / `cloudflarePreset` のシグネチャを `{ cache, swr, ...(waitUntil) }` 共通契約に対称化 (Issue #313 / M2)。
+
+  - `cloudflarePreset` に `swr` を追加 (デフォルト ttlMs 5 分)、新 `opts.swr` で上書き可能
+  - `DEFAULT_RATE_LIMITER` 定数を core から export し、`RateLimiterConfig` のデフォルト値 (`maxConcurrent: 3`, `retryOn: [429, 502, 503]`, `maxRetries: 4`, `baseDelayMs: 1000`) を IDE 補完可能にした
+
+  （`nextPreset` は v2 で `@notion-headless-cms/client/next` に集約済み）
+
+- 12ddf52: `defineCollection<T>()` ヘルパーと `StrictCollectionDef<T>` 型を新設し、`slugField` / `statusField` を `keyof T & string` で型ガードできるようにした (Issue #314 / M3)。CLI 生成スキーマや手書きの schema で `defineCollection<PostItem>({ slugField: "slag" })` のような誤フィールド名を **コンパイル時に検出**できる。`CollectionDef<T>` 自体は後方互換のため variance を維持。
+
+### Patch Changes
+
+- 6478628: `notionBlocks()` が `undefined` を返したときの警告メッセージを正確化。既定 (blocks 戦略) では設定不要で利用できること、`markdownFetcher` 使用時は markdown→React の Renderer を使うか `blocksFetcher()` に切り替える旨を案内する。挙動は不変。
+- e9698a3: `notionBlocks()` がブロックフェッチャ未設定などで `undefined` を返したとき、`notionSource({ fetch: blocksFetcher() })` の設定を促す警告を CollectionClient 単位で一度だけ出すようにした。無言失敗で React レンダリングが空になる問題の発見性を改善する。返り値・公開 API シグネチャは変更なし（挙動互換）。
+- f7f0493: `scripts/check-internal-boundary.mjs` を追加し、`packages/*/src/internal/**` への外部 import を CI で禁止 (Issue #315 / M4)。`pnpm lint:boundary` として実行可能、`ci.yml` の lint job に組み込み済み。
+- 4183d36: CI verify gate に `pnpm size` (size-limit) を追加し、`publish-dry-run-nightly.yml` で `publint` / `attw` / `size` / `pnpm publish --dry-run` を main の任意時点で毎日検証する (Issue #318 / M7)。`docs/ja/release/meta-package-bump.md` を新設し、changesets の連鎖 bump とレビュー観点を明文化。
+- 3f8bd02: 1.0 リリース凍結チェックリスト (`docs/ja/release/1.0-checklist.md`) を新設 (Issue #319 / M8)。公開 API シェイプ・後方互換性・品質ゲート・ドキュメントの 4 区分で凍結対象を列挙し、fixed mode 切替手順 / 1.0-rc.0 リリース手順 / 1.0.0 GA 昇格手順をまとめる。実際の fixed mode 切替・rc 発行はユーザー判断。
+- 355f3e1: CI に changeset-check ワークフローを追加し、packages/\*\* に変更がある PR で changeset を必須化 (Issue #306 / S2)。`skip-changeset` ラベルで除外可能。
+- 6e1cec6: マルチソース構成のフェイルオーバー (1 つのコレクションが失敗しても他が独立に動く) と、画像キャッシュが Notion 署名 URL の 1 時間失効後も SHA256 ハッシュキーで永続キャッシュから返すことを fakeTimers で明示検証するテストを追加 (Issue #309 / S5)。
+- Updated dependencies [3aa3f1e]
+- Updated dependencies [2d6b5b8]
+  - @notion-headless-cms/markdown-html@1.0.3
+
 ## 0.4.0
 
 ### Minor Changes
