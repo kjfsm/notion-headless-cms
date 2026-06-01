@@ -20,6 +20,34 @@ import type {
 } from "@notion-headless-cms/notion-source";
 import { notionSource } from "@notion-headless-cms/notion-source";
 
+// 上級者向けの逃がし口（escape hatch）。createCMS で足りない場合に直接組み立てる。
+export type {
+  BaseContentItem,
+  CacheAdapter,
+  CMSClient,
+  CMSGlobalOps,
+  CreateClientOptions,
+  ItemWithContent,
+  SWRConfig,
+} from "@notion-headless-cms/core";
+export {
+  CMSError,
+  createClient,
+  isCMSError,
+  isCMSErrorInNamespace,
+  matchCMSError,
+  memoryCache,
+  nodePreset,
+} from "@notion-headless-cms/core";
+export { blocksFetcher } from "@notion-headless-cms/fetch-blocks";
+export { markdownFetcher } from "@notion-headless-cms/fetch-markdown";
+export type {
+  NotionPublishOptions,
+  NotionSourceConfig,
+  SchemaMap,
+} from "@notion-headless-cms/notion-source";
+export { notionSource } from "@notion-headless-cms/notion-source";
+
 /**
  * 本文の取得・表現モード。`createCMS` の唯一の本文に関する決定。
  * - `"html"`: Markdown 取得 + Markdown→HTML renderer（Hono / Express / Astro 等）

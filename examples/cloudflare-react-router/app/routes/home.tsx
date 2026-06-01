@@ -1,4 +1,4 @@
-import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
+import { NotionRevalidator } from "@notion-headless-cms/client/react";
 import { Link } from "react-router";
 import { makeCms } from "../lib/cms";
 import type { Route } from "./+types/home";

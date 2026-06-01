@@ -30,21 +30,23 @@ const TEMPLATES: Record<string, TemplateDef> = {
     output: "src/generated/nhc.schema.ts",
     useDotenv: true,
     nextSteps: [
+      "依存を追加: pnpm add @notion-headless-cms/client @notion-headless-cms/cli @notionhq/client zod notion-to-md",
       "nhc.config.ts を編集して collections を設定する",
       "NOTION_TOKEN 環境変数を設定する (Notion インテグレーションのシークレット)",
       "pnpm nhc generate でスキーマを生成する",
-      "createClient({ sources: { notion: notionSource({ schema, token }) }, ...nodePreset() }) で組み込む",
+      'createCMS({ schema, token, content: "html", collections: { posts: { published: ["公開済み"] } } }) で組み込む',
     ],
   },
   "cloudflare-react-router": {
     output: "./app/generated/nhc.ts",
     useDotenv: false,
     nextSteps: [
-      "依存を追加: pnpm add @notion-headless-cms/cloudflare @notion-headless-cms/fetch-blocks @notion-headless-cms/react-renderer @notionhq/client zod notion-to-md",
+      "依存を追加: pnpm add @notion-headless-cms/client @notionhq/client zod notion-to-md react react-dom react-router",
       "NOTION_TOKEN を .dev.vars に設定する (wrangler dev が自動読込)",
-      "nhc.config.ts の dbName / publishedStatuses を編集する",
+      "nhc.config.ts の dbName を編集する",
       "pnpm nhc generate でスキーマを生成する",
       "wrangler.toml に DOC_CACHE (KV) と IMG_BUCKET (R2) を binding する",
+      'createCMS({ schema, token, content: "react", runtime: cloudflarePreset({ env, ctx }), collections: { posts: { published: ["公開済み"] } } }) で組み込む',
       "完全な雛形 → examples/cloudflare-react-router/ / 解説 → docs/ja/recipes/react-router.md",
     ],
   },
@@ -52,11 +54,12 @@ const TEMPLATES: Record<string, TemplateDef> = {
     output: "./src/generated/nhc.ts",
     useDotenv: false,
     nextSteps: [
-      "依存を追加: pnpm add @notion-headless-cms/cloudflare @notionhq/client zod notion-to-md",
+      "依存を追加: pnpm add @notion-headless-cms/client @notionhq/client zod notion-to-md",
       "NOTION_TOKEN を .dev.vars に設定する (wrangler dev が自動読込)",
-      "nhc.config.ts の dbName / publishedStatuses を編集する",
+      "nhc.config.ts の dbName を編集する",
       "pnpm nhc generate でスキーマを生成する",
       "wrangler.toml に DOC_CACHE (KV) と IMG_BUCKET (R2) を binding する",
+      'createCMS({ schema, token, content: "html", runtime: cloudflarePreset({ env, ctx }), collections: { posts: { published: ["公開済み"] } } }) で組み込む',
       "完全な雛形 → examples/cloudflare-hono/ / 解説 → docs/ja/recipes/cloudflare-workers.md",
     ],
   },
@@ -64,10 +67,11 @@ const TEMPLATES: Record<string, TemplateDef> = {
     output: "./app/generated/nhc.ts",
     useDotenv: true,
     nextSteps: [
-      "依存を追加: pnpm add @notion-headless-cms/next @notion-headless-cms/cache @notionhq/client zod notion-to-md",
+      "依存を追加: pnpm add @notion-headless-cms/client @notion-headless-cms/cache @notionhq/client zod notion-to-md",
       "NOTION_TOKEN を .env (.env.local) に設定する",
-      "nhc.config.ts の dbName / publishedStatuses を編集する",
+      "nhc.config.ts の dbName を編集する",
       "pnpm nhc generate でスキーマを生成する",
+      'createCMS({ schema, token, content: "html", runtime: { cache: [nextCache(...), memoryCache()] }, collections: { posts: { published: ["公開済み"] } } }) で組み込む',
       "完全な雛形 → examples/vercel-nextjs/ / 解説 → docs/ja/recipes/nextjs-app-router.md",
     ],
   },
@@ -83,7 +87,7 @@ function buildConfig(def: TemplateDef): string {
 export default defineConfig({
 	// Notion インテグレーションのシークレット (環境変数 NOTION_TOKEN から読み込む)
 	notionToken: env("NOTION_TOKEN"),
-	// 生成ファイルの出力先 (スキーマ定義のみ。ランタイム設定は createClient() 側で指定する)
+	// 生成ファイルの出力先 (DB 構造のみ。token / 公開ポリシー等の振る舞いは createCMS() 側で指定する)
 	output: "${def.output}",
 	// コレクション定義 (cms.posts → "posts")
 	collections: {
@@ -97,8 +101,7 @@ export default defineConfig({
 			// slugField: "slug",
 			// statusField: "status",
 
-			// list() のデフォルト絞り込みに使う公開ステータス値
-			publishedStatuses: ["公開済み"],
+			// 公開ステータス値 (published) は createCMS({ collections }) 側で指定します
 
 			// 日本語など ASCII 変換できないプロパティ名は明示マッピング必須
 			// fieldMappings: { "タイトル": "title", "カテゴリ": "category" },

@@ -1,9 +1,5 @@
-import {
-  cloudflarePreset,
-  createClient,
-  notionSource,
-} from "@notion-headless-cms/cloudflare";
-import { blocksFetcher } from "@notion-headless-cms/fetch-blocks";
+import { createCMS } from "@notion-headless-cms/client";
+import { cloudflarePreset } from "@notion-headless-cms/client/cloudflare";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -15,27 +11,23 @@ export interface Env {
 }
 
 // Notion からは "ランディング + 固定ページ" のみを取得する。
-// fetch-blocks 戦略で BlockObjectResponse ツリーを取得し、react-renderer で
+// content:"react" は blocks 取得戦略で BlockObjectResponse ツリーを取得し、react-renderer で
 // callout / column / embed などを高忠実度に描画する。
 // 本体ドキュメントは docs/ 配下の md を直接配信するため、ここには出てこない。
 export function makeCms(
   env: Env,
   ctx: { waitUntil(p: Promise<unknown>): void },
 ) {
-  return createClient({
-    sources: {
-      notion: notionSource({
-        schema,
-        token: env.NOTION_TOKEN,
-        fetch: blocksFetcher(),
-        publishOptions: {
-          pages: {
-            publishedStatuses: ["完了"],
-            accessibleStatuses: ["未着手", "進行中", "完了"],
-          },
-        },
-      }),
+  return createCMS({
+    schema,
+    token: env.NOTION_TOKEN,
+    content: "react",
+    runtime: cloudflarePreset({ env, ctx }),
+    collections: {
+      pages: {
+        published: ["完了"],
+        accessible: ["未着手", "進行中", "完了"],
+      },
     },
-    ...cloudflarePreset({ env, ctx }),
   });
 }

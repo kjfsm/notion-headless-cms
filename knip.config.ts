@@ -77,6 +77,19 @@ export default {
       // markdown-html は rendering.ts で動的 import するオプショナル peerDep
       ignoreDependencies: ["@notion-headless-cms/markdown-html"],
     },
+    "packages/client": {
+      // package.json の exports サブパス (./, ./next, ./cloudflare, ./react)
+      entry: [
+        "src/index.ts",
+        "src/next.ts",
+        "src/cloudflare.ts",
+        "src/react.ts",
+      ],
+      project: ["src/**/*.ts"],
+      // ./next と ./react サブパスからのみ使う optional peerDependencies。
+      // ルート (.) では不要なので optional のまま明示的に無視する。
+      ignoreDependencies: ["next", "react", "react-dom", "react-router"],
+    },
     "packages/*": {
       entry: ["src/index.ts"],
       project: ["src/**/*.ts"],
@@ -97,8 +110,13 @@ export default {
       ignoreDependencies: [
         // 生成物 (app/generated/nhc.ts) が要求する間接依存（ユーザーは pnpm add するだけ）
         "@notion-headless-cms/notion-orm",
+        // ルートは @notion-headless-cms/client/react 経由で使う。テストが /server サブパスを
+        // モックするため直接依存として残すが、ソースの直接 import は無い。
+        "@notion-headless-cms/react-renderer",
         // @shikijs/rehype の peerDep。直接 import はない
         "shiki",
+        // app.css の @import "katex/dist/katex.min.css" 経由でロードされる。knip は CSS を解析しない
+        "katex",
         // @tailwindcss/vite プラグイン経由で間接消費される（CSS 側で @tailwindcss/postcss 風に解決）
         "tailwindcss",
         // app.css の @plugin ディレクティブ経由でロードされる。knip は CSS を解析しない

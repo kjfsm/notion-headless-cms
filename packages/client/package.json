@@ -24,6 +24,18 @@
     ".": {
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
+    },
+    "./next": {
+      "types": "./dist/next.d.mts",
+      "import": "./dist/next.mjs"
+    },
+    "./cloudflare": {
+      "types": "./dist/cloudflare.d.mts",
+      "import": "./dist/cloudflare.mjs"
+    },
+    "./react": {
+      "types": "./dist/react.d.mts",
+      "import": "./dist/react.mjs"
     }
   },
   "files": [
@@ -33,7 +45,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "tsdown src/index.ts --format esm --dts --sourcemap --out-dir dist",
+    "build": "tsdown src/index.ts src/next.ts src/cloudflare.ts src/react.ts --format esm --dts --sourcemap --out-dir dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest run --passWithNoTests",
     "test:coverage": "vitest run --passWithNoTests --coverage --coverage.reporter=lcov --coverage.reporter=text",
@@ -49,8 +61,30 @@
     "@notion-headless-cms/notion-source": "workspace:*",
     "@notion-headless-cms/fetch-markdown": "workspace:*",
     "@notion-headless-cms/fetch-blocks": "workspace:*",
+    "@notion-headless-cms/cache": "workspace:*",
+    "@notion-headless-cms/react-renderer": "workspace:*",
     "@notionhq/client": "^5.20.0",
     "notion-to-md": "^3.1.0",
     "zod": "^4.0.0"
+  },
+  "peerDependencies": {
+    "next": ">=14.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router": ">=7"
+  },
+  "peerDependenciesMeta": {
+    "next": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "react-dom": {
+      "optional": true
+    },
+    "react-router": {
+      "optional": true
+    }
   }
 }

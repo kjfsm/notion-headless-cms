@@ -1,6 +1,6 @@
 import { isCMSError } from "@notion-headless-cms/core";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { readRestKvEnv, restKvCache, restKvNamespace } from "../rest-kv";
+import { readRestKvEnv, restKvCache, restKvNamespace } from "../cloudflare";
 
 const fullEnv = {
   CLOUDFLARE_ACCOUNT_ID: "acc",

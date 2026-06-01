@@ -80,13 +80,15 @@ describe("runInit", () => {
     logSpy.mockRestore();
   });
 
-  it("生成されたテンプレートに dbName と publishedStatuses の例が含まれる", async () => {
+  it("生成されたテンプレートに dbName が含まれ、published は createCMS 側へ案内する", async () => {
     const outputPath = path.join(tmpDir, "nhc.config.ts");
     await runInit({ output: outputPath });
 
     const content = await fs.readFile(outputPath, "utf-8");
     expect(content).toContain("dbName");
-    expect(content).toContain("publishedStatuses");
+    // 公開ステータスは振る舞いなので config には書かず createCMS 側へ案内する
+    expect(content).not.toContain("publishedStatuses");
+    expect(content).toContain("createCMS");
   });
 
   it("template: cloudflare-react-router は output を app/generated にし dotenv を入れない", async () => {

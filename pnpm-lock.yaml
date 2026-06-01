@@ -128,15 +128,12 @@ importers:
       '@icons-pack/react-simple-icons':
         specifier: ^13.13.0
         version: 13.13.0(react@19.2.6)
-      '@notion-headless-cms/cloudflare':
+      '@notion-headless-cms/client':
         specifier: workspace:*
-        version: link:../../packages/cloudflare
+        version: link:../../packages/client
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
-      '@notion-headless-cms/fetch-blocks':
-        specifier: workspace:*
-        version: link:../../packages/fetch-blocks
       '@notion-headless-cms/notion-orm':
         specifier: workspace:*
         version: link:../../packages/notion-orm
@@ -255,9 +252,9 @@ importers:
       '@notion-headless-cms/block-html':
         specifier: workspace:*
         version: link:../../packages/block-html
-      '@notion-headless-cms/cloudflare':
+      '@notion-headless-cms/client':
         specifier: workspace:*
-        version: link:../../packages/cloudflare
+        version: link:../../packages/client
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -319,9 +316,9 @@ importers:
 
   examples/cloudflare-hono:
     dependencies:
-      '@notion-headless-cms/cloudflare':
+      '@notion-headless-cms/client':
         specifier: workspace:*
-        version: link:../../packages/cloudflare
+        version: link:../../packages/client
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -365,9 +362,9 @@ importers:
       '@notion-headless-cms/block-html':
         specifier: workspace:*
         version: link:../../packages/block-html
-      '@notion-headless-cms/cloudflare':
+      '@notion-headless-cms/client':
         specifier: workspace:*
-        version: link:../../packages/cloudflare
+        version: link:../../packages/client
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -502,15 +499,15 @@ importers:
       '@notion-headless-cms/block-html':
         specifier: workspace:*
         version: link:../../packages/block-html
+      '@notion-headless-cms/client':
+        specifier: workspace:*
+        version: link:../../packages/client
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@notion-headless-cms/fetch-markdown':
         specifier: workspace:*
         version: link:../../packages/fetch-markdown
-      '@notion-headless-cms/node':
-        specifier: workspace:*
-        version: link:../../packages/node
       '@notion-headless-cms/notion-orm':
         specifier: workspace:*
         version: link:../../packages/notion-orm
@@ -563,15 +560,15 @@ importers:
       '@hono/node-server':
         specifier: ^2.0.3
         version: 2.0.3(hono@4.12.19)
+      '@notion-headless-cms/client':
+        specifier: workspace:*
+        version: link:../../packages/client
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@notion-headless-cms/fetch-markdown':
         specifier: workspace:*
         version: link:../../packages/fetch-markdown
-      '@notion-headless-cms/node':
-        specifier: workspace:*
-        version: link:../../packages/node
       '@notion-headless-cms/notion-orm':
         specifier: workspace:*
         version: link:../../packages/notion-orm
@@ -615,15 +612,15 @@ importers:
       '@notion-headless-cms/cache':
         specifier: workspace:*
         version: link:../../packages/cache
+      '@notion-headless-cms/client':
+        specifier: workspace:*
+        version: link:../../packages/client
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../../packages/core
       '@notion-headless-cms/fetch-markdown':
         specifier: workspace:*
         version: link:../../packages/fetch-markdown
-      '@notion-headless-cms/next':
-        specifier: workspace:*
-        version: link:../../packages/next
       '@notion-headless-cms/notion-orm':
         specifier: workspace:*
         version: link:../../packages/notion-orm
@@ -759,6 +756,9 @@ importers:
 
   packages/client:
     dependencies:
+      '@notion-headless-cms/cache':
+        specifier: workspace:*
+        version: link:../cache
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core
@@ -771,30 +771,27 @@ importers:
       '@notion-headless-cms/notion-source':
         specifier: workspace:*
         version: link:../notion-source
+      '@notion-headless-cms/react-renderer':
+        specifier: workspace:*
+        version: link:../react-renderer
       '@notionhq/client':
         specifier: ^5.20.0
         version: 5.21.0
+      next:
+        specifier: '>=14.0.0'
+        version: 16.2.6(@babel/core@7.29.0)(@playwright/test@1.60.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       notion-to-md:
         specifier: ^3.1.0
         version: 3.1.9
-      zod:
-        specifier: ^4.0.0
-        version: 4.4.3
-
-  packages/cloudflare:
-    dependencies:
-      '@notion-headless-cms/cache':
-        specifier: workspace:*
-        version: link:../cache
-      '@notion-headless-cms/core':
-        specifier: workspace:*
-        version: link:../core
-      '@notion-headless-cms/notion-source':
-        specifier: workspace:*
-        version: link:../notion-source
-      '@notionhq/client':
-        specifier: ^5.20.0
-        version: 5.21.0
+      react:
+        specifier: ^19.0.0
+        version: 19.2.6
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.6(react@19.2.6)
+      react-router:
+        specifier: '>=7'
+        version: 7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
       zod:
         specifier: ^4.0.0
         version: 4.4.3
@@ -906,45 +903,6 @@ importers:
       unified:
         specifier: 'catalog:'
         version: 11.0.5
-
-  packages/next:
-    dependencies:
-      '@notion-headless-cms/core':
-        specifier: workspace:*
-        version: link:../core
-      '@notion-headless-cms/markdown-html':
-        specifier: workspace:*
-        version: link:../markdown-html
-      '@notion-headless-cms/notion-source':
-        specifier: workspace:*
-        version: link:../notion-source
-      '@notionhq/client':
-        specifier: ^5.20.0
-        version: 5.21.0
-      next:
-        specifier: '>=14.0.0'
-        version: 16.2.6(@babel/core@7.29.0)(@playwright/test@1.60.0)(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      zod:
-        specifier: ^4.0.0
-        version: 4.4.3
-
-  packages/node:
-    dependencies:
-      '@notion-headless-cms/core':
-        specifier: workspace:*
-        version: link:../core
-      '@notion-headless-cms/markdown-html':
-        specifier: workspace:*
-        version: link:../markdown-html
-      '@notion-headless-cms/notion-source':
-        specifier: workspace:*
-        version: link:../notion-source
-      '@notionhq/client':
-        specifier: ^5.20.0
-        version: 5.21.0
-      zod:
-        specifier: ^4.0.0
-        version: 4.4.3
 
   packages/notion-katex:
     dependencies:
