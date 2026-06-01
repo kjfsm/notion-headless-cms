@@ -11,6 +11,9 @@ order: 2
 観点で整理する。特に **Cloudflare Workers + React Router のユーザーが "なんとなく" で
 使える** ことを重視する。各案は *課題 / 提案 / 影響範囲 / 想定工数 / リスク* で記述する。
 
+> 使い勝手をコンセプトレベルから作り直す（クリーンスレート v2）提案は
+> [`rfc/v2-usability-redesign.md`](./rfc/v2-usability-redesign.md) を参照。
+
 ## 実装済み
 
 ### 第 1 弾（ドキュメント整備）
