@@ -13,4 +13,5 @@ export default defineWorkspace([
   "packages/react-renderer",
   "packages/testing",
   "packages/validate",
+  "packages/client",
 ]);

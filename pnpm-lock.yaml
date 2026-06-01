@@ -757,6 +757,30 @@ importers:
         specifier: 'catalog:'
         version: 25.9.0
 
+  packages/client:
+    dependencies:
+      '@notion-headless-cms/core':
+        specifier: workspace:*
+        version: link:../core
+      '@notion-headless-cms/fetch-blocks':
+        specifier: workspace:*
+        version: link:../fetch-blocks
+      '@notion-headless-cms/fetch-markdown':
+        specifier: workspace:*
+        version: link:../fetch-markdown
+      '@notion-headless-cms/notion-source':
+        specifier: workspace:*
+        version: link:../notion-source
+      '@notionhq/client':
+        specifier: ^5.20.0
+        version: 5.21.0
+      notion-to-md:
+        specifier: ^3.1.0
+        version: 3.1.9
+      zod:
+        specifier: ^4.0.0
+        version: 4.4.3
+
   packages/cloudflare:
     dependencies:
       '@notion-headless-cms/cache':

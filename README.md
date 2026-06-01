@@ -310,6 +310,12 @@ export async function GET(
 | `@notion-headless-cms/cloudflare` | Cloudflare Workers |
 | `@notion-headless-cms/next` | Next.js App Router |
 
+### 単一エントリ（実験的・v2 プレビュー）
+
+| パッケージ | 役割 |
+|---|---|
+| `@notion-headless-cms/client` | `createCMS` 単一エントリ。schema(構造) と振る舞いを分離して 1 呼び出しで組み立てる（[RFC](./docs/ja/rfc/v2-usability-redesign.md)） |
+
 ### コアパッケージ（拡張作者向け）
 
 | パッケージ | 役割 |
