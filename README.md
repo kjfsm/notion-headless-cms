@@ -14,8 +14,8 @@ Notion をヘッドレス CMS として利用するための TypeScript ライ�
 ### 1. インストール
 
 ```bash
-pnpm add @notion-headless-cms/node @notion-headless-cms/cli
-# peer deps
+pnpm add @notion-headless-cms/client @notion-headless-cms/cli
+# peer deps（CLI 実行・スキーマ解決に必要）
 pnpm add @notionhq/client zod notion-to-md
 ```
 
@@ -55,44 +55,44 @@ npx nhc generate
 
 ### 4. クライアント作成
 
+`createCMS` 一本で組み立てる。**DB 構造は `schema`（生成物）、それ以外の振る舞い
+（token / content / 公開ポリシー / ランタイム）は引数**で指定する。
+
 ```ts
 // src/lib/cms.ts
-import { createClient, nodePreset, notionSource } from "@notion-headless-cms/node";
+import { createCMS } from "@notion-headless-cms/client";
 import { schema } from "./generated/nhc.js";
 
-export const cms = createClient({
-  sources: {
-    notion: notionSource({
-      schema,
-      token: process.env.NOTION_TOKEN!,
-      publishOptions: {
-        posts: { publishedStatuses: ["公開済み"] },
-      },
-    }),
+export const cms = createCMS({
+  schema,
+  token: process.env.NOTION_TOKEN!,
+  content: "html", // "html" | "react"（取得戦略 + renderer を内部結線）
+  collections: {
+    // published の値は schema の status options で型補完される
+    posts: { published: ["公開済み"] },
   },
-  ...nodePreset(),
 });
 ```
 
 ### 5. データ取得
 
 本文は **`async` メソッド** で取得する（`title` などのメタデータはプロパティ）。
-用途に応じて 4 つの取り出し方がある。
+取り出し方は `content` モードで型が切り替わる。
 
 ```ts
 const posts = await cms.posts.list();
 const post = await cms.posts.find("my-first-post");
 
-const html = await post?.html(); // HTML 文字列（Hono / Express / Astro 等）
-// 他の取り出し方:
-//   await post?.markdown()     // Markdown 文字列
-//   await post?.blocks()       // 内部ブロック配列
-//   await post?.notionBlocks() // BlockObjectResponse ツリー（React レンダリング用）
+// content: "html" のとき
+const html = await post?.html();     // HTML 文字列（Hono / Express / Astro 等）
+const md = await post?.markdown();   // Markdown 文字列
+
+// content: "react" のとき
+//   const blocks = await post?.notionBlocks(); // BlockObjectResponse ツリー（React 描画用）
 ```
 
-> React (React Router / Next.js) で描画する場合は `notionBlocks()` を使う（下記「React Router」参照）。
-> `notionBlocks()` は既定（blocks 戦略）で利用可能で、追加設定は不要。`markdownFetcher()` を
-> 選んだ場合のみ無効になる（その場合は markdown→React の `Renderer` を使う）。
+> `content` モードでアクセサ型が切り替わるため、`"html"` で `notionBlocks()` を呼ぶような
+> 不整合は型エラーになる。React 描画は下記「React Router」を参照。
 
 ---
 
@@ -101,28 +101,26 @@ const html = await post?.html(); // HTML 文字列（Hono / Express / Astro 等�
 ### Cloudflare Workers
 
 ```bash
-pnpm add @notion-headless-cms/cloudflare @notion-headless-cms/cli
+pnpm add @notion-headless-cms/client @notion-headless-cms/cli
 pnpm add @notionhq/client zod notion-to-md
 ```
 
 ```ts
 // src/lib/cms.ts
-import { cloudflarePreset, createClient, notionSource } from "@notion-headless-cms/cloudflare";
+import { createCMS } from "@notion-headless-cms/client";
+import { cloudflarePreset } from "@notion-headless-cms/client/cloudflare";
 import { schema } from "../generated/nhc";
 
 export function makeCms(
   env: { NOTION_TOKEN: string; DOC_CACHE?: KVNamespace; IMG_BUCKET?: R2Bucket },
   ctx: ExecutionContext,
 ) {
-  return createClient({
-    sources: {
-      notion: notionSource({
-        schema,
-        token: env.NOTION_TOKEN,
-        publishOptions: { posts: { publishedStatuses: ["公開済み"] } },
-      }),
-    },
-    ...cloudflarePreset({ env, ctx }),
+  return createCMS({
+    schema,
+    token: env.NOTION_TOKEN,
+    content: "html",
+    runtime: cloudflarePreset({ env, ctx }),
+    collections: { posts: { published: ["公開済み"] } },
   });
 }
 ```
@@ -135,18 +133,14 @@ React Router v7 (Framework mode) + Cloudflare Workers なら、loader でデー�
 `react-renderer` で Notion ブロックを React として描画できる。最短構成は次の 4 ファイル。
 
 ```bash
-pnpm add @notion-headless-cms/cloudflare @notion-headless-cms/fetch-blocks \
-  @notion-headless-cms/react-renderer @notion-headless-cms/cli
-pnpm add @notionhq/client zod notion-to-md
+pnpm add @notion-headless-cms/client @notion-headless-cms/cli
+pnpm add @notionhq/client zod notion-to-md react react-dom react-router
 ```
 
 ```ts
 // app/lib/cms.ts — env / ctx を受け取って CMS を作る
-import {
-  cloudflarePreset,
-  createClient,
-  notionSource,
-} from "@notion-headless-cms/cloudflare";
+import { createCMS } from "@notion-headless-cms/client";
+import { cloudflarePreset } from "@notion-headless-cms/client/cloudflare";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -156,17 +150,13 @@ export interface Env {
 }
 
 export function makeCms(env: Env, ctx: ExecutionContext) {
-  return createClient({
-    sources: {
-      notion: notionSource({
-        schema,
-        token: env.NOTION_TOKEN,
-        // fetch は省略可（既定で blocks 戦略 = notionBlocks() が使える）。
-        // OGP 取得やカスタムブロックを足すときだけ fetch: blocksFetcher({ ... }) を渡す。
-        publishOptions: { posts: { publishedStatuses: ["公開済み"] } },
-      }),
-    },
-    ...cloudflarePreset({ env, ctx }),
+  return createCMS({
+    schema,
+    token: env.NOTION_TOKEN,
+    // content: "react" は blocks 取得戦略。loader で notionBlocks() を React 描画する。
+    content: "react",
+    runtime: cloudflarePreset({ env, ctx }),
+    collections: { posts: { published: ["公開済み"] } },
   });
 }
 ```
@@ -189,9 +179,11 @@ export default {
 
 ```tsx
 // app/routes/post.tsx — loader で取得し、React として描画
-import { Renderer } from "@notion-headless-cms/fetch-blocks/react";
-import type { NotionBlock } from "@notion-headless-cms/react-renderer";
-import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
+import {
+  type NotionBlock,
+  NotionRevalidator,
+  Renderer,
+} from "@notion-headless-cms/client/react";
 import { makeCms } from "../lib/cms";
 import type { Route } from "./+types/post";
 
@@ -240,31 +232,31 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 ### Next.js (App Router)
 
 ```bash
-pnpm add @notion-headless-cms/next @notion-headless-cms/cache @notion-headless-cms/cli
+pnpm add @notion-headless-cms/client @notion-headless-cms/cache @notion-headless-cms/cli
 pnpm add @notionhq/client zod notion-to-md
 ```
 
 ```ts
 // app/lib/cms.ts
-import { createClient, notionSource } from "@notion-headless-cms/next";
+import { createCMS } from "@notion-headless-cms/client";
 import { memoryCache } from "@notion-headless-cms/cache";
+import { nextCache } from "@notion-headless-cms/cache/next";
 import { schema } from "@/app/generated/nhc";
 
-export const cms = createClient({
-  sources: {
-    notion: notionSource({
-      schema,
-      token: process.env.NOTION_TOKEN!,
-      publishOptions: { posts: { publishedStatuses: ["公開済み"] } },
-    }),
-  },
-  cache: [memoryCache()],
+export const cms = createCMS({
+  schema,
+  token: process.env.NOTION_TOKEN!,
+  content: "html",
+  // document は Next.js の ISR、image は in-process メモリ
+  runtime: { cache: [nextCache({ tags: ["posts"] }), memoryCache()] },
+  imageProxyBase: "/api/cms/images",
+  collections: { posts: { published: ["公開済み"] } },
 });
 ```
 
 ```ts
 // app/api/cms/[...path]/route.ts
-import { createNextHandler } from "@notion-headless-cms/next";
+import { createNextHandler } from "@notion-headless-cms/client/next";
 import { cms } from "@/app/lib/cms";
 
 const handler = createNextHandler(cms, { webhookSecret: process.env.REVALIDATE_SECRET });
@@ -296,25 +288,21 @@ export async function GET(
 }
 ```
 
-`createClient({ imageProxyBase: "/api/cms/images" })` のように base を変えた場合は、route のパスも合わせて変更する。
+`createCMS({ imageProxyBase: "/api/cms/images" })` のように base を変えた場合は、route のパスも合わせて変更する。
 
 ---
 
 ## パッケージ構成
 
-### メタパッケージ（推奨）
+### 利用側（これだけで揃う）
 
-| パッケージ | 対象環境 |
+| パッケージ / サブパス | 役割 |
 |---|---|
-| `@notion-headless-cms/node` | Node.js (Express, Hono 等) |
-| `@notion-headless-cms/cloudflare` | Cloudflare Workers |
-| `@notion-headless-cms/next` | Next.js App Router |
-
-### 単一エントリ（実験的・v2 プレビュー）
-
-| パッケージ | 役割 |
-|---|---|
-| `@notion-headless-cms/client` | `createCMS` 単一エントリ。schema(構造) と振る舞いを分離して 1 呼び出しで組み立てる（[RFC](./docs/ja/rfc/v2-usability-redesign.md)） |
+| `@notion-headless-cms/client` | `createCMS` 単一エントリ。全ランタイム共通 |
+| `@notion-headless-cms/client/cloudflare` | `cloudflarePreset` / `restKvCache`（Cloudflare Workers） |
+| `@notion-headless-cms/client/next` | `createNextHandler` / `nextPreset`（Next.js App Router） |
+| `@notion-headless-cms/client/react` | `Renderer` / `NotionRevalidator`（React 描画） |
+| `@notion-headless-cms/cli` | `nhc init` / `nhc generate` スキーマ生成 CLI |
 
 ### コアパッケージ（拡張作者向け）
 
@@ -327,7 +315,6 @@ export async function GET(
 | `@notion-headless-cms/block-html` | Notion ブロック拡張 HTML レンダラ |
 | `@notion-headless-cms/fetch-blocks` | BlockObjectResponse ツリー取得（`notionBlocks()` 用）+ React `Renderer` |
 | `@notion-headless-cms/react-renderer` | BlockObjectResponse → React コンポーネント / 再検証フック |
-| `@notion-headless-cms/cli` | `nhc generate` スキーマ生成 CLI |
 
 ---
 
@@ -368,7 +355,7 @@ flowchart LR
 
 [`apps/docs/`](./apps/docs/) は本ライブラリ自身で構築された公式サイトです。
 
-- ランディング・固定ページは Notion DB から `@notion-headless-cms/cloudflare` で配信（dogfooding）
+- ランディング・固定ページは Notion DB から `@notion-headless-cms/client`（`/cloudflare`）で配信（dogfooding）
 - ライブラリ本体の API リファレンス・レシピは `docs/ja/` 配下の md を静的レンダリング
 - Cloudflare Workers + R2 + KV、`/api/revalidate` で Notion Webhook 受信
 
@@ -378,9 +365,12 @@ flowchart LR
 
 ## アーキテクチャと拡張
 
-`createClient` のオプションで独自データソースや SWR フックを追加できます。
+`createCMS` で足りない高度なケース（独自データソース・カスタム fetch 戦略）は、
+`@notion-headless-cms/client` が re-export する低レベル API（`createClient` /
+`notionSource` / `nodePreset` 等）を直接組み立てる escape hatch を使えます。
 
 ```ts
+import { createClient, nodePreset } from "@notion-headless-cms/client";
 import type { CMSAdapter } from "@notion-headless-cms/core/source-author";
 
 // カスタムデータソースは CMSAdapter を実装する
