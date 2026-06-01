@@ -32,7 +32,7 @@ order: 2
   通して `InvalidateScope.collection` を埋める。
 - **`nhc init --template <name>`**（D1）: `node` / `cloudflare-react-router` / `cloudflare-hono` /
   `next` を用意。ランタイムに合った `output` と次のステップ（依存・binding・example 導線）を出力。
-- **KV プリウォームの公式ヘルパー**（P2）: `@notion-headless-cms/cloudflare` に `restKvCache()` と
+- **KV プリウォームの公式ヘルパー**（P2）: `@notion-headless-cms/client/cloudflare` に `restKvCache()` と
   `readRestKvEnv()` を追加。`createClient({ cache: [restKvCache(readRestKvEnv())] })` →
   `cms.<collection>.cache.warm()` で Node から KV を事前充填できる。
 - **`.claude/rules` / `CLAUDE.md` の旧パッケージ名 drift 修正**（renderer→markdown-html、

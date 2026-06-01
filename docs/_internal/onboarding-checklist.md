@@ -10,7 +10,7 @@ v1.0 リリース前に最低 1 名（社外推奨）で実測すること。
 
 ## 手順
 
-- [ ] 1. `pnpm add @notion-headless-cms/node @notion-headless-cms/cli` (目標: 30秒)
+- [ ] 1. `pnpm add @notion-headless-cms/client @notion-headless-cms/cli` (目標: 30秒)
 - [ ] 2. Notion インテグレーション作成 → データベースに接続 (目標: 2分)
 - [ ] 3. `NOTION_TOKEN` を環境変数に設定 (目標: 15秒)
 - [ ] 4. `nhc.config.ts` を作成 (目標: 30秒、README コピペ)
