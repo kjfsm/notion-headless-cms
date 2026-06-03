@@ -10,7 +10,7 @@ order: 3
 > ステータス: **Accepted（中核は v2.0 で実装済み）** / 対象: クリーンスレート v2（破壊的変更を許容）
 > 本 RFC の中核（§4 単一エントリ `createCMS` / §5 `runtime` 統一 / §6 `content` モード /
 > §8 単一インストール / §9 CLI 生成物）は v2.0（#346, `@notion-headless-cms/client`）で実装済み。
-> 残作業は §7 の公開名集約（無印 `@notion-headless-cms`、1.0 で実施予定・破壊的）と §11 の未解決論点。
+> 残作業は §11 の未解決論点（§7 公開名集約は npm 名前規則により取り下げ。末尾「## 実装状況」参照）。
 > 節ごとの状況は末尾「## 実装状況」を参照。
 
 ## 1. 背景と問題提起
@@ -275,6 +275,12 @@ IDE 表示改善のため、アクセサ型に `HtmlItem` / `ReactItem` の別�
 
 ## 7. パッケージ集約とゼロ依存 core の再定義
 
+> **取り下げ（2026-06）**: 本節が前提とする無印 `@notion-headless-cms`（`@scope` 単体）は
+> npm のパッケージ名規則（`@scope/name` 形式が必須・スコープ名単体は不可）に違反し、
+> `pnpm install` が `ERR_PNPM_BAD_PACKAGE_JSON: Invalid name` で失敗するため**実現不可能**。
+> よって公開名は `@notion-headless-cms/client`（+ サブパス）を**恒久名**とする。
+> 以下の「公開面の集約」案は設計記録として残すが採用しない。
+
 ### 公開面の集約
 
 公開 npm パッケージをサブパス構成に集約する:
@@ -392,7 +398,7 @@ IDE 表示改善のため、アクセサ型に `HtmlItem` / `ReactItem` の別�
 | §6 | `content: "html" \| "react"` モードと型分岐 | ✅ 実装済み（取得戦略+renderer を内部結線、`notionBlocks()` の undefined を型で排除） |
 | §8 | 単一インストール（`@notionhq/client` / `zod` / `notion-to-md` を deps 化） | ✅ 実装済み（`pnpm add @notion-headless-cms/client` で動く） |
 | §9 | CLI 生成物を schema データのみに / `nhc init` 雛形 | ✅ 実装済み |
-| §7 | 公開名を無印 `@notion-headless-cms` に集約 | ⬜ 未実施（現状 `/client`）。**1.0 で実施予定**（破壊的） |
+| §7 | 公開名を無印 `@notion-headless-cms` に集約 | ❌ 取り下げ（npm 名前規則違反: `@scope` 単体は不可・`@scope/name` 必須）。`@notion-headless-cms/client` を恒久公開名とする |
 | §11 | 残論点（型チェック時間ベンチ / `notion-to-md` の最終形態 / `imageProxyBase` 単一ソース化 / status options の generate 頻度） | ⬜ 1.0 前に決着させる |
 
 > 旧メタパッケージ（node / cloudflare / next）は v2.0 で廃止済み。移行は [`docs/ja/migration/`](../migration/) を参照。
