@@ -7,9 +7,11 @@ order: 3
 
 # RFC: v2 使い勝手のコンセプト再設計
 
-> ステータス: **提案（Draft）** / 対象: クリーンスレート v2（破壊的変更を許容）
-> この文書は「どう作るのがベストか」をコンセプトレベルで提案するものであり、
-> まだ実装は伴わない。レビュー後に実装可否・優先度を判断する。
+> ステータス: **Accepted（中核は v2.0 で実装済み）** / 対象: クリーンスレート v2（破壊的変更を許容）
+> 本 RFC の中核（§4 単一エントリ `createCMS` / §5 `runtime` 統一 / §6 `content` モード /
+> §8 単一インストール / §9 CLI 生成物）は v2.0（#346, `@notion-headless-cms/client`）で実装済み。
+> 残作業は §7 の公開名集約（無印 `@notion-headless-cms`、1.0 で実施予定・破壊的）と §11 の未解決論点。
+> 節ごとの状況は末尾「## 実装状況」を参照。
 
 ## 1. 背景と問題提起
 
@@ -378,3 +380,19 @@ IDE 表示改善のため、アクセサ型に `HtmlItem` / `ReactItem` の別�
 | パッケージ・選択肢の削減 | §4 単一 createCMS / §5 runtime 統一 / §7 集約 / §8 単一インストール |
 | 型安全・フットガン排除 | §6 content モードと型分岐 / §3 status options 型付け |
 | クリーンスレート v2（破壊的 OK） | §10 移行の方向性 |
+
+---
+
+## 実装状況（2026-06 時点）
+
+| 節 | 内容 | 状況 |
+|---|---|---|
+| §4 | 単一エントリ `createCMS` | ✅ v2.0 実装済み（#346, `@notion-headless-cms/client`） |
+| §5 | `runtime` 統一（node 既定 / `cloudflare()` / `next()`） | ✅ 実装済み（`/cloudflare` `/next` サブパス） |
+| §6 | `content: "html" \| "react"` モードと型分岐 | ✅ 実装済み（取得戦略+renderer を内部結線、`notionBlocks()` の undefined を型で排除） |
+| §8 | 単一インストール（`@notionhq/client` / `zod` / `notion-to-md` を deps 化） | ✅ 実装済み（`pnpm add @notion-headless-cms/client` で動く） |
+| §9 | CLI 生成物を schema データのみに / `nhc init` 雛形 | ✅ 実装済み |
+| §7 | 公開名を無印 `@notion-headless-cms` に集約 | ⬜ 未実施（現状 `/client`）。**1.0 で実施予定**（破壊的） |
+| §11 | 残論点（型チェック時間ベンチ / `notion-to-md` の最終形態 / `imageProxyBase` 単一ソース化 / status options の generate 頻度） | ⬜ 1.0 前に決着させる |
+
+> 旧メタパッケージ（node / cloudflare / next）は v2.0 で廃止済み。移行は [`docs/ja/migration/`](../migration/) を参照。

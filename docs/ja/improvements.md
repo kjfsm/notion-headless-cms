@@ -50,6 +50,12 @@ order: 2
 - **取得戦略と subrequest 制限の指針**（P4 を content モードの選び方として明文化、
   `recipes/cloudflare-workers.md`）。
 
+### 第 4 弾（react-renderer 拡張ポイント）
+- **単一 Context 化**（#217）: `useNotionContext()` で prop drilling を解消。
+- **URL 変換フック**（#218）: `resolveImageUrl` / `resolvePageUrl` / `resolvePageTitle` を第一級 API 化。
+- **Image / Link の DOM 差替スロット**（#219）: `next/image` / `next/link` を注入可能に。
+- **レスポンシブ画像**: `imageSizes` で proxy URL に `?w=` を付けた `srcSet` を自動生成。
+
 ## 提案（未実装）
 
 ### DX
@@ -65,6 +71,14 @@ order: 2
   example をコピーする運用。
 - **提案**: `examples/*` を source of truth に、ルート・`wrangler.toml`・`workers/app.ts` まで
   生成する。テンプレ同期の仕組みが要る。 **想定工数**: 大。 **リスク**: 中。
+
+#### D6. Notion 内部リンクの自動 slug 解決（#260）
+- **課題**: `resolvePageUrl` フック（#218）は提供済みだが、Notion ページ ID → 自サイト slug の
+  逆引きは利用者実装に委ねられている。
+- **提案**: collection の slug インデックスを内部に持ち、mention-page / link_to_page を
+  フック未指定時に既定で slug URL へ解決する。
+- **影響範囲**: `react-renderer` + `core`（slug 逆引き）。 **想定工数**: 中。 **リスク**: 中
+  （複数コレクション横断の解決ルール）。
 
 ### 性能
 
