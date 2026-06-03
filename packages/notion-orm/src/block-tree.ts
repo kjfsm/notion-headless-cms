@@ -67,7 +67,7 @@ export interface FetchBlockTreeOptions {
 
 /**
  * ブロック木に対して追加情報を付与する enricher 関数。
- * `createNotionCollection` の `enrichers` オプションに渡す。
+ * `blocksFetcher({ enrichers })` に渡す。
  * `notion-katex` など拡張パッケージが実装する。
  */
 export type BlockEnricher = (

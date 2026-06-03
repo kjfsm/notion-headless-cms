@@ -65,6 +65,7 @@ Markdown 派は `blocksFetcher` の代わりに `@notion-headless-cms/fetch-mark
 
 ## 自動チェック
 
-`tsc --noEmit` で `@deprecated` マークが付いた箇所に IDE 警告が出ます。
-CI で deprecated 利用を失敗扱いにしたい場合は `eslint-plugin-deprecation` 等を
-ご利用ください (本リポジトリは Biome のみ採用、検出は IDE / typecheck 任せ)。
+v1.0.0 以降は `blocks` / `ogp` / `enrichers` が型から削除されるため、
+そのまま渡すと `tsc --noEmit` で「既知のプロパティではありません」という
+コンパイルエラーになります (0.3.x までは `@deprecated` の IDE 警告のみでした)。
+`content: blocksFetcher({ blocks, ogp, enrichers })` へ移すとエラーは解消します。
