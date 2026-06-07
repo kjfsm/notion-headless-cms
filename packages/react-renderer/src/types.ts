@@ -53,8 +53,12 @@ export type NotionBlock = BlockObjectResponse & {
 /** Image/Video/Audio/File/PDF の file URL を変換する関数。CDN プロキシや永続 URL への書き換えに使う。 */
 export type ResolveImageUrlFn = (url: string, block: NotionBlock) => string;
 
-/** Notion 内部ページ ID をサイト内 URL に変換する関数。slug ベースルーティングなどに使う。 */
-export type ResolvePageUrlFn = (pageId: string) => string;
+/**
+ * Notion 内部ページ ID をサイト内 URL に変換する関数。slug ベースルーティングなどに使う。
+ * 解決できないページ ID では `undefined` を返してよく、その場合は各ブロックが従来の
+ * フォールバック（`link_to_page` は `#id`、page mention は素の表示）に委ねる。
+ */
+export type ResolvePageUrlFn = (pageId: string) => string | undefined;
 
 /** Notion 内部ページ ID をタイトルに変換する関数。link_to_page の表示テキストに使う。 */
 export type ResolvePageTitleFn = (pageId: string) => string | undefined;

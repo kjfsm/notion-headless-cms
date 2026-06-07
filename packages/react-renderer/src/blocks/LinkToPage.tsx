@@ -24,7 +24,8 @@ export function LinkToPage({
       : target.type === "database_id"
         ? target.database_id
         : "comment";
-  const href = resolvePageUrl ? resolvePageUrl(id) : `#${id}`;
+  // 未解決（resolver 未指定 or インデックスに無い ID）は従来どおりフラグメントへフォールバック。
+  const href = resolvePageUrl?.(id) ?? `#${id}`;
   const title = resolvePageTitle?.(id) ?? "Open page";
   const LinkComp = (LinkSlot ?? "a") as ElementType<
     React.AnchorHTMLAttributes<HTMLAnchorElement>

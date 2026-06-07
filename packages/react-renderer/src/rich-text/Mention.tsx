@@ -11,7 +11,12 @@ export interface MentionProps {
 
 /** rich_text の mention 種別を React で描画する。link_mention は Notion 風カードに近い見た目。 */
 export function Mention({ item }: MentionProps) {
-  const { Image: ImageSlot, Link: LinkSlot } = useNotionContext();
+  const {
+    Image: ImageSlot,
+    Link: LinkSlot,
+    resolvePageUrl,
+    resolvePageTitle,
+  } = useNotionContext();
   const m = item.mention;
   const plainText = item.plain_text;
 
@@ -66,19 +71,55 @@ export function Mention({ item }: MentionProps) {
   }
 
   if (m.type === "page") {
+    // resolvePageUrl が ID を解決できればリンク化、できなければ従来どおり素の表示。
+    const href = resolvePageUrl?.(m.page.id);
+    const label = resolvePageTitle?.(m.page.id) || plainText || m.page.id;
+    const inner = (
+      <>
+        <span aria-hidden>📋</span>
+        <span>{label}</span>
+      </>
+    );
+    if (href) {
+      return (
+        <LinkComp
+          href={href}
+          className="inline-flex items-baseline gap-1 rounded px-1 hover:bg-muted"
+        >
+          {inner}
+        </LinkComp>
+      );
+    }
     return (
       <span className="inline-flex items-baseline gap-1 rounded bg-muted px-1">
-        <span aria-hidden>📋</span>
-        <span>{plainText || m.page.id}</span>
+        {inner}
       </span>
     );
   }
 
   if (m.type === "database") {
+    const href = resolvePageUrl?.(m.database.id);
+    const label =
+      resolvePageTitle?.(m.database.id) || plainText || m.database.id;
+    const inner = (
+      <>
+        <span aria-hidden>🗄️</span>
+        <span>{label}</span>
+      </>
+    );
+    if (href) {
+      return (
+        <LinkComp
+          href={href}
+          className="inline-flex items-baseline gap-1 rounded px-1 hover:bg-muted"
+        >
+          {inner}
+        </LinkComp>
+      );
+    }
     return (
       <span className="inline-flex items-baseline gap-1 rounded bg-muted px-1">
-        <span aria-hidden>🗄️</span>
-        <span>{plainText || m.database.id}</span>
+        {inner}
       </span>
     );
   }

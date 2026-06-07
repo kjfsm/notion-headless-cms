@@ -75,6 +75,28 @@ const components: ComponentOverrides = {
 <NotionRenderer blocks={blocks} components={components} />;
 ```
 
+### 内部リンクを自サイト URL に解決する
+
+`link_to_page` ブロックやリッチテキスト内の page / database mention は、既定では Notion ページ ID
+止まり（`link_to_page` は `#id`、mention は素の表示）。`@notion-headless-cms/core` の
+`createPageLinkResolver(cms)` でサーバ側に逆引きインデックスを作り、解決関数を spread すると、
+これらが `/${collection}/${slug}` のような自サイト URL に解決される。
+
+```tsx
+import { createPageLinkResolver } from "@notion-headless-cms/core";
+
+// サーバ（RSC / loader）で 1 回生成する
+const linkResolver = await createPageLinkResolver(cms);
+
+return <NotionRenderer blocks={blocks} {...linkResolver} />;
+```
+
+- `cms.collections` を走査し各 `list()` の `id` / `slug` / `title` からインデックスを構築する（`list()` は SWR キャッシュ経由なのでウォーム後は安価）。
+- URL 規約は `createPageLinkResolver(cms, { url: (entry) => \`/${entry.slug}\` })` で上書き可。既定は `/${collection}/${slug}`。
+- インデックスに無いページ ID は解決されず、各ブロックの従来フォールバックに委ねられる。
+- リクエストごとの再構築を避けたい場合は `buildPageIndex(cms)` の結果を保持し `createPageLinkResolver(cms, { index })` に渡す。
+- 画像 URL 解決（`resolveBlockImageUrls`）と併用できる。
+
 ### 数式 (KaTeX) を使う
 
 v0.2 以降、block / inline equation は **既定で動的 import** されるため、`katex` を peer に入れるだけで自動的に整形される（サブパス `react-renderer/equation` は廃止）。
