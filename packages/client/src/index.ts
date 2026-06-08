@@ -29,9 +29,13 @@ export type {
   CMSGlobalOps,
   CreateClientOptions,
   ItemWithContent,
+  PageLinkMap,
+  ResolvedPageLink,
   SWRConfig,
 } from "@notion-headless-cms/core";
 export {
+  buildPageIndex,
+  buildPageLinkMap,
   CMSError,
   createClient,
   isCMSError,
@@ -39,6 +43,7 @@ export {
   matchCMSError,
   memoryCache,
   nodePreset,
+  normalizePageId,
 } from "@notion-headless-cms/core";
 export { blocksFetcher } from "@notion-headless-cms/fetch-blocks";
 export { markdownFetcher } from "@notion-headless-cms/fetch-markdown";

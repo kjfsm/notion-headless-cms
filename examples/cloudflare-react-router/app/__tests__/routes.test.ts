@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const fakeCms = {
+  // buildPageLinkMap(cms) が走査するコレクション名一覧。
+  collections: ["posts"],
   posts: {
     list: vi.fn(),
     find: vi.fn(),
@@ -51,7 +53,7 @@ describe("home loader()", () => {
 describe("post loader()", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("ページ詳細とブロック木を返す", async () => {
+  it("ページ詳細・ブロック木・内部リンク解決マップを返す", async () => {
     fakeCms.posts.find.mockResolvedValue({
       id: "id-1",
       slug: "hello",
@@ -59,11 +61,27 @@ describe("post loader()", () => {
         { object: "block", id: "b1", type: "paragraph" },
       ],
     });
-    const result = await postLoader({
+    // buildPageLinkMap(cms) は各コレクションの list() を走査して逆引きを作る。
+    fakeCms.posts.list.mockResolvedValue([
+      {
+        id: "11111111-1111-1111-1111-111111111111",
+        slug: "hello",
+        title: "Hello",
+      },
+    ]);
+    const result = (await postLoader({
       params: { slug: "hello" },
       context: fakeContext,
-    } as never);
-    expect((result as { blocks: unknown[] }).blocks).toHaveLength(1);
+    } as never)) as {
+      blocks: unknown[];
+      pageLinks: Record<string, { href: string; title?: string | null }>;
+    };
+    expect(result.blocks).toHaveLength(1);
+    // 正規化 pageId（ダッシュ除去）で /posts/hello に解決される。
+    expect(result.pageLinks["11111111111111111111111111111111"]).toEqual({
+      href: "/posts/hello",
+      title: "Hello",
+    });
   });
 
   it("存在しないスラグは例外を投げる", async () => {

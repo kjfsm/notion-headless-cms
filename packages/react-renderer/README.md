@@ -75,6 +75,33 @@ const components: ComponentOverrides = {
 <NotionRenderer blocks={blocks} components={components} />;
 ```
 
+### 内部リンクを自サイト URL に解決する
+
+`link_to_page` ブロックやリッチテキスト内の page / database mention・`child_page` は、既定では
+Notion ページ ID 止まり（`link_to_page` は `#id`、mention は素の表示）。サーバ側で
+`buildPageLinkMap(cms)` を作って `pageLinks` プロップに渡すと、これらが
+`/${collection}/${slug}` のような自サイト URL に解決される。
+
+```tsx
+import { buildPageLinkMap } from "@notion-headless-cms/core";
+// もしくは: import { buildPageLinkMap } from "@notion-headless-cms/client";
+
+// サーバ（RSC / loader / route handler）で 1 回構築する
+const pageLinks = await buildPageLinkMap(cms);
+
+return <NotionRenderer blocks={blocks} pageLinks={pageLinks} />;
+```
+
+- **`pageLinks` はプレーンオブジェクト**（`正規化pageId → { href, title }`）なので、React Router の
+  loader 戻り値や RSC（Server → Client Component）境界をそのまま越えられる。`resolvePageUrl`
+  などの**関数プロップはシリアライズ境界を越えられない**ため、内部リンクには `pageLinks` を使う。
+- `cms.collections` を走査し各 `list()` の `id` / `slug` / `title` からマップを構築する（`list()` は SWR キャッシュ経由なのでウォーム後は安価）。
+- URL 規約は `buildPageLinkMap(cms, { url: (entry) => \`/${entry.slug}\` })` で上書き可。既定は `/${collection}/${slug}`。
+- どのコレクションにも属さないページ ID はマップに無く、各ブロックの従来フォールバックに委ねられる。
+- リクエストごとの再構築を避けたい場合は `buildPageIndex(cms)` の結果を保持し `buildPageLinkMap(cms, { index })` に渡す。
+- 画像 URL 解決（`resolveBlockImageUrls`）と併用できる。
+- カスタムルーティング（コレクション一覧に依存しない解決）が必要なら `resolvePageUrl` / `resolvePageTitle` 関数プロップを escape hatch として使える（非シリアライズ境界のみ）。
+
 ### 数式 (KaTeX) を使う
 
 v0.2 以降、block / inline equation は **既定で動的 import** されるため、`katex` を peer に入れるだけで自動的に整形される（サブパス `react-renderer/equation` は廃止）。

@@ -56,6 +56,14 @@ order: 2
 - **Image / Link の DOM 差替スロット**（#219）: `next/image` / `next/link` を注入可能に。
 - **レスポンシブ画像**: `imageSizes` で proxy URL に `?w=` を付けた `srcSet` を自動生成。
 
+### 第 5 弾（内部リンク解決）
+- **Notion 内部リンクの slug 自動解決**（D6 / #356）: core に `buildPageIndex` /
+  `createPageLinkResolver` / `normalizePageId` を追加。`cms` のコレクションを走査して
+  pageId → {collection, slug, title} の逆引きインデックスを作り、`resolvePageUrl` /
+  `resolvePageTitle` を生成する。react-renderer の page / database mention をフック対応にし、
+  解決できればリンク化・できなければ従来表示へフォールバック。サーバで
+  `const r = await createPageLinkResolver(cms)` を作り `<NotionRenderer {...r} />` で spread する。
+
 ## 提案（未実装）
 
 ### DX
@@ -72,13 +80,6 @@ order: 2
 - **提案**: `examples/*` を source of truth に、ルート・`wrangler.toml`・`workers/app.ts` まで
   生成する。テンプレ同期の仕組みが要る。 **想定工数**: 大。 **リスク**: 中。
 
-#### D6. Notion 内部リンクの自動 slug 解決（#260）
-- **課題**: `resolvePageUrl` フック（#218）は提供済みだが、Notion ページ ID → 自サイト slug の
-  逆引きは利用者実装に委ねられている。
-- **提案**: collection の slug インデックスを内部に持ち、mention-page / link_to_page を
-  フック未指定時に既定で slug URL へ解決する。
-- **影響範囲**: `react-renderer` + `core`（slug 逆引き）。 **想定工数**: 中。 **リスク**: 中
-  （複数コレクション横断の解決ルール）。
 
 ### 性能
 

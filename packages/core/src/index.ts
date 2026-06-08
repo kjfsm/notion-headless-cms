@@ -30,6 +30,21 @@ export type { HandlerAdapter, HandlerOptions } from "./handler";
 export { createHandler } from "./handler";
 // ── フック・ロガー・プラグイン ────────────────────────────────────────
 export { mergeHooks, mergeLoggers } from "./hooks";
+// ── 内部リンク解決（pageId → slug 逆引き） ───────────────────────────
+export type {
+  BuildPageIndexOptions,
+  BuildPageLinkMapOptions,
+  PageIndex,
+  PageIndexEntry,
+  PageIndexSource,
+  PageLinkMap,
+  ResolvedPageLink,
+} from "./page-index";
+export {
+  buildPageIndex,
+  buildPageLinkMap,
+  normalizePageId,
+} from "./page-index";
 // ── プリセット ─────────────────────────────────────────────────────────
 export type { NodePresetOptions } from "./preset/node";
 export { nodePreset } from "./preset/node";

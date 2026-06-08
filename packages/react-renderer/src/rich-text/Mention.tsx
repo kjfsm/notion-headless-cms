@@ -4,6 +4,7 @@ import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoi
 import { Link as LinkIcon } from "lucide-react";
 import type { ElementType } from "react";
 import { useNotionContext } from "../context";
+import { normalizePageId } from "../lib/normalize-page-id";
 
 export interface MentionProps {
   item: Extract<RichTextItemResponse, { type: "mention" }>;
@@ -11,7 +12,13 @@ export interface MentionProps {
 
 /** rich_text の mention 種別を React で描画する。link_mention は Notion 風カードに近い見た目。 */
 export function Mention({ item }: MentionProps) {
-  const { Image: ImageSlot, Link: LinkSlot } = useNotionContext();
+  const {
+    Image: ImageSlot,
+    Link: LinkSlot,
+    pageLinks,
+    resolvePageUrl,
+    resolvePageTitle,
+  } = useNotionContext();
   const m = item.mention;
   const plainText = item.plain_text;
 
@@ -66,19 +73,64 @@ export function Mention({ item }: MentionProps) {
   }
 
   if (m.type === "page") {
+    // pageLinks → resolvePageUrl の順で解決。どちらも無ければ従来どおり素の表示。
+    const resolved = pageLinks?.[normalizePageId(m.page.id)];
+    const href = resolved?.href ?? resolvePageUrl?.(m.page.id);
+    const label =
+      resolved?.title ||
+      resolvePageTitle?.(m.page.id) ||
+      plainText ||
+      m.page.id;
+    const inner = (
+      <>
+        <span aria-hidden>📋</span>
+        <span>{label}</span>
+      </>
+    );
+    if (href) {
+      return (
+        <LinkComp
+          href={href}
+          className="inline-flex items-baseline gap-1 rounded px-1 hover:bg-muted"
+        >
+          {inner}
+        </LinkComp>
+      );
+    }
     return (
       <span className="inline-flex items-baseline gap-1 rounded bg-muted px-1">
-        <span aria-hidden>📋</span>
-        <span>{plainText || m.page.id}</span>
+        {inner}
       </span>
     );
   }
 
   if (m.type === "database") {
+    const resolved = pageLinks?.[normalizePageId(m.database.id)];
+    const href = resolved?.href ?? resolvePageUrl?.(m.database.id);
+    const label =
+      resolved?.title ||
+      resolvePageTitle?.(m.database.id) ||
+      plainText ||
+      m.database.id;
+    const inner = (
+      <>
+        <span aria-hidden>🗄️</span>
+        <span>{label}</span>
+      </>
+    );
+    if (href) {
+      return (
+        <LinkComp
+          href={href}
+          className="inline-flex items-baseline gap-1 rounded px-1 hover:bg-muted"
+        >
+          {inner}
+        </LinkComp>
+      );
+    }
     return (
       <span className="inline-flex items-baseline gap-1 rounded bg-muted px-1">
-        <span aria-hidden>🗄️</span>
-        <span>{plainText || m.database.id}</span>
+        {inner}
       </span>
     );
   }

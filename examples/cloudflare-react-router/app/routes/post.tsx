@@ -1,3 +1,4 @@
+import { buildPageLinkMap } from "@notion-headless-cms/client";
 import { NotionRevalidator, Renderer } from "@notion-headless-cms/client/react";
 import { data, isRouteErrorResponse } from "react-router";
 import { makeCms } from "../lib/cms";
@@ -28,8 +29,12 @@ export async function loader({ params, context }: Route.LoaderArgs) {
     const post = await cms.posts.find(params.slug ?? "");
     if (!post) throw data("Not Found", { status: 404 });
     const blocks = await post.notionBlocks();
+    // Notion 内部リンク（link_to_page / page mention）を自サイト URL に解決するマップ。
+    // プレーンオブジェクトなので loader 経由でそのままコンポーネントに渡せる。
+    const pageLinks = await buildPageLinkMap(cms);
     return {
       blocks,
+      pageLinks,
       item: {
         slug: post.slug,
         title: post.title,
@@ -45,7 +50,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 }
 
 export default function Post({ loaderData }: Route.ComponentProps) {
-  const { blocks, item } = loaderData;
+  const { blocks, pageLinks, item } = loaderData;
   return (
     <article>
       <NotionRevalidator
@@ -56,7 +61,7 @@ export default function Post({ loaderData }: Route.ComponentProps) {
       />
       <h1>{item.title ?? item.slug}</h1>
       {item.publishedAt && <time>{item.publishedAt}</time>}
-      <Renderer blocks={blocks} />
+      <Renderer blocks={blocks} pageLinks={pageLinks} />
     </article>
   );
 }

@@ -5,6 +5,7 @@ import { FileText } from "lucide-react";
 import type { ElementType } from "react";
 import { Card, CardHeader, CardTitle } from "../components/ui/card.js";
 import { useNotionContext } from "../context";
+import { normalizePageId } from "../lib/normalize-page-id.js";
 import { cn } from "../lib/utils";
 import type { BlockComponentProps } from "../types";
 
@@ -12,8 +13,10 @@ export function ChildPage({
   block,
   className,
 }: BlockComponentProps<ChildPageBlockObjectResponse>) {
-  const { resolvePageUrl, Link: LinkSlot } = useNotionContext();
-  const href = resolvePageUrl ? resolvePageUrl(block.id) : undefined;
+  const { pageLinks, resolvePageUrl, Link: LinkSlot } = useNotionContext();
+  // child_page の id はその子ページ自身の pageId。pageLinks → 関数の順で解決。
+  const href =
+    pageLinks?.[normalizePageId(block.id)]?.href ?? resolvePageUrl?.(block.id);
 
   const inner = (
     <CardHeader className="flex flex-row items-center gap-2">
