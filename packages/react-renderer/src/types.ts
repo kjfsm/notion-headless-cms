@@ -63,6 +63,20 @@ export type ResolvePageUrlFn = (pageId: string) => string | undefined;
 /** Notion 内部ページ ID をタイトルに変換する関数。link_to_page の表示テキストに使う。 */
 export type ResolvePageTitleFn = (pageId: string) => string | undefined;
 
+/** 解決済みの内部リンク（`href` と表示用 `title`）。 */
+export interface ResolvedPageLink {
+  href: string;
+  title?: string | null;
+}
+
+/**
+ * 正規化済み pageId → 解決済みリンクのプレーンマップ。
+ * `@notion-headless-cms/core` の `buildPageLinkMap(cms)` で生成し、`NotionRenderer` の
+ * `pageLinks` プロップに渡す。関数ではなくプレーンオブジェクトなので、loader / RSC の
+ * シリアライズ境界を越えて渡せる（`resolvePageUrl` 関数プロップは越えられない）。
+ */
+export type PageLinkMap = Record<string, ResolvedPageLink>;
+
 /**
  * 各 block コンポーネントの共通プロップ。
  * 子ブロードの描画は Context 経由の `<NotionBlocks>` が担うため、
@@ -174,7 +188,17 @@ export interface NotionRendererProps {
   classNames?: BlockClassNames;
   /** file URL を変換する関数。Notion 署名済み URL をプロキシ URL 等に書き換えるために使う（#218）。 */
   resolveImageUrl?: ResolveImageUrlFn;
-  /** Notion ページ ID をサイト内 URL に変換する関数（#218）。 */
+  /**
+   * Notion 内部リンクの解決マップ。`buildPageLinkMap(cms)` の戻り値をそのまま渡す。
+   * `link_to_page` / page・database mention / `child_page` を自サイト URL に解決する。
+   * シリアライズ可能なため RSC / loader 境界を越えられる（推奨）。
+   */
+  pageLinks?: PageLinkMap;
+  /**
+   * Notion ページ ID をサイト内 URL に変換する関数（#218）。
+   * `pageLinks` で解決できない場合のフォールバック / カスタムルーティング用の escape hatch。
+   * 関数のためシリアライズ境界（RSC / loader）は越えられない点に注意。
+   */
   resolvePageUrl?: ResolvePageUrlFn;
   /** Notion ページ ID を表示名に変換する関数。link_to_page の本文に使う。 */
   resolvePageTitle?: ResolvePageTitleFn;

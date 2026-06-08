@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildPageIndex,
-  createPageLinkResolver,
+  buildPageLinkMap,
   normalizePageId,
   type PageIndexSource,
 } from "../page-index";
@@ -79,42 +79,37 @@ describe("buildPageIndex", () => {
   });
 });
 
-describe("createPageLinkResolver", () => {
+describe("buildPageLinkMap", () => {
   const source = fakeSource({
     posts: [
       fakeItem("33333333-3333-3333-3333-333333333333", "my-post", "My Post"),
     ],
   });
-  const known = "33333333-3333-3333-3333-333333333333";
+  // renderer 側の normalizePageId と同じキーで引ける（ダッシュ有無を問わない）
+  const key = normalizePageId("33333333-3333-3333-3333-333333333333");
 
-  it("既定 URL は /${collection}/${slug}、タイトルも解決する", async () => {
-    const { resolvePageUrl, resolvePageTitle } =
-      await createPageLinkResolver(source);
-    // ダッシュ無し ID でも解決できる
-    expect(resolvePageUrl("33333333333333333333333333333333")).toBe(
-      "/posts/my-post",
-    );
-    expect(resolvePageTitle(known)).toBe("My Post");
+  it("既定 URL は /${collection}/${slug}、title も持つプレーンマップを返す", async () => {
+    const map = await buildPageLinkMap(source);
+    expect(map[key]).toEqual({ href: "/posts/my-post", title: "My Post" });
   });
 
   it("url オプションで URL 規約を上書きできる", async () => {
-    const { resolvePageUrl } = await createPageLinkResolver(source, {
+    const map = await buildPageLinkMap(source, {
       url: (entry) => `/${entry.slug}`,
     });
-    expect(resolvePageUrl(known)).toBe("/my-post");
+    expect(map[key]?.href).toBe("/my-post");
   });
 
-  it("未登録 ID は undefined を返す（renderer のフォールバックに委ねる）", async () => {
-    const { resolvePageUrl, resolvePageTitle } =
-      await createPageLinkResolver(source);
-    const unknown = "99999999-9999-9999-9999-999999999999";
-    expect(resolvePageUrl(unknown)).toBeUndefined();
-    expect(resolvePageTitle(unknown)).toBeUndefined();
+  it("未登録 ID はマップに存在しない（renderer のフォールバックに委ねる）", async () => {
+    const map = await buildPageLinkMap(source);
+    expect(map[normalizePageId("99999999-9999-9999-9999-999999999999")]).toBe(
+      undefined,
+    );
   });
 
   it("事前構築済みインデックスを再利用できる", async () => {
     const index = await buildPageIndex(source);
-    const { resolvePageUrl } = await createPageLinkResolver(source, { index });
-    expect(resolvePageUrl(known)).toBe("/posts/my-post");
+    const map = await buildPageLinkMap(source, { index });
+    expect(map[key]?.href).toBe("/posts/my-post");
   });
 });

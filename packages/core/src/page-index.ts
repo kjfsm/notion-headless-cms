@@ -15,7 +15,7 @@ export interface PageIndexEntry {
 export type PageIndex = Map<string, PageIndexEntry>;
 
 /**
- * `buildPageIndex` / `createPageLinkResolver` が必要とする最小の CMS 形状。
+ * `buildPageIndex` / `buildPageLinkMap` が必要とする最小の CMS 形状。
  * `collections` でコレクション名を列挙し、各名でコレクションクライアントへアクセスする。
  * `CMSClient` はコレクションを自身に spread しているため構造的に満たす。
  */
@@ -32,6 +32,8 @@ export interface BuildPageIndexOptions {
  * Notion ページ ID を比較用に正規化する。
  * Notion の ID は文脈によりダッシュの有無・大文字小文字が揺れるため、
  * ダッシュ除去 + 小文字化して突き合わせる。
+ *
+ * react-renderer 側も同一実装で `pageLinks` を引くため、変更時は両方を揃えること。
  */
 export function normalizePageId(id: string): string {
   return id.replace(/-/g, "").toLowerCase();
@@ -53,8 +55,7 @@ function asCollectionClient(
  * 全コレクションを `list()` で走査し、pageId → {collection, slug, title} の逆引きマップを構築する。
  * Notion 内部リンク（link_to_page / page mention など）を自サイト URL へ解決するための材料。
  *
- * `list()` は SWR ドキュメントキャッシュ経由のためウォーム後は安価。リクエストごとに
- * 構築し直したくない場合は結果を呼び出し側で保持し `createPageLinkResolver({ index })` に渡す。
+ * `list()` は SWR ドキュメントキャッシュ経由のためウォーム後は安価。
  */
 export async function buildPageIndex(
   source: PageIndexSource,
@@ -81,7 +82,20 @@ export async function buildPageIndex(
   return index;
 }
 
-export interface PageLinkResolverOptions extends BuildPageIndexOptions {
+/** 解決済みの内部リンク。`href` は構築時に決まり、`title` は表示テキスト用。 */
+export interface ResolvedPageLink {
+  href: string;
+  title?: string | null;
+}
+
+/**
+ * 正規化済み pageId → 解決済みリンクのプレーンマップ。
+ * 関数ではなくプレーンオブジェクトなので、loader / RSC（Server Component → Client
+ * Component）境界を越えて `<NotionRenderer pageLinks={...} />` にそのまま渡せる。
+ */
+export type PageLinkMap = Record<string, ResolvedPageLink>;
+
+export interface BuildPageLinkMapOptions extends BuildPageIndexOptions {
   /**
    * エントリから URL を組み立てる関数。既定は `/${collection}/${slug}`。
    * 単一コレクションで `/${slug}` にしたい場合などに上書きする。
@@ -91,38 +105,27 @@ export interface PageLinkResolverOptions extends BuildPageIndexOptions {
   index?: PageIndex;
 }
 
-/** react-renderer の `resolvePageUrl` / `resolvePageTitle` に渡す関数ペア。 */
-export interface PageLinkResolver {
-  resolvePageUrl: (pageId: string) => string | undefined;
-  resolvePageTitle: (pageId: string) => string | undefined;
-}
-
 const defaultUrl = (entry: PageIndexEntry): string =>
   `/${entry.collection}/${entry.slug}`;
 
 /**
- * Notion 内部リンクを自サイト URL に解決する関数ペアを生成する。
- * サーバ側で 1 回生成し、`<NotionRenderer blocks={...} {...resolver} />` のように spread して使う。
- * 未登録ページ（CMS のコレクションに無い ID）は `undefined` を返し、renderer 側の従来
- * フォールバック（`link_to_page` は `#id`、mention は素の表示）に委ねる。
+ * Notion 内部リンクを「正規化 pageId → {href, title}」のプレーンマップに解決する。
+ * サーバ側（loader / RSC / route handler）で 1 回構築し、`<NotionRenderer pageLinks={...} />`
+ * に渡す。プレーンオブジェクトなのでシリアライズ境界（RSC / loader）を越えられる。
  *
  * @example
- * const resolver = await createPageLinkResolver(cms);
- * <NotionRenderer blocks={blocks} {...resolver} />;
+ * const pageLinks = await buildPageLinkMap(cms);
+ * <NotionRenderer blocks={blocks} pageLinks={pageLinks} />;
  */
-export async function createPageLinkResolver(
+export async function buildPageLinkMap(
   source: PageIndexSource,
-  opts?: PageLinkResolverOptions,
-): Promise<PageLinkResolver> {
+  opts?: BuildPageLinkMapOptions,
+): Promise<PageLinkMap> {
   const index = opts?.index ?? (await buildPageIndex(source, opts));
   const toUrl = opts?.url ?? defaultUrl;
-  return {
-    resolvePageUrl(pageId) {
-      const entry = index.get(normalizePageId(pageId));
-      return entry ? toUrl(entry, pageId) : undefined;
-    },
-    resolvePageTitle(pageId) {
-      return index.get(normalizePageId(pageId))?.title ?? undefined;
-    },
-  };
+  const map: PageLinkMap = {};
+  for (const [key, entry] of index) {
+    map[key] = { href: toUrl(entry, key), title: entry.title };
+  }
+  return map;
 }

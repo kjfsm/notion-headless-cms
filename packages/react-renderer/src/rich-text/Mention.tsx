@@ -4,6 +4,7 @@ import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoi
 import { Link as LinkIcon } from "lucide-react";
 import type { ElementType } from "react";
 import { useNotionContext } from "../context";
+import { normalizePageId } from "../lib/normalize-page-id";
 
 export interface MentionProps {
   item: Extract<RichTextItemResponse, { type: "mention" }>;
@@ -14,6 +15,7 @@ export function Mention({ item }: MentionProps) {
   const {
     Image: ImageSlot,
     Link: LinkSlot,
+    pageLinks,
     resolvePageUrl,
     resolvePageTitle,
   } = useNotionContext();
@@ -71,9 +73,14 @@ export function Mention({ item }: MentionProps) {
   }
 
   if (m.type === "page") {
-    // resolvePageUrl が ID を解決できればリンク化、できなければ従来どおり素の表示。
-    const href = resolvePageUrl?.(m.page.id);
-    const label = resolvePageTitle?.(m.page.id) || plainText || m.page.id;
+    // pageLinks → resolvePageUrl の順で解決。どちらも無ければ従来どおり素の表示。
+    const resolved = pageLinks?.[normalizePageId(m.page.id)];
+    const href = resolved?.href ?? resolvePageUrl?.(m.page.id);
+    const label =
+      resolved?.title ||
+      resolvePageTitle?.(m.page.id) ||
+      plainText ||
+      m.page.id;
     const inner = (
       <>
         <span aria-hidden>📋</span>
@@ -98,9 +105,13 @@ export function Mention({ item }: MentionProps) {
   }
 
   if (m.type === "database") {
-    const href = resolvePageUrl?.(m.database.id);
+    const resolved = pageLinks?.[normalizePageId(m.database.id)];
+    const href = resolved?.href ?? resolvePageUrl?.(m.database.id);
     const label =
-      resolvePageTitle?.(m.database.id) || plainText || m.database.id;
+      resolved?.title ||
+      resolvePageTitle?.(m.database.id) ||
+      plainText ||
+      m.database.id;
     const inner = (
       <>
         <span aria-hidden>🗄️</span>

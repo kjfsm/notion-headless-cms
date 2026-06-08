@@ -33,15 +33,16 @@ export { mergeHooks, mergeLoggers } from "./hooks";
 // ── 内部リンク解決（pageId → slug 逆引き） ───────────────────────────
 export type {
   BuildPageIndexOptions,
+  BuildPageLinkMapOptions,
   PageIndex,
   PageIndexEntry,
   PageIndexSource,
-  PageLinkResolver,
-  PageLinkResolverOptions,
+  PageLinkMap,
+  ResolvedPageLink,
 } from "./page-index";
 export {
   buildPageIndex,
-  createPageLinkResolver,
+  buildPageLinkMap,
   normalizePageId,
 } from "./page-index";
 // ── プリセット ─────────────────────────────────────────────────────────

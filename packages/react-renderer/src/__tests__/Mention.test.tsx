@@ -62,4 +62,16 @@ describe("Mention（page）", () => {
     expect(container.querySelector("a")).toBeNull();
     expect(container.textContent).toContain("plain");
   });
+
+  it("pageLinks（シリアライズ可能マップ）で解決しリンク化する", () => {
+    // pageLinks のキーは正規化済み pageId（ダッシュ除去 + 小文字化）
+    const key = id.replace(/-/g, "").toLowerCase();
+    const { container } = renderWith(pageMention(id, "plain"), {
+      components: {},
+      pageLinks: { [key]: { href: "/posts/x", title: "マップ由来" } },
+    });
+    const a = container.querySelector("a");
+    expect(a?.getAttribute("href")).toBe("/posts/x");
+    expect(a?.textContent).toContain("マップ由来");
+  });
 });

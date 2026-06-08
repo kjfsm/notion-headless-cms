@@ -10,6 +10,7 @@ import type { ExtractedHeading } from "./lib/extract-headings.js";
 import type {
   BlockClassNames,
   ComponentOverrides,
+  PageLinkMap,
   ResolveImageUrlFn,
   ResolvePageTitleFn,
   ResolvePageUrlFn,
@@ -31,6 +32,8 @@ export interface NotionRendererContextValue {
   components: ComponentOverrides;
   classNames?: BlockClassNames;
   resolveImageUrl?: ResolveImageUrlFn;
+  /** Notion 内部リンクの解決マップ（`buildPageLinkMap` の戻り値）。 */
+  pageLinks?: PageLinkMap;
   resolvePageUrl?: ResolvePageUrlFn;
   resolvePageTitle?: ResolvePageTitleFn;
   Image?: ElementType<ImgHTMLAttributes<HTMLImageElement>>;
