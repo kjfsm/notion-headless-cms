@@ -64,6 +64,18 @@ describe("buildPageIndex", () => {
     ).toEqual({ collection: "docs", slug: "intro", title: "Intro" });
   });
 
+  it("collections を持たない source でもクラッシュせず空マップを返す", async () => {
+    // 異常な source（collections 未定義 / list が undefined を返す）に対する防御。
+    const malformed = { collections: undefined } as unknown as PageIndexSource;
+    await expect(buildPageIndex(malformed)).resolves.toEqual(new Map());
+
+    const undefinedList = {
+      collections: ["posts"],
+      posts: { list: async () => undefined },
+    } as unknown as PageIndexSource;
+    await expect(buildPageIndex(undefinedList)).resolves.toEqual(new Map());
+  });
+
   it("collections オプションで走査対象を限定できる", async () => {
     const source = fakeSource({
       posts: [fakeItem("aaaaaaaa-1111-1111-1111-111111111111", "a")],

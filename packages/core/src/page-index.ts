@@ -61,12 +61,20 @@ export async function buildPageIndex(
   source: PageIndexSource,
   opts?: BuildPageIndexOptions,
 ): Promise<PageIndex> {
+  // collections を持たない / 異常な source でもクラッシュさせず空マップを返す。
   const names = opts?.collections ?? source.collections;
   const index: PageIndex = new Map();
+  if (
+    !names ||
+    typeof (names as Iterable<string>)[Symbol.iterator] !== "function"
+  ) {
+    return index;
+  }
   for (const name of names) {
     const client = asCollectionClient(source, name);
     if (!client) continue;
     const items = await client.list();
+    if (!Array.isArray(items)) continue;
     for (const item of items) {
       // pageId は一意なので衝突しない前提。万一重複しても先勝ちで保持する。
       const key = normalizePageId(item.id);
