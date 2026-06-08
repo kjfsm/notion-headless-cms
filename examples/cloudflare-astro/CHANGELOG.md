@@ -1,5 +1,19 @@
 # example-cloudflare-astro
 
+## 0.0.48
+
+### Patch Changes
+
+- Updated dependencies [86585a7]
+- Updated dependencies [61acb13]
+  - @notion-headless-cms/core@0.5.1
+  - @notion-headless-cms/client@0.2.1
+  - @notion-headless-cms/notion-orm@0.2.0
+  - @notion-headless-cms/notion-source@0.2.2
+  - @notion-headless-cms/fetch-markdown@0.0.5
+  - @notion-headless-cms/notion-katex@1.0.0
+  - @notion-headless-cms/notion-shiki@1.0.0
+
 ## 0.0.47
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # @notion-headless-cms/source-notion
 
+## 0.2.0
+
+### Minor Changes
+
+- 61acb13: `createNotionCollection` のトップレベル `blocks` / `ogp` / `enrichers` オプションを削除した（v0.3.x で `@deprecated` 化済み）。本文取得戦略は `content: blocksFetcher({ blocks, ogp, enrichers })` に集約されているため、そちらへ移行すること。移行手順: `docs/ja/migration/blocks-ogp-enrichers.md`。
+
+### Patch Changes
+
+- Updated dependencies [86585a7]
+  - @notion-headless-cms/core@0.5.1
+
 ## 0.1.32
 
 ### Patch Changes
