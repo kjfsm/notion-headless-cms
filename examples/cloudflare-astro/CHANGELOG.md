@@ -1,5 +1,12 @@
 # example-cloudflare-astro
 
+## 0.0.50
+
+### Patch Changes
+
+- Updated dependencies [ef2c39c]
+  - @notion-headless-cms/client@0.2.3
+
 ## 0.0.49
 
 ### Patch Changes
