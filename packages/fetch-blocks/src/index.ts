@@ -7,6 +7,9 @@ import type {
 } from "@notion-headless-cms/notion-orm";
 import { fetchBlockTree } from "@notion-headless-cms/notion-orm";
 
+// createCMS など利用側が ogp オプションを型付きで渡せるよう re-export する。
+export type { FetchBlockTreeOgpOptions } from "@notion-headless-cms/notion-orm";
+
 export interface BlocksFetcherOptions {
   /**
    * 同時に展開する子ブロックの最大数。デフォルト 3。

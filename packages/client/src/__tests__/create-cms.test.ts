@@ -5,21 +5,28 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 // core / notion-source / fetcher を全てモックし、createCMS が組み立てる
 // createClient / notionSource への引数（配線）だけを検証する。
 // vi.mock は巻き上げられるため、参照する spy は vi.hoisted で先に確保する。
-const { createClientMock, nodePresetMock, notionSourceMock } = vi.hoisted(
-  () => ({
-    createClientMock: vi.fn((opts: Record<string, unknown>) => ({
-      __opts: opts,
-    })),
-    nodePresetMock: vi.fn(() => ({
-      cache: ["MEMORY"],
-      swr: { ttlMs: 300_000 },
-    })),
-    notionSourceMock: vi.fn((cfg: Record<string, unknown>) => ({
-      collections: {},
-      __cfg: cfg,
-    })),
-  }),
-);
+const {
+  createClientMock,
+  nodePresetMock,
+  notionSourceMock,
+  blocksFetcherMock,
+} = vi.hoisted(() => ({
+  createClientMock: vi.fn((opts: Record<string, unknown>) => ({
+    __opts: opts,
+  })),
+  nodePresetMock: vi.fn(() => ({
+    cache: ["MEMORY"],
+    swr: { ttlMs: 300_000 },
+  })),
+  notionSourceMock: vi.fn((cfg: Record<string, unknown>) => ({
+    collections: {},
+    __cfg: cfg,
+  })),
+  blocksFetcherMock: vi.fn((opts?: Record<string, unknown>) => ({
+    kind: "blocks",
+    __opts: opts,
+  })),
+}));
 
 vi.mock("@notion-headless-cms/core", () => ({
   createClient: createClientMock,
@@ -33,7 +40,7 @@ vi.mock("@notion-headless-cms/fetch-markdown", () => ({
   notionMarkdownRenderer: vi.fn(),
 }));
 vi.mock("@notion-headless-cms/fetch-blocks", () => ({
-  blocksFetcher: () => ({ kind: "blocks" }),
+  blocksFetcher: blocksFetcherMock,
 }));
 
 import { createCMS } from "../index";
@@ -76,6 +83,34 @@ describe("createCMS", () => {
       "blocks",
     );
     expect(lastCall(createClientMock).renderer).toBeUndefined();
+  });
+
+  it("react モードは OGP を既定オンで blocksFetcher に渡す", () => {
+    createCMS({ schema, token: "t", content: "react" });
+    expect(lastCall(blocksFetcherMock)).toEqual({ ogp: { enabled: true } });
+  });
+
+  it("ogp: false で OGP 取得を無効化する", () => {
+    createCMS({ schema, token: "t", content: "react", ogp: false });
+    expect(lastCall(blocksFetcherMock)).toEqual({ ogp: { enabled: false } });
+  });
+
+  it("ogp にオブジェクトを渡すとそのまま blocksFetcher へ届く", () => {
+    const imageCache = { kind: "r2" } as never;
+    createCMS({
+      schema,
+      token: "t",
+      content: "react",
+      ogp: { enabled: true, imageCache },
+    });
+    expect(lastCall(blocksFetcherMock)).toEqual({
+      ogp: { enabled: true, imageCache },
+    });
+  });
+
+  it("html モードでは blocksFetcher を呼ばず ogp を無視する", () => {
+    createCMS({ schema, token: "t", content: "html", ogp: false });
+    expect(blocksFetcherMock).not.toHaveBeenCalled();
   });
 
   it("content 省略時は html 既定になる", () => {

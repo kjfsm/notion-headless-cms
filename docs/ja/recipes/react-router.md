@@ -85,9 +85,24 @@ export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void })
     collections: {
       posts: { published: ["公開済み"] },
     },
+    // ogp は省略可。react モードでは既定オン（下記参照）。
   });
 }
 ```
+
+### リンクプレビュー（OGP）
+
+`content: "react"` では bookmark / link_preview / embed ブロックの OGP（タイトル・説明・OG 画像）取得が **既定でオン**になり、`<NotionRenderer>` が Notion 本家風のリンクカードを描画する。
+
+- メタデータはブロック取得時にサーバー側で取得され、**既存のドキュメントキャッシュに同梱**されるため、専用のキャッシュ設定は不要。
+- OG 画像は**既定で元 URL のままブラウザが直接読み込む**（R2 等への永続キャッシュなし）。`<img loading="lazy">` で遅延読み込みされるため、初回表示が遅れても本文描画はブロックしない。
+- 無効化したいときは `ogp: false`。OG 画像も R2 等へ永続化したい上級者は `ogp: { enabled: true, imageCache }` を渡す。
+
+```ts
+createCMS({ schema, token, content: "react", ogp: false }); // OGP を切る
+```
+
+> リンクを多用するページでは bookmark / link_preview ごとに外部 fetch が増える。CF Free のサブリクエスト上限（50/invocation）に近づく場合は `ogp: false` を検討する。初回（キャッシュミス）のみで、以降は SWR ドキュメントキャッシュが効く。
 
 ## Workers エントリ
 
