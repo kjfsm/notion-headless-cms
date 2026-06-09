@@ -7,7 +7,10 @@ import type {
   SWRConfig,
 } from "@notion-headless-cms/core";
 import { createClient, nodePreset } from "@notion-headless-cms/core";
-import { blocksFetcher } from "@notion-headless-cms/fetch-blocks";
+import {
+  blocksFetcher,
+  type FetchBlockTreeOgpOptions,
+} from "@notion-headless-cms/fetch-blocks";
 import {
   markdownFetcher,
   notionMarkdownRenderer,
@@ -45,6 +48,7 @@ export {
   nodePreset,
   normalizePageId,
 } from "@notion-headless-cms/core";
+export type { FetchBlockTreeOgpOptions } from "@notion-headless-cms/fetch-blocks";
 export { blocksFetcher } from "@notion-headless-cms/fetch-blocks";
 export { markdownFetcher } from "@notion-headless-cms/fetch-markdown";
 export type {
@@ -160,6 +164,31 @@ export interface CreateCMSOptions<
   runtime?: RuntimeConfig;
   /** 画像プロキシのベース URL。既定 `/api/images`。 */
   imageProxyBase?: string;
+  /**
+   * bookmark / link_preview / embed ブロックの OGP（リンクプレビュー）取得設定。
+   * `content: "react"` のときのみ効く（`"html"` では無視）。
+   *
+   * **既定はオン**。省略 / `true` で `{ enabled: true }` 相当となり、サーバー側で
+   * OGP メタデータを取得してブロックに付与する（取得結果はドキュメントキャッシュに同梱されるため
+   * 追加のキャッシュ設定は不要）。OG 画像は `imageCache` 未指定なら元 URL のまま流し、
+   * ブラウザが直接読み込む（R2 等への永続キャッシュなし）。
+   *
+   * - `false`: OGP 取得を無効化する。
+   * - `{ enabled: true, imageCache }`: OG 画像も R2 等へ永続化したい上級者向け。
+   */
+  ogp?: boolean | FetchBlockTreeOgpOptions;
+}
+
+/**
+ * `createCMS` の `ogp` オプションを `blocksFetcher` 用の設定へ正規化する。
+ * 既定（省略 / `true`）はオンにし、OG 画像はブラウザ直読み（imageCache なし）とする。
+ */
+function resolveOgpOption(
+  ogp: boolean | FetchBlockTreeOgpOptions | undefined,
+): FetchBlockTreeOgpOptions {
+  if (ogp === undefined || ogp === true) return { enabled: true };
+  if (ogp === false) return { enabled: false };
+  return ogp;
 }
 
 /**
@@ -198,8 +227,12 @@ export function createCMS<S extends SchemaMap, M extends ContentMode = "html">(
   opts: CreateCMSOptions<S, M>,
 ): CMSClientFor<S, M> {
   const content: ContentMode = opts.content ?? "html";
-  // content モードが取得戦略を一意に決める（renderer も同時に内部結線）
-  const fetch = content === "react" ? blocksFetcher() : markdownFetcher();
+  // content モードが取得戦略を一意に決める（renderer も同時に内部結線）。
+  // react モードは OGP（リンクプレビュー）を既定オンで取得する。
+  const fetch =
+    content === "react"
+      ? blocksFetcher({ ogp: resolveOgpOption(opts.ogp) })
+      : markdownFetcher();
 
   const publishOptions: { [K in keyof S]?: NotionPublishOptions } = {};
   if (opts.collections) {
