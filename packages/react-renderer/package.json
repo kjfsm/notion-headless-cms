@@ -43,10 +43,12 @@
     "./mermaid": {
       "types": "./dist/mermaid.d.mts",
       "import": "./dist/mermaid.mjs"
-    }
+    },
+    "./theme.css": "./styles/theme.css"
   },
   "files": [
-    "dist"
+    "dist",
+    "styles"
   ],
   "engines": {
     "node": ">=24"

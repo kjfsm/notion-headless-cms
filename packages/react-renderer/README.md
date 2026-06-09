@@ -11,17 +11,24 @@ UI プリミティブは [shadcn/ui](https://ui.shadcn.com/) (`new-york` style) 
 pnpm add @notion-headless-cms/react-renderer @notion-headless-cms/notion-orm @notionhq/client react react-dom
 ```
 
-利用側プロジェクトに **Tailwind v4 のセットアップが必須**。`tailwind.config` で本パッケージのソースをスキャン対象に含める:
+利用側プロジェクトに **Tailwind v4 のセットアップが必須**。エントリ CSS で `@import "tailwindcss"` の後に、本パッケージの既定テーマを 1 行読み込む:
 
-```ts
-// tailwind.config.ts (Tailwind v4 では @source を使う方式でも可)
-export default {
-  content: [
-    "./src/**/*.{ts,tsx}",
-    "./node_modules/@notion-headless-cms/react-renderer/dist/**/*.{js,mjs}",
-  ],
-};
+```css
+/* app.css など Tailwind v4 のエントリ */
+@import "tailwindcss";
+@import "katex/dist/katex.min.css"; /* 数式を使う場合のみ */
+@import "@notion-headless-cms/react-renderer/theme.css";
 ```
+
+`theme.css` は次の 3 点をまとめて供給する。これが無いと各ブロックが依存する shadcn
+トークン（`bg-card` / `text-muted-foreground` 等）が解決されず、引用・コールアウト・
+コードのキャプション等が無色になる。
+
+1. **`@source`** — レンダラ dist の class 名を Tailwind のスキャン対象に含める（利用側で別途 `@source` を書く必要はない）
+2. **`@theme inline` ブリッジ** — shadcn のセマンティックトークンを Tailwind v4 の色トークンへ公開
+3. **既定パレット（`:root` / `.dark`）** — neutral なライト/ダークの初期値
+
+詳しいカスタマイズは後述の「[スタイリング / カスタマイズ](#スタイリング--カスタマイズ)」を参照。
 
 ## 使い方
 
@@ -128,6 +135,65 @@ import { MermaidCode } from "@notion-headless-cms/react-renderer/mermaid";
 ```
 
 `MermaidCode` は `language === "mermaid"` のときだけ動的 import で `mermaid` を読み SVG にレンダし、それ以外の言語は既定の `Code` に委譲する。
+
+## スタイリング / カスタマイズ
+
+`theme.css` を入れた状態を出発点に、段階的に見た目を調整できる。
+
+### 1. 色（トークン）を変える — `:root` を上書き
+
+`theme.css` の import より**後**で、変えたいトークンだけ再定義する。`ui/*` の shadcn
+コンポーネントも同じトークンを参照するため、`--primary` を振るだけで全体が揃う。
+
+```css
+@import "tailwindcss";
+@import "@notion-headless-cms/react-renderer/theme.css";
+
+:root {
+  --primary: #9333ea;        /* ブランドカラー（purple-600） */
+  --primary-foreground: #fff;
+  --muted-foreground: #6b7280;
+  --radius: 0.75rem;
+}
+```
+
+### 2. ブロックごとに class を足す — `classNames`
+
+`block.type` をキーに、各ブロックのルート要素へ class を追加する（内部で `tailwind-merge`
+により既定 class と衝突解決される）。
+
+```tsx
+<NotionRenderer
+  blocks={blocks}
+  className="mx-auto max-w-2xl"        // ルート div（.notion-renderer）へ
+  classNames={{ paragraph: "my-4", quote: "border-primary" }}
+/>
+```
+
+### 3. ブロックを丸ごと差し替える — `components`
+
+既定実装では足りないときは、ブロック型単位でコンポーネントを差し替える（前掲
+「[コンポーネント差し替え](#コンポーネント差し替え)」と同じ）。
+
+### 安定したフック（セレクタ / 属性）
+
+- ルート要素に `.notion-renderer` class（`className` prop は追加で合成される）
+- shadcn プリミティブに `data-slot="..."`、コードブロックに `data-language="..."`
+- Notion の color は `text-*` / `bg-*` の Tailwind ユーティリティへ変換される
+
+### ダークモード
+
+`NotionThemeProvider` で囲うと、ダーク選択時にルートへ `dark` class が付き、`theme.css` の
+`.dark` トークンと `dark:` ユーティリティ（`@custom-variant dark`）が効く。
+
+```tsx
+<NotionThemeProvider theme="system">
+  <NotionRenderer blocks={blocks} />
+</NotionThemeProvider>
+```
+
+> **prose は併用しない**。各ブロックは余白・サイズを自前で当てているため、
+> `@tailwindcss/typography` の `prose` を被せると二重適用で崩れる。
 
 ## Notion 更新の表示反映 (`/router`, `/next`)
 

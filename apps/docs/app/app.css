@@ -1,10 +1,9 @@
 @import "tailwindcss";
 /* @notion-headless-cms/react-renderer/equation で KaTeX 数式を表示するために必要 */
 @import "katex/dist/katex.min.css";
+/* レンダラの既定テーマ（@source + shadcn ブリッジ + 既定パレット）を一括取り込み。 */
+@import "@notion-headless-cms/react-renderer/theme.css";
 @plugin "@tailwindcss/typography";
-
-/* react-renderer のクラスも Tailwind v4 のスキャン対象に含める */
-@source "../node_modules/@notion-headless-cms/react-renderer/dist";
 
 /* バンドサイト準拠の Inter ベース。font-sans 系ユーティリティが Inter を解決するようにする */
 @theme {
@@ -13,43 +12,12 @@
     "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
 }
 
-/* shadcn/ui の Tailwind v4 ブリッジ。:root で定義した CSS 変数を Tailwind の
-   色トークン（bg-primary / text-muted-foreground 等）として公開する。 */
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-  --radius-sm: calc(var(--radius) - 2px);
-  --radius-md: var(--radius);
-  --radius-lg: calc(var(--radius) + 4px);
-  --radius-xl: calc(var(--radius) + 8px);
-}
-
-/* バンドサイト準拠のライトオンリーパレット。
+/* theme.css の neutral 既定をバンドカラー（purple 系）へ上書きする。
    primary を purple-600 に振ることで、ui/* の shadcn コンポーネント（手編集禁止）
-   が自動的にバンドカラーへ揃う。 */
+   も自動的にバンドカラーへ揃う。 */
 :root {
-  --background: #ffffff;
   --foreground: #111827; /* gray-900 */
-  --card: #ffffff;
   --card-foreground: #111827;
-  --popover: #ffffff;
   --popover-foreground: #111827;
   --primary: #9333ea; /* purple-600 */
   --primary-foreground: #ffffff;
@@ -60,7 +28,6 @@
   --accent: #faf5ff; /* purple-50 */
   --accent-foreground: #7e22ce; /* purple-700 */
   --destructive: #dc2626;
-  --destructive-foreground: #ffffff;
   --border: #e5e7eb; /* gray-200 */
   --input: #e5e7eb;
   --ring: #a855f7; /* purple-500 */

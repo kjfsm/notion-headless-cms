@@ -1,27 +1,12 @@
 @import "tailwindcss";
 /* @notion-headless-cms/react-renderer/equation で KaTeX 数式を表示するために必要 */
 @import "katex/dist/katex.min.css";
-
-/* react-renderer のクラスも Tailwind v4 のスキャン対象に含める */
-@source "../../../node_modules/@notion-headless-cms/react-renderer/dist";
-
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* レンダラの既定テーマ（@source + shadcn ブリッジ + 既定パレット）を一括取り込み。 */
+@import "@notion-headless-cms/react-renderer/theme.css";
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
