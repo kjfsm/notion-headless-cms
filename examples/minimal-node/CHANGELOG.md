@@ -1,5 +1,11 @@
 # example-minimal-node
 
+## 0.0.4
+
+### Patch Changes
+
+- @notion-headless-cms/client@0.2.2
+
 ## 0.0.3
 
 ### Patch Changes
