@@ -90,7 +90,7 @@ if (post) {
 
 返り値: `Promise<ItemWithContent<T> | null>`
 
-`notionBlocks()` は `DataSource.loadNotionBlocks` を実装している場合のみ非 `undefined` を返す（`@notion-headless-cms/notion-orm` は対応済み）。`@notion-headless-cms/react-renderer` の `<NotionRenderer blocks={...} />` に渡すブロックツリーをキャッシュ経由で取得するために使う。型は `unknown[]` なので利用側で `NotionBlock[]` へキャストする。
+`notionBlocks()` は `DataSource.loadNotionBlocks` を実装している場合のみ非 `undefined` を返す（`@notion-headless-cms/notion-orm` は対応済み）。`@notion-headless-cms/react-renderer` の `<NotionRenderer blocks={...} />` に渡すブロックツリーをキャッシュ経由で取得するために使う。core はゼロ依存のため型は `unknown[] | undefined` であり、低レベル `createClient` 経由で使う場合のみ利用側で `NotionBlock[]` へキャストする。`@notion-headless-cms/client` の `createCMS({ content: "react" })` 経由なら `NotionBlock[]` に型付け済みでキャスト不要。
 
 `opts.fresh === true` を渡すと TTL に関わらずブロッキングで再取得し、本文キャッシュも破棄する。
 
