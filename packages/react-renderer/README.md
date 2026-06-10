@@ -45,25 +45,37 @@ export default function Page() {
 }
 ```
 
-### `@notion-headless-cms/core` と組み合わせて使う (推奨)
+### `createCMS` (content: "react") と組み合わせて使う (推奨)
 
-`createClient` 経由で取得すると、ブロックツリーが SWR キャッシュに乗り、画像 URL も
-`cms.cacheImage` 経由で永続プロキシ URL に書き換えられる (Notion 署名 URL の失効対策)。
+`@notion-headless-cms/client` の `createCMS({ content: "react" })` 経由で取得すると、
+ブロックツリーが SWR キャッシュに乗り、`notionBlocks()` の戻り値が `NotionBlock[]` に
+型付けされるため**キャストは不要**。画像 URL は `cms.cacheImage` 経由で永続プロキシ URL に
+書き換える (Notion 署名 URL の失効対策)。
 
 ```tsx
-import {
-  type NotionBlock,
-  NotionRenderer,
-} from "@notion-headless-cms/react-renderer";
+import { NotionRenderer } from "@notion-headless-cms/react-renderer";
 // "use client" を含まないサーバーサイド専用エントリ
 import { resolveBlockImageUrls } from "@notion-headless-cms/react-renderer/server";
 
 const post = await cms.posts.find(slug);
-const notionBlocks =
-  ((await post?.notionBlocks()) as NotionBlock[] | undefined) ?? [];
-const blocks = await resolveBlockImageUrls(notionBlocks, cms.cacheImage);
+if (!post) return null;
+
+const blocks = await resolveBlockImageUrls(
+  await post.notionBlocks(),
+  cms.cacheImage,
+);
 
 return <NotionRenderer blocks={blocks} />;
+```
+
+低レベル API（`@notion-headless-cms/core` の `createClient`）から使う場合のみ、core の
+ゼロ依存ルールにより `notionBlocks()` は `unknown[] | undefined` を返すため利用側でキャストする:
+
+```tsx
+import type { NotionBlock } from "@notion-headless-cms/react-renderer";
+
+const notionBlocks =
+  ((await post?.notionBlocks()) as NotionBlock[] | undefined) ?? [];
 ```
 
 - `cms.posts.find(slug).notionBlocks()` — ブロックツリーをキャッシュ経由で取得 (`DataSource.loadNotionBlocks` を実装している場合のみ。`@notion-headless-cms/notion-orm` は対応済み)
