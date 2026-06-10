@@ -1,0 +1,55 @@
+# CLAUDE.md
+
+**nDash** — Notion を書き換えると、サイトに反映される（Notion live publishing engine）。
+TypeScript の pnpm モノレポ。公開 npm パッケージは `ndash` のみ。
+製品ビジョン・中心概念・API 設計は **`docs/`** を参照（作業開始時に必ず `docs/README.md` から読む）。
+
+> コンパクション時: 変更中ファイル一覧・実行すべきテストコマンド・タスク状態を必ず保持すること。
+
+---
+
+## 絶対ルール
+
+スタックに依存しない最優先ルール。
+
+1. **言語**: コメント・コミットメッセージ・PR タイトル・PR 概要・AI とのやり取りはすべて**日本語**。ブランチ名は英語のみ（日本語禁止）。識別子・型名・ログ・JSX 表示テキストは英語のまま触らない。
+2. **変更後は必ず `typecheck` と関連テストを通す**。失敗を残したままコミットしない。
+3. **`main` への直 push 禁止**。必ずブランチを切って PR を出す。
+4. **シークレットをコード／Git にハードコードしない**。`.dev.vars` / `.env` は commit せず、ログにも出さない。
+5. **pre-commit / pre-deploy フックを `--no-verify` 等でスキップしない**。フックが落ちたら根本原因を直す。
+6. **自動生成ファイルを手編集しない**。
+
+---
+
+## nDash 固有の絶対ルール
+
+1. **PortableContent の直列化可能性を壊さない**: 公開 API が返すデータに関数・クラスインスタンス・循環参照を含めない（「item に関数を生やさない」）。全公開戻り値は `structuredClone` / `JSON.stringify` ラウンドトリップ可能であること。テストで保証する。
+2. **公開面は `ndash` 1 パッケージ + サブパスのみ**: 内部ワークスペース（data / pipeline / delivery）は `private: true` を維持し、npm に公開しない。新しい公開パッケージを増やす変更は ADR（`docs/architecture.md`）の更新とセットでのみ行う。
+3. **レイヤの依存方向は下向きのみ**: adapters/renderers → delivery → pipeline → data。逆向き import 禁止。data / pipeline / delivery 層は `@notionhq/client` 以外の外部ランタイム依存を持たない（unified / zod / React は adapters・renderers 層に隔離）。
+4. **「受理されるが効かない」オプションを作らない**: オプションは (a) 効く、(b) 型エラー、(c) 実行時に `DashError` で拒否、のいずれか。サイレント無視は dead option として即修正対象。
+5. **本文の canonical は Notion blocks ツリー 1 つ**: 独自中間 AST を追加しない。HTML / Markdown は変換器による派生で、要求された表現のみ生成・キャッシュする。
+6. **キャッシュヒット時のリクエスト処理中に Notion へ同期アクセスしない**: 鮮度は freshness ループ（scheduled / webhook）が裏で担う。serve-stale が既定。
+7. **changeset は fixed group**: 全ワークスペース同一バージョン。bump 種別は明示的な指示がない限り **`patch`**。
+8. **エラーは `DashError` に統一**: 生の `Error` を throw しない。`code` は `<namespace>/<kind>` 形式で、追加時はエラー一覧ドキュメントへの追記とセット。
+
+---
+
+## 参照先（索引）
+
+- **製品ビジョン・Non-goals** → `docs/vision.md`
+- **中心概念**（PortableContent / freshness / 編集者一級機能 / agent-native）→ `docs/concepts.md`
+- **公開 API の形**（変えない約束のコード例）→ `docs/api-design.md`
+- **レイヤ構成・ADR** → `docs/architecture.md`
+- **旧 notion-headless-cms からの移植元** → `docs/reuse-map.md`
+- **マイルストーンと完了条件** → `docs/roadmap.md`
+
+---
+
+## 自己更新ルール
+
+同じ指摘を 2 回以上受けた事項は、以下の優先順位でドキュメントに追記する。
+
+1. **パス固有の事実** → `.claude/rules/<area>.md`
+2. **手順・テンプレ・ワークフロー** → `.claude/skills/<name>/SKILL.md`
+3. **決定的に弾きたい挙動** → `.claude/hooks/*.sh`
+4. **全セッションで必要な絶対ルール** → この `CLAUDE.md`
