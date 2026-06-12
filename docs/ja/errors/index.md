@@ -101,13 +101,13 @@ createClient({ sources: {} });
 
 ---
 
-## version/
+## handler/
 
-### version-unknown_collection
+### handler-unknown_collection
 
-**原因**: `cms.handler()` の versions ルート（`GET {basePath}/versions/:collection/:slug`）が指す collection が `createCMS` の `collections` に登録されていない。
+**原因**: `cms.handler()` のルート（`GET {basePath}/versions/:collection/:slug` または `GET|POST {basePath}/check/:collection/:slug`）が指す collection が `createCMS` の `collections` に登録されていない。
 
-**対処**: `NotionRevalidator` の `poll.url` が登録済みのコレクション名を指しているか確認し、必要なら `collections` に追加する。
+**対処**: ポーリング / チェック URL が登録済みのコレクション名を指しているか確認し、必要なら `collections` に追加する。
 
 ---
 

@@ -267,6 +267,7 @@ const blocks = await resolveBlockImageUrls(notionBlocks, cms.cacheImage);
 
 - `GET {basePath}/images/:hash` — 画像プロキシ
 - `GET {basePath}/versions/:collection/:slug` — `peekVersion()`（更新検知ポーリング用、KV メタのみ）。未登録は `200` + `null`、未知コレクションは `404`
+- `GET|POST {basePath}/check/:collection/:slug?v={version}` — `check()`（Notion を実照会し差分があればキャッシュ更新）。`{ stale }` を返す。未存在は `404`、未知コレクションは `404`
 - `POST {basePath}/revalidate` — Webhook 受信 → `invalidate(scope)`
 
 `NotionRevalidator` のポーリング URL に versions ルートをそのまま渡せる（専用ルートの自前実装が不要）:

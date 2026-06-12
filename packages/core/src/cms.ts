@@ -406,12 +406,26 @@ export function createClient<S extends CMSSources = CMSSources>(
             const client = collections[collection];
             if (!client) {
               throw new CMSError({
-                code: "version/unknown_collection",
+                code: "handler/unknown_collection",
                 message: `Unknown collection: ${collection}`,
                 context: { operation: "peekVersionFor", collection, slug },
               });
             }
             return client.peekVersion(slug);
+          },
+          async checkFor(collection, slug, currentVersion) {
+            const client = collections[collection];
+            if (!client) {
+              throw new CMSError({
+                code: "handler/unknown_collection",
+                message: `Unknown collection: ${collection}`,
+                context: { operation: "checkFor", collection, slug },
+              });
+            }
+            const result = await client.check(slug, currentVersion);
+            // ItemWithContent は lazy 関数を含むため、HTTP には stale 判定のみ返す
+            // （差分ありの場合 check() が副作用でキャッシュ更新済み。利用側は loader 再実行で本文取得）。
+            return result === null ? null : { stale: result.stale };
           },
         },
         handlerOpts,

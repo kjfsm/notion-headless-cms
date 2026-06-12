@@ -253,6 +253,11 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 ポーリングは `notionUpdatedAt` の変化（更新あり → revalidate）または `cachedAt` の変化
 （確認完了・更新なし → 停止）を検出した時点で自動停止する。既定タイムアウトは 30 秒。
 
+`versions`（KV のみの受動ポーリング）に対し、`GET|POST {basePath}/check/:collection/:slug?v={version}`
+は Notion を実照会してその場でキャッシュ更新し `{ stale }` を返す能動版。即時に確実な更新確認を
+したい場合に使う（`cms.[collection].check()` をハンドラ経由で呼ぶ。差分時はキャッシュ更新済みなので
+loader 再実行で最新本文が得られる）。
+
 ## 画像プロキシ
 
 Notion 画像 URL は約 1 時間で失効するため、core が SHA256 ハッシュキーで R2 に永続保存し、
