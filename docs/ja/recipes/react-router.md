@@ -199,9 +199,8 @@ export default function Post({ loaderData }: Route.ComponentProps) {
   const { blocks, item } = loaderData;
   return (
     <article>
-      <NotionRevalidator
-        poll={{ url: `/api/posts/${item.slug}/check`, version: item.lastEditedTime }}
-      />
+      {/* collection と item だけで poll URL(/api/cms/versions/...) と version を自動導出 */}
+      <NotionRevalidator poll={{ collection: "posts", item }} />
       <h1>{item.title ?? item.slug}</h1>
       <Renderer blocks={blocks} />
     </article>
@@ -235,19 +234,16 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 }
 ```
 
-`cms.handler()` を 1 つの splat ルートにマウント済みなら、画像プロキシ・Webhook と同じ口で
-`GET {basePath}/versions/:collection/:slug` が `peekVersion` を返す。専用ルートは不要:
+`cms.handler()` を 1 つの splat ルート（`app/routes/api.cms.$.ts`）にマウント済みなら、画像プロキシ・
+Webhook と同じ口で `GET {basePath}/versions/:collection/:slug` が `peekVersion` を返す。専用ルートは不要。
+`poll` には `collection` と `item` を渡すだけで、URL も `version` も自動導出される:
 
 ```tsx
-// 既定 basePath /api/cms。app/routes/api.cms.$.ts に cms.handler() をマウント
-<NotionRevalidator
-  poll={{ url: `/api/cms/versions/posts/${item.slug}`, version: item.lastEditedTime }}
-/>
+// 推奨: collection + item で URL(/api/cms/versions/posts/:slug) と version を導出
+<NotionRevalidator poll={{ collection: "posts", item }} />
 
-// 自前 check.ts を使う場合
-<NotionRevalidator
-  poll={{ url: `/api/posts/${item.slug}/check`, version: item.lastEditedTime }}
-/>
+// URL を直接渡す従来形（別マウント先や自前 check ルートを使う場合）も有効
+<NotionRevalidator poll={{ url: `/api/cms/versions/posts/${item.slug}`, version: item.lastEditedTime }} />
 ```
 
 ポーリングは `notionUpdatedAt` の変化（更新あり → revalidate）または `cachedAt` の変化

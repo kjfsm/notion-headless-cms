@@ -13,16 +13,62 @@ export type NotionRevalidateTrigger = "mount" | "visibility";
 /**
  * KV ポーリングのオプション。
  * バックグラウンド SWR 更新の完了を検出してから revalidate するためのもの。
+ *
+ * `url` は省略でき、その場合 `collection` と `slug`（または `item.slug`）から
+ * `cms.handler()` の versions ルート URL を導出する。
  */
 export interface NotionPollOptions {
-  /** peekVersion を返すエンドポイント URL */
-  url: string;
-  /** ページロード時の `item.lastEditedTime`（ポーリング比較基準） */
-  version: string;
+  /**
+   * peekVersion を返すエンドポイント URL。省略時は `collection` / `slug`（または `item`）
+   * から `${basePath}/versions/${collection}/${slug}` を導出する。
+   */
+  url?: string;
+  /** URL 導出に使うコレクション名（例: "posts"）。`url` 省略時に必須。 */
+  collection?: string;
+  /** URL 導出に使う slug。省略時は `item.slug` を使う。 */
+  slug?: string;
+  /** `slug` と `version` をまとめて導出するためのアイテム。 */
+  item?: { slug: string; lastEditedTime: string };
+  /** URL 導出時のベースパス。既定 `/api/cms`（`cms.handler()` の既定 basePath）。 */
+  basePath?: string;
+  /** ポーリング比較基準のバージョン。省略時は `item.lastEditedTime` を使う。 */
+  version?: string;
   /** ポーリング間隔（ms）。既定: 500 */
   intervalMs?: number;
   /** タイムアウト（ms）。既定: 30000 */
   timeoutMs?: number;
+}
+
+/** `cms.handler()` の既定 basePath。poll URL 導出のデフォルト。 */
+const DEFAULT_CMS_BASE_PATH = "/api/cms";
+
+/**
+ * poll オプションから実際に叩く URL と比較バージョンを解決する。
+ * `url`/`version` を明示しても、`collection`+`item`（or `slug`）からの導出でもよい。
+ * どちらでも解決できなければ null（= ポーリングしない）。
+ */
+export function resolvePoll(poll: NotionPollOptions | undefined): {
+  url: string;
+  version: string;
+  intervalMs?: number;
+  timeoutMs?: number;
+} | null {
+  if (!poll) return null;
+  const slug = poll.slug ?? poll.item?.slug;
+  const version = poll.version ?? poll.item?.lastEditedTime;
+  const basePath = poll.basePath ?? DEFAULT_CMS_BASE_PATH;
+  const url =
+    poll.url ??
+    (poll.collection && slug
+      ? `${basePath}/versions/${poll.collection}/${slug}`
+      : undefined);
+  if (!url || version === undefined) return null;
+  return {
+    url,
+    version,
+    intervalMs: poll.intervalMs,
+    timeoutMs: poll.timeoutMs,
+  };
 }
 
 export interface UseNotionRevalidateOptions {
@@ -57,11 +103,12 @@ export function useRevalidateEffect(
   const hasPoll = Boolean(opts.poll);
   const triggerKey = toTriggerList(opts.on, hasPoll).join(",");
   // poll オブジェクトは毎レンダリングで新インスタンスになる可能性があるため
-  // primitive な値に展開してから deps に渡す
-  const pollUrl = opts.poll?.url;
-  const pollVersion = opts.poll?.version;
-  const pollIntervalMs = opts.poll?.intervalMs;
-  const pollTimeoutMs = opts.poll?.timeoutMs;
+  // 解決後の primitive な値に展開してから deps に渡す
+  const resolvedPoll = resolvePoll(opts.poll);
+  const pollUrl = resolvedPoll?.url;
+  const pollVersion = resolvedPoll?.version;
+  const pollIntervalMs = resolvedPoll?.intervalMs;
+  const pollTimeoutMs = resolvedPoll?.timeoutMs;
 
   useEffect(() => {
     const triggers = triggerKey

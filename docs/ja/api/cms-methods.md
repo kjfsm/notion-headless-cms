@@ -196,13 +196,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 ```
 
 ```tsx
-// クライアント: バックグラウンド更新完了後に自動再描画
-<NotionRevalidator
-  poll={{
-    url: `/api/posts/${item.slug}/check`,
-    version: item.lastEditedTime,
-  }}
-/>
+// クライアント: バックグラウンド更新完了後に自動再描画。
+// collection と item を渡せば poll URL(/api/cms/versions/...) と version は自動導出される。
+<NotionRevalidator poll={{ collection: "posts", item }} />
 ```
 
 ## コレクション別キャッシュ操作 (`CollectionCacheOps<T>`)
@@ -270,11 +266,18 @@ const blocks = await resolveBlockImageUrls(notionBlocks, cms.cacheImage);
 - `GET|POST {basePath}/check/:collection/:slug?v={version}` — `check()`（Notion を実照会し差分があればキャッシュ更新）。`{ stale }` を返す。未存在は `404`、未知コレクションは `404`
 - `POST {basePath}/revalidate` — Webhook 受信 → `invalidate(scope)`
 
-`NotionRevalidator` のポーリング URL に versions ルートをそのまま渡せる（専用ルートの自前実装が不要）:
+`NotionRevalidator` の `poll` は `collection` と `item`（または `slug`）を渡すだけでよい。URL は
+versions ルートの規約 `${basePath}/versions/${collection}/${slug}`（basePath 既定 `/api/cms`）から、
+`version` は `item.lastEditedTime` から自動導出される（専用ルートの自前実装も URL 文字列の手書きも不要）:
 
 ```tsx
-// 既定 basePath /api/cms の場合
-<NotionRevalidator poll={{ url: `/api/cms/versions/posts/${item.slug}`, version: item.lastEditedTime }} />
+// item から slug と version を、collection から URL を導出
+<NotionRevalidator poll={{ collection: "posts", item }} />
+
+// 個別指定や別マウント先（basePath）も可能
+<NotionRevalidator poll={{ collection: "posts", slug, version, basePath: "/api/notion" }} />
+// url を直接渡す従来形も引き続き有効
+<NotionRevalidator poll={{ url: `/api/cms/versions/posts/${slug}`, version }} />
 ```
 
 ```ts
