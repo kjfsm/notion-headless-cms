@@ -402,6 +402,17 @@ export function createClient<S extends CMSSources = CMSSources>(
             return ds.parseWebhook(req, { secret: webhookSecret });
           },
           revalidate: (scope) => globalOps.invalidate(scope),
+          peekVersionFor(collection, slug) {
+            const client = collections[collection];
+            if (!client) {
+              throw new CMSError({
+                code: "version/unknown_collection",
+                message: `Unknown collection: ${collection}`,
+                context: { operation: "peekVersionFor", collection, slug },
+              });
+            }
+            return client.peekVersion(slug);
+          },
         },
         handlerOpts,
       );

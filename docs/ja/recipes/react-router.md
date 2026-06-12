@@ -224,15 +224,27 @@ export default function Post({ loaderData }: Route.ComponentProps) {
 
 ### KV ポーリングで確実に最新化
 
+ポーリング先は専用ルートを自前で書く（`peekVersion` を返すだけ）か、`cms.handler()`
+の versions ルートをそのまま使える。
+
 ```ts
-// app/routes/check.ts
+// app/routes/check.ts — 自前で書く場合
 export async function loader({ params, context }: Route.LoaderArgs) {
   const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
   return Response.json(await cms.posts.peekVersion(params.slug ?? ""));
 }
 ```
 
+`cms.handler()` を 1 つの splat ルートにマウント済みなら、画像プロキシ・Webhook と同じ口で
+`GET {basePath}/versions/:collection/:slug` が `peekVersion` を返す。専用ルートは不要:
+
 ```tsx
+// 既定 basePath /api/cms。app/routes/api.cms.$.ts に cms.handler() をマウント
+<NotionRevalidator
+  poll={{ url: `/api/cms/versions/posts/${item.slug}`, version: item.lastEditedTime }}
+/>
+
+// 自前 check.ts を使う場合
 <NotionRevalidator
   poll={{ url: `/api/posts/${item.slug}/check`, version: item.lastEditedTime }}
 />

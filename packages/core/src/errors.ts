@@ -11,6 +11,7 @@
  * | `webhook/payload_invalid` | Webhook ペイロード形式不正 |
  * | `webhook/unknown_collection` | Webhook の対象コレクションが未知 |
  * | `webhook/not_implemented` | DataSource が parseWebhook を実装していない |
+ * | `version/unknown_collection` | バージョン照会 (`cms.handler()` の versions ルート) の対象コレクションが未知 |
  * | `source/fetch_items_failed` | `DataSource.list()` 失敗 |
  * | `source/fetch_item_failed` | `DataSource.findByProp()` 失敗 |
  * | `source/load_markdown_failed` | `DataSource.loadMarkdown()` 失敗 |
@@ -42,6 +43,7 @@ export type BuiltInCMSErrorCode =
   | "webhook/payload_invalid"
   | "webhook/unknown_collection"
   | "webhook/not_implemented"
+  | "version/unknown_collection"
   | "source/fetch_items_failed"
   | "source/fetch_item_failed"
   | "source/load_markdown_failed"
@@ -146,6 +148,13 @@ const BUILT_IN_ERROR_HELP: Record<BuiltInCMSErrorCode, ErrorHelp> = {
     nextSteps: [
       "対象 collection の DataSource に parseWebhook を実装する",
       "Webhook を使わない場合は cms.invalidate() を直接呼ぶ運用に切り替える",
+    ],
+  },
+  "version/unknown_collection": {
+    docsAnchor: "version-unknown_collection",
+    nextSteps: [
+      "versions ポーリング URL が登録済みのコレクション名を指しているか確認する",
+      "createCMS の collections に該当コレクションが定義されているか確認する",
     ],
   },
   "source/fetch_items_failed": {

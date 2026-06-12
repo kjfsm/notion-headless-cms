@@ -266,7 +266,15 @@ const blocks = await resolveBlockImageUrls(notionBlocks, cms.cacheImage);
 `basePath` (デフォルト `/api/cms`) 以下に以下のルートをマウント:
 
 - `GET {basePath}/images/:hash` — 画像プロキシ
+- `GET {basePath}/versions/:collection/:slug` — `peekVersion()`（更新検知ポーリング用、KV メタのみ）。未登録は `200` + `null`、未知コレクションは `404`
 - `POST {basePath}/revalidate` — Webhook 受信 → `invalidate(scope)`
+
+`NotionRevalidator` のポーリング URL に versions ルートをそのまま渡せる（専用ルートの自前実装が不要）:
+
+```tsx
+// 既定 basePath /api/cms の場合
+<NotionRevalidator poll={{ url: `/api/cms/versions/posts/${item.slug}`, version: item.lastEditedTime }} />
+```
 
 ```ts
 // Hono
