@@ -1,5 +1,14 @@
 # @notion-headless-cms/react-renderer
 
+## 0.1.16
+
+### Patch Changes
+
+- d0c8f31: README の `notionBlocks()` 利用例を `createCMS({ content: "react" })` のキャスト不要パターンに更新。`as NotionBlock[]` キャストが必要なのは低レベル `createClient` 経由の場合のみであることを明記する（docs/ja/api/cms-methods.md にも同趣旨を追記）。
+- a2016b5: `NotionRevalidator` の `poll` で URL 手書きを不要にする。`poll.url` を省略でき、`collection` と `slug`（または `item`）から `cms.handler()` の versions ルート URL（`${basePath}/versions/${collection}/${slug}`、basePath 既定 `/api/cms`）を自動導出する。`version` も `item.lastEditedTime` から導出されるため、最小形は `poll={{ collection: "posts", item }}` で済む。
+
+  従来の `poll={{ url, version }}` も引き続き有効（後方互換）。`basePath` で別マウント先も指定できる。
+
 ## 0.1.15
 
 ### Patch Changes

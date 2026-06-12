@@ -1,5 +1,14 @@
 # @notion-headless-cms/fetch-blocks
 
+## 0.0.8
+
+### Patch Changes
+
+- Updated dependencies [d0c8f31]
+- Updated dependencies [a2016b5]
+  - @notion-headless-cms/react-renderer@0.1.16
+  - @notion-headless-cms/notion-orm@0.2.1
+
 ## 0.0.7
 
 ### Patch Changes
