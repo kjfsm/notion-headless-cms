@@ -198,8 +198,8 @@ describe("createCMS", () => {
     expect(opts.waitUntil).toBe(waitUntil);
   });
 
-  it("imageProxyBase を指定すると createClient に渡る", () => {
-    createCMS({ schema, token: "t", imageProxyBase: "/api/cms/images" });
+  it("imageProxyBase は /api/cms/images に固定され createClient に渡る", () => {
+    createCMS({ schema, token: "t" });
     expect(lastCall(createClientMock).imageProxyBase).toBe("/api/cms/images");
   });
 });

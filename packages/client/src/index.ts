@@ -162,8 +162,6 @@ export interface CreateCMSOptions<
   collections?: { [K in keyof S]?: CollectionBehavior<StatusValuesOf<S[K]>> };
   /** ランタイム配線。省略時は `nodePreset()`。 */
   runtime?: RuntimeConfig;
-  /** 画像プロキシのベース URL。既定 `/api/images`。 */
-  imageProxyBase?: string;
   /**
    * bookmark / link_preview / embed ブロックの OGP（リンクプレビュー）取得設定。
    * `content: "react"` のときのみ効く（`"html"` では無視）。
@@ -190,6 +188,14 @@ function resolveOgpOption(
   if (ogp === false) return { enabled: false };
   return ogp;
 }
+
+/**
+ * createCMS の画像プロキシのベース URL（固定）。
+ * `cms.handler()` の既定ルート (`{basePath}/images` = `/api/cms/images`) と一致させ、
+ * cacheImage が書き込む URL と handler の配信先が常に揃うようにする。
+ * createCMS では設定不可（低レベルに調整したい場合は createClient の imageProxyBase を使う）。
+ */
+const CMS_IMAGE_PROXY_BASE = "/api/cms/images";
 
 /**
  * schema（構造）と振る舞いを分離して CMS クライアントを 1 つの呼び出しで組み立てる。
@@ -263,7 +269,8 @@ export function createCMS<S extends SchemaMap, M extends ContentMode = "html">(
     },
     // html モードのみ Markdown→HTML renderer を注入する。react は notionBlocks を直接使う。
     ...(content === "html" ? { renderer: notionMarkdownRenderer } : {}),
-    ...(opts.imageProxyBase ? { imageProxyBase: opts.imageProxyBase } : {}),
+    // 画像プロキシは handler の既定ルートに固定（createCMS では変更不可）。
+    imageProxyBase: CMS_IMAGE_PROXY_BASE,
     ...(runtime.cache ? { cache: runtime.cache } : {}),
     ...(runtime.swr ? { swr: runtime.swr } : {}),
     ...(runtime.waitUntil ? { waitUntil: runtime.waitUntil } : {}),

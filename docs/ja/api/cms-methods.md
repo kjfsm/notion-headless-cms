@@ -40,7 +40,7 @@ cms.invalidate(scope?)
 cms.getCachedImage(hash)
 cms.handler(opts?)
 cms.cacheImage         // (url) => Promise<string> | undefined
-cms.imageProxyBase     // string (デフォルト "/api/images")
+cms.imageProxyBase     // string（createCMS では "/api/cms/images" に固定）
 ```
 
 ## `BaseContentItem` — 自動フィールド
@@ -246,7 +246,7 @@ const { ok, failed } = await cms.posts.cache.warm({
 | `cms.getCachedImage(hash)` | 画像キャッシュから `{ data, contentType }` を取得 |
 | `cms.handler(opts?)` | Web Standard な `(req: Request) => Promise<Response>` を返す |
 | `cms.cacheImage` | `(url: string) => Promise<string>` または `undefined`。Notion 画像 URL を `{imageProxyBase}/{sha256}` 形式へ変換しキャッシュへ書き込む。画像キャッシュ未設定 (noop) の場合は `undefined` |
-| `cms.imageProxyBase` | 画像プロキシのベース URL (`createClient({ imageProxyBase })`、デフォルト `/api/images`) |
+| `cms.imageProxyBase` | 画像プロキシのベース URL。**createCMS では `/api/cms/images` に固定**（`cms.handler()` の既定 `{basePath}/images` と一致し、`api.cms.$.ts` 1 枚で配信される）。低レベルに変えたい場合のみ `createClient({ imageProxyBase })`（既定 `/api/images`）を使う |
 
 ### `cms.cacheImage` の利用例
 
