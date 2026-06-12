@@ -55,7 +55,7 @@ export default function Post({ loaderData }: Route.ComponentProps) {
     <article>
       <NotionRevalidator
         poll={{
-          url: `/api/posts/${item.slug}/check`,
+          url: `/api/cms/versions/posts/${item.slug}`,
           version: item.lastEditedTime,
         }}
       />
