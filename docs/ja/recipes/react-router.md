@@ -199,9 +199,8 @@ export default function Post({ loaderData }: Route.ComponentProps) {
   const { blocks, item } = loaderData;
   return (
     <article>
-      <NotionRevalidator
-        poll={{ url: `/api/posts/${item.slug}/check`, version: item.lastEditedTime }}
-      />
+      {/* collection と item だけで poll URL(/api/cms/versions/...) と version を自動導出 */}
+      <NotionRevalidator poll={{ collection: "posts", item }} />
       <h1>{item.title ?? item.slug}</h1>
       <Renderer blocks={blocks} />
     </article>
@@ -224,22 +223,36 @@ export default function Post({ loaderData }: Route.ComponentProps) {
 
 ### KV ポーリングで確実に最新化
 
+ポーリング先は専用ルートを自前で書く（`peekVersion` を返すだけ）か、`cms.handler()`
+の versions ルートをそのまま使える。
+
 ```ts
-// app/routes/check.ts
+// app/routes/check.ts — 自前で書く場合
 export async function loader({ params, context }: Route.LoaderArgs) {
   const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
   return Response.json(await cms.posts.peekVersion(params.slug ?? ""));
 }
 ```
 
+`cms.handler()` を 1 つの splat ルート（`app/routes/api.cms.$.ts`）にマウント済みなら、画像プロキシ・
+Webhook と同じ口で `GET {basePath}/versions/:collection/:slug` が `peekVersion` を返す。専用ルートは不要。
+`poll` には `collection` と `item` を渡すだけで、URL も `version` も自動導出される:
+
 ```tsx
-<NotionRevalidator
-  poll={{ url: `/api/posts/${item.slug}/check`, version: item.lastEditedTime }}
-/>
+// 推奨: collection + item で URL(/api/cms/versions/posts/:slug) と version を導出
+<NotionRevalidator poll={{ collection: "posts", item }} />
+
+// URL を直接渡す従来形（別マウント先や自前 check ルートを使う場合）も有効
+<NotionRevalidator poll={{ url: `/api/cms/versions/posts/${item.slug}`, version: item.lastEditedTime }} />
 ```
 
 ポーリングは `notionUpdatedAt` の変化（更新あり → revalidate）または `cachedAt` の変化
 （確認完了・更新なし → 停止）を検出した時点で自動停止する。既定タイムアウトは 30 秒。
+
+`versions`（KV のみの受動ポーリング）に対し、`GET|POST {basePath}/check/:collection/:slug?v={version}`
+は Notion を実照会してその場でキャッシュ更新し `{ stale }` を返す能動版。即時に確実な更新確認を
+したい場合に使う（`cms.[collection].check()` をハンドラ経由で呼ぶ。差分時はキャッシュ更新済みなので
+loader 再実行で最新本文が得られる）。
 
 ## 画像プロキシ
 

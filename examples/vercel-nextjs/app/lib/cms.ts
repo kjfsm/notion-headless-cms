@@ -9,7 +9,7 @@ export const cms = createCMS({
   token: process.env.NOTION_TOKEN ?? "",
   content: "html",
   runtime: { cache: [nextCache({ tags: ["posts"] }), memoryCache()] },
-  imageProxyBase: "/api/cms/images",
+  // 画像プロキシは /api/cms/images に固定（createNextHandler が同パスで配信する）。
   collections: {
     posts: {
       published: ["公開済み"],

@@ -4,7 +4,7 @@
 
 - `/` ・ `/:slug` … Notion 固定ページDB から `@notion-headless-cms/cloudflare` 経由で配信（ランディング + about / showcase / privacy 等）
 - `/docs` ・ `/docs/*` … リポジトリ直下 `docs/ja/**/*.md` を直接静的レンダリング（unified + remark + rehype-shiki）
-- `/api/images/:hash` … Notion 画像プロキシ（R2 キャッシュ）
+- `/api/cms/images/:hash` … Notion 画像プロキシ（R2 キャッシュ、createCMS の固定 imageProxyBase に一致）
 - `/api/pages/:slug/check` … クライアント側ポーリングで Notion ページの最終更新を確認
 - `/api/revalidate` … Notion Webhook 受信（HMAC-SHA256 署名検証）
 

@@ -40,7 +40,7 @@ cms.invalidate(scope?)
 cms.getCachedImage(hash)
 cms.handler(opts?)
 cms.cacheImage         // (url) => Promise<string> | undefined
-cms.imageProxyBase     // string (デフォルト "/api/images")
+cms.imageProxyBase     // string（createCMS では "/api/cms/images" に固定）
 ```
 
 ## `BaseContentItem` — 自動フィールド
@@ -196,13 +196,9 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 ```
 
 ```tsx
-// クライアント: バックグラウンド更新完了後に自動再描画
-<NotionRevalidator
-  poll={{
-    url: `/api/posts/${item.slug}/check`,
-    version: item.lastEditedTime,
-  }}
-/>
+// クライアント: バックグラウンド更新完了後に自動再描画。
+// collection と item を渡せば poll URL(/api/cms/versions/...) と version は自動導出される。
+<NotionRevalidator poll={{ collection: "posts", item }} />
 ```
 
 ## コレクション別キャッシュ操作 (`CollectionCacheOps<T>`)
@@ -246,7 +242,7 @@ const { ok, failed } = await cms.posts.cache.warm({
 | `cms.getCachedImage(hash)` | 画像キャッシュから `{ data, contentType }` を取得 |
 | `cms.handler(opts?)` | Web Standard な `(req: Request) => Promise<Response>` を返す |
 | `cms.cacheImage` | `(url: string) => Promise<string>` または `undefined`。Notion 画像 URL を `{imageProxyBase}/{sha256}` 形式へ変換しキャッシュへ書き込む。画像キャッシュ未設定 (noop) の場合は `undefined` |
-| `cms.imageProxyBase` | 画像プロキシのベース URL (`createClient({ imageProxyBase })`、デフォルト `/api/images`) |
+| `cms.imageProxyBase` | 画像プロキシのベース URL。**createCMS では `/api/cms/images` に固定**（`cms.handler()` の既定 `{basePath}/images` と一致し、`api.cms.$.ts` 1 枚で配信される）。低レベルに変えたい場合のみ `createClient({ imageProxyBase })`（既定 `/api/images`）を使う |
 
 ### `cms.cacheImage` の利用例
 
@@ -266,7 +262,23 @@ const blocks = await resolveBlockImageUrls(notionBlocks, cms.cacheImage);
 `basePath` (デフォルト `/api/cms`) 以下に以下のルートをマウント:
 
 - `GET {basePath}/images/:hash` — 画像プロキシ
+- `GET {basePath}/versions/:collection/:slug` — `peekVersion()`（更新検知ポーリング用、KV メタのみ）。未登録は `200` + `null`、未知コレクションは `404`
+- `GET|POST {basePath}/check/:collection/:slug?v={version}` — `check()`（Notion を実照会し差分があればキャッシュ更新）。`{ stale }` を返す。未存在は `404`、未知コレクションは `404`
 - `POST {basePath}/revalidate` — Webhook 受信 → `invalidate(scope)`
+
+`NotionRevalidator` の `poll` は `collection` と `item`（または `slug`）を渡すだけでよい。URL は
+versions ルートの規約 `${basePath}/versions/${collection}/${slug}`（basePath 既定 `/api/cms`）から、
+`version` は `item.lastEditedTime` から自動導出される（専用ルートの自前実装も URL 文字列の手書きも不要）:
+
+```tsx
+// item から slug と version を、collection から URL を導出
+<NotionRevalidator poll={{ collection: "posts", item }} />
+
+// 個別指定や別マウント先（basePath）も可能
+<NotionRevalidator poll={{ collection: "posts", slug, version, basePath: "/api/notion" }} />
+// url を直接渡す従来形も引き続き有効
+<NotionRevalidator poll={{ url: `/api/cms/versions/posts/${slug}`, version }} />
+```
 
 ```ts
 // Hono

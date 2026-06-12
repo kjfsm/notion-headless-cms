@@ -36,8 +36,7 @@ DB は `nhc.config.ts` の `dbName`（既定 "ブログ記事DB"）で検索さ�
 |---|---|---|
 | `/` | `app/routes/home.tsx` | `cms.posts.list()` で記事一覧 |
 | `/posts/:slug` | `app/routes/post.tsx` | `cms.posts.find()` → `notionBlocks()` → `<Renderer>` で React 描画 + `<NotionRevalidator poll>` |
-| `/api/images/:hash` | `app/routes/images.ts` | `cms.getCachedImage()` を返す画像プロキシ（Notion 署名 URL 失効対策） |
-| `/api/posts/:slug/check` | `app/routes/check.ts` | `cms.posts.peekVersion()`（KV ポーリング再検証用） |
+| `/api/cms/*` | `app/routes/api.cms.ts` | `cms.handler()` に委譲。画像プロキシ(`/api/cms/images/:hash`)・更新検知(`/api/cms/versions/:collection/:slug`・`/api/cms/check/:collection/:slug`)・Webhook(`/api/cms/revalidate/:collection`) をまとめて処理 |
 | `/api/warm` | `app/routes/warm.ts` | `cms.posts.cache.warm()` で全記事を事前キャッシュ（action） |
 
 CMS の生成は `app/lib/cms.ts` の `makeCms(env, ctx)` に集約。`workers/app.ts` が
