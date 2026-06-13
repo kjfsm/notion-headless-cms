@@ -1,5 +1,12 @@
 # example-vercel-nextjs
 
+## 0.0.62
+
+### Patch Changes
+
+- Updated dependencies [5c6d7e6]
+  - @notion-headless-cms/client@0.3.1
+
 ## 0.0.61
 
 ### Patch Changes
