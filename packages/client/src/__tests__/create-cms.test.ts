@@ -70,7 +70,7 @@ describe("createCMS", () => {
   });
 
   it("html モードは markdownFetcher を選び renderer を結線する", () => {
-    createCMS({ schema, token: "t", content: "html" });
+    createCMS({ notion: { schema, token: "t" }, render: { content: "html" } });
     expect((lastCall(notionSourceMock).fetch as { kind: string }).kind).toBe(
       "markdown",
     );
@@ -78,7 +78,7 @@ describe("createCMS", () => {
   });
 
   it("react モードは blocksFetcher を選び renderer を渡さない", () => {
-    createCMS({ schema, token: "t", content: "react" });
+    createCMS({ notion: { schema, token: "t" }, render: { content: "react" } });
     expect((lastCall(notionSourceMock).fetch as { kind: string }).kind).toBe(
       "blocks",
     );
@@ -86,22 +86,23 @@ describe("createCMS", () => {
   });
 
   it("react モードは OGP を既定オンで blocksFetcher に渡す", () => {
-    createCMS({ schema, token: "t", content: "react" });
+    createCMS({ notion: { schema, token: "t" }, render: { content: "react" } });
     expect(lastCall(blocksFetcherMock)).toEqual({ ogp: { enabled: true } });
   });
 
   it("ogp: false で OGP 取得を無効化する", () => {
-    createCMS({ schema, token: "t", content: "react", ogp: false });
+    createCMS({
+      notion: { schema, token: "t" },
+      render: { content: "react", ogp: false },
+    });
     expect(lastCall(blocksFetcherMock)).toEqual({ ogp: { enabled: false } });
   });
 
   it("ogp にオブジェクトを渡すとそのまま blocksFetcher へ届く", () => {
     const imageCache = { kind: "r2" } as never;
     createCMS({
-      schema,
-      token: "t",
-      content: "react",
-      ogp: { enabled: true, imageCache },
+      notion: { schema, token: "t" },
+      render: { content: "react", ogp: { enabled: true, imageCache } },
     });
     expect(lastCall(blocksFetcherMock)).toEqual({
       ogp: { enabled: true, imageCache },
@@ -109,23 +110,31 @@ describe("createCMS", () => {
   });
 
   it("html モードでは blocksFetcher を呼ばず ogp を無視する", () => {
-    createCMS({ schema, token: "t", content: "html", ogp: false });
+    createCMS({
+      notion: { schema, token: "t" },
+      render: { content: "html", ogp: false },
+    });
     expect(blocksFetcherMock).not.toHaveBeenCalled();
   });
 
-  it("content 省略時は html 既定になる", () => {
-    createCMS({ schema, token: "t" });
+  it("render/content 省略時は html 既定になる", () => {
+    createCMS({ notion: { schema, token: "t" } });
     expect((lastCall(notionSourceMock).fetch as { kind: string }).kind).toBe(
       "markdown",
     );
   });
 
-  it("collections の published/accessible を publishOptions へ写す", () => {
+  it("notion.collections の published/accessible を publishOptions へ写す", () => {
     createCMS({
-      schema,
-      token: "t",
-      collections: {
-        posts: { published: ["公開済み"], accessible: ["下書き", "公開済み"] },
+      notion: {
+        schema,
+        token: "t",
+        collections: {
+          posts: {
+            published: ["公開済み"],
+            accessible: ["下書き", "公開済み"],
+          },
+        },
       },
     });
     expect(
@@ -139,9 +148,11 @@ describe("createCMS", () => {
 
   it("published のみ指定なら accessibleStatuses は省略される", () => {
     createCMS({
-      schema,
-      token: "t",
-      collections: { posts: { published: ["公開済み"] } },
+      notion: {
+        schema,
+        token: "t",
+        collections: { posts: { published: ["公開済み"] } },
+      },
     });
     expect(
       (lastCall(notionSourceMock).publishOptions as Record<string, unknown>)
@@ -151,9 +162,11 @@ describe("createCMS", () => {
 
   it("accessible のみ指定なら publishedStatuses は省略される", () => {
     createCMS({
-      schema,
-      token: "t",
-      collections: { posts: { accessible: ["下書き", "公開済み"] } },
+      notion: {
+        schema,
+        token: "t",
+        collections: { posts: { accessible: ["下書き", "公開済み"] } },
+      },
     });
     expect(
       (lastCall(notionSourceMock).publishOptions as Record<string, unknown>)
@@ -161,45 +174,58 @@ describe("createCMS", () => {
     ).toEqual({ accessibleStatuses: ["下書き", "公開済み"] });
   });
 
-  it("runtime に cache のみ指定したら swr/waitUntil は createClient に渡らない", () => {
-    const cache = ["KV"] as unknown as readonly CacheAdapter[];
-    createCMS({ schema, token: "t", runtime: { cache } });
-    const opts = lastCall(createClientMock);
-    expect(opts.cache).toEqual(["KV"]);
-    expect(opts.swr).toBeUndefined();
-    expect(opts.waitUntil).toBeUndefined();
-  });
-
   it("token と schema を notionSource にそのまま渡す", () => {
-    createCMS({ schema, token: "secret-token" });
+    createCMS({ notion: { schema, token: "secret-token" } });
     expect(lastCall(notionSourceMock).token).toBe("secret-token");
     expect(lastCall(notionSourceMock).schema).toBe(schema);
   });
 
-  it("runtime 省略時は nodePreset の cache/swr を使う", () => {
-    createCMS({ schema, token: "t" });
+  it("cache 省略時は nodePreset の cache/swr を使い waitUntil は渡らない", () => {
+    createCMS({ notion: { schema, token: "t" } });
     expect(nodePresetMock).toHaveBeenCalledTimes(1);
-    expect(lastCall(createClientMock).cache).toEqual(["MEMORY"]);
+    const opts = lastCall(createClientMock);
+    expect(opts.cache).toEqual(["MEMORY"]);
+    expect(opts.swr).toEqual({ ttlMs: 300_000 });
+    expect(opts.waitUntil).toBeUndefined();
+  });
+
+  it("cache.document/image を document→image の順で配列へ畳む", () => {
+    const document = "KV" as unknown as CacheAdapter;
+    const image = "R2" as unknown as CacheAdapter;
+    createCMS({
+      notion: { schema, token: "t" },
+      cache: { document, image },
+    });
+    expect(nodePresetMock).not.toHaveBeenCalled();
+    expect(lastCall(createClientMock).cache).toEqual(["KV", "R2"]);
+  });
+
+  it("cache.document のみ指定なら image は配列に入らない", () => {
+    const document = "KV" as unknown as CacheAdapter;
+    createCMS({ notion: { schema, token: "t" }, cache: { document } });
+    expect(lastCall(createClientMock).cache).toEqual(["KV"]);
+  });
+
+  it("cache 指定時 swr 省略なら 5 分の既定を使う", () => {
+    const document = "KV" as unknown as CacheAdapter;
+    createCMS({ notion: { schema, token: "t" }, cache: { document } });
     expect(lastCall(createClientMock).swr).toEqual({ ttlMs: 300_000 });
   });
 
-  it("runtime 指定時はその cache/swr/waitUntil を使い nodePreset を呼ばない", () => {
+  it("cache.swr/waitUntil を createClient へ渡す", () => {
     const waitUntil = vi.fn();
-    const cache = ["KV"] as unknown as readonly CacheAdapter[];
+    const document = "KV" as unknown as CacheAdapter;
     createCMS({
-      schema,
-      token: "t",
-      runtime: { cache, swr: { ttlMs: 5 }, waitUntil },
+      notion: { schema, token: "t" },
+      cache: { document, swr: { ttlMs: 5 }, waitUntil },
     });
-    expect(nodePresetMock).not.toHaveBeenCalled();
     const opts = lastCall(createClientMock);
-    expect(opts.cache).toEqual(["KV"]);
     expect(opts.swr).toEqual({ ttlMs: 5 });
     expect(opts.waitUntil).toBe(waitUntil);
   });
 
   it("imageProxyBase は /api/cms/images に固定され createClient に渡る", () => {
-    createCMS({ schema, token: "t" });
+    createCMS({ notion: { schema, token: "t" } });
     expect(lastCall(createClientMock).imageProxyBase).toBe("/api/cms/images");
   });
 });
@@ -207,7 +233,10 @@ describe("createCMS", () => {
 // 型レベル検証（実行しない）: content モードで本文アクセサが切り替わり、
 // 不整合な呼び出しが型エラーになる（フットガン排除）ことを tsc で保証する。
 async function _typeChecks() {
-  const html = createCMS({ schema, token: "t", content: "html" });
+  const html = createCMS({
+    notion: { schema, token: "t" },
+    render: { content: "html" },
+  });
   const htmlPost = await html.posts.find("s");
   if (htmlPost) {
     await htmlPost.html();
@@ -216,7 +245,10 @@ async function _typeChecks() {
     await htmlPost.notionBlocks();
   }
 
-  const react = createCMS({ schema, token: "t", content: "react" });
+  const react = createCMS({
+    notion: { schema, token: "t" },
+    render: { content: "react" },
+  });
   const reactPost = await react.posts.find("s");
   if (reactPost) {
     const blocks: unknown[] = await reactPost.notionBlocks();
@@ -225,17 +257,32 @@ async function _typeChecks() {
     await reactPost.html();
   }
 
+  // render 省略時は html 既定。html() が生え、notionBlocks() は型エラーになる。
+  const defaulted = createCMS({ notion: { schema, token: "t" } });
+  const defaultedPost = await defaulted.posts.find("s");
+  if (defaultedPost) {
+    await defaultedPost.html();
+    // @ts-expect-error 既定（html）モードに notionBlocks は存在しない
+    await defaultedPost.notionBlocks();
+  }
+
   // published/accessible は schema の status options で型付けされる
   createCMS({
-    schema,
-    token: "t",
-    collections: { posts: { published: ["公開済み"], accessible: ["下書き"] } },
+    notion: {
+      schema,
+      token: "t",
+      collections: {
+        posts: { published: ["公開済み"], accessible: ["下書き"] },
+      },
+    },
   });
   createCMS({
-    schema,
-    token: "t",
-    // @ts-expect-error "存在しない" は status options に無い
-    collections: { posts: { published: ["存在しない"] } },
+    notion: {
+      schema,
+      token: "t",
+      // @ts-expect-error "存在しない" は status options に無い
+      collections: { posts: { published: ["存在しない"] } },
+    },
   });
 }
 void _typeChecks;

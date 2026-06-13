@@ -1,5 +1,5 @@
-import { createCMS } from "@notion-headless-cms/client";
-import { cloudflarePreset } from "@notion-headless-cms/client/cloudflare";
+import { createCMS, memoryCache } from "@notion-headless-cms/client";
+import { kvCache, r2Cache } from "@notion-headless-cms/client/cloudflare";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -19,15 +19,26 @@ export function makeCms(
   ctx: { waitUntil(p: Promise<unknown>): void },
 ) {
   return createCMS({
-    schema,
-    token: env.NOTION_TOKEN,
-    content: "react",
-    runtime: cloudflarePreset({ env, ctx }),
-    collections: {
-      pages: {
-        published: ["完了"],
-        accessible: ["未着手", "進行中", "完了"],
+    notion: {
+      schema,
+      token: env.NOTION_TOKEN,
+      collections: {
+        pages: {
+          published: ["完了"],
+          accessible: ["未着手", "進行中", "完了"],
+        },
       },
+    },
+    render: { content: "react" },
+    // binding があれば KV/R2、無ければ in-process memory（ローカル / テスト用）にフォールバック。
+    cache: {
+      document: env.DOC_CACHE
+        ? kvCache({ namespace: env.DOC_CACHE })
+        : memoryCache(),
+      image: env.IMG_BUCKET
+        ? r2Cache({ bucket: env.IMG_BUCKET })
+        : memoryCache(),
+      waitUntil: (p) => ctx.waitUntil(p),
     },
   });
 }

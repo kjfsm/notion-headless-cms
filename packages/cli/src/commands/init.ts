@@ -34,7 +34,7 @@ const TEMPLATES: Record<string, TemplateDef> = {
       "nhc.config.ts を編集して collections を設定する",
       "NOTION_TOKEN 環境変数を設定する (Notion インテグレーションのシークレット)",
       "pnpm nhc generate でスキーマを生成する",
-      'createCMS({ schema, token, content: "html", collections: { posts: { published: ["公開済み"] } } }) で組み込む',
+      'createCMS({ notion: { schema, token, collections: { posts: { published: ["公開済み"] } } }, render: { content: "html" } }) で組み込む',
     ],
   },
   "cloudflare-react-router": {
@@ -46,7 +46,7 @@ const TEMPLATES: Record<string, TemplateDef> = {
       "nhc.config.ts の dbName を編集する",
       "pnpm nhc generate でスキーマを生成する",
       "wrangler.toml に DOC_CACHE (KV) と IMG_BUCKET (R2) を binding する",
-      'createCMS({ schema, token, content: "react", runtime: cloudflarePreset({ env, ctx }), collections: { posts: { published: ["公開済み"] } } }) で組み込む',
+      'createCMS({ notion: { schema, token, collections: { posts: { published: ["公開済み"] } } }, render: { content: "react" }, cache: { document: kvCache({ namespace: env.DOC_CACHE }), image: r2Cache({ bucket: env.IMG_BUCKET }), waitUntil: (p) => ctx.waitUntil(p) } }) で組み込む',
       "完全な雛形 → examples/cloudflare-react-router/ / 解説 → docs/ja/recipes/react-router.md",
     ],
   },
@@ -59,7 +59,7 @@ const TEMPLATES: Record<string, TemplateDef> = {
       "nhc.config.ts の dbName を編集する",
       "pnpm nhc generate でスキーマを生成する",
       "wrangler.toml に DOC_CACHE (KV) と IMG_BUCKET (R2) を binding する",
-      'createCMS({ schema, token, content: "html", runtime: cloudflarePreset({ env, ctx }), collections: { posts: { published: ["公開済み"] } } }) で組み込む',
+      'createCMS({ notion: { schema, token, collections: { posts: { published: ["公開済み"] } } }, render: { content: "html" }, cache: { document: kvCache({ namespace: env.DOC_CACHE }), image: r2Cache({ bucket: env.IMG_BUCKET }), waitUntil: (p) => ctx.waitUntil(p) } }) で組み込む',
       "完全な雛形 → examples/cloudflare-hono/ / 解説 → docs/ja/recipes/cloudflare-workers.md",
     ],
   },
@@ -71,7 +71,7 @@ const TEMPLATES: Record<string, TemplateDef> = {
       "NOTION_TOKEN を .env (.env.local) に設定する",
       "nhc.config.ts の dbName を編集する",
       "pnpm nhc generate でスキーマを生成する",
-      'createCMS({ schema, token, content: "html", runtime: { cache: [nextCache(...), memoryCache()] }, collections: { posts: { published: ["公開済み"] } } }) で組み込む',
+      'createCMS({ notion: { schema, token, collections: { posts: { published: ["公開済み"] } } }, render: { content: "html" }, cache: { document: nextCache({ tags: ["posts"] }), image: memoryCache() } }) で組み込む',
       "完全な雛形 → examples/vercel-nextjs/ / 解説 → docs/ja/recipes/nextjs-app-router.md",
     ],
   },
@@ -100,7 +100,7 @@ export default defineConfig({
 			// slugField: "slug",
 			// statusField: "status",
 
-			// 公開ステータス値 (published) は createCMS({ collections }) 側で指定します
+			// 公開ステータス値 (published) は createCMS({ notion: { collections } }) 側で指定します
 
 			// 日本語など ASCII 変換できないプロパティ名は明示マッピング必須
 			// fieldMappings: { "タイトル": "title", "カテゴリ": "category" },

@@ -7,6 +7,10 @@ import type {
 } from "@notion-headless-cms/core";
 import { memoryCache } from "@notion-headless-cms/core";
 
+// createCMS({ cache: { document: nextCache({ tags }) } }) で ISR 連携の文書キャッシュとして渡す。
+export type { NextCacheOptions } from "@notion-headless-cms/cache/next";
+export { nextCache } from "@notion-headless-cms/cache/next";
+
 /** `nextPreset()` のオプション。 */
 export interface NextPresetOptions {
   /** メモリキャッシュ設定。 */
@@ -16,8 +20,9 @@ export interface NextPresetOptions {
 }
 
 /**
- * Next.js (App Router) 向け runtime プリセット。`createCMS({ runtime: nextPreset() })` に渡す。
- * ISR キャッシュを使う場合は `runtime: { cache: [nextISRCache(...)] }` のように個別に組み立てる。
+ * Next.js (App Router) 向け低レベル `createClient` プリセット。`...nextPreset()` を
+ * `createClient` にスプレッドして使う。`createCMS` を使う場合は
+ * `cache: { document: nextCache({ tags }), image: memoryCache() }` のように役割別に組み立てる。
  */
 export function nextPreset(opts: NextPresetOptions = {}): {
   cache: CacheAdapter[];

@@ -45,9 +45,9 @@ export default function Page() {
 }
 ```
 
-### `createCMS` (content: "react") と組み合わせて使う (推奨)
+### `createCMS` (render: { content: "react" }) と組み合わせて使う (推奨)
 
-`@notion-headless-cms/client` の `createCMS({ content: "react" })` 経由で取得すると、
+`@notion-headless-cms/client` の `createCMS({ render: { content: "react" } })` 経由で取得すると、
 ブロックツリーが SWR キャッシュに乗り、`notionBlocks()` の戻り値が `NotionBlock[]` に
 型付けされるため**キャストは不要**。画像 URL は `cms.cacheImage` 経由で永続プロキシ URL に
 書き換える (Notion 署名 URL の失効対策)。
@@ -226,7 +226,7 @@ export default function Post() {
 }
 ```
 
-内部で `useRevalidator()` を呼び loader を再走させる。サーバ側で `cloudflarePreset({ env, ctx })` 等により `waitUntil` が配線されていれば、前回訪問時の SWR bg 更新で KV が最新化されており、再呼び出しで新内容が返って画面が差し替わる。
+内部で `useRevalidator()` を呼び loader を再走させる。サーバ側で `createCMS({ cache: { waitUntil: (p) => ctx.waitUntil(p) } })` のように `waitUntil` が配線されていれば、前回訪問時の SWR bg 更新で KV が最新化されており、再呼び出しで新内容が返って画面が差し替わる。
 
 ### Next.js App Router
 

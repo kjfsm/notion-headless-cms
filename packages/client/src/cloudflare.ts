@@ -9,8 +9,18 @@ export type {
   CloudflarePresetEnv,
   CloudflarePresetOptions,
   CloudflarePresetTestOptions,
+  KVCacheOptions,
+  KVNamespaceLike,
+  R2BucketLike,
+  R2CacheOptions,
 } from "@notion-headless-cms/cache/cloudflare";
-export { cloudflarePreset } from "@notion-headless-cms/cache/cloudflare";
+// createCMS({ cache: { document, image } }) で役割別に渡すアダプタ。env を丸ごと渡す
+// 旧 preset と違い、どの binding がどのキャッシュかを呼び出し側で明示できる。
+export {
+  cloudflarePreset,
+  kvCache,
+  r2Cache,
+} from "@notion-headless-cms/cache/cloudflare";
 
 /** Cloudflare KV REST API に接続するための認証情報。 */
 export interface RestKvOptions {
@@ -43,9 +53,8 @@ export interface RestKvOptions {
  * });
  *
  * const cms = createCMS({
- *   schema,
- *   token: process.env.NOTION_TOKEN!,
- *   runtime: { cache: [restKvCache({ accountId, namespaceId, apiToken })] },
+ *   notion: { schema, token: process.env.NOTION_TOKEN! },
+ *   cache: { document: restKvCache({ accountId, namespaceId, apiToken }) },
  * });
  * await cms.posts.cache.warm({ onProgress: (done, total) => console.log(`${done}/${total}`) });
  */
@@ -125,7 +134,7 @@ export interface RestKvCacheOptions extends RestKvOptions {
 
 /**
  * Cloudflare KV REST API をドキュメントキャッシュ (`CacheAdapter`) として返す。
- * Node.js の warm スクリプトで `createCMS({ runtime: { cache: [restKvCache(...)] } })` に渡し、
+ * Node.js の warm スクリプトで `createCMS({ cache: { document: restKvCache(...) } })` に渡し、
  * `cms.<collection>.cache.warm()` を実行すると、Workers が読むのと同じ KV に書き込める。
  *
  * @example
@@ -133,9 +142,8 @@ export interface RestKvCacheOptions extends RestKvOptions {
  * import { schema } from "../app/generated/nhc.js";
  *
  * const cms = createCMS({
- *   schema,
- *   token: process.env.NOTION_TOKEN!,
- *   runtime: { cache: [restKvCache(readRestKvEnv())] },
+ *   notion: { schema, token: process.env.NOTION_TOKEN! },
+ *   cache: { document: restKvCache(readRestKvEnv()) },
  * });
  * await cms.posts.cache.warm({ onProgress: (d, t) => console.log(`${d}/${t}`) });
  */

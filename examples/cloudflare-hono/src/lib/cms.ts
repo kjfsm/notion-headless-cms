@@ -1,5 +1,5 @@
-import { createCMS } from "@notion-headless-cms/client";
-import { cloudflarePreset } from "@notion-headless-cms/client/cloudflare";
+import { createCMS, memoryCache } from "@notion-headless-cms/client";
+import { kvCache, r2Cache } from "@notion-headless-cms/client/cloudflare";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -15,18 +15,29 @@ export function makeCms(
   ctx: { waitUntil(p: Promise<unknown>): void },
 ) {
   return createCMS({
-    schema,
-    token: env.NOTION_TOKEN,
+    notion: {
+      schema,
+      token: env.NOTION_TOKEN,
+      collections: {
+        posts: {
+          published: ["公開済み"],
+          accessible: ["下書き", "編集中", "公開済み"],
+        },
+      },
+    },
     // content:"html" は Notion Markdown export API（1 リクエスト）+ HTML renderer を内部結線し、
     // Cloudflare Workers Free プランの 50 subrequest 上限を回避する。
-    content: "html",
-    // cloudflarePreset は swr.ttlMs を持たず永続キャッシュ。差分があれば waitUntil の bg で差し替える。
-    runtime: cloudflarePreset({ env, ctx }),
-    collections: {
-      posts: {
-        published: ["公開済み"],
-        accessible: ["下書き", "編集中", "公開済み"],
-      },
+    render: { content: "html" },
+    // document=KV / image=R2 を役割別に明示。binding が無ければ memory にフォールバック。
+    // waitUntil で SWR バックグラウンド更新を応答後も完走させる。
+    cache: {
+      document: env.DOC_CACHE
+        ? kvCache({ namespace: env.DOC_CACHE })
+        : memoryCache(),
+      image: env.IMG_BUCKET
+        ? r2Cache({ bucket: env.IMG_BUCKET })
+        : memoryCache(),
+      waitUntil: (p) => ctx.waitUntil(p),
     },
   });
 }

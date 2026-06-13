@@ -31,6 +31,7 @@ export type {
   CMSGlobalOps,
   CreateClientOptions,
   ItemWithContent,
+  MemoryCacheOptions,
   PageLinkMap,
   ResolvedPageLink,
   SWRConfig,
@@ -133,34 +134,28 @@ export interface CollectionBehavior<V extends string = string> {
 }
 
 /**
- * ランタイム配線。`nodePreset()` / `cloudflarePreset({ env, ctx })` /
- * `nextPreset()` の戻り値をそのまま渡せる。省略時は node 既定（memoryCache）。
+ * notion（取得元）設定。Notion からの取得に必要なものを集約する。
+ * - `schema`: `nhc generate` が出力した DB 構造の単一の真実源
+ * - `token`: Notion API トークン（Notion 認証）
+ * - `collections`: コレクション別の公開ポリシー（Notion status 値で型付け）
  */
-export interface RuntimeConfig {
-  cache?: readonly CacheAdapter[];
-  swr?: SWRConfig;
-  waitUntil?: (p: Promise<unknown>) => void;
-}
-
-/**
- * `createCMS` のオプション。
- * - **構造**（DB 由来）は `schema`（生成物）に集約。
- * - **振る舞い**（token / content / 公開ポリシー / ランタイム）はここで定義。
- */
-export interface CreateCMSOptions<
-  S extends SchemaMap,
-  M extends ContentMode = "html",
-> {
+export interface CmsNotionConfig<S extends SchemaMap> {
   /** `nhc generate` が出力した schema（DB 構造の単一の真実源）。 */
   schema: S;
   /** Notion API トークン。 */
   token: string;
-  /** 本文モード。省略時は `"html"`。 */
-  content?: M;
   /** コレクション別の公開ポリシー。published/accessible は schema の status 値で型付けされる。 */
   collections?: { [K in keyof S]?: CollectionBehavior<StatusValuesOf<S[K]>> };
-  /** ランタイム配線。省略時は `nodePreset()`。 */
-  runtime?: RuntimeConfig;
+}
+
+/**
+ * render（出力先）設定。本文の取得戦略・表現に関わるものを集約する。
+ * 画像プロキシのベース URL は `cms.handler()` の既定ルートに固定のため createCMS では設定しない
+ * （低レベルに調整したい場合は createClient の imageProxyBase を使う）。
+ */
+export interface CmsRenderConfig<M extends ContentMode = "html"> {
+  /** 本文モード。省略時は `"html"`。 */
+  content?: M;
   /**
    * bookmark / link_preview / embed ブロックの OGP（リンクプレビュー）取得設定。
    * `content: "react"` のときのみ効く（`"html"` では無視）。
@@ -174,6 +169,45 @@ export interface CreateCMSOptions<
    * - `{ enabled: true, imageCache }`: OG 画像も R2 等へ永続化したい上級者向け。
    */
   ogp?: boolean | FetchBlockTreeOgpOptions;
+}
+
+/**
+ * cache（キャッシュ戦略）設定。どこに永続化し、いつ再検証するかを役割別に明示する。
+ *
+ * document / image にそれぞれ `CacheAdapter` を渡す（`kvCache` / `r2Cache` / `memoryCache`
+ * など）。`env` を丸ごと渡す旧 preset と違い、どの binding がどのキャッシュかが呼び出し側で
+ * 一目で分かる。`cache` 自体を省略すると node 既定（memoryCache が document/image 兼用）になる。
+ */
+export interface CmsCacheConfig {
+  /** 文書（list/meta/content）キャッシュのアダプタ。 */
+  document?: CacheAdapter;
+  /** 画像キャッシュのアダプタ。 */
+  image?: CacheAdapter;
+  /** SWR（Stale-While-Revalidate）戦略。省略時は ttlMs 5 分。 */
+  swr?: SWRConfig;
+  /**
+   * SWR バックグラウンド更新を応答送信後も完走させる実行フック。
+   * Cloudflare Workers では `(p) => ctx.waitUntil(p)` を渡す。Node では不要。
+   */
+  waitUntil?: (p: Promise<unknown>) => void;
+}
+
+/**
+ * `createCMS` のオプション。データの流れ「取得 → 表現 → 永続化」で 3 グループに分ける。
+ * - `notion`: 取得元（schema / token / 公開ポリシー）
+ * - `render`: 出力先（本文モード / OGP）
+ * - `cache`: キャッシュ戦略（document / image アダプタ / swr / waitUntil）
+ */
+export interface CreateCMSOptions<
+  S extends SchemaMap,
+  M extends ContentMode = "html",
+> {
+  /** 取得元（Notion 接続）設定。 */
+  notion: CmsNotionConfig<S>;
+  /** 出力先（表現）設定。省略可。 */
+  render?: CmsRenderConfig<M>;
+  /** キャッシュ戦略設定。省略時は node 既定（memoryCache + swr 5 分）。 */
+  cache?: CmsCacheConfig;
 }
 
 /**
@@ -200,49 +234,57 @@ const CMS_IMAGE_PROXY_BASE = "/api/cms/images";
  * schema（構造）と振る舞いを分離して CMS クライアントを 1 つの呼び出しで組み立てる。
  * `createClient` + `notionSource` + preset の合成を内部に隠蔽する単一エントリ。
  *
- * @example Node（既定ランタイム）
+ * @example Node（cache 省略で memory 既定）
  * ```ts
  * import { createCMS } from "@notion-headless-cms/client";
  * import { schema } from "./generated/nhc";
  *
  * export const cms = createCMS({
- *   schema,
- *   token: process.env.NOTION_TOKEN!,
- *   content: "html",
- *   collections: { posts: { published: ["公開済み"] } },
+ *   notion: {
+ *     schema,
+ *     token: process.env.NOTION_TOKEN!,
+ *     collections: { posts: { published: ["公開済み"] } },
+ *   },
+ *   render: { content: "html" },
  * });
  * ```
  *
- * @example Cloudflare（runtime に preset を渡す）
+ * @example Cloudflare（cache を役割別に明示）
  * ```ts
  * import { createCMS } from "@notion-headless-cms/client";
- * import { cloudflarePreset } from "@notion-headless-cms/cache/cloudflare";
+ * import { kvCache, r2Cache } from "@notion-headless-cms/client/cloudflare";
  *
  * export const makeCms = (env: Env, ctx: ExecutionContext) =>
  *   createCMS({
- *     schema,
- *     token: env.NOTION_TOKEN,
- *     content: "react",
- *     runtime: cloudflarePreset({ env, ctx }),
- *     collections: { posts: { published: ["公開済み"] } },
+ *     notion: {
+ *       schema,
+ *       token: env.NOTION_TOKEN,
+ *       collections: { posts: { published: ["公開済み"] } },
+ *     },
+ *     render: { content: "react" },
+ *     cache: {
+ *       document: kvCache({ namespace: env.DOC_CACHE }),
+ *       image: r2Cache({ bucket: env.IMG_BUCKET }),
+ *       waitUntil: (p) => ctx.waitUntil(p),
+ *     },
  *   });
  * ```
  */
 export function createCMS<S extends SchemaMap, M extends ContentMode = "html">(
   opts: CreateCMSOptions<S, M>,
 ): CMSClientFor<S, M> {
-  const content: ContentMode = opts.content ?? "html";
+  const content: ContentMode = opts.render?.content ?? "html";
   // content モードが取得戦略を一意に決める（renderer も同時に内部結線）。
   // react モードは OGP（リンクプレビュー）を既定オンで取得する。
   const fetch =
     content === "react"
-      ? blocksFetcher({ ogp: resolveOgpOption(opts.ogp) })
+      ? blocksFetcher({ ogp: resolveOgpOption(opts.render?.ogp) })
       : markdownFetcher();
 
   const publishOptions: { [K in keyof S]?: NotionPublishOptions } = {};
-  if (opts.collections) {
-    for (const key of Object.keys(opts.collections) as (keyof S)[]) {
-      const behavior = opts.collections[key];
+  if (opts.notion.collections) {
+    for (const key of Object.keys(opts.notion.collections) as (keyof S)[]) {
+      const behavior = opts.notion.collections[key];
       if (!behavior) continue;
       publishOptions[key] = {
         ...(behavior.published
@@ -255,13 +297,15 @@ export function createCMS<S extends SchemaMap, M extends ContentMode = "html">(
     }
   }
 
-  const runtime: RuntimeConfig = opts.runtime ?? nodePreset();
+  // cache 全体を省略したら node 既定（memoryCache + swr 5 分）。指定があれば
+  // document / image アダプタを配列へ畳む（core の resolveCache が handles で先勝ち割り当て）。
+  const cacheConfig = resolveCacheConfig(opts.cache);
 
   const client = createClient({
     sources: {
       notion: notionSource({
-        schema: opts.schema,
-        token: opts.token,
+        schema: opts.notion.schema,
+        token: opts.notion.token,
         fetch,
         publishOptions,
       }),
@@ -270,11 +314,34 @@ export function createCMS<S extends SchemaMap, M extends ContentMode = "html">(
     ...(content === "html" ? { renderer: notionMarkdownRenderer } : {}),
     // 画像プロキシは handler の既定ルートに固定（createCMS では変更不可）。
     imageProxyBase: CMS_IMAGE_PROXY_BASE,
-    ...(runtime.cache ? { cache: runtime.cache } : {}),
-    ...(runtime.swr ? { swr: runtime.swr } : {}),
-    ...(runtime.waitUntil ? { waitUntil: runtime.waitUntil } : {}),
+    ...(cacheConfig.cache ? { cache: cacheConfig.cache } : {}),
+    ...(cacheConfig.swr ? { swr: cacheConfig.swr } : {}),
+    ...(cacheConfig.waitUntil ? { waitUntil: cacheConfig.waitUntil } : {}),
   });
 
   // 実行時オブジェクトは全アクセサを持つが、型は content モードで狭める。
   return client as unknown as CMSClientFor<S, M>;
+}
+
+/**
+ * `cache` 設定を `createClient` が受け取るフラットな `{ cache, swr, waitUntil }` へ変換する。
+ * - 未指定: `nodePreset()`（memoryCache が document/image 兼用 + swr 5 分）にフォールバック。
+ * - 指定あり: `document` → `image` の順に並べた配列を返す。省略された役割はそのまま無し
+ *   （memory への暗黙フォールバックは「cache 全体省略時」のみ。明示主義）。
+ */
+function resolveCacheConfig(cache: CmsCacheConfig | undefined): {
+  cache?: readonly CacheAdapter[];
+  swr?: SWRConfig;
+  waitUntil?: (p: Promise<unknown>) => void;
+} {
+  if (!cache) return nodePreset();
+  const adapters: CacheAdapter[] = [];
+  // document を先頭に並べ、resolveCache の先勝ち割り当てで役割が混ざらないようにする。
+  if (cache.document) adapters.push(cache.document);
+  if (cache.image) adapters.push(cache.image);
+  return {
+    cache: adapters,
+    swr: cache.swr ?? { ttlMs: 5 * 60_000 },
+    waitUntil: cache.waitUntil,
+  };
 }

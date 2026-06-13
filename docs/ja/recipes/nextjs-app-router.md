@@ -27,27 +27,29 @@ NOTION_TOKEN=secret_xxx npx nhc generate
 
 ```ts
 // app/lib/cms.ts
-import { memoryCache } from "@notion-headless-cms/cache";
-import { nextCache } from "@notion-headless-cms/cache/next";
-import { createCMS } from "@notion-headless-cms/client";
+import { createCMS, memoryCache } from "@notion-headless-cms/client";
+import { nextCache } from "@notion-headless-cms/client/next";
 import { schema } from "@/app/generated/nhc.schema";
 
 // document は Next.js の unstable_cache + revalidateTag、image は in-process メモリ。
 export const cms = createCMS({
-  schema,
-  token: process.env.NOTION_TOKEN!,
-  content: "html",
-  runtime: {
-    cache: [nextCache({ revalidate: 300, tags: ["posts"] }), memoryCache()],
+  notion: {
+    schema,
+    token: process.env.NOTION_TOKEN!,
+    collections: {
+      posts: { published: ["公開済み"] },
+    },
   },
-  collections: {
-    posts: { published: ["公開済み"] },
+  render: { content: "html" },
+  cache: {
+    document: nextCache({ revalidate: 300, tags: ["posts"] }),
+    image: memoryCache(),
   },
 });
 ```
 
-`nextCache` は `unstable_cache` でラップするため document キャッシュを担当し、
-`memoryCache` が画像キャッシュを担当する。配列の先着順でアダプタが振り分けられる。
+`nextCache` は `unstable_cache` でラップするため `document` キャッシュを担当し、
+`memoryCache` を `image` に割り当てて画像キャッシュを担う。役割別に明示して渡す。
 
 ## ページ一覧（Server Component）
 

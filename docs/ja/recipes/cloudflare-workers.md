@@ -49,11 +49,11 @@ wrangler secret put NOTION_TOKEN
 
 ## Workers のコード
 
-`cloudflarePreset({ env, ctx })` を `createClient` に展開すると、KV + R2 のキャッシュアダプタと `waitUntil` が一括で配線される。
+`cache` グループに `kvCache` / `r2Cache` を役割別に渡すと、KV を document、R2 を image に割り当てつつ `waitUntil` を配線できる。
 
 ```ts
-import { createCMS } from "@notion-headless-cms/client";
-import { cloudflarePreset } from "@notion-headless-cms/client/cloudflare";
+import { createCMS, memoryCache } from "@notion-headless-cms/client";
+import { kvCache, r2Cache } from "@notion-headless-cms/client/cloudflare";
 import { schema } from "./generated/nhc.schema";
 
 interface Env {
@@ -64,13 +64,20 @@ interface Env {
 
 function makeCms(env: Env, ctx: ExecutionContext) {
   return createCMS({
-    schema,
-    token: env.NOTION_TOKEN,
-    content: "html",
-    // cache (KV+R2) と waitUntil を一括注入。
-    // ctx を渡さないと SWR の bg 更新が打ち切られて古いキャッシュが残る。
-    runtime: cloudflarePreset({ env, ctx }),
-    collections: { posts: { published: ["公開済み"] } },
+    notion: {
+      schema,
+      token: env.NOTION_TOKEN,
+      collections: { posts: { published: ["公開済み"] } },
+    },
+    render: { content: "html" },
+    cache: {
+      // KV を document、R2 を image に割り当てる。
+      // DOC_CACHE は optional 型なので未設定時は memoryCache() へフォールバック。
+      document: env.DOC_CACHE ? kvCache({ namespace: env.DOC_CACHE }) : memoryCache(),
+      image: r2Cache({ bucket: env.IMG_BUCKET }),
+      // waitUntil を渡さないと SWR の bg 更新が打ち切られて古いキャッシュが残る。
+      waitUntil: (p) => ctx.waitUntil(p),
+    },
   });
 }
 
@@ -159,7 +166,7 @@ import { notionRevalidatorScript } from "@notion-headless-cms/core/html";
 
 ## 個別の binding をカスタマイズしたい場合
 
-`cloudflarePreset` の代わりに低レベル API を組み合わせる。
+`createCMS` の `cache` グループの代わりに、低レベル `createClient` でアダプタ配列を直接組み立てることもできる。
 
 ```ts
 import {
@@ -186,7 +193,7 @@ binding が未設定なら該当アダプタは省略され、キャッシュな
 ## キャッシュなしで動かす（ローカル開発）
 
 `.dev.vars` に `NOTION_TOKEN` だけ書けば `wrangler dev` で動く。
-KV / R2 binding が未設定でも `cloudflarePreset` は空配列を返すため、メモリ無しでも例外にはならない。
+KV / R2 binding が未設定でも、`document` を `memoryCache()` にフォールバックさせておけば（上記 `makeCms` の例）メモリキャッシュで起動でき、例外にはならない。
 
 ```
 # .dev.vars
