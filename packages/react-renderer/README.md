@@ -45,9 +45,9 @@ export default function Page() {
 }
 ```
 
-### `createCMS` (content: "react") と組み合わせて使う (推奨)
+### `createCMS` (render: { content: "react" }) と組み合わせて使う (推奨)
 
-`@notion-headless-cms/client` の `createCMS({ content: "react" })` 経由で取得すると、
+`@notion-headless-cms/client` の `createCMS({ render: { content: "react" } })` 経由で取得すると、
 ブロックツリーが SWR キャッシュに乗り、`notionBlocks()` の戻り値が `NotionBlock[]` に
 型付けされるため**キャストは不要**。画像 URL は `cms.cacheImage` 経由で永続プロキシ URL に
 書き換える (Notion 署名 URL の失効対策)。
