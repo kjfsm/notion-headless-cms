@@ -152,6 +152,20 @@ export interface CmsNotionConfig<S extends SchemaMap> {
    * 更新されたページを自動でミラー再生成する。`wrangler secret put` 等で渡し、ハードコードしない。
    */
   webhookSecret?: string;
+  /**
+   * webhook サブスク登録時に Notion が送る `verification_token` を受け取るコールバック。
+   * トークンを取得して `webhookSecret` に設定する用途。
+   *
+   * @example
+   * ```ts
+   * createCMS({
+   *   notion: {
+   *     onVerificationToken: (token) => console.log("verification_token:", token),
+   *   },
+   * });
+   * ```
+   */
+  onVerificationToken?: (token: string) => void;
 }
 
 /**
@@ -327,6 +341,21 @@ export function createCMS<S extends SchemaMap, M extends ContentMode = "html">(
       ? { notionWebhookSecret: opts.notion.webhookSecret }
       : {}),
   });
+
+  // onVerificationToken が指定されていれば handler() に自動注入する。
+  if (opts.notion.onVerificationToken) {
+    const cb = opts.notion.onVerificationToken;
+    const orig = client.handler.bind(client);
+    client.handler = (handlerOpts?: Parameters<typeof client.handler>[0]) =>
+      orig({
+        ...handlerOpts,
+        notionWebhook: {
+          ...handlerOpts?.notionWebhook,
+          onVerificationToken:
+            handlerOpts?.notionWebhook?.onVerificationToken ?? cb,
+        },
+      });
+  }
 
   // 実行時オブジェクトは全アクセサを持つが、型は content モードで狭める。
   return client as unknown as CMSClientFor<S, M>;
