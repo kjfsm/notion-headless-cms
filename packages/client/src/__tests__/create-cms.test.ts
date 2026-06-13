@@ -299,6 +299,16 @@ async function _typeChecks() {
     },
   } as const satisfies SchemaMap;
 
+  // 要素コレクションには公開ポリシー（published/accessible）を設定できない。
+  createCMS({
+    notion: {
+      schema: mixedSchema,
+      token: "t",
+      // @ts-expect-error kind: "data" のコレクションに published は設定できない
+      collections: { settings: { published: ["x"] } },
+    },
+  });
+
   const mixed = createCMS({ notion: { schema: mixedSchema, token: "t" } });
   // ページ側は従来どおり find/params が使える。
   await mixed.posts.find("s");
