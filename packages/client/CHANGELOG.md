@@ -1,5 +1,11 @@
 # @notion-headless-cms/client
 
+## 0.3.5
+
+### Patch Changes
+
+- 31e7f99: `createCMS` の `notion.onVerificationToken` コールバックを追加。webhook サブスク登録時に Notion が送る `verification_token` を受け取れるようにする。
+
 ## 0.3.4
 
 ### Patch Changes
