@@ -5,8 +5,8 @@ import type { BaseContentItem } from "./types/content";
 export interface PageIndexEntry {
   /** 所属コレクション名。 */
   collection: string;
-  /** URL キー。 */
-  slug: string;
+  /** URL キー。要素コレクション（URL を持たない）のアイテムでは undefined。 */
+  slug?: string;
   /** ページ名（表示テキスト用）。 */
   title?: string | null;
 }
@@ -133,6 +133,9 @@ export async function buildPageLinkMap(
   const toUrl = opts?.url ?? defaultUrl;
   const map: PageLinkMap = {};
   for (const [key, entry] of index) {
+    // 要素コレクション（slug 無し）はページ URL を持たないため、既定ではリンク対象外。
+    // url を明示指定した場合は呼び出し側の導出に委ねる。
+    if (entry.slug == null && !opts?.url) continue;
     map[key] = { href: toUrl(entry, key), title: entry.title };
   }
   return map;

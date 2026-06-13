@@ -14,6 +14,7 @@
 export type {
   CollectionDef,
   CollectionsConfig,
+  DataCollectionDef,
   InferCollectionItem,
 } from "./types/config";
 export type { BaseContentItem } from "./types/content";

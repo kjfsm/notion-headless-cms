@@ -765,7 +765,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
       },
     });
     const items = await cms.posts.list({
-      filter: (item) => item.slug.startsWith("a"),
+      filter: (item) => (item.slug ?? "").startsWith("a"),
     });
     expect(items).toHaveLength(1);
     expect(items[0]?.slug).toBe("alpha");
@@ -792,7 +792,7 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     const items = await cms.posts.list({
       sort: {
         by: "slug",
-        compare: (a, b) => b.slug.localeCompare(a.slug),
+        compare: (a, b) => (b.slug ?? "").localeCompare(a.slug ?? ""),
       },
     });
     expect(items.map((i) => i.slug)).toEqual(["gamma", "beta", "alpha"]);
@@ -1157,7 +1157,9 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
       renderer: mockRenderer,
     });
     const listed = await cms.posts.list();
-    const slugsFromList = listed.map((i) => i.slug);
+    const slugsFromList = listed
+      .map((i) => i.slug)
+      .filter((s): s is string => s != null);
 
     for (const slug of slugsFromList) {
       const got = await cms.posts.find(slug);

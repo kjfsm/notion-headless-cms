@@ -100,6 +100,10 @@ export default defineConfig({
 			// slugField: "slug",
 			// statusField: "status",
 
+			// URL ルーティングしない要素（設定値一覧・リストなど）は kind: "data" を指定します。
+			// その場合 slug は不要で、cms.<name> は list() / get(id) のみになります。
+			// kind: "data",
+
 			// 公開ステータス値 (published) は createCMS({ notion: { collections } }) 側で指定します
 
 			// 日本語など ASCII 変換できないプロパティ名は明示マッピング必須

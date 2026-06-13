@@ -78,10 +78,15 @@ export interface RateLimiterConfig {
  * `slugField` / `statusField` は TS フィールド名 (DataSource の `properties` キーと一致)。
  */
 export interface CollectionDef<T extends BaseContentItem = BaseContentItem> {
+  /** コレクション種別。`"data"` は要素（URL ルーティングしないデータ）。既定は `"page"`。 */
+  kind?: "page" | "data";
   /** Notion etc. のデータソース実装。 */
   source: DataSource<T>;
-  /** slug として使う TS フィールド名 (必須)。`source.properties[slugField]` で Notion プロパティ名を解決する。 */
-  slugField: string;
+  /**
+   * slug として使う TS フィールド名。`source.properties[slugField]` で Notion プロパティ名を解決する。
+   * ページコレクション（`kind: "page"`）では必須。要素コレクション（`kind: "data"`）では未指定。
+   */
+  slugField?: string;
   /** ステータスとして使う TS フィールド名。 */
   statusField?: string;
   /** 公開扱いするステータス値。`list()` のデフォルト絞り込みに使う。 */
@@ -90,6 +95,15 @@ export interface CollectionDef<T extends BaseContentItem = BaseContentItem> {
   accessibleStatuses?: readonly string[];
   /** コレクション固有のライフサイクルフック。グローバル hooks の後に実行される。 */
   hooks?: CMSHooks<T>;
+}
+
+/**
+ * 要素（データ）コレクション 1 件の定義。`kind: "data"` で slug を持たない。
+ * `createClient` は判別共用体としては扱わず、`CollectionDef` の `kind`/`slugField` で分岐する。
+ */
+export interface DataCollectionDef<T extends BaseContentItem = BaseContentItem>
+  extends Omit<CollectionDef<T>, "kind" | "slugField"> {
+  kind: "data";
 }
 
 /**

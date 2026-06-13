@@ -312,6 +312,22 @@ describe("generateSchemaFile", () => {
     expect(code).not.toContain("accessibleStatuses:");
   });
 
+  it("kind: data では slug プロパティを生成せず schema に kind: data を出力する", () => {
+    const collection = makeCollection({
+      name: "settings",
+      config: { dbName: "設定DB", kind: "data", publishedStatuses: [] },
+      properties: {
+        Key: makeProp("title"),
+        Value: makeProp("rich_text"),
+      },
+    });
+    const code = generateSchemaFile([collection]);
+    // 要素コレクションは URL を持たないため slug 列・slugField を出力しない。
+    expect(code).not.toContain("slug: string;");
+    expect(code).not.toContain("slugField:");
+    expect(code).toContain('kind: "data"');
+  });
+
   it("notion-source / core から型を import する", () => {
     const code = generateSchemaFile([makeCollection()]);
     expect(code).toContain(

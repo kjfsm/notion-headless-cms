@@ -513,6 +513,7 @@ describe("createNotionCollection - properties オプション（新形式）", (
       slug: { type: "richText", notion: "Slug" },
       status: { type: "status", notion: "Status" },
     },
+    slugField: "slug",
   });
 
   beforeEach(() => {

@@ -13,7 +13,14 @@ export interface CollectionGenConfig {
    * 完全一致でのみマッチ。
    */
   dbName?: string;
-  /** slug として使う TS フィールド名。デフォルト "slug"。 */
+  /**
+   * コレクション種別。
+   * - `"page"`（既定）: URL ルーティングする記事・固定ページ。slug を持つ。
+   * - `"data"`: URL を持たない要素（設定値一覧・選択肢リストなど）。slug 不要で
+   *   `list()` / `get(id)` のみのクライアントになる。Notion DB に slug 列を用意しなくてよい。
+   */
+  kind?: "page" | "data";
+  /** slug として使う TS フィールド名。デフォルト "slug"。`kind: "data"` では無視される。 */
   slugField?: string;
   /** status として使う TS フィールド名。デフォルト "status"。 */
   statusField?: string;

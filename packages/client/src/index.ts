@@ -3,6 +3,7 @@ import type {
   CacheAdapter,
   CMSGlobalOps,
   CollectionClient,
+  DataCollectionClient,
   FindOptions,
   Logger,
   LogLevel,
@@ -32,6 +33,7 @@ export type {
   CMSClient,
   CMSGlobalOps,
   CreateClientOptions,
+  DataCollectionClient,
   ItemWithContent,
   LogContext,
   Logger,
@@ -109,9 +111,15 @@ type ModeCollectionClient<
   ): Promise<{ stale: false } | { stale: true; item: ModeItem<T, M> } | null>;
 };
 
-/** `createCMS` の戻り値。schema の各コレクションが mode で型付けされる。 */
+/**
+ * `createCMS` の戻り値。schema の各コレクションが mode で型付けされる。
+ * 要素コレクション（`kind: "data"`）は本文を持たない `DataCollectionClient`、
+ * ページコレクションは mode で本文アクセサを差し替えた `ModeCollectionClient`。
+ */
 export type CMSClientFor<S extends SchemaMap, M extends ContentMode> = {
-  [K in keyof S]: ModeCollectionClient<CMSItemFromSchema<S[K]>, M>;
+  [K in keyof S]: S[K] extends { kind: "data" }
+    ? DataCollectionClient<CMSItemFromSchema<S[K]>>
+    : ModeCollectionClient<CMSItemFromSchema<S[K]>, M>;
 } & CMSGlobalOps;
 
 /**

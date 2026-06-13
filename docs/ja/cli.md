@@ -116,6 +116,7 @@ collections: {
   posts: {
     dbName: "ブログ記事DB",            // Notion DB 名（完全一致）
     // databaseId: "xxx-yyy-zzz",     // dbName の代わりに直接指定可
+    // kind: "page",                  // 既定。URL ルーティングするページ
     publishedStatuses: ["公開済み"],   // 備忘録（生成物には埋め込まれない）
     accessibleStatuses: ["下書き", "公開済み"],
     slugField: "slug",                // デフォルト "slug"
@@ -126,6 +127,26 @@ collections: {
 ```
 
 > **重要**: `publishedStatuses` / `accessibleStatuses` を `nhc.config.ts` に書いても、生成ファイルには埋め込まれない（DB 構造のみが出力される）。実際の公開ステータスは `notionSource({ publishOptions })` で指定する。
+
+### ページコレクションと要素（データ）コレクション（`kind`）
+
+コレクションには 2 種類ある。
+
+| `kind` | 用途 | クライアント API | slug |
+|---|---|---|---|
+| `"page"`（既定） | URL ルーティングする記事・固定ページ | `find(slug)` / `list()` / `params()` / 本文（`html()` 等） | 必須（`slugField`） |
+| `"data"` | URL を持たない要素（設定値一覧・選択肢リストなど） | `list()` / `get(id)` / `cache.invalidate()` のみ | 不要 |
+
+```ts
+collections: {
+  posts: { dbName: "ブログ記事DB" },              // kind: "page"（既定）
+  settings: { dbName: "サイト設定DB", kind: "data" }, // URL を持たない要素
+}
+```
+
+- 要素コレクションは Notion DB に slug プロパティを用意する必要がない。`cms.settings.list()` で全件、`cms.settings.get(id)` で 1 件取得する。
+- 生成されるアイテム型から `slug` は除去されるため、`cms.settings.find(...)` / `.params()` / `item.slug` はコンパイルエラーになる（ページとの誤用を型で防ぐ）。
+- 内部のキャッシュ identity はページが slug、要素が Notion ページ ID。
 
 ### `notionToken` / `env()`
 

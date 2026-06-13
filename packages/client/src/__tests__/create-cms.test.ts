@@ -284,5 +284,38 @@ async function _typeChecks() {
       collections: { posts: { published: ["存在しない"] } },
     },
   });
+
+  // 要素（データ）コレクション: kind: "data" は list/get のみで find/params/slug は型エラー。
+  const mixedSchema = {
+    posts: {
+      dataSourceId: "ds_1",
+      properties: { slug: { type: "richText", notion: "URL" } },
+      slugField: "slug",
+    },
+    settings: {
+      kind: "data",
+      dataSourceId: "ds_2",
+      properties: { value: { type: "richText", notion: "Value" } },
+    },
+  } as const satisfies SchemaMap;
+
+  const mixed = createCMS({ notion: { schema: mixedSchema, token: "t" } });
+  // ページ側は従来どおり find/params が使える。
+  await mixed.posts.find("s");
+  await mixed.posts.params();
+  // 要素側は list / get / cache.invalidate のみ。
+  const settings = await mixed.settings.list();
+  const one = await mixed.settings.get("page-id");
+  await mixed.settings.cache.invalidate();
+  if (one) {
+    void one.value;
+    // @ts-expect-error 要素アイテムに slug は存在しない
+    void one.slug;
+  }
+  void settings;
+  // @ts-expect-error 要素コレクションに find は存在しない
+  await mixed.settings.find("s");
+  // @ts-expect-error 要素コレクションに params は存在しない
+  await mixed.settings.params();
 }
 void _typeChecks;

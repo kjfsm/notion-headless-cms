@@ -56,12 +56,17 @@ type PropertyValue = string | string[] | number | boolean | null;
 
 /**
  * Notion ページを CLI 生成の PropertyMap に従ってフラットな Record に変換する。
- * ページ構成の知識（slug/status の意味）を持たず、すべてのプロパティを等しく扱う。
- * slug・title・lastEditedTime などの BaseContentItem フィールドも含む。
+ * ページ構成の知識（status の意味）を持たず、すべてのプロパティを等しく扱う。
+ * title・lastEditedTime などの BaseContentItem フィールドも含む。
+ *
+ * @param slugField slug として使う TS フィールド名。ページコレクションでは必須。
+ *   要素コレクション（`kind: "data"`）では未指定とし、その場合 slug を設定せず
+ *   空チェックもスキップする（URL を持たないデータを許容する）。
  */
 export function mapItemFromPropertyMap(
   page: NotionPage,
   properties: PropertyMap,
+  slugField?: string,
 ): BaseContentItem {
   const result: Record<string, PropertyValue> &
     Pick<
@@ -91,10 +96,18 @@ export function mapItemFromPropertyMap(
     result[tsName] = extractPropertyValue(prop, propDef.type);
   }
 
+  if (slugField === undefined) {
+    // 要素コレクション。URL を持たないため slug を設定しない（内部 identity は id で解決される）。
+    result.slug = undefined as unknown as string;
+    return result as BaseContentItem;
+  }
+
+  // slugField が "slug" 以外でも slug を正しく埋める。
+  result.slug = (result[slugField] as string | undefined) ?? "";
   if (!result.slug) {
     throw new CMSError({
       code: "core/schema_invalid",
-      message: `Notion ページのスラグが空です。PropertyMap に "slug" キーを含め、対応するプロパティに値が設定されているか確認してください。`,
+      message: `Notion ページのスラグが空です。PropertyMap の "${slugField}" キーに対応するプロパティに値が設定されているか確認してください。`,
       context: { operation: "mapItemFromPropertyMap", pageId: page.id },
     });
   }

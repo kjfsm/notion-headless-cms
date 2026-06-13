@@ -67,6 +67,7 @@ describe("mapItemFromPropertyMap", () => {
     const result = mapItemFromPropertyMap(
       page as never,
       properties,
+      "slug",
     ) as unknown as Record<string, unknown>;
     expect(result.slug).toBe("my-slug");
   });
@@ -413,7 +414,7 @@ describe("mapItemFromPropertyMap", () => {
     expect(item.coverImageUrl).toBeNull();
   });
 
-  it("PropertyMap に slug が含まれない場合は CMSError をスローする", () => {
+  it("slugField 指定時に該当プロパティが PropertyMap に無い場合は CMSError をスローする", () => {
     const page = makePage({
       Name: { type: "title", title: [{ plain_text: "Test" }] },
     });
@@ -422,7 +423,7 @@ describe("mapItemFromPropertyMap", () => {
     };
     let caughtError: unknown;
     try {
-      mapItemFromPropertyMap(page as never, properties);
+      mapItemFromPropertyMap(page as never, properties, "slug");
     } catch (err) {
       caughtError = err;
     }
@@ -441,7 +442,7 @@ describe("mapItemFromPropertyMap", () => {
     };
     let caughtError: unknown;
     try {
-      mapItemFromPropertyMap(page as never, properties);
+      mapItemFromPropertyMap(page as never, properties, "slug");
     } catch (err) {
       caughtError = err;
     }
@@ -449,6 +450,33 @@ describe("mapItemFromPropertyMap", () => {
     expect(isCMSError(caughtError) && caughtError.code).toBe(
       "core/schema_invalid",
     );
+  });
+
+  it("slugField 未指定（要素コレクション）では slug を設定せず throw しない", () => {
+    const page = makePage({
+      Name: { type: "title", title: [{ plain_text: "設定A" }] },
+    });
+    const properties: PropertyMap = {
+      name: { type: "title", notion: "Name" },
+    };
+    const result = mapItemFromPropertyMap(page as never, properties);
+    expect(result.slug).toBeUndefined();
+    expect(result.id).toBeDefined();
+  });
+
+  it("slugField が 'slug' 以外でも slug を正しく埋める", () => {
+    const page = makePage({
+      Permalink: { type: "rich_text", rich_text: [{ plain_text: "p-1" }] },
+    });
+    const properties: PropertyMap = {
+      permalink: { type: "richText", notion: "Permalink" },
+    };
+    const result = mapItemFromPropertyMap(
+      page as never,
+      properties,
+      "permalink",
+    );
+    expect(result.slug).toBe("p-1");
   });
 });
 

@@ -164,3 +164,31 @@ export interface CollectionClient<T extends BaseContentItem = BaseContentItem> {
   /** キャッシュ操作 namespace。 */
   cache: CollectionCacheOps<T>;
 }
+
+/** 要素コレクション（`kind: "data"`）のキャッシュ操作 namespace。 */
+export interface DataCollectionCacheOps {
+  /**
+   * コレクション全体のキャッシュを失効させる。
+   * 次回 `list` / `get` で source から再取得される。
+   */
+  invalidate(): Promise<void>;
+}
+
+/**
+ * 要素（データ）コレクションの CMS クライアント。
+ * URL ルーティングしない単純データ（設定値一覧・選択肢リストなど）向けで、
+ * `find(slug)` / `params()` / 本文レンダリングは持たない。
+ * `cms.settings.list()` / `cms.settings.get(id)` のようにアクセスする。
+ */
+export interface DataCollectionClient<
+  T extends BaseContentItem = BaseContentItem,
+> {
+  /** 全アイテム一覧を取得する。 */
+  list(opts?: ListOptions<T>): Promise<T[]>;
+
+  /** Notion ページ ID で 1 件取得する。存在しなければ null。 */
+  get(id: string): Promise<T | null>;
+
+  /** キャッシュ操作 namespace。 */
+  cache: DataCollectionCacheOps;
+}

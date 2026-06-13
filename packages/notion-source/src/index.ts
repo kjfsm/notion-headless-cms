@@ -7,6 +7,8 @@ export type {
   CMSItemFromSchema,
   CollectionSchemaEntry,
   CollectionsFromSchema,
+  DataCollectionSchemaEntry,
+  PageCollectionSchemaEntry,
   SchemaMap,
 } from "./schema-types.js";
 
@@ -62,16 +64,21 @@ export function notionSource<S extends SchemaMap>(
 ): CMSAdapter<CollectionsFromSchema<S>> {
   const entries = Object.entries(opts.schema).map(([name, entry]) => {
     const pubOpts = opts.publishOptions?.[name];
+    const isData = entry.kind === "data";
+    // 要素コレクションは slug を持たないため slugField を渡さず、mapper の slug 必須チェックを回避する。
+    const slugField = isData ? undefined : entry.slugField;
     const def = {
+      ...(isData ? { kind: "data" as const } : {}),
       source: createNotionCollection({
         token: opts.token,
         dataSourceId: entry.dataSourceId,
         properties: entry.properties,
         // parseWebhook が返す InvalidateScope.collection に使う論理名。
         collectionName: name,
+        ...(slugField ? { slugField } : {}),
         ...(opts.fetch ? { content: opts.fetch } : {}),
       }),
-      slugField: entry.slugField,
+      ...(slugField ? { slugField } : {}),
       ...(entry.statusField ? { statusField: entry.statusField } : {}),
       publishedStatuses: pubOpts?.publishedStatuses ?? [],
       ...(pubOpts?.accessibleStatuses

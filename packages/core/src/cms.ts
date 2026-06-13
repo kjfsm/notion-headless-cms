@@ -1,5 +1,9 @@
 import { noopDocOps, noopImgOps } from "./cache/noop";
-import { CollectionClientImpl, type CollectionContext } from "./collection";
+import {
+  CollectionClientImpl,
+  type CollectionContext,
+  DataCollectionClientImpl,
+} from "./collection";
 import { CMSError } from "./errors";
 import { createHandler, type HandlerOptions } from "./handler";
 import { mergeHooks, mergeLoggers, withTraceId } from "./hooks";
@@ -238,13 +242,16 @@ export function createClient<S extends CMSSources = CMSSources>(
         nextSteps: ["notionSource(...) を sources に渡しているか確認する"],
       });
     }
-    if (!def.slugField) {
+    // ページコレクション（kind 既定 "page"）は slugField が必須。
+    // 要素コレクション（kind: "data"）は URL を持たないため slugField 不要。
+    if (def.kind !== "data" && !def.slugField) {
       throw new CMSError({
         code: "core/config_invalid",
-        message: `createClient: コレクション "${name}" の slugField は必須です。`,
+        message: `createClient: ページコレクション "${name}" の slugField は必須です（URL を持たない場合は kind: "data" を指定）。`,
         context: { operation: "createClient", collection: name },
         nextSteps: [
           `nhc.config.ts の ${name} コレクションに slugField を設定する`,
+          `URL ルーティングしない要素コレクションなら kind: "data" を指定する`,
         ],
       });
     }
@@ -277,11 +284,14 @@ export function createClient<S extends CMSSources = CMSSources>(
   };
 
   const collectionNames: string[] = [];
-  const collections: Record<string, CollectionClient<BaseContentItem>> = {};
-  // warmByPageId は CollectionClient I/F に無い impl 専用メソッドを呼ぶため、具象も保持する。
-  const collectionImpls: Record<
+  // cms.<name> として返す公開クライアント（ページ or 要素）。
+  const collections: Record<string, unknown> = {};
+  // peekVersion / check は本文を持つページコレクションのみ対応。handler から参照する。
+  const pageImpls: Record<string, CollectionClientImpl<BaseContentItem>> = {};
+  // warmByPageId は公開 I/F に無い impl 専用メソッドのため、ページ・要素とも具象を保持する。
+  const warmImpls: Record<
     string,
-    CollectionClientImpl<BaseContentItem>
+    { warmByPageId(pageId: string): Promise<string | null> }
   > = {};
   for (const [name, def] of Object.entries(collectionsInput)) {
     collectionNames.push(name);
@@ -321,9 +331,16 @@ export function createClient<S extends CMSSources = CMSSources>(
       waitUntil,
       slugField: def.slugField,
     };
-    const impl = new CollectionClientImpl(ctx);
-    collections[name] = impl;
-    collectionImpls[name] = impl;
+    if (def.kind === "data") {
+      const dataImpl = new DataCollectionClientImpl(ctx);
+      collections[name] = dataImpl;
+      warmImpls[name] = dataImpl;
+    } else {
+      const impl = new CollectionClientImpl(ctx);
+      collections[name] = impl;
+      pageImpls[name] = impl;
+      warmImpls[name] = impl;
+    }
   }
 
   const cacheImage = cacheRes.hasImg
@@ -391,7 +408,7 @@ export function createClient<S extends CMSSources = CMSSources>(
     },
     async warmByPageId(pageId) {
       for (const name of collectionNames) {
-        const slug = await collectionImpls[name]?.warmByPageId(pageId);
+        const slug = await warmImpls[name]?.warmByPageId(pageId);
         if (slug) {
           logger?.debug?.("warmByPageId: ページを再ウォーム", {
             operation: "warmByPageId",
@@ -433,7 +450,8 @@ export function createClient<S extends CMSSources = CMSSources>(
           },
           revalidate: (scope) => globalOps.invalidate(scope),
           peekVersionFor(collection, slug) {
-            const client = collections[collection];
+            // peekVersion は本文を持つページコレクションのみ対応。
+            const client = pageImpls[collection];
             if (!client) {
               throw new CMSError({
                 code: "handler/unknown_collection",
@@ -444,7 +462,7 @@ export function createClient<S extends CMSSources = CMSSources>(
             return client.peekVersion(slug);
           },
           async checkFor(collection, slug, currentVersion) {
-            const client = collections[collection];
+            const client = pageImpls[collection];
             if (!client) {
               throw new CMSError({
                 code: "handler/unknown_collection",

@@ -55,6 +55,29 @@ describe("notionSource", () => {
     ]);
   });
 
+  it("kind: data のエントリは slugField 無し・kind: data の DataCollectionDef を生成する", () => {
+    const dataSchema = {
+      settings: {
+        kind: "data",
+        dataSourceId: "ds-settings",
+        properties: {
+          key: { type: "title", notion: "Key" },
+          value: { type: "richText", notion: "Value" },
+        },
+      },
+    } as const satisfies SchemaMap;
+    const adapter = notionSource({ schema: dataSchema, token: "tk" });
+    const def = adapter.collections.settings as unknown as {
+      kind?: string;
+      slugField?: string;
+    };
+    expect(def.kind).toBe("data");
+    expect(def.slugField).toBeUndefined();
+    // createNotionCollection にも slugField を渡さない。
+    const lastCall = vi.mocked(createNotionCollection).mock.calls.at(-1);
+    expect(lastCall?.[0]).not.toHaveProperty("slugField");
+  });
+
   it("fetch オプションを content として createNotionCollection に渡す", () => {
     const fetcher = vi.fn() as unknown as Parameters<
       typeof createNotionCollection

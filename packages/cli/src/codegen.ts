@@ -164,7 +164,9 @@ function generateCollectionBlock(
 ): string {
   const { name, id, dbName, config } = collection;
   const itemTypeName = pascal(name).replace(/s$/, ""); // posts → Post
-  const slugField = config.slugField ?? "slug";
+  const isData = config.kind === "data";
+  // 要素コレクション（kind: "data"）は URL を持たないため slug を解決・生成しない。
+  const slugField = isData ? undefined : (config.slugField ?? "slug");
   const statusField = config.statusField ?? "status";
 
   const propertyLines = resolved.fields.map((f) => {
@@ -206,7 +208,7 @@ function generateCollectionBlock(
       `\t${f.tsName}: ${fieldType};`,
     );
   }
-  if (!hasSlug) {
+  if (!isData && !hasSlug) {
     itemFieldLines.push("\t/** URL key。 */", "\tslug: string;");
   }
   if (!hasStatus) {
@@ -257,8 +259,17 @@ function generateSchemaAggregateBlock(
   collections: ResolvedCollection[],
 ): string {
   const entries = collections.map((c) => {
-    const slugField = c.config.slugField ?? "slug";
     const statusField = c.config.statusField ?? "status";
+    if (c.config.kind === "data") {
+      // 要素コレクション: slug を持たないため slugField を出力しない。
+      return `\t${c.name}: {
+\t\tkind: "data",
+\t\tdataSourceId: ${c.name}DataSourceId,
+\t\tproperties: ${c.name}Properties,
+\t\tstatusField: ${JSON.stringify(statusField)},
+\t},`;
+    }
+    const slugField = c.config.slugField ?? "slug";
     return `\t${c.name}: {
 \t\tdataSourceId: ${c.name}DataSourceId,
 \t\tproperties: ${c.name}Properties,

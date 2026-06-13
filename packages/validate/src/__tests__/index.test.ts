@@ -84,6 +84,36 @@ describe("validateCreateClientOptions", () => {
       }),
     ).toThrowError(CMSError);
   });
+
+  it("ページコレクションで slugField が無いとエラー", () => {
+    expect(() =>
+      validateCreateClientOptions({
+        sources: {
+          notion: {
+            collections: {
+              posts: { source: { list: async () => [] } },
+            },
+          },
+        },
+      }),
+    ).toThrowError(CMSError);
+  });
+
+  it("kind: data のコレクションは slugField 無しでも通る", () => {
+    const opts = {
+      sources: {
+        notion: {
+          collections: {
+            settings: {
+              kind: "data" as const,
+              source: { list: async () => [] },
+            },
+          },
+        },
+      },
+    };
+    expect(validateCreateClientOptions(opts)).toBe(opts);
+  });
 });
 
 describe("validateNotionSourceConfig", () => {
@@ -116,6 +146,29 @@ describe("validateNotionSourceConfig", () => {
     expect(() =>
       validateNotionSourceConfig({
         schema: { posts: { slugField: "slug", properties: {} } },
+        token: "secret",
+      }),
+    ).toThrowError(CMSError);
+  });
+
+  it("kind: data の schema entry は slugField 無しでも通る", () => {
+    const opts = {
+      schema: {
+        settings: {
+          kind: "data" as const,
+          dataSourceId: "db_id",
+          properties: {},
+        },
+      },
+      token: "secret",
+    };
+    expect(validateNotionSourceConfig(opts)).toBe(opts);
+  });
+
+  it("ページの schema entry で slugField が無いとエラー", () => {
+    expect(() =>
+      validateNotionSourceConfig({
+        schema: { posts: { dataSourceId: "db_id", properties: {} } },
         token: "secret",
       }),
     ).toThrowError(CMSError);
