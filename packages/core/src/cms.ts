@@ -77,11 +77,13 @@ export interface CMSGlobalOps {
   /**
    * Notion ページ ID を全コレクション横断で解決し、該当アイテムを単件ウォームする。
    * 公式 webhook の sparse payload（page id のみ）からミラーを再生成するために使う。
-   * 一致したコレクションと slug を返す。どのコレクションにも属さなければ `null`。
+   * 一致したコレクション名を返す。ページコレクションは `slug` も含む。
+   * URL を持たない要素コレクション（`kind: "data"`）は `slug` を含まない。
+   * どのコレクションにも属さなければ `null`。
    */
   warmByPageId(
     pageId: string,
-  ): Promise<{ collection: string; slug: string } | null>;
+  ): Promise<{ collection: string; slug?: string } | null>;
   /** Web Standard な Request/Response ベースのルートハンドラ (画像プロキシ + webhook)。 */
   handler(opts?: HandlerOptions): (req: Request) => Promise<Response>;
   getCachedImage(hash: string): Promise<StorageBinary | null>;
@@ -343,6 +345,29 @@ export function createClient<S extends CMSSources = CMSSources>(
     }
   }
 
+  // version / check は本文を持つページコレクション専用。pageImpls に無い場合、
+  // コレクション自体が存在する（= 要素コレクション）なら「version 非対応」、
+  // 存在しないなら「未知コレクション」を区別して投げる。
+  const versionUnsupportedOrUnknown = (
+    operation: string,
+    collection: string,
+    slug: string,
+  ): CMSError =>
+    collection in collectionsInput
+      ? new CMSError({
+          code: "handler/version_unsupported",
+          message: `Collection "${collection}" is a data collection (kind: "data") and does not support version polling.`,
+          context: { operation, collection, slug },
+          nextSteps: [
+            "要素コレクションは list() / get(id) のみ対応。versions / check は使わない",
+          ],
+        })
+      : new CMSError({
+          code: "handler/unknown_collection",
+          message: `Unknown collection: ${collection}`,
+          context: { operation, collection, slug },
+        });
+
   const cacheImage = cacheRes.hasImg
     ? buildCacheImageFn(cacheRes.img, cacheRes.imgName, imageProxyBase, logger)
     : undefined;
@@ -408,15 +433,20 @@ export function createClient<S extends CMSSources = CMSSources>(
     },
     async warmByPageId(pageId) {
       for (const name of collectionNames) {
-        const slug = await warmImpls[name]?.warmByPageId(pageId);
-        if (slug) {
+        const identity = await warmImpls[name]?.warmByPageId(pageId);
+        if (identity) {
+          // ページは slug を返す。要素コレクション（pageImpls に無い）は URL を
+          // 持たないため slug を付けず、id を slug に偽装しない。
+          const slug = pageImpls[name] ? identity : undefined;
           logger?.debug?.("warmByPageId: ページを再ウォーム", {
             operation: "warmByPageId",
             collection: name,
             slug,
             pageId,
           });
-          return { collection: name, slug };
+          return slug !== undefined
+            ? { collection: name, slug }
+            : { collection: name };
         }
       }
       return null;
@@ -453,22 +483,18 @@ export function createClient<S extends CMSSources = CMSSources>(
             // peekVersion は本文を持つページコレクションのみ対応。
             const client = pageImpls[collection];
             if (!client) {
-              throw new CMSError({
-                code: "handler/unknown_collection",
-                message: `Unknown collection: ${collection}`,
-                context: { operation: "peekVersionFor", collection, slug },
-              });
+              throw versionUnsupportedOrUnknown(
+                "peekVersionFor",
+                collection,
+                slug,
+              );
             }
             return client.peekVersion(slug);
           },
           async checkFor(collection, slug, currentVersion) {
             const client = pageImpls[collection];
             if (!client) {
-              throw new CMSError({
-                code: "handler/unknown_collection",
-                message: `Unknown collection: ${collection}`,
-                context: { operation: "checkFor", collection, slug },
-              });
+              throw versionUnsupportedOrUnknown("checkFor", collection, slug);
             }
             const result = await client.check(slug, currentVersion);
             // ItemWithContent は lazy 関数を含むため、HTTP には stale 判定のみ返す

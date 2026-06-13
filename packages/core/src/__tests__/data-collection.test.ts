@@ -124,4 +124,44 @@ describe("要素（データ）コレクション", () => {
     expect(a?.title).toBe("設定A");
     expect(b?.title).toBe("設定B");
   });
+
+  it("warmByPageId は要素コレクションでは slug を付けず collection のみ返す", async () => {
+    const cms = makeDataCms(async () => makeDataItems());
+    const result = await (
+      cms as unknown as {
+        warmByPageId(
+          id: string,
+        ): Promise<{ collection: string; slug?: string } | null>;
+      }
+    ).warmByPageId("page-a");
+    expect(result).toEqual({ collection: "settings" });
+    // id を slug 欄に偽装しない。
+    expect(result && "slug" in result).toBe(false);
+  });
+
+  it("要素コレクションへの versions リクエストは version_unsupported (400) を返す", async () => {
+    const cms = makeDataCms(async () => makeDataItems());
+    const handler = (
+      cms as unknown as { handler(): (req: Request) => Promise<Response> }
+    ).handler();
+    const res = await handler(
+      new Request("http://localhost/api/cms/versions/settings/anything"),
+    );
+    expect(res.status).toBe(400);
+    const body = (await res.json()) as { code?: string };
+    expect(body.code).toBe("handler/version_unsupported");
+  });
+
+  it("未知コレクションへの versions リクエストは unknown_collection (404) を返す", async () => {
+    const cms = makeDataCms(async () => makeDataItems());
+    const handler = (
+      cms as unknown as { handler(): (req: Request) => Promise<Response> }
+    ).handler();
+    const res = await handler(
+      new Request("http://localhost/api/cms/versions/nope/anything"),
+    );
+    expect(res.status).toBe(404);
+    const body = (await res.json()) as { code?: string };
+    expect(body.code).toBe("handler/unknown_collection");
+  });
 });
