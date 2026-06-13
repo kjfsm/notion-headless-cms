@@ -1,5 +1,11 @@
 # example-node-express
 
+## 0.0.59
+
+### Patch Changes
+
+- @notion-headless-cms/client@0.3.3
+
 ## 0.0.58
 
 ### Patch Changes

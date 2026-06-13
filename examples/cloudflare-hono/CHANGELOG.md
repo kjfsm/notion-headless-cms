@@ -1,5 +1,11 @@
 # example-cloudflare-hono
 
+## 0.0.54
+
+### Patch Changes
+
+- @notion-headless-cms/client@0.3.3
+
 ## 0.0.53
 
 ### Patch Changes

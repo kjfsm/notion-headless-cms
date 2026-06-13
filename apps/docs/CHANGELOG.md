@@ -1,5 +1,13 @@
 # example-docs-site
 
+## 0.0.9
+
+### Patch Changes
+
+- Updated dependencies [6e92cd2]
+  - @notion-headless-cms/react-renderer@0.1.17
+  - @notion-headless-cms/client@0.3.3
+
 ## 0.0.8
 
 ### Patch Changes
