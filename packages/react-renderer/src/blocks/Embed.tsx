@@ -36,7 +36,8 @@ function resolveEmbedSize(url: string): {
       hostname === "store.steampowered.com" &&
       pathname.startsWith("/widget/")
     ) {
-      return { width: 646, height: 190 };
+      // Steam ウィジェットは幅を指定すると埋め込み幅より狭くなるため、幅は全幅（w-full）に委ねる
+      return { height: 190 };
     }
   } catch {
     // URL parse 失敗時は既定にフォールバック
@@ -74,13 +75,13 @@ export function Embed({
   }
 
   return (
-    <figure className={className}>
+    <figure className={cn("my-4", className)}>
       <iframe
         src={url}
         title="Embed"
         width={size.width}
         height={size.height}
-        className="max-w-full"
+        className={cn("max-w-full", !size.width && "w-full")}
         sandbox={NOTION_SANDBOX}
         allowFullScreen
         loading="lazy"
