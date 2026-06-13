@@ -146,6 +146,12 @@ export interface CmsNotionConfig<S extends SchemaMap> {
   token: string;
   /** コレクション別の公開ポリシー。published/accessible は schema の status 値で型付けされる。 */
   collections?: { [K in keyof S]?: CollectionBehavior<StatusValuesOf<S[K]>> };
+  /**
+   * Notion 公式 webhook（integration の Webhooks）の検証トークン。設定すると
+   * `cms.handler()` の `POST {basePath}/notion-webhook` が署名検証つきで有効になり、
+   * 更新されたページを自動でミラー再生成する。`wrangler secret put` 等で渡し、ハードコードしない。
+   */
+  webhookSecret?: string;
 }
 
 /**
@@ -317,6 +323,9 @@ export function createCMS<S extends SchemaMap, M extends ContentMode = "html">(
     ...(cacheConfig.cache ? { cache: cacheConfig.cache } : {}),
     ...(cacheConfig.swr ? { swr: cacheConfig.swr } : {}),
     ...(cacheConfig.waitUntil ? { waitUntil: cacheConfig.waitUntil } : {}),
+    ...(opts.notion.webhookSecret
+      ? { notionWebhookSecret: opts.notion.webhookSecret }
+      : {}),
   });
 
   // 実行時オブジェクトは全アクセサを持つが、型は content モードで狭める。

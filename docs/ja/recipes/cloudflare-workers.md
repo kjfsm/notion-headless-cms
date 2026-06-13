@@ -220,6 +220,37 @@ if (url.pathname.startsWith("/api/revalidate/")) {
 - **対象の絞り込み**: リクエスト body が `{ "slug": "..." }` を含めばそのスラッグだけ、無ければコレクション全体を無効化する。不正な JSON は `webhook/payload_invalid`（400）。
 - **独自方式**: Notion の HMAC 署名検証など別方式が必要なら、`DataSource.parseWebhook` を自前実装で差し替える。
 
+## Notion 公式 webhook で「ページ更新時」に自動ウォーム（初回アクセス高速化）
+
+キャッシュが空のコールドスタートは Notion API を同期で叩くため初回が遅い。**Notion の integration「Webhooks」（無料プランでも利用可）**を使うと、ページ更新イベントを受けて該当ページだけをサーバー側で温め直せる。`createCMS` に検証トークンを渡すだけで `cms.handler()` が `POST {basePath}/notion-webhook` を自動マウントする。
+
+```ts
+const cms = createCMS({
+  notion: {
+    schema,
+    token: env.NOTION_TOKEN,
+    collections: { posts: { published: ["公開済み"] } },
+    webhookSecret: env.NOTION_WEBHOOK_SECRET, // ← これだけで /notion-webhook が有効化
+  },
+  render: { content: "react" },
+  cache: {
+    document: kvCache({ namespace: env.DOC_CACHE }),
+    image: r2Cache({ bucket: env.IMG_BUCKET }),
+    waitUntil: (p) => ctx.waitUntil(p), // 応答後にウォームを完走させる
+  },
+});
+// 既に cms.handler() を /api/* 等に配線していれば追加コードは不要
+```
+
+セットアップ手順:
+
+1. デプロイ後、Notion の integration 設定 → Webhooks で `https://<site>/api/cms/notion-webhook`（`basePath` に合わせる）を登録する。
+2. Notion が一度だけ送る `verification_token` を、エンドポイントのレスポンス本文（`{ verification_token }` を echo）または `wrangler tail` のログで確認する。
+3. その値を `wrangler secret put NOTION_WEBHOOK_SECRET` に設定し、Notion UI 側の Verify に貼って有効化する（再デプロイで反映）。
+4. 対象 DB のページを編集すると `page.content_updated` 等が届き、`entity.id` → slug を `findById`（`pages.retrieve` + parent data source 一致チェック）で解決して `cache.prime()` 相当の単件ウォームが走る。
+
+> 公式 webhook の payload は page id のみ（slug を含まない）。`findById` で fresh に解決するため、一覧キャッシュが stale でも新規公開ページを取りこぼさない。デプロイ直後の「一度も編集していない既存ページ」は対象外なので、必要なら `cms.<collection>.cache.warm()` で一度シードする。
+
 ## 画像配信ルート
 
 Notion 画像 URL は期限付きのため、core 側で SHA256 ハッシュキーに変換して R2 に永続保存する。レンダリング後の HTML 内の `<img>` は `/api/images/<hash>` に書き換わるので、同じハッシュを提供するルートを用意する。

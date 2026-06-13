@@ -70,6 +70,14 @@ export interface CMSGlobalOps {
   /** クライアント単位の trace ID (`createClient` で発行)。 */
   readonly traceId: string;
   invalidate(scope?: InvalidateScope): Promise<void>;
+  /**
+   * Notion ページ ID を全コレクション横断で解決し、該当アイテムを単件ウォームする。
+   * 公式 webhook の sparse payload（page id のみ）からミラーを再生成するために使う。
+   * 一致したコレクションと slug を返す。どのコレクションにも属さなければ `null`。
+   */
+  warmByPageId(
+    pageId: string,
+  ): Promise<{ collection: string; slug: string } | null>;
   /** Web Standard な Request/Response ベースのルートハンドラ (画像プロキシ + webhook)。 */
   handler(opts?: HandlerOptions): (req: Request) => Promise<Response>;
   getCachedImage(hash: string): Promise<StorageBinary | null>;
@@ -270,6 +278,11 @@ export function createClient<S extends CMSSources = CMSSources>(
 
   const collectionNames: string[] = [];
   const collections: Record<string, CollectionClient<BaseContentItem>> = {};
+  // warmByPageId は CollectionClient I/F に無い impl 専用メソッドを呼ぶため、具象も保持する。
+  const collectionImpls: Record<
+    string,
+    CollectionClientImpl<BaseContentItem>
+  > = {};
   for (const [name, def] of Object.entries(collectionsInput)) {
     collectionNames.push(name);
     const source = def.source as DataSource<BaseContentItem>;
@@ -308,7 +321,9 @@ export function createClient<S extends CMSSources = CMSSources>(
       waitUntil,
       slugField: def.slugField,
     };
-    collections[name] = new CollectionClientImpl(ctx);
+    const impl = new CollectionClientImpl(ctx);
+    collections[name] = impl;
+    collectionImpls[name] = impl;
   }
 
   const cacheImage = cacheRes.hasImg
@@ -374,10 +389,28 @@ export function createClient<S extends CMSSources = CMSSources>(
       });
       await cacheRes.doc.invalidate(scope ?? "all");
     },
+    async warmByPageId(pageId) {
+      for (const name of collectionNames) {
+        const slug = await collectionImpls[name]?.warmByPageId(pageId);
+        if (slug) {
+          logger?.debug?.("warmByPageId: ページを再ウォーム", {
+            operation: "warmByPageId",
+            collection: name,
+            slug,
+            pageId,
+          });
+          return { collection: name, slug };
+        }
+      }
+      return null;
+    },
     handler(handlerOpts?: HandlerOptions) {
       return createHandler(
         {
           imageCache: cacheRes.img,
+          warmByPageId: (pageId) => globalOps.warmByPageId(pageId),
+          notionWebhookSecret: opts.notionWebhookSecret,
+          scheduleBackground: waitUntil,
           async parseWebhookFor(collection, req, webhookSecret) {
             const def = collectionsInput[collection];
             if (!def) {

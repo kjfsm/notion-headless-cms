@@ -102,6 +102,12 @@ export interface CollectionCacheOps<T extends BaseContentItem> {
    * SSG ビルド前のウォームアップに利用する。
    */
   warm(opts?: WarmOptions): Promise<WarmResult>;
+
+  /**
+   * 指定 slug の1件だけを Notion から再取得し、メタ・本文キャッシュを作り直す（単件ウォーム）。
+   * webhook 受信時など、更新された1ページだけを温め直すのに使う。アイテムが存在しなければ何もしない。
+   */
+  prime(slug: string): Promise<void>;
 }
 
 /** `check()` の戻り値。差分なしか、差分ありの場合はアイテムを含む。 */

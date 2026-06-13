@@ -174,6 +174,13 @@ export interface CreateClientOptions<S extends CMSSources = CMSSources> {
   imageProxyBase?: string;
   /** Cloudflare Workers の `waitUntil` に相当する非同期処理の登録関数。 */
   waitUntil?: (p: Promise<unknown>) => void;
+  /**
+   * Notion 公式 webhook（integration の Webhooks）の検証トークン（HMAC 署名キー）。
+   * 設定すると `cms.handler()` の `POST {basePath}/notion-webhook` が署名検証つきで有効になり、
+   * 受信イベントの対象ページを `warmByPageId` で再ウォームする。
+   * `cms.handler({ notionWebhook: { secret } })` で個別上書きも可能。
+   */
+  notionWebhookSecret?: string;
   /** ライフサイクルフック (全コレクション共通)。 */
   hooks?: CMSHooks<BaseContentItem>;
   /** プラグイン配列。 */

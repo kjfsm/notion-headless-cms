@@ -81,6 +81,13 @@ export interface DataSource<T extends BaseContentItem = BaseContentItem> {
    */
   findByProp?(notionPropName: string, value: string): Promise<T | null>;
 
+  /**
+   * Notion ページ ID で1件取得する（公式 webhook の sparse payload は page id のみを送るため、
+   * `warmByPageId` がこれで slug を解決する）。
+   * 自身の data source に属さないページを渡された場合は `null` を返す実装とする。
+   */
+  findById?(pageId: string): Promise<T | null>;
+
   /** アイテム本文を ContentBlock 配列で返す。 */
   loadBlocks(item: T): Promise<ContentBlock[]>;
 
