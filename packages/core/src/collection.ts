@@ -42,9 +42,10 @@ export function collectionKey(collection: string, slug?: string): string {
 /**
  * アイテムの内部 identity（キャッシュキー・ログ用）を返す。
  * ページコレクションは slug、URL を持たない要素コレクションは id でキー管理する。
+ * slug が空文字のときも id にフォールバックし、`""` キーでの衝突を防ぐ（`??` ではなく `||`）。
  */
 export function itemKey(item: BaseContentItem): string {
-  return item.slug ?? item.id;
+  return item.slug || item.id;
 }
 
 export interface CollectionContext<T extends BaseContentItem> {
@@ -177,9 +178,10 @@ export class CollectionClientImpl<T extends BaseContentItem>
 
   async params(): Promise<string[]> {
     const items = await this.fetchList();
+    // slug を持つアイテムのみページ化対象（空文字・未設定は除外）。
     return items
       .map((item) => item.slug)
-      .filter((slug): slug is string => slug != null);
+      .filter((slug): slug is string => Boolean(slug));
   }
 
   async peekVersion(
@@ -653,7 +655,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
       item = await withRetry(() => findByProp(notionPropName, slug), retryOpts);
     } else {
       const all = await withRetry(() => this.ctx.source.list(), retryOpts);
-      item = all.find((i) => (i.slug ?? i.id) === slug) ?? null;
+      item = all.find((i) => itemKey(i) === slug) ?? null;
     }
 
     if (!item) return null;

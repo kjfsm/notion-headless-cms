@@ -621,6 +621,28 @@ describe("collectionKey", () => {
   });
 });
 
+describe("itemKey", () => {
+  it("slug があれば slug を identity に使う", async () => {
+    const { itemKey } = await import("../collection");
+    expect(
+      itemKey({ id: "page-1", slug: "my-post", lastEditedTime: "t" }),
+    ).toBe("my-post");
+  });
+
+  it("slug 未設定なら id にフォールバックする", async () => {
+    const { itemKey } = await import("../collection");
+    expect(itemKey({ id: "page-1", lastEditedTime: "t" })).toBe("page-1");
+  });
+
+  it("slug が空文字でも id にフォールバックし衝突を防ぐ", async () => {
+    const { itemKey } = await import("../collection");
+    // ?? ではなく || なので空文字は id に倒れる。
+    expect(itemKey({ id: "page-1", slug: "", lastEditedTime: "t" })).toBe(
+      "page-1",
+    );
+  });
+});
+
 describe("リトライ中のロガー", () => {
   it("list() がリトライ中に logger.warn を呼ぶ", async () => {
     const warnFn = vi.fn();

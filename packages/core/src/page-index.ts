@@ -5,8 +5,8 @@ import type { BaseContentItem } from "./types/content";
 export interface PageIndexEntry {
   /** 所属コレクション名。 */
   collection: string;
-  /** URL キー。要素コレクション（URL を持たない）のアイテムでは undefined。 */
-  slug?: string;
+  /** URL キー。要素コレクション（slug 無し）は index に含まれないため常に存在する。 */
+  slug: string;
   /** ページ名（表示テキスト用）。 */
   title?: string | null;
 }
@@ -76,12 +76,15 @@ export async function buildPageIndex(
     const items = await client.list();
     if (!Array.isArray(items)) continue;
     for (const item of items) {
+      // URL を持たない要素（slug 無し）はリンク解決対象外なので index に入れない。
+      const slug = item.slug;
+      if (slug == null) continue;
       // pageId は一意なので衝突しない前提。万一重複しても先勝ちで保持する。
       const key = normalizePageId(item.id);
       if (!index.has(key)) {
         index.set(key, {
           collection: name,
-          slug: item.slug,
+          slug,
           title: item.title,
         });
       }
@@ -133,9 +136,6 @@ export async function buildPageLinkMap(
   const toUrl = opts?.url ?? defaultUrl;
   const map: PageLinkMap = {};
   for (const [key, entry] of index) {
-    // 要素コレクション（slug 無し）はページ URL を持たないため、既定ではリンク対象外。
-    // url を明示指定した場合は呼び出し側の導出に委ねる。
-    if (entry.slug == null && !opts?.url) continue;
     map[key] = { href: toUrl(entry, key), title: entry.title };
   }
   return map;

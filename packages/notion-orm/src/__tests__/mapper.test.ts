@@ -464,6 +464,18 @@ describe("mapItemFromPropertyMap", () => {
     expect(result.id).toBeDefined();
   });
 
+  it("slugField 未指定でも properties に slug キーがあればその値を握り潰さない", () => {
+    const page = makePage({
+      Slug: { type: "rich_text", rich_text: [{ plain_text: "keep-me" }] },
+    });
+    const properties: PropertyMap = {
+      slug: { type: "richText", notion: "Slug" },
+    };
+    const result = mapItemFromPropertyMap(page as never, properties);
+    // 要素コレクションでも、ユーザーが slug 名のプロパティを定義していれば値を保持する。
+    expect(result.slug).toBe("keep-me");
+  });
+
   it("slugField が 'slug' 以外でも slug を正しく埋める", () => {
     const page = makePage({
       Permalink: { type: "rich_text", rich_text: [{ plain_text: "p-1" }] },

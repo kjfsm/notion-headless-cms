@@ -72,7 +72,6 @@ export function mapItemFromPropertyMap(
     Pick<
       BaseContentItem,
       | "id"
-      | "slug"
       | "lastEditedTime"
       | "createdAt"
       | "isArchived"
@@ -83,7 +82,6 @@ export function mapItemFromPropertyMap(
     id: page.id,
     lastEditedTime: page.last_edited_time,
     title: extractPageTitle(page),
-    slug: "",
     createdAt: page.created_time,
     isArchived: page.archived,
     isInTrash: page.in_trash,
@@ -97,8 +95,8 @@ export function mapItemFromPropertyMap(
   }
 
   if (slugField === undefined) {
-    // 要素コレクション。URL を持たないため slug を設定しない（内部 identity は id で解決される）。
-    result.slug = undefined as unknown as string;
+    // 要素コレクション。URL を持たないため slug を強制しない（内部 identity は id で解決される）。
+    // properties に "slug" キーがある場合はその値を保持する（握り潰さない）。
     return result as BaseContentItem;
   }
 
