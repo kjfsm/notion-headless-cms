@@ -26,8 +26,9 @@ export default {
       ],
       project: ["src/**/*.{ts,tsx}"],
       // mermaid は ./mermaid サブパスから動的 import される optional peer。
+      // tailwindcss は ./theme.css の @source/@theme ディレクティブ経由で参照される optional peer。
       // knip の "Referenced optional peerDependencies" 通知を抑止する。
-      ignoreDependencies: ["mermaid"],
+      ignoreDependencies: ["mermaid", "tailwindcss"],
     },
     "packages/cli": {
       entry: ["src/index.ts", "src/cli.ts"],
@@ -107,6 +108,9 @@ export default {
       // 自動検出される。それ以外で knip が拾えないエントリだけ明示する。
       entry: ["nhc.config.ts", "app/__tests__/**/*.{ts,tsx}"],
       project: ["app/**/*.{ts,tsx}", "workers/**/*.{ts,tsx}"],
+      // ./+types/* は `react-router typegen` が生成するルート型ファイル。
+      // ビルド前の静的解析では存在しないため未解決になるが、実害はない。
+      ignoreUnresolved: ["./\\+types/.*"],
       ignoreDependencies: [
         // 生成物 (app/generated/nhc.ts) が要求する間接依存（ユーザーは pnpm add するだけ）
         "@notion-headless-cms/notion-orm",
