@@ -411,6 +411,7 @@ export function createClient<S extends CMSSources = CMSSources>(
           warmByPageId: (pageId) => globalOps.warmByPageId(pageId),
           notionWebhookSecret: opts.notionWebhookSecret,
           scheduleBackground: waitUntil,
+          logger,
           async parseWebhookFor(collection, req, webhookSecret) {
             const def = collectionsInput[collection];
             if (!def) {
