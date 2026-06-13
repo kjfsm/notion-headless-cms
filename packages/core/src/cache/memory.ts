@@ -48,7 +48,6 @@ class MemoryDocumentOps implements DocumentCacheOps {
   private metas = new Map<string, CachedItemMeta<BaseContentItem>>();
   private contents = new Map<string, CachedItemContent>();
   private readonly maxItems: number | undefined;
-  /** `cms.stats()` 用のヒット/ミス集計 (list+meta+content の合計)。 */
   hits = 0;
   misses = 0;
 
@@ -56,7 +55,6 @@ class MemoryDocumentOps implements DocumentCacheOps {
     this.maxItems = options?.maxItems;
   }
 
-  /** 保持エントリ数 (list / meta / content の合計)。stats() で使う。 */
   totalEntries(): number {
     return this.lists.size + this.metas.size + this.contents.size;
   }
@@ -148,7 +146,6 @@ class MemoryDocumentOps implements DocumentCacheOps {
       // 単一スラッグ無効化ではリストは触らない（リスト全体の整合は別管理）
       return Promise.resolve();
     }
-    // コレクション全体
     if (kind === "all" || kind === "meta") {
       this.lists.delete(collection);
       const prefix = `${collection}:`;
@@ -180,13 +177,11 @@ class MemoryDocumentOps implements DocumentCacheOps {
   }
 }
 
-/** インメモリの画像オペレーション実装。 */
 class MemoryImageOps implements ImageCacheOps {
   private store = new Map<string, StorageBinary>();
   private totalBytes = 0;
   private readonly maxItems: number | undefined;
   private readonly maxSizeBytes: number | undefined;
-  /** `cms.stats()` 用のヒット/ミス集計。 */
   hits = 0;
   misses = 0;
 
@@ -206,7 +201,6 @@ class MemoryImageOps implements ImageCacheOps {
     return Promise.resolve(entry ?? null);
   }
 
-  /** stats() 用に、現在の保持エントリ数と合計バイト数を返す。 */
   snapshot(): { entries: number; sizeBytes: number } {
     return { entries: this.store.size, sizeBytes: this.totalBytes };
   }

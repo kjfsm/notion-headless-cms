@@ -159,7 +159,6 @@ describe("createNotionCLIClient: リトライロジック", () => {
     const rejectCheck = expect(promise).rejects.toThrow();
     await vi.runAllTimersAsync();
     await rejectCheck;
-    // 1回 + 4回リトライ = 5回
     expect(searchMock).toHaveBeenCalledTimes(5);
   });
 

@@ -161,14 +161,12 @@ describe("renderRichText", () => {
       const result = await renderRichText([item]);
       expect(result).toContain('class="nhc-mention nhc-mention--link"');
       expect(result).toContain('href="https://www.youtube.com/@Euphoric-Band"');
-      // アイコンは <img src="<icon_url>"> として描画される
       expect(result).toContain(
         '<img class="nhc-mention__icon nhc-mention__icon--image"',
       );
       expect(result).toContain(
         'src="https://www.youtube.com/s/desktop/40cd5ddc/img/favicon_144x144.png"',
       );
-      // プロバイダ名 (YouTube) と太字タイトルが両方含まれる
       expect(result).toContain(
         '<span class="nhc-mention__provider">YouTube</span>',
       );

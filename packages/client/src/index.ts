@@ -24,7 +24,6 @@ import type {
 import { notionSource } from "@notion-headless-cms/notion-source";
 import type { NotionBlock } from "@notion-headless-cms/react-renderer";
 
-// 上級者向けの逃がし口（escape hatch）。createCMS で足りない場合に直接組み立てる。
 export type {
   BaseContentItem,
   CacheAdapter,
@@ -150,13 +149,13 @@ export interface CmsNotionConfig<S extends SchemaMap> {
 }
 
 /**
- * render（出力先）設定。本文の取得戦略・表現・出力に関わるものを集約する。
+ * render（出力先）設定。本文の取得戦略・表現に関わるものを集約する。
+ * 画像プロキシのベース URL は `cms.handler()` の既定ルートに固定のため createCMS では設定しない
+ * （低レベルに調整したい場合は createClient の imageProxyBase を使う）。
  */
 export interface CmsRenderConfig<M extends ContentMode = "html"> {
   /** 本文モード。省略時は `"html"`。 */
   content?: M;
-  /** 画像プロキシのベース URL。既定 `/api/images`。 */
-  imageProxyBase?: string;
   /**
    * bookmark / link_preview / embed ブロックの OGP（リンクプレビュー）取得設定。
    * `content: "react"` のときのみ効く（`"html"` では無視）。
@@ -196,7 +195,7 @@ export interface CmsCacheConfig {
 /**
  * `createCMS` のオプション。データの流れ「取得 → 表現 → 永続化」で 3 グループに分ける。
  * - `notion`: 取得元（schema / token / 公開ポリシー）
- * - `render`: 出力先（本文モード / 画像プロキシ / OGP）
+ * - `render`: 出力先（本文モード / OGP）
  * - `cache`: キャッシュ戦略（document / image アダプタ / swr / waitUntil）
  */
 export interface CreateCMSOptions<
@@ -222,6 +221,14 @@ function resolveOgpOption(
   if (ogp === false) return { enabled: false };
   return ogp;
 }
+
+/**
+ * createCMS の画像プロキシのベース URL（固定）。
+ * `cms.handler()` の既定ルート (`{basePath}/images` = `/api/cms/images`) と一致させ、
+ * cacheImage が書き込む URL と handler の配信先が常に揃うようにする。
+ * createCMS では設定不可（低レベルに調整したい場合は createClient の imageProxyBase を使う）。
+ */
+const CMS_IMAGE_PROXY_BASE = "/api/cms/images";
 
 /**
  * schema（構造）と振る舞いを分離して CMS クライアントを 1 つの呼び出しで組み立てる。
@@ -305,9 +312,8 @@ export function createCMS<S extends SchemaMap, M extends ContentMode = "html">(
     },
     // html モードのみ Markdown→HTML renderer を注入する。react は notionBlocks を直接使う。
     ...(content === "html" ? { renderer: notionMarkdownRenderer } : {}),
-    ...(opts.render?.imageProxyBase
-      ? { imageProxyBase: opts.render.imageProxyBase }
-      : {}),
+    // 画像プロキシは handler の既定ルートに固定（createCMS では変更不可）。
+    imageProxyBase: CMS_IMAGE_PROXY_BASE,
     ...(cacheConfig.cache ? { cache: cacheConfig.cache } : {}),
     ...(cacheConfig.swr ? { swr: cacheConfig.swr } : {}),
     ...(cacheConfig.waitUntil ? { waitUntil: cacheConfig.waitUntil } : {}),

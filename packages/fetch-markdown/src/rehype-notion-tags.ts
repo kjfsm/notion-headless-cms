@@ -124,7 +124,6 @@ function transformMentionDate(node: Element): void {
 function transformPageLink(node: Element, kind: "page" | "database"): void {
   const url = getAttr(node, "url");
   node.tagName = "a";
-  // children を保持して見出し相当のリンクにする。
   node.properties = { className: ["nhc-link", `nhc-link-${kind}`] };
   if (url) (node.properties as Record<string, unknown>).href = url;
   setAttr(node, "data-link-type", kind);

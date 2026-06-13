@@ -70,8 +70,6 @@ export class CollectionClientImpl<T extends BaseContentItem>
     };
   }
 
-  // ── 基本取得 ──────────────────────────────────────────────────────────
-
   async find(
     slug: string,
     opts: FindOptions = {},
@@ -108,7 +106,6 @@ export class CollectionClientImpl<T extends BaseContentItem>
         await this.invalidateContentEntry(slug);
         return this.attachLazyContent(meta);
       }
-      // SWR: 即時返却しつつバックグラウンドで差分チェック
       const bg = this.checkAndUpdateItemBg(slug, cachedMeta);
       if (this.ctx.waitUntil) this.ctx.waitUntil(bg);
       this.ctx.logger?.debug?.("キャッシュヒット", {
@@ -181,8 +178,6 @@ export class CollectionClientImpl<T extends BaseContentItem>
     };
   }
 
-  // ── キャッシュ操作 ────────────────────────────────────────────────────
-
   private async invalidateImpl(): Promise<void> {
     this.ctx.logger?.debug?.("コレクション全体のキャッシュを無効化", {
       operation: "cache.invalidate",
@@ -243,8 +238,6 @@ export class CollectionClientImpl<T extends BaseContentItem>
     });
     return { ok, failed };
   }
-
-  // ── 内部 ──────────────────────────────────────────────────────────────
 
   private async persistMeta(
     slug: string,
@@ -347,7 +340,6 @@ export class CollectionClientImpl<T extends BaseContentItem>
     }) as ItemWithContent<T>;
   }
 
-  // notionBlocks() が undefined を返したときの案内を CollectionClient 単位で一度だけ出す。
   private notionBlocksWarned = false;
 
   private warnMissingNotionBlocks(): void {
@@ -362,7 +354,6 @@ export class CollectionClientImpl<T extends BaseContentItem>
   private async fetchList(): Promise<T[]> {
     const cached = await this.ctx.docCache.getList<T>(this.ctx.collection);
     if (cached) {
-      // TTL 切れはブロッキングで再取得する (find と同じ理由)
       if (
         this.ctx.ttlMs !== undefined &&
         isStale(cached.cachedAt, this.ctx.ttlMs)
@@ -571,7 +562,6 @@ export class CollectionClientImpl<T extends BaseContentItem>
     if (notionPropName && findByProp) {
       item = await withRetry(() => findByProp(notionPropName, slug), retryOpts);
     } else {
-      // PropertyMap 未提供 / findByProp 未実装の DataSource 向けフォールバック
       const all = await withRetry(() => this.ctx.source.list(), retryOpts);
       item = all.find((i) => i.slug === slug) ?? null;
     }

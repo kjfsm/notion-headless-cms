@@ -5,7 +5,6 @@ import { useNotionContext } from "../context.js";
 import { cn } from "../lib/utils.js";
 import type { BlockComponentProps } from "../types.js";
 
-// heading レベル 1..4 を視覚的にインデントするためのクラス。
 const INDENT_BY_LEVEL: Record<1 | 2 | 3 | 4, string> = {
   1: "pl-0",
   2: "pl-4",

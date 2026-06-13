@@ -77,7 +77,6 @@ describe("createFixtureClient", () => {
   it("items だけで動く CMSClient を組み立てる", async () => {
     const cms = createFixtureClient({ items: samplePosts });
     const list = await cms.posts.list();
-    // isArchived を除いた 2 件
     expect(list).toHaveLength(2);
   });
 
@@ -86,7 +85,6 @@ describe("createFixtureClient", () => {
     const post = await cms.posts.find("hello");
     if (!post) throw new Error("post not found");
     const html = await post.html();
-    // fakeRenderer は `<article>...markdown...</article>` を返す
     expect(html).toContain("<article>");
     expect(html).toContain("# Hello");
   });

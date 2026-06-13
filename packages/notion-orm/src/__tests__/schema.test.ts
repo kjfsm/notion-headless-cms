@@ -59,7 +59,6 @@ describe("defineSchema", () => {
       expect(item.slug).toBe("hello-world");
       expect(item.status).toBe("Published");
       expect(item.views).toBe(42);
-      // id と lastEditedTime は page メタデータから自動設定される
       expect(item.id).toBe("page-id-123");
       expect(item.lastEditedTime).toBe("2024-06-01T12:00:00.000Z");
     });
@@ -130,7 +129,6 @@ describe("defineSchema", () => {
         views: { type: "number", notion: "Views" },
       });
       const strictSchema = defineSchema(StrictSchema, strictMapping);
-      // views が null なので z.number() バリデーション失敗
       const page = makePage({
         Title: { type: "title", title: [{ plain_text: "Hi" }] },
         Slug: { type: "rich_text", rich_text: [{ plain_text: "hi" }] },
@@ -217,7 +215,6 @@ describe("defineSchema", () => {
       const checkSchema = defineSchema(CheckSchema, checkMapping);
       const page = makePage({
         Name: { type: "title", title: [] },
-        // Active を rich_text にすることで型ミスマッチを起こす
         Active: { type: "rich_text", rich_text: [] },
       });
       const item = checkSchema.mapItem(page as never);
@@ -335,7 +332,6 @@ describe("defineSchema", () => {
       const allTypesSchema = defineSchema(AllTypesSchema, allTypesMapping);
       const page = makePage({
         Name: { type: "title", title: [] },
-        // MissingCheck, MissingTags, MissingName は存在しない
       });
       const item = allTypesSchema.mapItem(page as never);
       expect(item.check).toBe(false);
@@ -549,7 +545,6 @@ describe("defineSchema", () => {
         defineMapping<z.infer<typeof MediaSchema>>({}),
       );
 
-      // external カバー画像
       const pageExternal = {
         ...makePage({}),
         cover: {
@@ -561,7 +556,6 @@ describe("defineSchema", () => {
         "https://example.com/cover.jpg",
       );
 
-      // file カバー画像
       const pageFile = {
         ...makePage({}),
         cover: {
@@ -573,14 +567,12 @@ describe("defineSchema", () => {
         "https://s3.example.com/cover.png",
       );
 
-      // 絵文字アイコン
       const pageEmoji = {
         ...makePage({}),
         icon: { type: "emoji", emoji: "🎉" },
       };
       expect(mediaSchema.mapItem(pageEmoji as never).iconEmoji).toBe("🎉");
 
-      // 絵文字でないアイコン → null
       const pageExternalIcon = {
         ...makePage({}),
         icon: {
@@ -592,7 +584,6 @@ describe("defineSchema", () => {
         mediaSchema.mapItem(pageExternalIcon as never).iconEmoji,
       ).toBeNull();
 
-      // 未対応カバータイプ → null
       const pageUnknownCover = {
         ...makePage({}),
         cover: { type: "unsupported" },
@@ -619,7 +610,6 @@ describe("defineSchema", () => {
         Slug: { type: "rich_text", rich_text: [{ plain_text: "my-slug" }] },
       });
       const item = sysSchema.mapItem(page as never);
-      // システムフィールドはページメタデータから取得される
       expect(item.id).toBe("page-id-123");
       expect(item.slug).toBe("my-slug");
     });

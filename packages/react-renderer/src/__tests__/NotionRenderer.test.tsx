@@ -147,9 +147,6 @@ const bullet = (id: string, text: string): NotionBlock =>
     },
   }) as unknown as NotionBlock;
 
-// narrow 型を受ける Paragraph 差し替えコンポーネント。
-// ComponentOverrides.Paragraph が narrow 型になったため as キャスト不要。
-// 子ブロックは NotionBlocks で描画することで Context が伝播するかを検証する。
 function CustomParagraph({
   block,
 }: BlockComponentProps<ParagraphBlockObjectResponse>) {
@@ -198,8 +195,6 @@ describe("NotionRenderer", () => {
     expect(container.textContent).toContain("Unsupported");
   });
 
-  // 既定の Equation は SSR では <pre> フォールバックを返し、水和後に lazy KaTeX で
-  // 置き換える。テスト環境の初期 render では katex は未ロードなので原文を含む。
   it("デフォルトの Equation は SSR では原文を <pre> で出す", () => {
     const { container } = render(
       <NotionRenderer blocks={[equation("e1", "E = mc^2")]} />,
@@ -435,7 +430,6 @@ describe("NotionRenderer", () => {
     });
   });
 
-  // Context 経由で components が子ブロック（再帰ツリー）にも伝播することを確認する。
   it("Context 経由で components が子ブロックに伝播する", () => {
     const parent = para("parent", "parent-text", [para("child", "child-text")]);
     const { container } = render(
@@ -445,7 +439,6 @@ describe("NotionRenderer", () => {
       />,
     );
     const customs = container.querySelectorAll("[data-testid='custom']");
-    // 親ブロックと子ブロック両方に CustomParagraph が適用される
     expect(customs.length).toBeGreaterThanOrEqual(2);
   });
 });

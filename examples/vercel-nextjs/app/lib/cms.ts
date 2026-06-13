@@ -15,7 +15,8 @@ export const cms = createCMS({
       },
     },
   },
-  render: { content: "html", imageProxyBase: "/api/cms/images" },
+  render: { content: "html" },
+  // 画像プロキシは /api/cms/images に固定（createNextHandler が同パスで配信する）。
   cache: {
     document: nextCache({ tags: ["posts"] }),
     image: memoryCache(),

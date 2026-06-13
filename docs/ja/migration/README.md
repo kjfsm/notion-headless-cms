@@ -24,8 +24,8 @@
 | `token` | `notion.token` | |
 | `collections` | `notion.collections` | |
 | `content` | `render.content` | 省略時 `"html"` |
-| `imageProxyBase` | `render.imageProxyBase` | 省略可 |
 | `ogp` | `render.ogp` | 省略可（`react` モードのみ有効） |
+| `imageProxyBase` | （廃止） | createCMS では `/api/cms/images` に固定（`cms.handler()` の既定ルートと一致）。低レベルに変えたい場合のみ `createClient({ imageProxyBase })` |
 | `runtime` | `cache`（下記参照） | フィールド廃止 |
 
 `render` グループが空になる（`content` 既定が `"html"` で他も未指定）場合は `render` ごと省略してよい。
@@ -64,7 +64,7 @@
 #### 移行手順
 
 1. `schema` / `token` / `collections` を `notion: { ... }` の中へ移す。
-2. `content` / `imageProxyBase` / `ogp` を `render: { ... }` の中へ移す（空なら省略）。
+2. `content` / `ogp` を `render: { ... }` の中へ移す（空なら省略）。`imageProxyBase` は廃止（`/api/cms/images` 固定）なので削除する。
 3. `runtime` を上記ルールで `cache` グループへ展開し、`cloudflarePreset` の import を
    `kvCache` / `r2Cache` の import に置き換える。
 4. `cache.swr.ttlMs`（既定 5 分）や `cache.waitUntil` も `cache` グループの中で指定する。

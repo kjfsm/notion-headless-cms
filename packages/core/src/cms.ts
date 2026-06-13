@@ -33,7 +33,6 @@ import type {
 
 const DEFAULT_IMAGE_PROXY_BASE = "/api/images";
 
-/** コレクション別アクセス + グローバル操作の合成型。 */
 export type CMSClient<C extends CollectionsConfig> = {
   [K in keyof C]: CollectionClient<InferCollectionItem<C[K]>>;
 } & CMSGlobalOps;
@@ -198,7 +197,6 @@ export function createClient<S extends CMSSources = CMSSources>(
     ? MergeSourceCollections<S>
     : CollectionsConfig
 > {
-  // sources の各アダプタが持つ collections をマージする
   const collectionsInput: CollectionsConfig = {};
   if (opts.sources) {
     for (const adapter of Object.values(
@@ -250,8 +248,6 @@ export function createClient<S extends CMSSources = CMSSources>(
   const contentConfig = opts.content;
   const rendererFn: RendererFn | undefined = opts.renderer;
   const waitUntil = opts.waitUntil;
-  // plugin logger と createClient 引数の logger を合成し、その上でクライアント単位の
-  // traceId をログコンテキストに自動付与する。
   const baseLogger: Logger | undefined = mergeLoggers(
     opts.plugins ?? [],
     opts.logger,
@@ -402,6 +398,31 @@ export function createClient<S extends CMSSources = CMSSources>(
             return ds.parseWebhook(req, { secret: webhookSecret });
           },
           revalidate: (scope) => globalOps.invalidate(scope),
+          peekVersionFor(collection, slug) {
+            const client = collections[collection];
+            if (!client) {
+              throw new CMSError({
+                code: "handler/unknown_collection",
+                message: `Unknown collection: ${collection}`,
+                context: { operation: "peekVersionFor", collection, slug },
+              });
+            }
+            return client.peekVersion(slug);
+          },
+          async checkFor(collection, slug, currentVersion) {
+            const client = collections[collection];
+            if (!client) {
+              throw new CMSError({
+                code: "handler/unknown_collection",
+                message: `Unknown collection: ${collection}`,
+                context: { operation: "checkFor", collection, slug },
+              });
+            }
+            const result = await client.check(slug, currentVersion);
+            // ItemWithContent は lazy 関数を含むため、HTTP には stale 判定のみ返す
+            // （差分ありの場合 check() が副作用でキャッシュ更新済み。利用側は loader 再実行で本文取得）。
+            return result === null ? null : { stale: result.stale };
+          },
         },
         handlerOpts,
       );

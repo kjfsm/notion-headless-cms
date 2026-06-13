@@ -37,7 +37,6 @@ function run<T>(
           err instanceof Error ? err.message : String(err),
         );
       }
-      // debug は stack も出す。
       if (opts.debug && err instanceof Error && err.stack) {
         console.error("\nスタックトレース:\n", err.stack);
         if (isCMSError(err) && err.cause instanceof Error && err.cause.stack) {

@@ -56,7 +56,6 @@ describe("画像キャッシュの 1 時間失効耐性 (Issue #309 / S5)", () =
       makeResponse(200, new ArrayBuffer(8), "image/jpeg"),
     );
 
-    // Notion 署名 URL は 1 回だけフェッチされ、SHA256 キーでキャッシュされる。
     const url = "https://prod-files-secure.s3.amazonaws.com/abc/signed.jpg";
     const first = await cacheImage(url);
     expect(first).toMatch(/^\/api\/images\//);
@@ -85,7 +84,6 @@ describe("画像キャッシュの 1 時間失効耐性 (Issue #309 / S5)", () =
     await cacheImage("https://example.com/a.webp");
     vi.advanceTimersByTime(ONE_HOUR_MS + 5000);
 
-    // 別 URL (異なる SHA256 キー) は新規 fetch される。
     await cacheImage("https://example.com/b.webp");
 
     expect(globalThis.fetch).toHaveBeenCalledTimes(2);

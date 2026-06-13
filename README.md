@@ -57,7 +57,7 @@ npx nhc generate
 
 `createCMS` 一本で組み立てる。引数はデータの流れ「**取得 → 表現 → 永続化**」で
 3 グループに分かれる：**`notion`（取得元: schema / token / 公開ポリシー）**、
-**`render`（出力先: content / 画像プロキシ / OGP）**、**`cache`（キャッシュ戦略）**。
+**`render`（出力先: content / OGP）**、**`cache`（キャッシュ戦略）**。
 
 ```ts
 // src/lib/cms.ts
@@ -261,7 +261,7 @@ export const cms = createCMS({
     token: process.env.NOTION_TOKEN!,
     collections: { posts: { published: ["公開済み"] } },
   },
-  render: { content: "html", imageProxyBase: "/api/cms/images" },
+  render: { content: "html" },
   // document は Next.js の ISR、image は in-process メモリ
   cache: {
     document: nextCache({ tags: ["posts"] }),
@@ -280,7 +280,7 @@ export const GET = handler;
 export const POST = handler;
 ```
 
-このハンドラは画像プロキシ (`/api/cms/images/:hash`) と Webhook (`/api/cms/revalidate`) の 2 ルートをまとめて受ける。Notion 画像 URL は約 1 時間で失効するため、`cms` 経由で生成された HTML 内の画像はこのプロキシ URL (`{imageProxyBase}/{sha256}`、デフォルト `/api/images`) に書き換えられ、キャッシュから配信される。
+このハンドラは画像プロキシ (`/api/cms/images/:hash`) と Webhook (`/api/cms/revalidate`) の 2 ルートをまとめて受ける。Notion 画像 URL は約 1 時間で失効するため、`cms` 経由で生成された HTML 内の画像はこのプロキシ URL (`/api/cms/images/{sha256}`) に書き換えられ、キャッシュから配信される。
 
 ハンドラを使わず個別の route で受けたい場合のサンプル:
 
@@ -304,7 +304,7 @@ export async function GET(
 }
 ```
 
-`createCMS({ render: { imageProxyBase: "/api/cms/images" } })` のように base を変えた場合は、route のパスも合わせて変更する。
+`createCMS` の画像プロキシは `/api/cms/images` に固定されており、`createNextHandler(cms)` が同じパスで配信する（個別 route の自前実装は不要）。
 
 ---
 

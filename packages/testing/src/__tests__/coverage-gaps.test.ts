@@ -79,7 +79,6 @@ describe("createFakeNotionSource — オプショナル経路のカバレッジ"
           id: "1",
           slug: "a",
           lastEditedTime: "2024-01-01",
-          // slug 以外のフィールドを検索対象にする
           extra: "match-me",
         } as BaseContentItem & { extra: string },
         {

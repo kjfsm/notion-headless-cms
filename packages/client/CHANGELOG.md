@@ -1,5 +1,25 @@
 # @notion-headless-cms/client
 
+## 0.3.0
+
+### Minor Changes
+
+- a2016b5: `createCMS` の `imageProxyBase` オプションを廃止し、`/api/cms/images` に固定する。`cms.handler()` の既定ルート（`{basePath}/images` = `/api/cms/images`）と常に一致するため、`api.cms.$.ts` に `cms.handler()` を 1 枚マウントすれば画像配信もまとめて賄える（cacheImage の書き込み先と handler の配信先がズレる設定ミスを排除）。
+
+  破壊的変更: これまで `createCMS({ imageProxyBase })` を指定していた場合は型エラーになる。低レベルに調整したい場合は `createClient({ imageProxyBase })`（既定 `/api/images`）を使う。既定値も `/api/images` → `/api/cms/images` に変わるため、画像配信ルートは `/api/cms` 配下（`cms.handler()`）へ寄せること。
+
+### Patch Changes
+
+- Updated dependencies [a2016b5]
+- Updated dependencies [d0c8f31]
+- Updated dependencies [a2016b5]
+  - @notion-headless-cms/core@0.5.2
+  - @notion-headless-cms/react-renderer@0.1.16
+  - @notion-headless-cms/cache@0.1.2
+  - @notion-headless-cms/notion-source@0.2.3
+  - @notion-headless-cms/fetch-blocks@0.0.8
+  - @notion-headless-cms/fetch-markdown@0.0.6
+
 ## 0.2.3
 
 ### Patch Changes

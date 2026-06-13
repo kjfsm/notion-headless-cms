@@ -36,8 +36,6 @@ import type {
   CollectionsConfig,
 } from "@notion-headless-cms/core/source-author";
 
-// --- fake DataSource ------------------------------------------------------
-
 /** 1 コレクションぶんの fake 設定。 */
 export interface FakeCollectionConfig<
   T extends BaseContentItem = BaseContentItem,
@@ -142,7 +140,6 @@ function makeFakeDataSource<T extends BaseContentItem>(
     },
     findByProp: (prop, value) => {
       if (prop !== slugField && prop !== "slug") {
-        // fake は slug 以外のプロパティ検索を素朴に走査する
         for (const it of items) {
           const v = (it as unknown as Record<string, unknown>)[prop];
           if (v === value) return Promise.resolve(it);
@@ -170,8 +167,6 @@ function makeFakeDataSource<T extends BaseContentItem>(
         : xs.map((it) => it.lastEditedTime).reduce((a, b) => (a > b ? a : b)),
   } satisfies DataSource<T>;
 }
-
-// --- fake CacheAdapter ----------------------------------------------------
 
 /** `createFakeCache()` のオプション。 */
 export interface CreateFakeCacheOptions {
@@ -286,8 +281,6 @@ export function createFakeCache(
     dump: () => ({ lists, metas, contents, images }),
   };
 }
-
-// --- fixture client -------------------------------------------------------
 
 /** テスト用の最小 renderer。markdown をそのまま `<article>` で囲んで返す。 */
 export const fakeRenderer: RendererFn = (markdown) =>

@@ -1,7 +1,3 @@
-// Cloudflare R2 / KV の最小インターフェース。
-// 実装詳細は @cloudflare/workers-types に依存せず、構造的サブタイプで互換にする。
-// Workers の R2Bucket / KVNamespace はそのまま渡せる。
-
 /** R2 オブジェクトの最小インターフェース。 */
 export interface R2ObjectLike {
   json<T>(): Promise<T>;

@@ -33,7 +33,6 @@ export function LinkPreview({
     );
   }
 
-  // ogp 未取得時は inline リンク + HoverCard で URL のみ表示
   const LinkComp = (LinkSlot ?? "a") as ElementType<
     React.AnchorHTMLAttributes<HTMLAnchorElement>
   >;

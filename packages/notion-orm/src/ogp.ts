@@ -1,6 +1,3 @@
-// 埋め込み URL から OGP メタデータを抽出するユーティリティ。
-// HTML パースには linkedom を使う（Cloudflare Workers / Node 互換、軽量）。
-
 import type { ImageCacheOps, Logger } from "@notion-headless-cms/core";
 import { sha256Hex } from "@notion-headless-cms/core";
 import { parseHTML } from "linkedom";
@@ -110,8 +107,6 @@ export interface OgpImageCacheBinding {
   /** デバッグ表示用のキャッシュ名。 */
   cacheName?: string;
 }
-
-// ── KV / R2 ファクトリ ──────────────────────────────────────────────────────
 
 /** `createKvOgpCache` に渡す KV バインディングの最小インターフェース。Cloudflare Workers の `KVNamespace` と構造互換。 */
 export interface KvOgpStore {

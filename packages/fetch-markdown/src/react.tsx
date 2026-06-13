@@ -96,10 +96,6 @@ export function Renderer(props: RendererProps): ReactNode {
   return props.className ? <div className={props.className}>{tree}</div> : tree;
 }
 
-// ──────────────────────────────────────────────────────────────────────────────
-// 既定の Notion 独自タグ用コンポーネント
-// ──────────────────────────────────────────────────────────────────────────────
-
 type AnyProps = Record<string, unknown> & { children?: ReactNode };
 
 function NotionCallout(props: AnyProps): ReactNode {
@@ -200,7 +196,6 @@ function NotionTOC(): ReactNode {
 }
 
 function NotionSpan(props: AnyProps): ReactNode {
-  // <span color="red"> や <span underline="true"> を class に正規化。
   const { color, underline, children, ...rest } = props;
   const cls: string[] = [];
   if (typeof color === "string") cls.push(`nhc-color-${color}`);

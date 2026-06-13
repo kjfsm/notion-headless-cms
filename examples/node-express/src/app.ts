@@ -18,7 +18,8 @@ app.get("/posts/:slug", async (req, res) => {
   res.json({ html, item: post });
 });
 
-app.get("/api/images/:hash", async (req, res) => {
+// 画像プロキシ。createCMS は画像 URL を /api/cms/images/<hash> に固定するため、同じパスで配信する。
+app.get("/api/cms/images/:hash", async (req, res) => {
   const binary = await cms.getCachedImage(req.params.hash);
   if (!binary) {
     res.status(404).send("Not Found");

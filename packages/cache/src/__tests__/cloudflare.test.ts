@@ -8,8 +8,6 @@ import {
 } from "../cloudflare";
 import type { KVNamespaceLike, R2BucketLike, R2ObjectLike } from "../types";
 
-// ── In-memory fake KV / R2 ───────────────────────────────────────────────
-
 const inMemoryKV = (): KVNamespaceLike => {
   const store = new Map<string, string>();
   return {
@@ -78,16 +76,12 @@ const inMemoryBucket = (): R2BucketLike => {
   };
 };
 
-// ── 共通フィクスチャ ────────────────────────────────────────────────────
-
 const meta = (slug: string, lastEdited = "2024-01-01"): CachedItemMeta =>
   ({
     item: { id: `id-${slug}`, slug, lastEditedTime: lastEdited },
     notionUpdatedAt: lastEdited,
     cachedAt: 1700000000000,
   }) as unknown as CachedItemMeta;
-
-// ── cloudflarePreset ────────────────────────────────────────────────────
 
 describe("cloudflarePreset", () => {
   it("env.DOC_CACHE / env.IMG_BUCKET から cache 配列を生成する", () => {
@@ -155,8 +149,6 @@ describe("cloudflarePreset", () => {
   });
 });
 
-// ── cloudflareCache ─────────────────────────────────────────────────────
-
 describe("cloudflareCache", () => {
   it("docCache のみで kv アダプタだけ返す", () => {
     const adapters = cloudflareCache({ docCache: inMemoryKV() });
@@ -170,8 +162,6 @@ describe("cloudflareCache", () => {
     expect(adapters[0]?.name).toBe("r2");
   });
 });
-
-// ── kvCache (KV document ops) ───────────────────────────────────────────
 
 describe("kvCache", () => {
   const setupAdapter = () => {
@@ -267,8 +257,6 @@ describe("kvCache", () => {
     expect(await b?.getMeta("posts", "hello")).toBeNull();
   });
 });
-
-// ── r2Cache (R2 image ops + 任意の document ops) ────────────────────────
 
 describe("r2Cache", () => {
   it("既定では image のみ担当する", () => {

@@ -101,7 +101,6 @@ describe("notionMarkdownRenderer", () => {
   });
 
   it("未知のハイフン区切りタグには nhc-<tag> クラスのみ付与する", async () => {
-    // remark の inline tag は p の中に来る。
     const md = "<custom-tag>x</custom-tag>\n";
     const html = await notionMarkdownRenderer(md);
     expect(html).toContain("nhc-custom-tag");

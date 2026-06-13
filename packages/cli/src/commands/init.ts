@@ -79,7 +79,6 @@ const TEMPLATES: Record<string, TemplateDef> = {
 
 const DEFAULT_TEMPLATE = "node";
 
-/** テンプレートに応じた `nhc.config.ts` の内容を組み立てる。 */
 function buildConfig(def: TemplateDef): string {
   const dotenvLine = def.useDotenv ? 'import "dotenv/config";\n' : "";
   return `${dotenvLine}import { defineConfig, env } from "@notion-headless-cms/cli";

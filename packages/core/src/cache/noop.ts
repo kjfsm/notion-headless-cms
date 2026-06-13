@@ -8,7 +8,6 @@ import type {
   StorageBinary,
 } from "../types/index";
 
-/** 何もキャッシュしないドキュメントオペレーション。常に null を返す。 */
 const noopDoc: DocumentCacheOps = {
   getList<T extends BaseContentItem>(
     _collection: string,
@@ -52,7 +51,6 @@ const noopDoc: DocumentCacheOps = {
   },
 };
 
-/** 何もキャッシュしない画像オペレーション。 */
 const noopImg: ImageCacheOps = {
   get(_hash: string): Promise<StorageBinary | null> {
     return Promise.resolve(null);

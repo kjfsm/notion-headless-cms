@@ -53,12 +53,8 @@ export default function Post({ loaderData }: Route.ComponentProps) {
   const { blocks, pageLinks, item } = loaderData;
   return (
     <article>
-      <NotionRevalidator
-        poll={{
-          url: `/api/posts/${item.slug}/check`,
-          version: item.lastEditedTime,
-        }}
-      />
+      {/* collection と item から poll URL(/api/cms/versions/...) と version を自動導出する */}
+      <NotionRevalidator poll={{ collection: "posts", item }} />
       <h1>{item.title ?? item.slug}</h1>
       {item.publishedAt && <time>{item.publishedAt}</time>}
       <Renderer blocks={blocks} pageLinks={pageLinks} />

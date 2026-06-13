@@ -73,5 +73,5 @@ content モードでアクセサ型が切り替わるため、`"html"` で `noti
 |---|---|
 | DB 構造（id / properties / slugField / statusField） | `schema`（`nhc generate`） |
 | 取得元（schema / token / 公開ポリシー） | `createCMS({ notion })` |
-| 出力先（content / 画像プロキシ / OGP） | `createCMS({ render })` |
+| 出力先（content / OGP） | `createCMS({ render })` |
 | キャッシュ戦略（document / image / swr / waitUntil） | `createCMS({ cache })` |

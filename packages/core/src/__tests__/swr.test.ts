@@ -71,11 +71,9 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
     const result = await cms.posts.find("my-post");
 
-    // TTL 期限切れ → ブロッキングで最新データが返される
     expect(result).not.toBeNull();
     expect(result?.lastEditedTime).toBe("2024-01-02T00:00:00Z");
 
-    // ブロッキングフェッチなのでバックグラウンド Promise は渡されない
     expect(waitUntil).not.toHaveBeenCalled();
   });
 
@@ -109,7 +107,6 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
     });
 
-    // TTL 未設定（永続キャッシュ）
     const cms = createClient({
       sources: {
         mock: { collections: { posts: { source, slugField: "slug" } } },
@@ -121,14 +118,11 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
     const result = await cms.posts.find("my-post");
 
-    // キャッシュが即時返される
     expect(result).not.toBeNull();
     expect(result?.lastEditedTime).toBe("2024-01-01T00:00:00Z");
 
-    // バックグラウンド差分チェックの Promise が waitUntil に渡されている
     expect(capturedPromises.length).toBeGreaterThan(0);
 
-    // バックグラウンド処理を待つ → 更新あり → キャッシュが新しいアイテムで更新される
     await Promise.all(capturedPromises);
     const updated = await cache.doc?.getMeta<BaseContentItem>(
       "posts",
@@ -167,7 +161,6 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
     });
 
-    // TTL 未設定（永続キャッシュ）
     const cms = createClient({
       sources: {
         mock: { collections: { posts: { source, slugField: "slug" } } },
@@ -179,11 +172,9 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
     const items = await cms.posts.list();
 
-    // キャッシュが即時返される
     expect(items).toHaveLength(1);
     expect(items[0]?.lastEditedTime).toBe("2024-01-01T00:00:00Z");
 
-    // バックグラウンド差分チェックの Promise が waitUntil に渡されている
     expect(capturedPromises.length).toBeGreaterThan(0);
   });
 
@@ -225,10 +216,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
     const items = await cms.posts.list();
 
-    // TTL 期限切れ → ブロッキングで最新リストが返される
     expect(items).toHaveLength(2);
 
-    // ブロッキングフェッチなのでバックグラウンド Promise は渡されない
     expect(waitUntil).not.toHaveBeenCalled();
   });
 
@@ -540,7 +529,6 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
     await cms.posts.find("my-post");
 
-    // 期限内でもバックグラウンド差分チェックは行われる
     expect(capturedPromises.length).toBeGreaterThan(0);
   });
 
@@ -574,7 +562,6 @@ describe("SWR（Stale-While-Revalidate）", () => {
 
     await cms.posts.list();
     await Promise.all(capturedPromises);
-    // エラーなく完了することを確認
     expect(capturedPromises.length).toBeGreaterThan(0);
   });
 });
