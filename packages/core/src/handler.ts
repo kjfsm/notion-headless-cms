@@ -1,5 +1,5 @@
 import { isCMSError } from "./errors";
-import type { ImageCacheOps, InvalidateScope } from "./types/index";
+import type { ImageCacheOps, InvalidateScope, Logger } from "./types/index";
 
 export interface HandlerOptions {
   /** マウントするベースパス。デフォルト `/api/cms`。 */
@@ -75,6 +75,8 @@ export interface HandlerAdapter {
   notionWebhookSecret?: string;
   /** 応答送信後もウォームを完走させる実行フック (Cloudflare の `waitUntil` 相当)。 */
   scheduleBackground?: (p: Promise<unknown>) => void;
+  /** webhook 受信・キャッシュ更新のログ出力先。 */
+  logger?: Logger;
 }
 
 const DEFAULT_OPTS = {
@@ -299,12 +301,25 @@ export function createHandler(
         return jsonResponse({ ok: true, skipped: "no page entity" }, 200);
       }
 
+      const doWarm = async () => {
+        const result = await adapter.warmByPageId(pageId);
+        if (result) {
+          adapter.logger?.info?.("notion webhook: キャッシュ更新完了", {
+            operation: "notionWebhook",
+            pageId,
+            collection: result.collection,
+            slug: result.slug,
+          });
+        }
+        return result;
+      };
+
       // 応答は即返し、ウォームは可能なら waitUntil でバックグラウンド完走させる。
       if (adapter.scheduleBackground) {
-        adapter.scheduleBackground(adapter.warmByPageId(pageId));
+        adapter.scheduleBackground(doWarm());
         return jsonResponse({ ok: true, pageId }, 200);
       }
-      const result = await adapter.warmByPageId(pageId);
+      const result = await doWarm();
       return jsonResponse({ ok: true, pageId, result }, 200);
     }
 

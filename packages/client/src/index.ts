@@ -4,6 +4,8 @@ import type {
   CMSGlobalOps,
   CollectionClient,
   FindOptions,
+  Logger,
+  LogLevel,
   SWRConfig,
 } from "@notion-headless-cms/core";
 import { createClient, nodePreset } from "@notion-headless-cms/core";
@@ -31,6 +33,9 @@ export type {
   CMSGlobalOps,
   CreateClientOptions,
   ItemWithContent,
+  LogContext,
+  Logger,
+  LogLevel,
   MemoryCacheOptions,
   PageLinkMap,
   ResolvedPageLink,
@@ -228,6 +233,19 @@ export interface CreateCMSOptions<
   render?: CmsRenderConfig<M>;
   /** キャッシュ戦略設定。省略時は node 既定（memoryCache + swr 5 分）。 */
   cache?: CmsCacheConfig;
+  /**
+   * ログ出力先。未指定ならログを出力しない。
+   *
+   * @example
+   * ```ts
+   * createCMS({
+   *   logger: { info: console.log, warn: console.warn, error: console.error },
+   * });
+   * ```
+   */
+  logger?: Logger;
+  /** logger の出力レベル下限。指定レベル未満のログを抑制する。デフォルトは全レベル出力。 */
+  logLevel?: LogLevel;
 }
 
 /**
@@ -340,6 +358,8 @@ export function createCMS<S extends SchemaMap, M extends ContentMode = "html">(
     ...(opts.notion.webhookSecret
       ? { notionWebhookSecret: opts.notion.webhookSecret }
       : {}),
+    ...(opts.logger ? { logger: opts.logger } : {}),
+    ...(opts.logLevel ? { logLevel: opts.logLevel } : {}),
   });
 
   // onVerificationToken が指定されていれば handler() に自動注入する。
