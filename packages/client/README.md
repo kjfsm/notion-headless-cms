@@ -19,10 +19,13 @@ import { createCMS } from "@notion-headless-cms/client";
 import { schema } from "./generated/nhc";
 
 export const cms = createCMS({
-  schema,
-  token: process.env.NOTION_TOKEN!,
-  content: "html", // "html" | "react"（取得戦略 + renderer を内部結線）
-  collections: { posts: { published: ["公開済み"] } },
+  notion: {
+    schema,
+    token: process.env.NOTION_TOKEN!,
+    collections: { posts: { published: ["公開済み"] } },
+  },
+  render: { content: "html" }, // "html" | "react"（取得戦略 + renderer を内部結線）
+  // cache 省略時は in-process memory が既定（document / image 兼用）
 });
 
 const posts = await cms.posts.list();
@@ -32,19 +35,25 @@ const html = await post?.html();
 
 ## 使い方（Cloudflare / Next）
 
-`runtime` に各 preset の戻り値を渡す。
+`cache` に役割別（document / image）でアダプタを明示する。
 
 ```ts
 import { createCMS } from "@notion-headless-cms/client";
-import { cloudflarePreset } from "@notion-headless-cms/cache/cloudflare";
+import { kvCache, r2Cache } from "@notion-headless-cms/client/cloudflare";
 
 export const makeCms = (env: Env, ctx: ExecutionContext) =>
   createCMS({
-    schema,
-    token: env.NOTION_TOKEN,
-    content: "react",
-    runtime: cloudflarePreset({ env, ctx }),
-    collections: { posts: { published: ["公開済み"] } },
+    notion: {
+      schema,
+      token: env.NOTION_TOKEN,
+      collections: { posts: { published: ["公開済み"] } },
+    },
+    render: { content: "react" },
+    cache: {
+      document: kvCache({ namespace: env.DOC_CACHE }),
+      image: r2Cache({ bucket: env.IMG_BUCKET }),
+      waitUntil: (p) => ctx.waitUntil(p),
+    },
   });
 ```
 
@@ -63,4 +72,6 @@ content モードでアクセサ型が切り替わるため、`"html"` で `noti
 | 情報 | 住所 |
 |---|---|
 | DB 構造（id / properties / slugField / statusField） | `schema`（`nhc generate`） |
-| token / content / 公開ポリシー / ランタイム | `createCMS` の引数 |
+| 取得元（schema / token / 公開ポリシー） | `createCMS({ notion })` |
+| 出力先（content / 画像プロキシ / OGP） | `createCMS({ render })` |
+| キャッシュ戦略（document / image / swr / waitUntil） | `createCMS({ cache })` |

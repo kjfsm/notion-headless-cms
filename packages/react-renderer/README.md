@@ -226,7 +226,7 @@ export default function Post() {
 }
 ```
 
-内部で `useRevalidator()` を呼び loader を再走させる。サーバ側で `cloudflarePreset({ env, ctx })` 等により `waitUntil` が配線されていれば、前回訪問時の SWR bg 更新で KV が最新化されており、再呼び出しで新内容が返って画面が差し替わる。
+内部で `useRevalidator()` を呼び loader を再走させる。サーバ側で `createCMS({ cache: { waitUntil: (p) => ctx.waitUntil(p) } })` のように `waitUntil` が配線されていれば、前回訪問時の SWR bg 更新で KV が最新化されており、再呼び出しで新内容が返って画面が差し替わる。
 
 ### Next.js App Router
 

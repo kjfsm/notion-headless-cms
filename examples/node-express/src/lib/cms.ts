@@ -7,13 +7,15 @@ if (!token) {
 }
 
 export const cms = createCMS({
-  schema,
-  token,
-  content: "html",
-  collections: {
-    posts: {
-      published: ["公開済み"],
-      accessible: ["下書き", "編集中", "公開済み"],
+  notion: {
+    schema,
+    token,
+    collections: {
+      posts: {
+        published: ["公開済み"],
+        accessible: ["下書き", "編集中", "公開済み"],
+      },
     },
   },
+  render: { content: "html" },
 });

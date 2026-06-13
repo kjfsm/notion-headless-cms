@@ -55,8 +55,9 @@ npx nhc generate
 
 ### 4. クライアント作成
 
-`createCMS` 一本で組み立てる。**DB 構造は `schema`（生成物）、それ以外の振る舞い
-（token / content / 公開ポリシー / ランタイム）は引数**で指定する。
+`createCMS` 一本で組み立てる。引数はデータの流れ「**取得 → 表現 → 永続化**」で
+3 グループに分かれる：**`notion`（取得元: schema / token / 公開ポリシー）**、
+**`render`（出力先: content / 画像プロキシ / OGP）**、**`cache`（キャッシュ戦略）**。
 
 ```ts
 // src/lib/cms.ts
@@ -64,13 +65,16 @@ import { createCMS } from "@notion-headless-cms/client";
 import { schema } from "./generated/nhc.js";
 
 export const cms = createCMS({
-  schema,
-  token: process.env.NOTION_TOKEN!,
-  content: "html", // "html" | "react"（取得戦略 + renderer を内部結線）
-  collections: {
-    // published の値は schema の status options で型補完される
-    posts: { published: ["公開済み"] },
+  notion: {
+    schema,
+    token: process.env.NOTION_TOKEN!,
+    collections: {
+      // published の値は schema の status options で型補完される
+      posts: { published: ["公開済み"] },
+    },
   },
+  render: { content: "html" }, // "html" | "react"（取得戦略 + renderer を内部結線）
+  // cache 省略時は in-process memory が既定（document / image 兼用）
 });
 ```
 
@@ -108,19 +112,26 @@ pnpm add @notionhq/client zod notion-to-md
 ```ts
 // src/lib/cms.ts
 import { createCMS } from "@notion-headless-cms/client";
-import { cloudflarePreset } from "@notion-headless-cms/client/cloudflare";
+import { kvCache, r2Cache } from "@notion-headless-cms/client/cloudflare";
 import { schema } from "../generated/nhc";
 
 export function makeCms(
-  env: { NOTION_TOKEN: string; DOC_CACHE?: KVNamespace; IMG_BUCKET?: R2Bucket },
+  env: { NOTION_TOKEN: string; DOC_CACHE: KVNamespace; IMG_BUCKET: R2Bucket },
   ctx: ExecutionContext,
 ) {
   return createCMS({
-    schema,
-    token: env.NOTION_TOKEN,
-    content: "html",
-    runtime: cloudflarePreset({ env, ctx }),
-    collections: { posts: { published: ["公開済み"] } },
+    notion: {
+      schema,
+      token: env.NOTION_TOKEN,
+      collections: { posts: { published: ["公開済み"] } },
+    },
+    render: { content: "html" },
+    // document=KV / image=R2 を役割別に明示。どの binding がどのキャッシュか一目で分かる。
+    cache: {
+      document: kvCache({ namespace: env.DOC_CACHE }),
+      image: r2Cache({ bucket: env.IMG_BUCKET }),
+      waitUntil: (p) => ctx.waitUntil(p),
+    },
   });
 }
 ```
@@ -140,23 +151,29 @@ pnpm add @notionhq/client zod notion-to-md react react-dom react-router
 ```ts
 // app/lib/cms.ts — env / ctx を受け取って CMS を作る
 import { createCMS } from "@notion-headless-cms/client";
-import { cloudflarePreset } from "@notion-headless-cms/client/cloudflare";
+import { kvCache, r2Cache } from "@notion-headless-cms/client/cloudflare";
 import { schema } from "../generated/nhc";
 
 export interface Env {
   NOTION_TOKEN: string;
-  DOC_CACHE?: KVNamespace;
-  IMG_BUCKET?: R2Bucket;
+  DOC_CACHE: KVNamespace;
+  IMG_BUCKET: R2Bucket;
 }
 
 export function makeCms(env: Env, ctx: ExecutionContext) {
   return createCMS({
-    schema,
-    token: env.NOTION_TOKEN,
+    notion: {
+      schema,
+      token: env.NOTION_TOKEN,
+      collections: { posts: { published: ["公開済み"] } },
+    },
     // content: "react" は blocks 取得戦略。loader で notionBlocks() を React 描画する。
-    content: "react",
-    runtime: cloudflarePreset({ env, ctx }),
-    collections: { posts: { published: ["公開済み"] } },
+    render: { content: "react" },
+    cache: {
+      document: kvCache({ namespace: env.DOC_CACHE }),
+      image: r2Cache({ bucket: env.IMG_BUCKET }),
+      waitUntil: (p) => ctx.waitUntil(p),
+    },
   });
 }
 ```
@@ -234,19 +251,22 @@ pnpm add @notionhq/client zod notion-to-md
 
 ```ts
 // app/lib/cms.ts
-import { createCMS } from "@notion-headless-cms/client";
-import { memoryCache } from "@notion-headless-cms/cache";
-import { nextCache } from "@notion-headless-cms/cache/next";
+import { createCMS, memoryCache } from "@notion-headless-cms/client";
+import { nextCache } from "@notion-headless-cms/client/next";
 import { schema } from "@/app/generated/nhc";
 
 export const cms = createCMS({
-  schema,
-  token: process.env.NOTION_TOKEN!,
-  content: "html",
+  notion: {
+    schema,
+    token: process.env.NOTION_TOKEN!,
+    collections: { posts: { published: ["公開済み"] } },
+  },
+  render: { content: "html", imageProxyBase: "/api/cms/images" },
   // document は Next.js の ISR、image は in-process メモリ
-  runtime: { cache: [nextCache({ tags: ["posts"] }), memoryCache()] },
-  imageProxyBase: "/api/cms/images",
-  collections: { posts: { published: ["公開済み"] } },
+  cache: {
+    document: nextCache({ tags: ["posts"] }),
+    image: memoryCache(),
+  },
 });
 ```
 
@@ -284,7 +304,7 @@ export async function GET(
 }
 ```
 
-`createCMS({ imageProxyBase: "/api/cms/images" })` のように base を変えた場合は、route のパスも合わせて変更する。
+`createCMS({ render: { imageProxyBase: "/api/cms/images" } })` のように base を変えた場合は、route のパスも合わせて変更する。
 
 ---
 

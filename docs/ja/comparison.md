@@ -37,7 +37,7 @@ order: 3
 
 **強み**
 - 編集 UI が Notion なので非エンジニアの学習コスト 0
-- `cloudflarePreset({ env })` 1 行で Workers + R2/KV 配信
+- `cache: { document: kvCache(...), image: r2Cache(...) }` の数行で Workers + R2/KV 配信
 - `last_edited_time` 比較による差分再生成（SWR）
 - Notion 画像 URL の 1 時間失効を SHA256 ハッシュキャッシュで解決
 - `react-renderer` が shiki / katex / embed まで全ブロック対応

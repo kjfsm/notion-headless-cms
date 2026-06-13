@@ -55,16 +55,16 @@ wrangler secret put NOTION_TOKEN   # 本番
 # ローカルは .dev.vars に NOTION_TOKEN=secret_xxx を書く（wrangler dev が自動読込）
 ```
 
-binding が未設定でも `cloudflarePreset` は空のキャッシュ配列を返すため、キャッシュ無しで起動できる。
+binding が未設定でも `document` を `memoryCache()` へフォールバックさせておけば、キャッシュ無しで起動できる。
 
 ## CMS ファクトリ
 
-`cloudflarePreset({ env, ctx })` で KV + R2 + `waitUntil` が一括配線される。
+`cache` グループに `kvCache` / `r2Cache` を役割別に渡すと、KV を document、R2 を image に割り当てつつ `waitUntil` を配線できる。
 
 ```ts
 // app/lib/cms.ts
-import { createCMS } from "@notion-headless-cms/client";
-import { cloudflarePreset } from "@notion-headless-cms/client/cloudflare";
+import { createCMS, memoryCache } from "@notion-headless-cms/client";
+import { kvCache, r2Cache } from "@notion-headless-cms/client/cloudflare";
 import { schema } from "../generated/nhc";
 
 export interface Env {
@@ -75,17 +75,27 @@ export interface Env {
 
 export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void }) {
   return createCMS({
-    schema,
-    token: env.NOTION_TOKEN,
-    // content: "react" は blocks 取得戦略。loader で notionBlocks() を React 描画する。
-    // 大きなページで CF Free のサブリクエスト上限が厳しいときは content: "html" を検討。
-    content: "react",
-    // ctx を渡さないと SWR のバックグラウンド更新が打ち切られ、古いキャッシュが残る。
-    runtime: cloudflarePreset({ env, ctx }),
-    collections: {
-      posts: { published: ["公開済み"] },
+    notion: {
+      schema,
+      token: env.NOTION_TOKEN,
+      collections: {
+        posts: { published: ["公開済み"] },
+      },
     },
-    // ogp は省略可。react モードでは既定オン（下記参照）。
+    render: {
+      // content: "react" は blocks 取得戦略。loader で notionBlocks() を React 描画する。
+      // 大きなページで CF Free のサブリクエスト上限が厳しいときは content: "html" を検討。
+      content: "react",
+      // ogp は省略可。react モードでは既定オン（下記参照）。
+    },
+    cache: {
+      // KV を document、R2 を image に割り当てる。
+      // DOC_CACHE は optional 型なので未設定時は memoryCache() へフォールバック。
+      document: env.DOC_CACHE ? kvCache({ namespace: env.DOC_CACHE }) : memoryCache(),
+      image: r2Cache({ bucket: env.IMG_BUCKET }),
+      // waitUntil を渡さないと SWR のバックグラウンド更新が打ち切られ、古いキャッシュが残る。
+      waitUntil: (p) => ctx.waitUntil(p),
+    },
   });
 }
 ```
@@ -96,13 +106,17 @@ export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void })
 
 - メタデータはブロック取得時にサーバー側で取得され、**既存のドキュメントキャッシュに同梱**されるため、専用のキャッシュ設定は不要。
 - OG 画像は**既定で元 URL のままブラウザが直接読み込む**（R2 等への永続キャッシュなし）。`<img loading="lazy">` で遅延読み込みされるため、初回表示が遅れても本文描画はブロックしない。
-- 無効化したいときは `ogp: false`。OG 画像も R2 等へ永続化したい上級者は `ogp: { enabled: true, imageCache }` を渡す。
+- 無効化したいときは `render.ogp: false`。OG 画像も R2 等へ永続化したい上級者は `render.ogp: { enabled: true, imageCache }` を渡す。
 
 ```ts
-createCMS({ schema, token, content: "react", ogp: false }); // OGP を切る
+// OGP を切る（notion / render を分けて渡す）
+createCMS({
+  notion: { schema, token, collections: { posts: { published: ["公開済み"] } } },
+  render: { content: "react", ogp: false },
+});
 ```
 
-> リンクを多用するページでは bookmark / link_preview ごとに外部 fetch が増える。CF Free のサブリクエスト上限（50/invocation）に近づく場合は `ogp: false` を検討する。初回（キャッシュミス）のみで、以降は SWR ドキュメントキャッシュが効く。
+> リンクを多用するページでは bookmark / link_preview ごとに外部 fetch が増える。CF Free のサブリクエスト上限（50/invocation）に近づく場合は `render.ogp: false` を検討する。初回（キャッシュミス）のみで、以降は SWR ドキュメントキャッシュが効く。
 
 ## Workers エントリ
 
@@ -264,7 +278,7 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 
 ## キャッシュ戦略: 永続 KV + バックグラウンド更新検知
 
-`swr.ttlMs` は **指定しない** のが推奨（`cloudflarePreset` の既定挙動に従う）。
+`cache.swr.ttlMs` は **指定しない** のが推奨（Cloudflare 構成の既定挙動に従う）。
 
 - KV キャッシュは期限なしで永続させ、リクエスト時は即時返却する。
 - `waitUntil` 経由でバックグラウンドに Notion の `lastEditedTime` と照合する。

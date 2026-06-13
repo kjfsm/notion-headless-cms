@@ -25,7 +25,7 @@ Notion API は 1 秒あたり 3 リクエスト程度のハード制限があり
    `maxRetries: 4`, `baseDelayMs: 1000`)
 2. `swr.ttlMs` を長めにして TTL 切れの頻度を減らす
 3. `cms.posts.warm({ concurrency: 1 })` で warm 時の並列度を絞る
-4. Cloudflare では `cloudflarePreset({ env, ctx })` を必ず ctx 付きで呼び、SWR バックグラウンド
+4. Cloudflare では `cache.waitUntil` に `(p) => ctx.waitUntil(p)` を必ず渡し、SWR バックグラウンド
    更新を `waitUntil` 経由でレスポンス送信後に逃がす
 
 ---
@@ -82,8 +82,8 @@ Notion API は 1 秒あたり 3 リクエスト程度のハード制限があり
 
 1. `wrangler.toml` の `kv_namespaces` と `r2_buckets` の binding 名を確認
    (既定: `DOC_CACHE`, `IMG_BUCKET`)
-2. `cloudflarePreset({ env: opts.env })` の env が、wrangler が注入する `env` と
-   同一オブジェクトか確認
+2. `kvCache({ namespace: env.DOC_CACHE })` / `r2Cache({ bucket: env.IMG_BUCKET })` に渡す
+   `env` が、wrangler が注入する `env` と同一オブジェクトか確認
 3. ローカル開発では `wrangler dev` (miniflare 経由) で binding が解決される。`pnpm dev`
    で素の Node を使うと binding は undefined のまま
 

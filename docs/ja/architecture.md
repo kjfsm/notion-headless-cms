@@ -20,11 +20,11 @@ Notion DB
        ├─ @notion-headless-cms/react-renderer （BlockObjectResponse→React / shadcn/ui + Tailwind v4）
        ├─ @notion-headless-cms/notion-source  （CMSAdapter 実装 / createCMS が内部で組み込む）
        └─ @notion-headless-cms/core           （CMS 統合・キャッシュ・フック・nodePreset）
-            └─ @notion-headless-cms/cache      （memory + サブパス /cloudflare（KV+R2, cloudflarePreset）/next）
+            └─ @notion-headless-cms/cache      （memory + サブパス /cloudflare（KV+R2, kvCache / r2Cache）/next）
 
 利用側の単一エントリ（これ 1 つ + サブパスで揃う）:
   @notion-headless-cms/client            = createCMS（core + notion-source + fetch-* + preset を集約）
-  @notion-headless-cms/client/cloudflare = cloudflarePreset / restKvCache
+  @notion-headless-cms/client/cloudflare = kvCache / r2Cache / restKvCache
   @notion-headless-cms/client/next       = createNextHandler / nextPreset
   @notion-headless-cms/client/react      = Renderer / NotionRevalidator
 ```
