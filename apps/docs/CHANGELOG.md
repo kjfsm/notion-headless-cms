@@ -1,5 +1,12 @@
 # example-docs-site
 
+## 0.0.11
+
+### Patch Changes
+
+- Updated dependencies [31e7f99]
+  - @notion-headless-cms/client@0.3.5
+
 ## 0.0.10
 
 ### Patch Changes
