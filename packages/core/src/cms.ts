@@ -33,7 +33,6 @@ import type {
 
 const DEFAULT_IMAGE_PROXY_BASE = "/api/images";
 
-/** コレクション別アクセス + グローバル操作の合成型。 */
 export type CMSClient<C extends CollectionsConfig> = {
   [K in keyof C]: CollectionClient<InferCollectionItem<C[K]>>;
 } & CMSGlobalOps;
@@ -198,7 +197,6 @@ export function createClient<S extends CMSSources = CMSSources>(
     ? MergeSourceCollections<S>
     : CollectionsConfig
 > {
-  // sources の各アダプタが持つ collections をマージする
   const collectionsInput: CollectionsConfig = {};
   if (opts.sources) {
     for (const adapter of Object.values(
@@ -250,8 +248,6 @@ export function createClient<S extends CMSSources = CMSSources>(
   const contentConfig = opts.content;
   const rendererFn: RendererFn | undefined = opts.renderer;
   const waitUntil = opts.waitUntil;
-  // plugin logger と createClient 引数の logger を合成し、その上でクライアント単位の
-  // traceId をログコンテキストに自動付与する。
   const baseLogger: Logger | undefined = mergeLoggers(
     opts.plugins ?? [],
     opts.logger,

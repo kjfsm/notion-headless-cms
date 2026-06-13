@@ -33,7 +33,6 @@ describe("embedRehypePlugins", () => {
     });
     const plugins = await embedRehypePlugins({ providers: [steamProvider] });
     const sanitize = getSanitizeEntry(plugins);
-    // rehype-sanitize は [plugin, schema] の形式
     expect(Array.isArray(sanitize)).toBe(true);
     const schema = sanitize[1] as { tagNames?: string[] };
     expect(schema.tagNames).toContain("iframe");
@@ -77,7 +76,6 @@ describe("schema 深いマージ", () => {
     const sanitize = getSanitizeEntry(plugins);
     const schema = sanitize[1] as { protocols?: Record<string, string[]> };
     expect(schema.protocols?.src).toContain("data");
-    // base にあった https/http も残っている
     expect(schema.protocols?.src).toContain("https");
   });
 
@@ -158,7 +156,6 @@ describe("notionEmbed 基本スキーマ", () => {
   });
 });
 
-// 実際の HTML パイプラインを通じて rehype-raw + rehype-sanitize の挙動を検証
 async function processRawHtml(html: string): Promise<string> {
   const plugins = await embedRehypePlugins();
   // unified の use() に PluggableList を直接渡す際、型推論が複雑になるため

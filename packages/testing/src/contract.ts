@@ -33,8 +33,6 @@ import type {
 } from "@notion-headless-cms/core";
 import { expect, it } from "vitest";
 
-// ── CacheAdapter 契約 ───────────────────────────────────────────────────
-
 export interface CacheAdapterContractOptions {
   /** テスト実行ごとに新しい adapter を生成するファクトリ。 */
   factory: () => CacheAdapter | Promise<CacheAdapter>;
@@ -104,8 +102,6 @@ export function runCacheAdapterContract(opts: CacheAdapterContractOptions) {
     expect((got?.data as ArrayBuffer)?.byteLength).toBe(8);
   });
 }
-
-// ── DataSource 契約 ─────────────────────────────────────────────────────
 
 export interface DataSourceContractOptions<
   T extends BaseContentItem = BaseContentItem,

@@ -66,13 +66,11 @@ describe("マルチソースのフェイルオーバー / 独立性 (Issue #309 
       },
     });
 
-    // posts は失敗
     await expect(cms.posts.list()).rejects.toSatisfy(
       (err: unknown) =>
         isCMSError(err) && err.code === "source/fetch_items_failed",
     );
 
-    // 同一クライアントの authors は健全
     const authors = await cms.authors.list();
     expect(authors).toHaveLength(1);
     expect(authors[0]?.slug).toBe("alice");
@@ -106,13 +104,11 @@ describe("マルチソースのフェイルオーバー / 独立性 (Issue #309 
       },
     });
 
-    // 1 回目: 失敗
     await expect(cms.posts.find("hello")).rejects.toSatisfy(
       (err: unknown) =>
         isCMSError(err) && err.code === "source/fetch_items_failed",
     );
 
-    // 2 回目: 回復
     const item = await cms.posts.find("hello");
     expect(item?.slug).toBe("hello");
   });

@@ -283,10 +283,8 @@ describe("createNotionCollection - dbName 解決", () => {
     });
     vi.mocked(queryAllPages).mockResolvedValue([]);
 
-    // 2 回を同時実行 → 2 回目は resolvingDataSourceId を再利用
     await Promise.all([dbNameAdapter.list(), dbNameAdapter.list()]);
 
-    // search は 1 回だけ呼ばれるはず
     expect(mockSearch).toHaveBeenCalledTimes(1);
   });
 

@@ -1,6 +1,3 @@
-// Notion の color トークン（"default" | "<color>" | "<color>_background"）を
-// Tailwind class へ変換する単一の表。rich_text の Annotation も block も同じ表を参照する。
-
 export type NotionColor = string;
 
 const FG: Record<string, string> = {

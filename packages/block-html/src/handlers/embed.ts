@@ -67,7 +67,6 @@ export async function renderEmbed(
   );
 }
 
-/** video ブロックを HTML にレンダリングする。 */
 export async function renderVideo(
   block: VideoBlockObjectResponse,
   providers: readonly EmbedProvider[],
@@ -114,7 +113,6 @@ export async function renderVideo(
   );
 }
 
-/** audio ブロックを HTML にレンダリングする。 */
 export async function renderAudio(
   block: AudioBlockObjectResponse,
 ): Promise<string> {
@@ -133,7 +131,6 @@ export async function renderAudio(
   );
 }
 
-/** pdf ブロックを HTML にレンダリングする。 */
 export async function renderPdf(
   block: PdfBlockObjectResponse,
 ): Promise<string> {
@@ -151,7 +148,6 @@ export async function renderPdf(
   );
 }
 
-/** image ブロックを HTML にレンダリングする。 */
 export async function renderImage(
   block: ImageBlockObjectResponse,
 ): Promise<string> {
@@ -172,7 +168,6 @@ export async function renderImage(
   );
 }
 
-/** file ブロックをダウンロードリンクとしてレンダリングする。 */
 export async function renderFile(
   block: FileBlockObjectResponse,
 ): Promise<string> {

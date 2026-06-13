@@ -2,8 +2,6 @@ import type { z } from "zod";
 import { getPlainText } from "./mapper";
 import type { NotionPage } from "./types";
 
-// ── フィールドマッピング型定義 ──────────────────────────────────────────────
-
 export type NotionFieldType =
   | {
       type: "title" | "richText" | "url" | "checkbox" | "date" | "number";
@@ -13,7 +11,6 @@ export type NotionFieldType =
   | { type: "select"; notion: string }
   | { type: "status"; notion: string };
 
-// id・lastEditedTime 等は Notion ページメタデータから自動設定されるシステムフィールド
 type SystemField =
   | "id"
   | "lastEditedTime"
@@ -22,8 +19,6 @@ type SystemField =
   | "isInTrash"
   | "coverImageUrl"
   | "iconEmoji";
-
-// ── defineMapping ────────────────────────────────────────────────────────────
 
 /**
  * Notion プロパティマッピングを定義する。
@@ -36,14 +31,10 @@ export function defineMapping<T extends object>(
   return mapping;
 }
 
-// ── NotionSchema オブジェクト型 ──────────────────────────────────────────────
-
 export interface NotionSchema<T> {
   mapping: { [K in keyof T]: NotionFieldType };
   mapItem: (page: NotionPage) => T;
 }
-
-// ── defineSchema ─────────────────────────────────────────────────────────────
 
 /**
  * Zod スキーマとマッピングを結合して NotionSchema を生成する。
@@ -76,8 +67,6 @@ export function defineSchema<S extends z.ZodRawShape>(
     },
   };
 }
-
-// ── パーサー ─────────────────────────────────────────────────────────────────
 
 type PropertyValue = NotionPage["properties"][string];
 

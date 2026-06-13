@@ -17,7 +17,6 @@ export function escapeAttr(value: string): string {
   return value.replace(HTML_ESCAPE_RE, (ch) => HTML_ESCAPE_MAP[ch] ?? ch);
 }
 
-/** テキストコンテンツエスケープ。 */
 export function escapeHtml(value: string): string {
   return value.replace(HTML_ESCAPE_RE, (ch) => HTML_ESCAPE_MAP[ch] ?? ch);
 }

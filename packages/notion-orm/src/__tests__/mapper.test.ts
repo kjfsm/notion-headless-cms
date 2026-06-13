@@ -6,7 +6,6 @@ import { isCMSError } from "@notion-headless-cms/core";
 import { describe, expect, it } from "vitest";
 import { mapItem, mapItemFromPropertyMap } from "../mapper";
 
-// テスト用ページファクトリ。デフォルトで Slug プロパティを含む
 const makePage = (properties: Record<string, unknown> = {}) => ({
   id: "page-id",
   last_edited_time: "2024-01-01T00:00:00.000Z",
@@ -17,7 +16,6 @@ const makePage = (properties: Record<string, unknown> = {}) => ({
   },
 });
 
-// slug フィールドを PropertyMap に含める最小構成
 const slugProp: PropertyMap = { slug: { type: "richText", notion: "Slug" } };
 
 describe("mapItemFromPropertyMap", () => {
@@ -421,7 +419,6 @@ describe("mapItemFromPropertyMap", () => {
     });
     const properties: PropertyMap = {
       name: { type: "title", notion: "Name" },
-      // slug キーを意図的に除外
     };
     let caughtError: unknown;
     try {
@@ -487,7 +484,6 @@ describe("mapItem", () => {
       ...makePage({
         Name: { type: "title", title: [{ plain_text: "Post" }] },
         Slug: { type: "rich_text", rich_text: [{ plain_text: "my-post" }] },
-        // Notion の select タイプをステータスフィールドとして使うケース
         Status: {
           type: "select",
           select: { id: "s1", name: "Published", color: "blue" },
@@ -546,7 +542,6 @@ describe("mapItem", () => {
           type: "status",
           status: { id: "s1", name: "公開", color: "green" },
         },
-        // CreatedAt プロパティなし → dateProperty が undefined
       }),
       last_edited_time: "2024-01-01T00:00:00.000Z",
       created_time: "2024-01-01T00:00:00.000Z",
@@ -560,7 +555,6 @@ describe("mapItem", () => {
       ...makePage({
         Name: { type: "title", title: [] },
         Slug: { type: "rich_text", rich_text: [{ plain_text: "my-post" }] },
-        // Status プロパティなし → statusProperty が undefined
         CreatedAt: { type: "date", date: { start: "2024-01-01" } },
       }),
       last_edited_time: "2024-01-01T00:00:00.000Z",

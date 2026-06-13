@@ -24,7 +24,6 @@ import type {
 import { notionSource } from "@notion-headless-cms/notion-source";
 import type { NotionBlock } from "@notion-headless-cms/react-renderer";
 
-// 上級者向けの逃がし口（escape hatch）。createCMS で足りない場合に直接組み立てる。
 export type {
   BaseContentItem,
   CacheAdapter,

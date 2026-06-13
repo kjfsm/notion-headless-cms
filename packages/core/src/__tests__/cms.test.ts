@@ -22,7 +22,6 @@ function makeMockSource(
   };
 }
 
-// collections マップを sources 形式にラップするヘルパー（ジェネリクスで型を保持）
 function makeSources<C extends Record<string, CollectionDef<BaseContentItem>>>(
   cols: C,
 ): { mock: { readonly collections: C } } {
@@ -156,7 +155,6 @@ describe("createClient - publishedStatuses / accessibleStatuses", () => {
     });
 
     await cms.posts.list();
-    // publishedStatuses なし（空配列のため undefined）で list() が呼ばれる
     expect(listMock).toHaveBeenCalledWith(
       expect.objectContaining({ publishedStatuses: undefined }),
     );
@@ -185,7 +183,6 @@ describe("createClient - publishedStatuses / accessibleStatuses", () => {
       renderer: mockRenderer,
     });
 
-    // 限定公開は accessibleStatuses に含まれるのでアクセスできる
     const result = await cms.posts.find("my-post");
     expect(result).not.toBeNull();
     expect(result?.slug).toBe("my-post");
@@ -219,7 +216,6 @@ describe("createClient - findByProp の利用", () => {
 
     await cms.posts.find("hello");
 
-    // findByProp が Notion プロパティ名 "Slug" と値 "hello" で呼ばれることを確認
     expect(findByPropMock).toHaveBeenCalledWith("Slug", "hello");
   });
 
@@ -232,7 +228,6 @@ describe("createClient - findByProp の利用", () => {
 
     const listMock = vi.fn().mockResolvedValue([item]);
 
-    // findByProp を持たないが properties は定義されている DataSource
     const source = makeMockSource({
       list: listMock,
       properties: {
@@ -249,7 +244,6 @@ describe("createClient - findByProp の利用", () => {
 
     const result = await cms.posts.find("hello");
 
-    // findByProp がないので list() で全件取得して線形探索する
     expect(listMock).toHaveBeenCalled();
     expect(result?.slug).toBe("hello");
   });
@@ -290,7 +284,6 @@ describe("createClient - コレクション間のキャッシュ独立性", () =
     const posts = await cms.posts.list();
     const pages = await cms.pages.list();
 
-    // 2 回目はキャッシュから返る（list は 1 度しか呼ばれない）
     const postsCached = await cms.posts.list();
     const pagesCached = await cms.pages.list();
 
@@ -298,7 +291,6 @@ describe("createClient - コレクション間のキャッシュ独立性", () =
     expect(posts[0]?.slug).toBe("post-one");
     expect(pages).toHaveLength(1);
     expect(pages[0]?.slug).toBe("page-one");
-    // キャッシュがスコープ別に独立しているので posts のリストが pages で上書きされない
     expect(postsCached[0]?.slug).toBe("post-one");
     expect(pagesCached[0]?.slug).toBe("page-one");
   });
@@ -340,7 +332,6 @@ describe("createClient - invalidate", () => {
     await cms.invalidate();
 
     const second = await cms.posts.list();
-    // invalidate 後はキャッシュがクリアされ、新しいデータが返される
     expect(second[0]?.slug).toBe("post-fresh");
     expect(listMock).toHaveBeenCalledTimes(2);
   });
@@ -389,7 +380,6 @@ describe("createClient - logLevel オプション", () => {
       logLevel: "info",
     });
 
-    // get でキャッシュミスの debug ログが出るはずだが抑制される
     await cms.posts.find("my-post");
 
     expect(debugFn).not.toHaveBeenCalled();
@@ -443,7 +433,6 @@ describe("createClient - collections.hooks コレクション固有フック", (
     };
     const { memoryCache } = await import("../cache/memory");
     const cache = memoryCache();
-    // キャッシュにアイテムを事前登録
     await cache.doc?.setMeta("posts", "my-post", {
       item,
       notionUpdatedAt: item.lastEditedTime,
@@ -467,7 +456,6 @@ describe("createClient - collections.hooks コレクション固有フック", (
 
     await cms.posts.find("my-post");
 
-    // グローバルフックとコレクション固有フックの両方が呼ばれる
     expect(globalHook).toHaveBeenCalledOnce();
     expect(collectionHook).toHaveBeenCalledOnce();
   });
@@ -557,7 +545,6 @@ describe("createClient - beforeCacheMeta / beforeCacheContent フック", () => 
     });
 
     const result = await cms.posts.find("test-post");
-    // 本文をアクセスして初めて呼ばれる
     expect(beforeCacheContent).not.toHaveBeenCalled();
     await result?.html();
     expect(beforeCacheContent).toHaveBeenCalledOnce();

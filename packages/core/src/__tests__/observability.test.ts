@@ -123,9 +123,7 @@ describe("cms.stats() — memoryCache 集計", () => {
         posts: { source: makeSource([item]), slugField: "slug" },
       }),
     });
-    // 初回 list (miss)
     await cms.posts.list();
-    // 2 回目 list (hit)
     await cms.posts.list();
     const stats = await cms.stats();
     expect(stats.traceId).toBe(cms.traceId);

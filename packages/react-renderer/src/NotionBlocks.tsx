@@ -6,7 +6,6 @@ import { NotionContext, useNotionContext } from "./context.js";
 import { groupListItems } from "./lib/group-list-items.js";
 import type { NotionBlock } from "./types.js";
 
-// Notion 本家と同じく numbered list は入れ子深さで 1 → a → i → 1 を循環。
 const OL_STYLES = ["list-decimal", "list-[lower-alpha]", "list-[lower-roman]"];
 
 /**
@@ -32,7 +31,6 @@ export function NotionBlocks({ blocks }: { blocks: NotionBlock[] }): ReactNode {
   const depth = ctx.listDepth ?? 0;
   const olClass = OL_STYLES[depth % OL_STYLES.length] ?? "list-decimal";
 
-  // 子レベルでは listDepth + 1 を被せた Context を流す。
   const nestedCtx = useMemo(
     () => ({ ...ctx, listDepth: depth + 1 }),
     [ctx, depth],

@@ -61,9 +61,7 @@ describe("createFakeCache", () => {
     const cms = createFixtureClient({
       items: [{ id: "1", slug: "hello", lastEditedTime: "2024-01-01" }],
     });
-    // 一度 list を呼ぶとキャッシュに書かれる
     await cms.posts.list();
-    // 直接覗くために独自に cache を渡したケースを別途確認
     const cache = createFakeCache();
     const cms2 = createFixtureClient({
       items: [{ id: "1", slug: "hello", lastEditedTime: "2024-01-01" }],

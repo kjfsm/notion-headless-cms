@@ -91,7 +91,6 @@ function resolveFields(collection: ResolvedCollection): {
   const { name, config, dbName, properties } = collection;
   const fieldMappings = config.fieldMappings ?? {};
 
-  // 事前検証: fieldMappings で指定したプロパティが DB に存在するか
   for (const notionPropName of Object.keys(fieldMappings)) {
     if (!(notionPropName in properties)) {
       throw new CMSError({
@@ -130,7 +129,6 @@ function resolveFields(collection: ResolvedCollection): {
       });
     }
 
-    // 重複時は連番を付与
     if (usedNames.has(tsName)) {
       let candidate: string;
       let suffix = 2;
@@ -178,7 +176,6 @@ function generateCollectionBlock(
     return `\t${f.tsName}: { type: "${f.defType}" as const, notion: "${escaped}"${optionsPart} },`;
   });
 
-  // アイテム型: 必須フィールド (id, lastEditedTime) + メタデータ + Notion プロパティ
   const itemFieldLines: string[] = [
     "\t/** Notion ページ ID。 */",
     "\tid: string;",
@@ -209,7 +206,6 @@ function generateCollectionBlock(
       `\t${f.tsName}: ${fieldType};`,
     );
   }
-  // BaseContentItem に必須なフィールドを補完
   if (!hasSlug) {
     itemFieldLines.push("\t/** URL key。 */", "\tslug: string;");
   }

@@ -1,7 +1,5 @@
 import type { NotionBlock } from "../types";
 
-// 連続する list_item を <ul>/<ol> でグループ化するための中間表現。
-// Notion API は list を 1 アイテム 1 ブロックで返すため、描画前に集約する必要がある。
 export type ListGroup =
   | { kind: "ul"; items: NotionBlock[] }
   | { kind: "ol"; items: NotionBlock[] }

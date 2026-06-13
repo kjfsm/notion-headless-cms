@@ -1,7 +1,6 @@
 import { isCMSError } from "./errors";
 import type { ImageCacheOps, InvalidateScope } from "./types/index";
 
-/** `$handler()` の挙動設定。 */
 export interface HandlerOptions {
   /** マウントするベースパス。デフォルト `/api/cms`。 */
   basePath?: string;
@@ -19,7 +18,6 @@ export interface HandlerOptions {
   disabled?: boolean;
 }
 
-/** `$handler()` が内部で依存する CMS 機能の最小セット。 */
 export interface HandlerAdapter {
   imageCache: ImageCacheOps;
   /**
@@ -63,7 +61,6 @@ const DEFAULT_OPTS = {
 
 const JSON_HEADERS = { "content-type": "application/json" } as const;
 
-/** CMSError コードを HTTP ステータスへ写像する。未対応コードは null。 */
 function httpStatusForError(code: string): number | null {
   if (code === "webhook/signature_invalid") return 401;
   if (code === "webhook/not_implemented") return 501;
@@ -73,7 +70,6 @@ function httpStatusForError(code: string): number | null {
   return null;
 }
 
-/** CMSError を HTTP ステータスへ写像できれば JSON レスポンスにする。未対応なら null。 */
 function errorResponse(err: unknown): Response | null {
   if (!isCMSError(err)) return null;
   const status = httpStatusForError(err.code);
@@ -84,7 +80,6 @@ function errorResponse(err: unknown): Response | null {
   });
 }
 
-/** `:collection/:slug` を分解する。どちらか欠ける場合は null。 */
 function splitCollectionSlug(
   sub: string,
 ): { collection: string; slug: string } | null {
@@ -166,7 +161,6 @@ export function createHandler(
       rel.startsWith(`${checkPath}/`)
     ) {
       const target = splitCollectionSlug(rel.slice(checkPath.length + 1));
-      // 比較基準のバージョンは `?v=` クエリで受け取る。
       const currentVersion = url.searchParams.get("v");
       if (!target || !currentVersion) {
         return new Response(
@@ -183,7 +177,6 @@ export function createHandler(
           target.slug,
           currentVersion,
         );
-        // アイテム未存在は 404。差分判定 (stale) は 200 で返す。
         if (result === null) {
           return new Response(
             JSON.stringify({ ok: false, reason: "not found" }),

@@ -11,7 +11,6 @@ export interface NotionEnv {
  */
 const DEFAULT_NOTION_VERSION = "2026-03-11";
 
-/** 環境変数のAPIキーでNotionクライアントを生成する。 */
 export function createClient(env: Pick<NotionEnv, "NOTION_TOKEN">): Client {
   return new Client({
     auth: env.NOTION_TOKEN,

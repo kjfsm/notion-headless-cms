@@ -110,7 +110,6 @@ describe("CollectionClient — adjacent", () => {
         },
       },
     });
-    // デフォルトソート(lastEditedTime 降順): gamma → beta → alpha
     const adj = await cms.posts.adjacent("beta");
     expect(adj.prev?.slug).toBe("gamma");
     expect(adj.next?.slug).toBe("alpha");
@@ -134,7 +133,6 @@ describe("CollectionClient — adjacent", () => {
         },
       },
     });
-    // デフォルトソート後の先頭は gamma (lastEditedTime が最新)
     const adj = await cms.posts.adjacent("gamma");
     expect(adj.prev).toBeNull();
     expect(adj.next?.slug).toBe("beta");
@@ -158,7 +156,6 @@ describe("CollectionClient — adjacent", () => {
         },
       },
     });
-    // デフォルトソート後の末尾は alpha (lastEditedTime が最古)
     const adj = await cms.posts.adjacent("alpha");
     expect(adj.prev?.slug).toBe("beta");
     expect(adj.next).toBeNull();
@@ -483,7 +480,6 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     });
     const result = await cms.posts.list({ tag: "tech" });
     expect(result).toHaveLength(2);
-    // デフォルトソート(lastEditedTime 降順): c(01-03) → a(01-01)
     expect(result.map((i) => i.slug)).toEqual(["c", "a"]);
   });
 
@@ -601,7 +597,6 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     });
     const items = await cms.posts.list({ limit: 2 });
     expect(items).toHaveLength(2);
-    // デフォルトソート後の先頭は gamma (lastEditedTime が最新)
     expect(items[0]?.slug).toBe("gamma");
   });
 
@@ -625,7 +620,6 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     });
     const items = await cms.posts.list({ skip: 2 });
     expect(items).toHaveLength(1);
-    // デフォルトソート後の末尾は alpha (lastEditedTime が最古)
     expect(items[0]?.slug).toBe("alpha");
   });
 
@@ -690,7 +684,6 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
       },
     });
     const result = await cms.posts.list();
-    // publishedAt 降順: new(01-03) → mid(01-02) → old(01-01)
     expect(result.map((i) => i.slug)).toEqual(["new", "mid", "old"]);
   });
 
@@ -750,7 +743,6 @@ describe("CollectionClient — list フィルタ・ソート・ページング",
     });
     const items = await cms.posts.list({ where: { id: ["1", "3"] } });
     expect(items).toHaveLength(2);
-    // デフォルトソート(lastEditedTime 降順): gamma(01-03) → alpha(01-01)
     expect(items.map((i) => i.slug)).toEqual(["gamma", "alpha"]);
   });
 
@@ -1167,12 +1159,10 @@ describe("CollectionClient — accessibleStatuses フィルタ", () => {
     const listed = await cms.posts.list();
     const slugsFromList = listed.map((i) => i.slug);
 
-    // list() で返ったスラッグはすべて find() でも取得できる
     for (const slug of slugsFromList) {
       const got = await cms.posts.find(slug);
       expect(got).not.toBeNull();
     }
-    // list() に含まれないスラッグは find() で null になる
     const excluded = await cms.posts.find("draft");
     expect(excluded).toBeNull();
   });
@@ -1290,7 +1280,6 @@ describe("CollectionClient — コンテンツアクセサ", () => {
         },
       },
     });
-    // statuses: string (配列ではなく単一文字列)
     const items = await cms.posts.list({ statuses: "公開" });
     expect(items.length).toBeGreaterThan(0);
     expect(items.every((i) => i.status === "公開")).toBe(true);
@@ -1642,11 +1631,9 @@ describe("CollectionClient — find() bypassCache", () => {
       cache: [cache],
     });
 
-    // 1回目: キャッシュなし → ソースから取得
     await cms.posts.find("live-post");
     const beforeBypass = callCount;
 
-    // bypassCache: true → キャッシュがあってもソースから取得
     const result = await cms.posts.find("live-post", { bypassCache: true });
     expect(result).not.toBeNull();
     expect(callCount).toBeGreaterThan(beforeBypass);

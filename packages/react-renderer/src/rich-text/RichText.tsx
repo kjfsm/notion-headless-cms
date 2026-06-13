@@ -48,7 +48,6 @@ function RichTextItem({ item }: { item: RichTextItemResponse }) {
   }
 
   if (item.type === "equation") {
-    // override が無ければ既定の lazy KaTeX を使う。
     const InlineEquation = components.InlineEquation ?? DefaultInlineEquation;
     return (
       <Annotated annotations={item.annotations} href={item.href}>
@@ -57,7 +56,6 @@ function RichTextItem({ item }: { item: RichTextItemResponse }) {
     );
   }
 
-  // text
   const url = item.text.link?.url ?? item.href ?? null;
   return (
     <Annotated annotations={item.annotations} href={url}>

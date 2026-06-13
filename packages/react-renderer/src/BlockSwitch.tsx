@@ -15,8 +15,6 @@ export interface BlockSwitchProps {
   block: NotionBlock;
 }
 
-// ブロック型ごとに別プロップ型を持つコンポーネント群を単一の Switch でディスパッチする。
-// 型整合は block.type による narrowing で保証し、要素を作る側はプロップを共通形にキャスト。
 type AnyBlockComponent = ComponentType<BlockComponentProps>;
 
 /**

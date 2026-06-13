@@ -46,7 +46,6 @@ describe("renderLinkPreview", () => {
       makeBlock("https://example.com/path"),
       false,
     );
-    // label テキストにプロトコルが含まれないことを確認（href は含んでよい）
     expect(html).toContain(
       '<span class="nhc-link-preview__label">example.com/path</span>',
     );

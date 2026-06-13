@@ -98,7 +98,6 @@ export function markdownToBlocks(markdown: string): ContentBlock[] {
       continue;
     }
 
-    // 段落は次の空行 or 別ブロック開始まで連結する
     const paragraphLines: string[] = [line];
     i++;
     while (i < lines.length) {
@@ -183,7 +182,6 @@ function parseInline(text: string): InlineNode[] {
       }
     }
 
-    // 次の特殊文字までを 1 つの text ノードにまとめる
     let j = i;
     while (j < text.length && !"[`*".includes(text[j] ?? "")) j++;
     if (j > i) {
