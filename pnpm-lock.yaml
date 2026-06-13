@@ -994,6 +994,9 @@ importers:
       tailwind-merge:
         specifier: ^3.6.0
         version: 3.6.0
+      tailwindcss:
+        specifier: ^4.0.0
+        version: 4.3.0
     devDependencies:
       '@notionhq/client':
         specifier: 'catalog:'
