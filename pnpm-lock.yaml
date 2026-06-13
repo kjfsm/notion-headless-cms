@@ -25,8 +25,8 @@ catalogs:
       specifier: ^17.4.2
       version: 17.4.2
     hono:
-      specifier: ^4.12.19
-      version: 4.12.19
+      specifier: ^4.12.21
+      version: 4.12.25
     katex:
       specifier: ^0.16.47
       version: 0.16.47
@@ -333,7 +333,7 @@ importers:
         version: link:../../packages/notion-source
       hono:
         specifier: 'catalog:'
-        version: 4.12.19
+        version: 4.12.25
       zod:
         specifier: 'catalog:'
         version: 4.4.3
@@ -559,7 +559,7 @@ importers:
     dependencies:
       '@hono/node-server':
         specifier: ^2.0.3
-        version: 2.0.3(hono@4.12.19)
+        version: 2.0.3(hono@4.12.25)
       '@notion-headless-cms/client':
         specifier: workspace:*
         version: link:../../packages/client
@@ -577,7 +577,7 @@ importers:
         version: link:../../packages/notion-source
       hono:
         specifier: 'catalog:'
-        version: 4.12.19
+        version: 4.12.25
       zod:
         specifier: 'catalog:'
         version: 4.4.3
@@ -5308,6 +5308,10 @@ packages:
     resolution: {integrity: sha512-xa3eYXYXx68XTT4hZ7dRzsXBhaq85ToSrlUJNoR0gwz/1Ap/CNwX47wfvV7pc/xWhjKVVkLT7zBJy8chhNguqQ==}
     engines: {node: '>=16.9.0'}
 
+  hono@4.12.25:
+    resolution: {integrity: sha512-2NFaIyNVgJmBs/ecmtGzlmluTFs5cHEWGTdu0t1HBwYzoGXOL5nUQBRMXsXWla5i4KkG//QMzVP88m1+I3fdAQ==}
+    engines: {node: '>=16.9.0'}
+
   hookable@6.1.1:
     resolution: {integrity: sha512-U9LYDy1CwhMCnprUfeAZWZGByVbhd54hwepegYTK7Pi5NvqEj63ifz5z+xukznehT7i6NIZRu89Ay1AZmRsLEQ==}
 
@@ -8569,9 +8573,9 @@ snapshots:
     dependencies:
       hono: 4.12.19
 
-  '@hono/node-server@2.0.3(hono@4.12.19)':
+  '@hono/node-server@2.0.3(hono@4.12.25)':
     dependencies:
-      hono: 4.12.19
+      hono: 4.12.25
 
   '@iconify/types@2.0.0': {}
 
@@ -11931,6 +11935,8 @@ snapshots:
   highlight.js@10.7.3: {}
 
   hono@4.12.19: {}
+
+  hono@4.12.25: {}
 
   hookable@6.1.1: {}
 
