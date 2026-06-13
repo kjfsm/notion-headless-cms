@@ -13,7 +13,6 @@ import type {
 import type { RichTextRenderOptions } from "../render-rich-text";
 import { renderRichText } from "../render-rich-text";
 
-/** paragraph ブロックを HTML に変換する。 */
 export async function renderParagraph(
   block: ParagraphBlockObjectResponse,
   opts?: RichTextRenderOptions,
@@ -29,7 +28,6 @@ export async function renderParagraph(
   return `<p${color}>${html || "<br>"}</p>`;
 }
 
-/** heading_1 ブロックを HTML に変換する。 */
 export async function renderHeading1(
   block: Heading1BlockObjectResponse,
   opts?: RichTextRenderOptions,
@@ -38,7 +36,6 @@ export async function renderHeading1(
   return `<h1>${html}</h1>`;
 }
 
-/** heading_2 ブロックを HTML に変換する。 */
 export async function renderHeading2(
   block: Heading2BlockObjectResponse,
   opts?: RichTextRenderOptions,
@@ -47,7 +44,6 @@ export async function renderHeading2(
   return `<h2>${html}</h2>`;
 }
 
-/** heading_3 ブロックを HTML に変換する。 */
 export async function renderHeading3(
   block: Heading3BlockObjectResponse,
   opts?: RichTextRenderOptions,
@@ -56,7 +52,7 @@ export async function renderHeading3(
   return `<h3>${html}</h3>`;
 }
 
-/** heading_4 ブロックを HTML に変換する。Notion API 2026-03-11 で導入された。 */
+/** Notion API 2026-03-11 で導入された。 */
 export async function renderHeading4(
   block: Heading4BlockObjectResponse,
   opts?: RichTextRenderOptions,
@@ -65,7 +61,6 @@ export async function renderHeading4(
   return `<h4>${html}</h4>`;
 }
 
-/** bulleted_list_item ブロックを HTML に変換する。 */
 export async function renderBulletedListItem(
   block: BulletedListItemBlockObjectResponse,
   opts?: RichTextRenderOptions,
@@ -74,7 +69,6 @@ export async function renderBulletedListItem(
   return `<li>${html}</li>`;
 }
 
-/** numbered_list_item ブロックを HTML に変換する。 */
 export async function renderNumberedListItem(
   block: NumberedListItemBlockObjectResponse,
   opts?: RichTextRenderOptions,
@@ -83,7 +77,6 @@ export async function renderNumberedListItem(
   return `<li>${html}</li>`;
 }
 
-/** quote ブロックを HTML に変換する。 */
 export async function renderQuote(
   block: QuoteBlockObjectResponse,
   opts?: RichTextRenderOptions,
@@ -92,7 +85,6 @@ export async function renderQuote(
   return `<blockquote class="nhc-quote">${html}</blockquote>`;
 }
 
-/** to_do ブロックを HTML に変換する。 */
 export async function renderToDo(
   block: ToDoBlockObjectResponse,
   opts?: RichTextRenderOptions,
@@ -108,7 +100,6 @@ export async function renderToDo(
   );
 }
 
-/** rich_text 配列を plain_text で連結する簡易版 (caption 等で使う)。 */
 export function plainText(
   richText: ReadonlyArray<RichTextItemResponse>,
 ): string {

@@ -30,7 +30,6 @@ export function getPlainText(
   return joined.length === 0 ? null : joined;
 }
 
-/** ページの title 型プロパティからプレーンテキストを取り出す。 */
 function extractPageTitle(page: NotionPage): string | null {
   const titleProp = Object.values(page.properties).find(
     (p) => p.type === "title",
@@ -38,7 +37,6 @@ function extractPageTitle(page: NotionPage): string | null {
   return titleProp?.type === "title" ? getPlainText(titleProp.title) : null;
 }
 
-/** page.cover から画像 URL を取り出す。設定なし / 未対応形式は null。 */
 function extractCoverUrl(page: NotionPage): string | null {
   const cover = page.cover;
   if (!cover) return null;
@@ -47,7 +45,6 @@ function extractCoverUrl(page: NotionPage): string | null {
   return null;
 }
 
-/** page.icon から絵文字を取り出す。絵文字でない / 未設定は null。 */
 function extractIconEmoji(page: NotionPage): string | null {
   const icon = page.icon;
   if (!icon) return null;

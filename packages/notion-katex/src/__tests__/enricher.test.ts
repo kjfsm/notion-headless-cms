@@ -30,7 +30,6 @@ describe("notionKatex", () => {
   it("displayMode オプションが反映される", () => {
     const ext = notionKatex({ displayMode: false });
     const plugins = ext.getMarkdownPlugins?.();
-    // プラグインが配列として存在すれば OK
     expect(Array.isArray(plugins?.rehypePlugins)).toBe(true);
   });
 

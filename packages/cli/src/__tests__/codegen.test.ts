@@ -52,11 +52,8 @@ describe("Notion API datasource プロパティ型マッピング", () => {
     const collection = makeCollection({
       config: { dbName: "テストDB", publishedStatuses: ["公開済み"] },
       properties: {
-        // title → string (slugField なので null 非許容)
         Slug: makeProp("title"),
-        // rich_text → string | null
         Body: makeProp("rich_text"),
-        // select → string | null (literal union にしない)
         Category: makeProp("select", {
           select: {
             options: [
@@ -64,7 +61,6 @@ describe("Notion API datasource プロパティ型マッピング", () => {
             ],
           },
         }),
-        // status → literal union + | null
         Status: makeProp("status", {
           status: {
             options: [
@@ -74,41 +70,27 @@ describe("Notion API datasource プロパティ型マッピング", () => {
             groups: [],
           },
         }),
-        // multi_select → string[]
         Tags: makeProp("multi_select", {
           multi_select: { options: [] },
         }),
-        // date → string | null
         "Published At": makeProp("date"),
-        // number → number | null
         Views: makeProp("number", { number: { format: "number" } }),
-        // checkbox → boolean
         Featured: makeProp("checkbox"),
-        // url → string | null
         "Source URL": makeProp("url"),
       },
     });
     const code = generateSchemaFile([collection]);
 
-    // title (slugField) は null 非許容の string
     expect(code).toContain("  slug: string;");
     expect(code).not.toContain("  slug: string | null;");
-    // rich_text
     expect(code).toContain("  body: string | null;");
-    // select は literal union にせず string | null
     expect(code).toContain("  category: string | null;");
     expect(code).not.toContain('"Tech"');
-    // status は literal union
     expect(code).toContain('"公開済み" | "下書き" | null');
-    // multi_select
     expect(code).toContain("  tags: string[];");
-    // date (camelCase: "Published At" → publishedAt)
     expect(code).toContain("  publishedAt: string | null;");
-    // number
     expect(code).toContain("  views: number | null;");
-    // checkbox
     expect(code).toContain("  featured: boolean;");
-    // url (camelCase: "Source URL" → sourceURL)
     expect(code).toContain("  sourceURL: string | null;");
   });
 
@@ -139,7 +121,6 @@ describe("Notion API datasource プロパティ型マッピング", () => {
     expect(code).toContain(
       'category: { type: "select" as const, notion: "Category" }',
     );
-    // status は PropertyMap でも type: "status"
     expect(code).toContain(
       'status: { type: "status" as const, notion: "Status" }',
     );
@@ -198,7 +179,6 @@ describe("Notion API datasource プロパティ型マッピング", () => {
     });
     const code = generateSchemaFile([collection]);
 
-    // 各未サポート型のスキップコメントが出力される
     const unsupportedTypes = [
       ["Formula", "formula"],
       ["Related", "relation"],
@@ -225,7 +205,6 @@ describe("Notion API datasource プロパティ型マッピング", () => {
       ).toContain(`未対応のプロパティ型: ${notionType}`);
     }
 
-    // 未サポート型のフィールドは TypeScript インターフェースに含まれない
     expect(code).not.toContain("  formula:");
     expect(code).not.toContain("  related:");
     expect(code).not.toContain("  rollup:");
@@ -250,11 +229,9 @@ describe("generateSchemaFile", () => {
     expect(code).toContain("satisfies SchemaMap");
     expect(code).toContain("dataSourceId: postsDataSourceId");
     expect(code).toContain("properties: postsProperties");
-    // 旧 API の痕跡が残っていないこと
     expect(code).not.toContain("export function createClient");
     expect(code).not.toContain("NhcConfig");
     expect(code).not.toContain("publishedStatuses");
-    // status 型の literal union が出力される
     expect(code).toContain('"公開済み" | "下書き" | null');
   });
 
@@ -331,7 +308,6 @@ describe("generateSchemaFile", () => {
     const code = generateSchemaFile([makeCollection()]);
     expect(code).toContain('slugField: "slug"');
     expect(code).toContain('statusField: "status"');
-    // publishedStatuses / accessibleStatuses は schema には含めない
     expect(code).not.toContain("publishedStatuses:");
     expect(code).not.toContain("accessibleStatuses:");
   });
@@ -344,7 +320,6 @@ describe("generateSchemaFile", () => {
     expect(code).toContain(
       'import type { SchemaMap } from "@notion-headless-cms/notion-source"',
     );
-    // 旧 import の痕跡なし
     expect(code).not.toContain("createNotionCollection");
     expect(code).not.toContain("FetchBlockTreeOgpOptions");
     expect(code).not.toContain("BlockHandler");

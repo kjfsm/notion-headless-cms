@@ -14,8 +14,6 @@ import type { KVNamespaceLike, R2BucketLike, R2ObjectLike } from "./types";
 
 export type { KVNamespaceLike, R2BucketLike } from "./types";
 
-// ── KV (document only) ────────────────────────────────────────────────────────
-
 export interface KVCacheOptions {
   namespace: KVNamespaceLike;
   /** キャッシュキーのプレフィックス。デフォルト: '' */
@@ -157,8 +155,6 @@ export function kvCache(opts: KVCacheOptions): CacheAdapter {
     doc: new KVDocumentOps(opts.namespace, opts.prefix ?? ""),
   };
 }
-
-// ── R2 (image only by default; document opt-in via doc:true) ───────────────────
 
 export interface R2CacheOptions {
   bucket: R2BucketLike;
@@ -348,8 +344,6 @@ export function r2Cache(opts: R2CacheOptions): CacheAdapter {
   return adapter;
 }
 
-// ── cloudflareCache (KV + R2 ショートカット) ───────────────────────────────
-
 /** `cloudflareCache` に渡す binding オブジェクト。 */
 export interface CloudflareCacheBindings {
   /** ドキュメントキャッシュ用 KV namespace。 */
@@ -380,8 +374,6 @@ export function cloudflareCache(
     adapters.push(r2Cache({ bucket: bindings.imgBucket, prefix }));
   return adapters;
 }
-
-// ── cloudflarePreset (createClient 用ショートカット) ───────────────────────
 
 /** `cloudflarePreset` が参照する env binding。 */
 export interface CloudflarePresetEnv {

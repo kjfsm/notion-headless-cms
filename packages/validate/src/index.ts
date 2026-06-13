@@ -16,8 +16,6 @@
 import { CMSError } from "@notion-headless-cms/core";
 import { z } from "zod";
 
-// --- 共通スキーマ -----------------------------------------------------------
-
 const loggerSchema = z
   .object({
     debug: z.function().optional(),
@@ -169,8 +167,6 @@ const cmsConfigSchema = z
   })
   .passthrough();
 
-// --- ヘルパー --------------------------------------------------------------
-
 function formatIssues(issues: readonly z.core.$ZodIssue[]): string {
   return issues
     .map((issue) => {
@@ -195,8 +191,6 @@ function throwSchemaInvalid(
     ],
   });
 }
-
-// --- 公開 API --------------------------------------------------------------
 
 /**
  * `createClient({...})` に渡すオプションを zod で検証する。

@@ -10,7 +10,7 @@ export async function queryAllPages(
   client: Client,
   dataSourceId: string,
 ): Promise<PageObjectResponse[]> {
-  // 公式ヘルパーで全ページ収集後、partial ページ（権限不足等で薄いレスポンス）を除外する
+  // partial ページ（権限不足等で薄いレスポンス）を除外する
   const results = await collectPaginatedAPI(client.dataSources.query, {
     data_source_id: dataSourceId,
   });

@@ -1,19 +1,15 @@
-// ── キャッシュ ─────────────────────────────────────────────────────────
 export { isStale, sha256Hex } from "./cache";
 export type { MemoryCacheOptions } from "./cache/memory";
 export { memoryCache } from "./cache/memory";
 export { noopDocOps, noopImgOps } from "./cache/noop";
-// ── メイン API ──────────────────────────────────────────────────────────
 export type { CMSClient, CMSGlobalOps } from "./cms";
 export { createClient } from "./cms";
-// ── コンテンツ AST ──────────────────────────────────────────────────────
 export type {
   ContentBlock,
   ContentResult,
   ImageRef,
   InlineNode,
 } from "./content/blocks";
-// ── エラー ──────────────────────────────────────────────────────────────
 export type {
   BuiltInCMSErrorCode,
   CMSErrorCode,
@@ -25,12 +21,9 @@ export {
   isCMSErrorInNamespace,
   matchCMSError,
 } from "./errors";
-// ── handler ────────────────────────────────────────────────────────────
 export type { HandlerAdapter, HandlerOptions } from "./handler";
 export { createHandler } from "./handler";
-// ── フック・ロガー・プラグイン ────────────────────────────────────────
 export { mergeHooks, mergeLoggers } from "./hooks";
-// ── 内部リンク解決（pageId → slug 逆引き） ───────────────────────────
 export type {
   BuildPageIndexOptions,
   BuildPageLinkMapOptions,
@@ -45,13 +38,10 @@ export {
   buildPageLinkMap,
   normalizePageId,
 } from "./page-index";
-// ── プリセット ─────────────────────────────────────────────────────────
 export type { NodePresetOptions } from "./preset/node";
 export { nodePreset } from "./preset/node";
-// ── リトライ ───────────────────────────────────────────────────────────
 export type { RetryConfig } from "./retry";
 export { DEFAULT_RETRY_CONFIG, withRetry } from "./retry";
-// ── 公開型 ──────────────────────────────────────────────────────────────
 export type {
   AdjacencyOptions,
   BaseContentItem,
@@ -97,5 +87,4 @@ export type {
 } from "./types/index";
 export { DEFAULT_RATE_LIMITER, defineCollection } from "./types/index";
 export { definePlugin } from "./types/plugin";
-// ── データソース拡張ポイント (source-author サブパスからも export) ───
 export type { CMSSources } from "./types/sources";

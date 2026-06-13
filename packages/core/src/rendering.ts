@@ -32,7 +32,6 @@ async function loadDefaultRenderer(): Promise<RendererFn> {
   }
 }
 
-/** 本文レンダリングに必要な依存を束ねたコンテキスト。 */
 export interface RenderContext<T extends BaseContentItem> {
   source: DataSource<T>;
   rendererFn: RendererFn | undefined;

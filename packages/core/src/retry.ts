@@ -45,8 +45,6 @@ export async function withRetry<T>(
         const jitterFactor =
           config.jitter !== false ? 0.5 + Math.random() * 0.5 : 1;
         const delay = config.baseDelayMs * 2 ** attempt * jitterFactor;
-        // onRetry には attempt / status と次回待機時間 (ms) を渡す。
-        // 呼び出し側のロガーが `LogContext.backoffMs` として記録できる。
         config.onRetry?.(attempt + 1, status, delay);
         await new Promise((resolve) => setTimeout(resolve, delay));
       }

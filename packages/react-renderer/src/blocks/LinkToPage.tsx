@@ -26,7 +26,6 @@ export function LinkToPage({
       : target.type === "database_id"
         ? target.database_id
         : "comment";
-  // pageLinks（シリアライズ可能なマップ）→ resolvePageUrl 関数 → フラグメントの順に解決。
   const resolved = pageLinks?.[normalizePageId(id)];
   const href = resolved?.href ?? resolvePageUrl?.(id) ?? `#${id}`;
   const title = resolved?.title || resolvePageTitle?.(id) || "Open page";

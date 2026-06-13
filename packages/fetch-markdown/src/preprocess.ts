@@ -24,18 +24,14 @@ export function preprocessNotionMarkdown(md: string): string {
     "column",
   ] as const;
   for (const tag of BLOCK_TAGS) {
-    // 開きタグ: <tag ...> or <tag>
     out = out.replace(new RegExp(`(<${tag}(?:\\s[^>]*)?>)`, "g"), "\n\n$1\n\n");
-    // 閉じタグ
     out = out.replace(new RegExp(`(</${tag}>)`, "g"), "\n\n$1\n\n");
   }
-  // 自己閉じタグ
   out = out.replace(/(<table_of_contents\s*\/>)/g, "\n\n$1\n\n");
 
   // </table> の後にのみ空行を追加（前に入れるとテーブル HTML ブロックが途中で切れる）
   out = out.replace(/(<\/table>)/g, "$1\n\n");
 
-  // <unknown .../> 前後に空行を追加
   out = out.replace(/(<unknown\s[^>]*\/>)/g, "\n\n$1\n\n");
 
   return out;

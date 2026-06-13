@@ -41,10 +41,8 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
 
   it("キャッシュヒット時は fetch せずにプロキシ URL を返す", async () => {
     const cache = makeImageCache();
-    // buildCacheImageFn は (cache, cacheName, imageProxyBase, logger?) の 4 引数
     const cacheImage = buildCacheImageFn(cache, "memory", "/api/images");
 
-    // キャッシュを事前にセットするために一度 fetch を実行
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
       makeResponse(200, new ArrayBuffer(4), "image/png"),
     );
@@ -52,7 +50,6 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
     const first = await cacheImage(url);
     expect(first).toMatch(/^\/api\/images\//);
 
-    // 2回目: fetch が呼ばれないはず
     vi.clearAllMocks();
     const second = await cacheImage(url);
     expect(second).toBe(first);
@@ -164,7 +161,6 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
   it("キャッシュミス時に logger.debug が「キャッシュミス」と「保存」で呼ばれる", async () => {
     const debugFn = vi.fn();
     const cache = makeImageCache();
-    // 4 番目の引数が logger
     const cacheImage = buildCacheImageFn(cache, "memory", "/api/images", {
       debug: debugFn,
     });
@@ -188,7 +184,6 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
     const debugFn = vi.fn();
     const cache = makeImageCache();
 
-    // 先に1回フェッチしてキャッシュに保存する
     vi.mocked(globalThis.fetch).mockResolvedValueOnce(
       makeResponse(200, new ArrayBuffer(4), "image/jpeg"),
     );
@@ -198,7 +193,6 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
     });
     await cacheImage(url);
 
-    // 2回目: キャッシュヒット
     vi.clearAllMocks();
     debugFn.mockClear();
     await cacheImage(url);

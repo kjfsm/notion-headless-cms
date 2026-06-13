@@ -103,7 +103,6 @@ describe("cacheOgImage", () => {
 
   it("既存キャッシュがあれば fetch しない", async () => {
     const bucket = makeBucket();
-    // 事前にハッシュを書き込む
     const url = "https://cdn.example.com/a.png";
     const { sha256Hex } = await import("@notion-headless-cms/core");
     const hash = await sha256Hex(url);

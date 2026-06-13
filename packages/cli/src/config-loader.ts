@@ -16,9 +16,6 @@ export async function loadConfig(configPath: string): Promise<CMSConfig> {
       : mod
   ) as CMSConfig;
 
-  // 旧来は手書きの分岐で defineConfig() の戻り値かどうかをざっくり判定していたが、
-  // フィールド単位で「何が足りないか」を伝えるため zod ベースの validateCMSConfig に置き換える。
-  // 失敗時の core/schema_invalid を CLI 文脈の cli/config_invalid に詰め直す。
   try {
     validateCMSConfig(config);
   } catch (err) {

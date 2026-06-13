@@ -72,7 +72,6 @@ export interface DataSource<T extends BaseContentItem = BaseContentItem> {
    */
   readonly properties?: PropertyMap;
 
-  // --- データ取得 ---
   /** 公開済みアイテム一覧を取得する。 */
   list(opts?: { publishedStatuses?: readonly string[] }): Promise<T[]>;
 
@@ -96,18 +95,15 @@ export interface DataSource<T extends BaseContentItem = BaseContentItem> {
    */
   loadNotionBlocks?(item: T): Promise<unknown[]>;
 
-  // --- キャッシュ整合性 ---
   /** SWR 鮮度判定用。item の最終更新タイムスタンプ。 */
   getLastModified(item: T): string;
 
   /** リスト全体のバージョン文字列 (例: 最新 last_edited_time)。 */
   getListVersion(items: T[]): string;
 
-  // --- 画像 ---
   /** 期限切れ画像 URL の再取得 (Notion の署名 URL 対応)。 */
   resolveImageUrl?(ref: ImageRef): Promise<string>;
 
-  // --- Webhook ---
   /**
    * Webhook リクエストをパースして無効化スコープを返す。
    * 実装していない場合は `$handler` が body の `{ slug }` にフォールバック。

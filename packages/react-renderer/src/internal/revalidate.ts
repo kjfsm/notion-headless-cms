@@ -1,6 +1,3 @@
-// router / next の useNotionRevalidate 共通ロジック。
-// このモジュールは外部公開しない（パッケージ境界ルールにより internal/ は非公開）。
-
 import { useEffect } from "react";
 
 /**

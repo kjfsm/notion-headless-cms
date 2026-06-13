@@ -13,7 +13,6 @@ function plainText(
   return richText.map((rt) => rt.plain_text).join("");
 }
 
-// `"plain text"` 等の Notion 言語名を Shiki/Prism で扱いやすい形に揃える。
 function normalizeLanguage(lang: string): string {
   const l = lang.trim().toLowerCase();
   if (l === "" || l === "plain text" || l === "plain_text") return "text";

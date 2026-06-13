@@ -2,7 +2,6 @@ import type { BlockObjectResponse, Client } from "@notionhq/client";
 import { describe, expect, it, vi } from "vitest";
 import { fetchBlockTree } from "../block-tree";
 
-// 最小のブロック生成ヘルパ。`satisfies` で公式型と整合させ、API 仕様変更時に型エラーで気付ける
 const block = (id: string, hasChildren = false) =>
   ({
     object: "block",

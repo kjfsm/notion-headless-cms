@@ -33,7 +33,6 @@ export async function fetchOembed(
   return (await res.json()) as OembedData;
 }
 
-/** oEmbed の html フィールドに含まれる iframe の src 属性値を取り出す。 */
 export function extractIframeSrc(html: string): string | null {
   const m = html.match(/\bsrc="([^"]+)"/);
   return m?.[1] ?? null;
