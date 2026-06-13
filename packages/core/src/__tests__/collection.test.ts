@@ -1687,3 +1687,133 @@ describe("CollectionClient — slugField + findByProp", () => {
     expect(findByProp).toHaveBeenCalledWith("Slug", "my-post");
   });
 });
+
+describe("CollectionClient — cache.prime", () => {
+  it("単件を取得してメタ・本文キャッシュを作り直す", async () => {
+    const cms = createClient({
+      renderer: mockRenderer,
+      cache: [memoryCache()],
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
+            },
+          },
+        },
+      },
+    });
+    await cms.posts.cache.prime("alpha");
+    const version = await cms.posts.peekVersion("alpha");
+    expect(version).not.toBeNull();
+    expect(version?.notionUpdatedAt).toBe("2024-01-01T00:00:00Z");
+  });
+
+  it("存在しない slug は何もしない", async () => {
+    const cms = createClient({
+      renderer: mockRenderer,
+      cache: [memoryCache()],
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
+            },
+          },
+        },
+      },
+    });
+    await cms.posts.cache.prime("missing");
+    expect(await cms.posts.peekVersion("missing")).toBeNull();
+  });
+});
+
+describe("cms.warmByPageId", () => {
+  it("findById で解決したページを温め collection / slug を返す", async () => {
+    const findById = vi
+      .fn()
+      .mockImplementation(
+        async (id: string) => makeItems().find((i) => i.id === id) ?? null,
+      );
+    const cms = createClient({
+      renderer: mockRenderer,
+      cache: [memoryCache()],
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                findById,
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
+            },
+          },
+        },
+      },
+    });
+    const result = await cms.warmByPageId("3");
+    expect(result).toEqual({ collection: "posts", slug: "gamma" });
+    expect(findById).toHaveBeenCalledWith("3");
+    expect(await cms.posts.peekVersion("gamma")).not.toBeNull();
+  });
+
+  it("findById 未実装なら list を id で走査して解決する", async () => {
+    const cms = createClient({
+      renderer: mockRenderer,
+      cache: [memoryCache()],
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
+            },
+          },
+        },
+      },
+    });
+    expect(await cms.warmByPageId("1")).toEqual({
+      collection: "posts",
+      slug: "alpha",
+    });
+  });
+
+  it("どのコレクションにも属さない page id は null を返す", async () => {
+    const cms = createClient({
+      renderer: mockRenderer,
+      cache: [memoryCache()],
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  return makeItems();
+                },
+              }),
+              slugField: "slug",
+            },
+          },
+        },
+      },
+    });
+    expect(await cms.warmByPageId("nonexistent")).toBeNull();
+  });
+});

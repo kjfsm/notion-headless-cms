@@ -1,5 +1,6 @@
 import { isStale } from "./cache";
 import { CMSError, isCMSError } from "./errors";
+import { normalizePageId } from "./page-index";
 import type { RenderContext } from "./rendering";
 import { buildCachedItemContent, buildCachedItemMeta } from "./rendering";
 import type { RetryConfig } from "./retry";
@@ -67,7 +68,22 @@ export class CollectionClientImpl<T extends BaseContentItem>
       invalidate: () => this.invalidateImpl(),
       invalidateItem: (slug: string) => this.invalidateItemImpl(slug),
       warm: (opts?: WarmOptions) => this.warmImpl(opts),
+      prime: (slug: string) => this.primeImpl(slug),
     };
+  }
+
+  /**
+   * Notion ページ ID で該当アイテムを解決し、単件ウォーム + リストキャッシュを更新する。
+   * このコレクションに属さない page id の場合は何もせず `null` を返す。
+   * 一致した場合は温めた slug を返す（公式 webhook から `cms.warmByPageId` 経由で呼ばれる）。
+   */
+  async warmByPageId(pageId: string): Promise<string | null> {
+    const item = await this.resolveByPageId(pageId);
+    if (!item) return null;
+    await this.primeItem(item);
+    // 一覧の見出し・新規公開・並び順の変化を反映するためリストキャッシュも作り直す。
+    await this.refreshList();
+    return item.slug;
   }
 
   async find(
@@ -211,13 +227,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
       await Promise.all(
         chunk.map(async (item) => {
           try {
-            await this.persistMeta(item.slug, item);
-            const content = await buildCachedItemContent(item, this.ctx.render);
-            await this.ctx.docCache.setContent(
-              this.ctx.collection,
-              item.slug,
-              content,
-            );
+            await this.primeItem(item);
             ok++;
           } catch (err) {
             failed.push({ slug: item.slug, error: err });
@@ -237,6 +247,61 @@ export class CollectionClientImpl<T extends BaseContentItem>
       cachedAt: Date.now(),
     });
     return { ok, failed };
+  }
+
+  private async primeImpl(slug: string): Promise<void> {
+    const item = await this.fetchRaw(slug);
+    if (!item) return;
+    await this.primeItem(item);
+  }
+
+  /** 取得済みアイテムからメタ・本文キャッシュを作り直す（warm / prime / warmByPageId 共通）。 */
+  private async primeItem(item: T): Promise<void> {
+    await this.persistMeta(item.slug, item);
+    const content = await buildCachedItemContent(item, this.ctx.render);
+    await this.ctx.docCache.setContent(this.ctx.collection, item.slug, content);
+  }
+
+  /** リストキャッシュを最新の取得結果で作り直す。 */
+  private async refreshList(): Promise<void> {
+    const items = await this.fetchListRaw();
+    await this.ctx.docCache.setList(this.ctx.collection, {
+      items,
+      cachedAt: Date.now(),
+    });
+  }
+
+  /** Notion page id からアクセス可能なアイテムを解決する。`findById` 優先、無ければ list を走査。 */
+  private async resolveByPageId(pageId: string): Promise<T | null> {
+    const target = normalizePageId(pageId);
+    const findById = this.ctx.source.findById?.bind(this.ctx.source);
+    let item: T | null;
+    if (findById) {
+      item = await withRetry(() => findById(pageId), {
+        ...this.ctx.retryConfig,
+        onRetry: (attempt, status, delayMs) => {
+          this.ctx.logger?.warn?.("findById() リトライ中", {
+            attempt,
+            status,
+            pageId,
+            backoffMs: delayMs,
+          });
+        },
+      });
+    } else {
+      const all = await this.fetchListRaw();
+      item = all.find((i) => normalizePageId(i.id) === target) ?? null;
+    }
+
+    if (!item) return null;
+    if (item.isArchived || item.isInTrash) return null;
+    if (
+      this.ctx.accessibleStatuses.length > 0 &&
+      (!item.status || !this.ctx.accessibleStatuses.includes(item.status))
+    ) {
+      return null;
+    }
+    return item;
   }
 
   private async persistMeta(

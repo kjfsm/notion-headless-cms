@@ -75,13 +75,14 @@ declare module "@notion-headless-cms/core" {
 - `list(opts?)` — 公開済み一覧（本文なし）
 - `params()` — SSG 用 slug 一覧
 - `cache.adjacent(slug, opts?)` — 前後記事ナビゲーション
-- `cache.warm(opts?)` / `cache.invalidate(scope?)` / `cache.checkItem(...)` — キャッシュ管理
+- `cache.warm(opts?)` / `cache.prime(slug)` / `cache.invalidate(scope?)` / `cache.checkItem(...)` — キャッシュ管理（`prime` は単件ウォーム）
 
 ### グローバル操作
 
 - `cms.collections` — 登録コレクション名一覧
 - `cms.invalidate(scope?)` — `"all" | { collection } | { collection, slug }`
-- `cms.handler(opts?)` — Web Standard `(req) => Response`（画像プロキシ + webhook）
+- `cms.warmByPageId(pageId)` — Notion ページ ID から該当 1 件を単件ウォーム（公式 webhook 用）
+- `cms.handler(opts?)` — Web Standard `(req) => Response`（画像プロキシ + webhook + `notion-webhook`）
 - `cms.getCachedImage(hash)` — 画像キャッシュ直アクセス
 - `cms.cacheImage(url)` — Notion 画像 URL を `{imageProxyBase}/{sha256}` 形式に変換し、永続キャッシュへ書き込む（画像キャッシュ未設定なら `undefined`）
 - `cms.imageProxyBase` — 画像プロキシのベース URL

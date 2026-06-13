@@ -12,8 +12,23 @@ export interface HandlerOptions {
   versionsPath?: string;
   /** 更新チェック (check) のパス (basePath 相対)。デフォルト `/check`。 */
   checkPath?: string;
+  /** Notion 公式 webhook 受信のパス (basePath 相対)。デフォルト `/notion-webhook`。 */
+  notionWebhookPath?: string;
   /** Webhook 署名検証用シークレット (未指定なら検証スキップ)。 */
   webhookSecret?: string;
+  /** Notion 公式 webhook（integration の Webhooks）の受信設定。 */
+  notionWebhook?: {
+    /**
+     * 検証トークン（HMAC-SHA256 署名キー）。未指定時は createCMS の
+     * `notion.webhookSecret`（= `CreateClientOptions.notionWebhookSecret`）を既定で使う。
+     */
+    secret?: string;
+    /**
+     * サブスク登録時に Notion が送る `verification_token` を受け取るコールバック。
+     * 値を控えて `notion.webhookSecret` に設定する用途（既定ではレスポンス本文にも echo する）。
+     */
+    onVerificationToken?: (token: string) => void;
+  };
   /** デフォルト実装を無効化する場合 true。 */
   disabled?: boolean;
 }
@@ -49,6 +64,17 @@ export interface HandlerAdapter {
     slug: string,
     currentVersion: string,
   ): Promise<{ stale: boolean } | null>;
+  /**
+   * Notion ページ ID を全コレクション横断で解決し単件ウォームする（公式 webhook 用）。
+   * 一致したコレクション / slug、無ければ `null`。
+   */
+  warmByPageId(
+    pageId: string,
+  ): Promise<{ collection: string; slug: string } | null>;
+  /** createCMS で設定された Notion webhook 検証トークンの既定値。 */
+  notionWebhookSecret?: string;
+  /** 応答送信後もウォームを完走させる実行フック (Cloudflare の `waitUntil` 相当)。 */
+  scheduleBackground?: (p: Promise<unknown>) => void;
 }
 
 const DEFAULT_OPTS = {
@@ -57,9 +83,38 @@ const DEFAULT_OPTS = {
   revalidatePath: "/revalidate",
   versionsPath: "/versions",
   checkPath: "/check",
+  notionWebhookPath: "/notion-webhook",
 } as const;
 
 const JSON_HEADERS = { "content-type": "application/json" } as const;
+
+/** HMAC-SHA256 を hex で返す。core はゼロ依存のため import せずグローバル `crypto.subtle` を使う。 */
+async function hmacSha256Hex(secret: string, message: string): Promise<string> {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(message));
+  let hex = "";
+  for (const b of new Uint8Array(sig)) hex += b.toString(16).padStart(2, "0");
+  return hex;
+}
+
+/** タイミング攻撃を避ける定数時間文字列比較。 */
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+function jsonResponse(body: unknown, status: number): Response {
+  return new Response(JSON.stringify(body), { status, headers: JSON_HEADERS });
+}
 
 function httpStatusForError(code: string): number | null {
   if (code === "webhook/signature_invalid") return 401;
@@ -110,6 +165,8 @@ export function createHandler(
   const revalidatePath = opts.revalidatePath ?? DEFAULT_OPTS.revalidatePath;
   const versionsPath = opts.versionsPath ?? DEFAULT_OPTS.versionsPath;
   const checkPath = opts.checkPath ?? DEFAULT_OPTS.checkPath;
+  const notionWebhookPath =
+    opts.notionWebhookPath ?? DEFAULT_OPTS.notionWebhookPath;
 
   return async (req: Request): Promise<Response> => {
     const url = new URL(req.url);
@@ -195,6 +252,60 @@ export function createHandler(
         if (res) return res;
         throw err;
       }
+    }
+
+    if (req.method === "POST" && rel === notionWebhookPath) {
+      const raw = await req.text();
+      let payload: unknown;
+      try {
+        payload = JSON.parse(raw);
+      } catch {
+        return jsonResponse({ ok: false, reason: "invalid json" }, 400);
+      }
+
+      // サブスク登録時の検証: verification_token を控えられるよう echo + コールバック。
+      if (
+        payload &&
+        typeof payload === "object" &&
+        "verification_token" in payload
+      ) {
+        const token = String(
+          (payload as Record<string, unknown>).verification_token,
+        );
+        opts.notionWebhook?.onVerificationToken?.(token);
+        return jsonResponse({ ok: true, verification_token: token }, 200);
+      }
+
+      const secret = opts.notionWebhook?.secret ?? adapter.notionWebhookSecret;
+      if (!secret) {
+        return jsonResponse(
+          { ok: false, reason: "notion webhook secret not configured" },
+          503,
+        );
+      }
+      const signature = req.headers.get("X-Notion-Signature") ?? "";
+      const expected = `sha256=${await hmacSha256Hex(secret, raw)}`;
+      if (!timingSafeEqual(signature, expected)) {
+        return jsonResponse(
+          { ok: false, code: "webhook/signature_invalid" },
+          401,
+        );
+      }
+
+      const entity = (payload as { entity?: { id?: string; type?: string } })
+        .entity;
+      const pageId = entity?.type === "page" ? entity.id : undefined;
+      if (!pageId) {
+        return jsonResponse({ ok: true, skipped: "no page entity" }, 200);
+      }
+
+      // 応答は即返し、ウォームは可能なら waitUntil でバックグラウンド完走させる。
+      if (adapter.scheduleBackground) {
+        adapter.scheduleBackground(adapter.warmByPageId(pageId));
+        return jsonResponse({ ok: true, pageId }, 200);
+      }
+      const result = await adapter.warmByPageId(pageId);
+      return jsonResponse({ ok: true, pageId, result }, 200);
     }
 
     if (req.method === "POST" && rel.startsWith(`${revalidatePath}/`)) {

@@ -7,9 +7,13 @@ import type {
   PropertyMap,
   WebhookConfig,
 } from "@notion-headless-cms/core";
-import { CMSError, isCMSError } from "@notion-headless-cms/core";
+import {
+  CMSError,
+  isCMSError,
+  normalizePageId,
+} from "@notion-headless-cms/core";
 import { Transformer } from "@notion-headless-cms/markdown-html";
-import type { DataSourceObjectResponse } from "@notionhq/client";
+import { type DataSourceObjectResponse, isFullPage } from "@notionhq/client";
 import { fetchBlockTree, type NotionBlockTreeNode } from "./block-tree";
 import type { ContentFetcher } from "./content-fetcher";
 import {
@@ -27,6 +31,26 @@ const DEFAULT_PROPERTIES: Required<CMSSchemaProperties> = {
   status: "Status",
   date: "CreatedAt",
 };
+
+/** Notion API の 404（object_not_found）か判定する。 */
+function isNotionNotFound(err: unknown): boolean {
+  if (!err || typeof err !== "object") return false;
+  const e = err as { code?: string; status?: number };
+  return e.code === "object_not_found" || e.status === 404;
+}
+
+/** ページ parent が指定の data source（または database）に属するか。 */
+function pageBelongsToDataSource(
+  parent: unknown,
+  dataSourceId: string,
+): boolean {
+  if (!parent || typeof parent !== "object") return false;
+  const p = parent as { data_source_id?: string; database_id?: string };
+  const target = normalizePageId(dataSourceId);
+  if (p.data_source_id) return normalizePageId(p.data_source_id) === target;
+  if (p.database_id) return normalizePageId(p.database_id) === target;
+  return false;
+}
 
 interface NotionCollectionCommonOptions {
   /** Notion API 認証トークン。 */
@@ -250,6 +274,28 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
         },
       });
     }
+  }
+
+  async findById(pageId: string): Promise<T | null> {
+    let page: Awaited<ReturnType<typeof this.client.pages.retrieve>>;
+    try {
+      page = await this.client.pages.retrieve({ page_id: pageId });
+    } catch (err) {
+      // 他 DB のページ・削除済みは 404。webhook は対象外イベントも送るため null で無視する。
+      if (isNotionNotFound(err)) return null;
+      if (isCMSError(err)) throw err;
+      throw new CMSError({
+        code: "source/fetch_item_failed",
+        message: "Failed to retrieve page by id from Notion.",
+        cause: err,
+        context: { operation: "NotionCollection.findById", pageId },
+      });
+    }
+    if (!isFullPage(page)) return null;
+    // この data source に属さないページは別コレクション扱い（誤ウォーム防止）。
+    const dataSourceId = await this.getDataSourceId();
+    if (!pageBelongsToDataSource(page.parent, dataSourceId)) return null;
+    return this.itemMapper(page);
   }
 
   async loadMarkdown(item: T): Promise<string> {

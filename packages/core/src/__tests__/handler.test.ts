@@ -14,8 +14,25 @@ function makeAdapter(overrides: Partial<HandlerAdapter> = {}): HandlerAdapter {
     revalidate: vi.fn().mockResolvedValue(undefined),
     peekVersionFor: vi.fn().mockResolvedValue(null),
     checkFor: vi.fn().mockResolvedValue({ stale: false }),
+    warmByPageId: vi.fn().mockResolvedValue(null),
     ...overrides,
   };
+}
+
+/** X-Notion-Signature と同じ HMAC-SHA256(hex) を計算する。 */
+async function signNotion(secret: string, body: string): Promise<string> {
+  const enc = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    "raw",
+    enc.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  const sig = await crypto.subtle.sign("HMAC", key, enc.encode(body));
+  let hex = "";
+  for (const b of new Uint8Array(sig)) hex += b.toString(16).padStart(2, "0");
+  return `sha256=${hex}`;
 }
 
 describe("createHandler", () => {
@@ -436,6 +453,147 @@ describe("createHandler", () => {
         ),
       );
       expect(res.status).toBe(200);
+    });
+  });
+
+  describe("POST {basePath}/notion-webhook — 公式 Notion webhook", () => {
+    const SECRET = "verification-token-xyz";
+
+    it("verification_token を含む POST は secret 未設定でも 200 + token を echo する", async () => {
+      const onVerificationToken = vi.fn();
+      const handler = createHandler(makeAdapter(), {
+        notionWebhook: { onVerificationToken },
+      });
+      const res = await handler(
+        new Request("http://localhost/api/cms/notion-webhook", {
+          method: "POST",
+          body: JSON.stringify({ verification_token: "abc-123" }),
+        }),
+      );
+      expect(res.status).toBe(200);
+      const body = (await res.json()) as { verification_token: string };
+      expect(body.verification_token).toBe("abc-123");
+      expect(onVerificationToken).toHaveBeenCalledWith("abc-123");
+    });
+
+    it("secret 未設定のイベントは 503 を返す", async () => {
+      const handler = createHandler(makeAdapter());
+      const res = await handler(
+        new Request("http://localhost/api/cms/notion-webhook", {
+          method: "POST",
+          body: JSON.stringify({ entity: { id: "page-1", type: "page" } }),
+        }),
+      );
+      expect(res.status).toBe(503);
+    });
+
+    it("署名が無い / 不一致なら 401 を返す", async () => {
+      const handler = createHandler(makeAdapter(), {
+        notionWebhook: { secret: SECRET },
+      });
+      const res = await handler(
+        new Request("http://localhost/api/cms/notion-webhook", {
+          method: "POST",
+          headers: { "X-Notion-Signature": "sha256=deadbeef" },
+          body: JSON.stringify({ entity: { id: "page-1", type: "page" } }),
+        }),
+      );
+      expect(res.status).toBe(401);
+      const body = (await res.json()) as { code: string };
+      expect(body.code).toBe("webhook/signature_invalid");
+    });
+
+    it("正しい署名 + page entity で warmByPageId が呼ばれ 200 を返す", async () => {
+      const warmByPageId = vi
+        .fn()
+        .mockResolvedValue({ collection: "posts", slug: "hello" });
+      const handler = createHandler(makeAdapter({ warmByPageId }), {
+        notionWebhook: { secret: SECRET },
+      });
+      const raw = JSON.stringify({
+        type: "page.content_updated",
+        entity: { id: "page-42", type: "page" },
+      });
+      const res = await handler(
+        new Request("http://localhost/api/cms/notion-webhook", {
+          method: "POST",
+          headers: { "X-Notion-Signature": await signNotion(SECRET, raw) },
+          body: raw,
+        }),
+      );
+      expect(res.status).toBe(200);
+      expect(warmByPageId).toHaveBeenCalledWith("page-42");
+    });
+
+    it("adapter.notionWebhookSecret を既定 secret として使う", async () => {
+      const warmByPageId = vi.fn().mockResolvedValue(null);
+      const handler = createHandler(
+        makeAdapter({ warmByPageId, notionWebhookSecret: SECRET }),
+      );
+      const raw = JSON.stringify({ entity: { id: "p1", type: "page" } });
+      const res = await handler(
+        new Request("http://localhost/api/cms/notion-webhook", {
+          method: "POST",
+          headers: { "X-Notion-Signature": await signNotion(SECRET, raw) },
+          body: raw,
+        }),
+      );
+      expect(res.status).toBe(200);
+      expect(warmByPageId).toHaveBeenCalledWith("p1");
+    });
+
+    it("page 以外の entity は warm せず 200 を返す", async () => {
+      const warmByPageId = vi.fn().mockResolvedValue(null);
+      const handler = createHandler(makeAdapter({ warmByPageId }), {
+        notionWebhook: { secret: SECRET },
+      });
+      const raw = JSON.stringify({
+        entity: { id: "ds-1", type: "data_source" },
+      });
+      const res = await handler(
+        new Request("http://localhost/api/cms/notion-webhook", {
+          method: "POST",
+          headers: { "X-Notion-Signature": await signNotion(SECRET, raw) },
+          body: raw,
+        }),
+      );
+      expect(res.status).toBe(200);
+      expect(warmByPageId).not.toHaveBeenCalled();
+    });
+
+    it("scheduleBackground があればウォームを待たず 200 を返す", async () => {
+      const schedule = vi.fn();
+      const warmByPageId = vi.fn().mockReturnValue(new Promise(() => {}));
+      const handler = createHandler(
+        makeAdapter({
+          warmByPageId,
+          notionWebhookSecret: SECRET,
+          scheduleBackground: schedule,
+        }),
+      );
+      const raw = JSON.stringify({ entity: { id: "p1", type: "page" } });
+      const res = await handler(
+        new Request("http://localhost/api/cms/notion-webhook", {
+          method: "POST",
+          headers: { "X-Notion-Signature": await signNotion(SECRET, raw) },
+          body: raw,
+        }),
+      );
+      expect(res.status).toBe(200);
+      expect(schedule).toHaveBeenCalledOnce();
+    });
+
+    it("不正な JSON は 400 を返す", async () => {
+      const handler = createHandler(makeAdapter(), {
+        notionWebhook: { secret: SECRET },
+      });
+      const res = await handler(
+        new Request("http://localhost/api/cms/notion-webhook", {
+          method: "POST",
+          body: "{not json",
+        }),
+      );
+      expect(res.status).toBe(400);
     });
   });
 

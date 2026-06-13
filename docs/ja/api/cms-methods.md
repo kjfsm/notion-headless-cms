@@ -33,10 +33,12 @@ cms.posts.check(slug, currentVersion)
 cms.posts.cache.adjacent(slug, opts?)
 cms.posts.cache.invalidate(slug?)
 cms.posts.cache.warm(opts?)
+cms.posts.cache.prime(slug)
 
 // グローバル
 cms.collections
 cms.invalidate(scope?)
+cms.warmByPageId(pageId)
 cms.getCachedImage(hash)
 cms.handler(opts?)
 cms.cacheImage         // (url) => Promise<string> | undefined
@@ -233,12 +235,21 @@ const { ok, failed } = await cms.posts.cache.warm({
 });
 ```
 
+### `cache.prime(slug)`
+
+指定 slug の **1 件だけ**を Notion から取得し直し、メタ・本文キャッシュを作り直す（`warm()` の単件版）。webhook 受信時など、更新された 1 ページだけを温め直すのに使う。アイテムが存在しなければ何もしない。
+
+```ts
+await cms.posts.cache.prime("hello-world");
+```
+
 ## グローバル操作
 
 | メソッド | 説明 |
 |---|---|
 | `cms.collections` | 登録されたコレクション名の配列 |
 | `cms.invalidate(scope?)` | 全体・コレクション単位・slug 単位のキャッシュ無効化 |
+| `cms.warmByPageId(pageId)` | Notion ページ ID を全コレクション横断で解決し、該当 1 件を単件ウォーム。一致した `{ collection, slug }`、無ければ `null`。公式 webhook の sparse payload（page id のみ）からミラー再生成するために使う |
 | `cms.getCachedImage(hash)` | 画像キャッシュから `{ data, contentType }` を取得 |
 | `cms.handler(opts?)` | Web Standard な `(req: Request) => Promise<Response>` を返す |
 | `cms.cacheImage` | `(url: string) => Promise<string>` または `undefined`。Notion 画像 URL を `{imageProxyBase}/{sha256}` 形式へ変換しキャッシュへ書き込む。画像キャッシュ未設定 (noop) の場合は `undefined` |
@@ -264,7 +275,26 @@ const blocks = await resolveBlockImageUrls(notionBlocks, cms.cacheImage);
 - `GET {basePath}/images/:hash` — 画像プロキシ
 - `GET {basePath}/versions/:collection/:slug` — `peekVersion()`（更新検知ポーリング用、KV メタのみ）。未登録は `200` + `null`、未知コレクションは `404`
 - `GET|POST {basePath}/check/:collection/:slug?v={version}` — `check()`（Notion を実照会し差分があればキャッシュ更新）。`{ stale }` を返す。未存在は `404`、未知コレクションは `404`
-- `POST {basePath}/revalidate` — Webhook 受信 → `invalidate(scope)`
+- `POST {basePath}/revalidate` — Webhook 受信 → `invalidate(scope)`（DataSource の `parseWebhook` 方式・共有シークレット）
+- `POST {basePath}/notion-webhook` — Notion 公式 webhook 受信 → `warmByPageId()`（下記）
+
+#### `notion-webhook`（Notion 公式 webhook）
+
+Notion の integration「Webhooks」から送られる公式 webhook を受け、更新されたページのキャッシュを自動でウォーム（ミラー再生成）する。`createCMS({ notion: { webhookSecret } })`（= `CreateClientOptions.notionWebhookSecret`）を設定すると有効になり、`cms.handler({ notionWebhook: { secret } })` で個別上書きもできる。
+
+- **検証**: サブスク登録時に Notion が送る `{ verification_token }` の POST には、secret 未設定でも `200` + token を echo する（`onVerificationToken` コールバックでも受け取れる）。控えたトークンを `webhookSecret` に設定する。
+- **署名検証**: 以降のイベントは `X-Notion-Signature: sha256=<hex>`（HMAC-SHA256(生ボディ, secret)）を定数時間比較。不一致は `webhook/signature_invalid`（401）、secret 未設定は `503`。
+- **ウォーム**: payload の `entity.id`（`entity.type === "page"`）を `warmByPageId()` に渡す。設定済みの `waitUntil` があれば応答後にバックグラウンドで完走させる。
+
+```ts
+// createCMS で有効化（Cloudflare の例）
+const cms = createCMS({
+  notion: { schema, token: env.NOTION_TOKEN, collections, webhookSecret: env.NOTION_WEBHOOK_SECRET },
+  render: { content: "react" },
+  cache: { document: kvCache({ namespace: env.DOC_CACHE }), image: r2Cache({ bucket: env.IMG_BUCKET }), waitUntil: (p) => ctx.waitUntil(p) },
+});
+// POST /api/cms/notion-webhook が自動マウントされる（cms.handler() を既に配線していれば追加コード不要）
+```
 
 `NotionRevalidator` の `poll` は `collection` と `item`（または `slug`）を渡すだけでよい。URL は
 versions ルートの規約 `${basePath}/versions/${collection}/${slug}`（basePath 既定 `/api/cms`）から、

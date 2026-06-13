@@ -642,3 +642,79 @@ describe("parseWebhook", () => {
     expect(scope).toEqual({ collection: "notion" });
   });
 });
+
+describe("createNotionCollection - findById", () => {
+  const makeFullPage = (slug: string, parent: Record<string, unknown>) => ({
+    object: "page",
+    id: `id-${slug}`,
+    url: `https://notion.so/${slug}`,
+    last_edited_time: "2024-01-01T00:00:00.000Z",
+    created_time: "2024-01-01T00:00:00.000Z",
+    parent,
+    properties: {
+      Name: { type: "title", title: [{ plain_text: slug }] },
+      Slug: { type: "rich_text", rich_text: [{ plain_text: slug }] },
+      Status: {
+        type: "status",
+        status: { id: "s1", name: "公開", color: "green" },
+      },
+      CreatedAt: { type: "date", date: { start: "2024-01-01" } },
+    },
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  const makeAdapter = (retrieve: ReturnType<typeof vi.fn>) => {
+    vi.mocked(createClient).mockReturnValue({
+      pages: { retrieve },
+    } as never);
+    return createNotionCollection({
+      token: "test-token",
+      dataSourceId: "test-db-id",
+    });
+  };
+
+  it("data source 一致のページを取得してマッピングする", async () => {
+    const retrieve = vi
+      .fn()
+      .mockResolvedValue(
+        makeFullPage("hello", { data_source_id: "test-db-id" }),
+      );
+    const adapter = makeAdapter(retrieve);
+    const item = await adapter.findById?.("id-hello");
+    expect(item?.slug).toBe("hello");
+    expect(retrieve).toHaveBeenCalledWith({ page_id: "id-hello" });
+  });
+
+  it("database_id 経由でも一致を判定する", async () => {
+    const retrieve = vi
+      .fn()
+      .mockResolvedValue(makeFullPage("hi", { database_id: "test-db-id" }));
+    const adapter = makeAdapter(retrieve);
+    expect((await adapter.findById?.("id-hi"))?.slug).toBe("hi");
+  });
+
+  it("別 data source のページは null を返す", async () => {
+    const retrieve = vi
+      .fn()
+      .mockResolvedValue(makeFullPage("other", { data_source_id: "other-db" }));
+    const adapter = makeAdapter(retrieve);
+    expect(await adapter.findById?.("id-other")).toBeNull();
+  });
+
+  it("404 (object_not_found) は null を返す", async () => {
+    const retrieve = vi.fn().mockRejectedValue({ code: "object_not_found" });
+    const adapter = makeAdapter(retrieve);
+    expect(await adapter.findById?.("missing")).toBeNull();
+  });
+
+  it("full page でない応答は null を返す", async () => {
+    const retrieve = vi
+      .fn()
+      .mockResolvedValue({ object: "page", id: "partial" });
+    const adapter = makeAdapter(retrieve);
+    expect(await adapter.findById?.("partial")).toBeNull();
+  });
+});
