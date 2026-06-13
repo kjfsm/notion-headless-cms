@@ -1,5 +1,11 @@
 # example-node-hono
 
+## 0.0.48
+
+### Patch Changes
+
+- @notion-headless-cms/client@0.3.3
+
 ## 0.0.47
 
 ### Patch Changes
