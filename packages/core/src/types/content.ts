@@ -14,8 +14,13 @@ import type { ContentBlock } from "../content/blocks";
 export interface BaseContentItem {
   /** ページ ID（変更検知に必須）。 */
   id: string;
-  /** URL キー（必須）。 */
-  slug: string;
+  /**
+   * URL キー。ページコレクション（`kind: "page"`）では必須。
+   * 要素コレクション（`kind: "data"`）では URL ルーティングしないため持たない。
+   * 内部 identity（キャッシュキー）は `slug ?? id` で解決するため、slug を持たない
+   * アイテムは id でキー管理される。
+   */
+  slug?: string;
   /** ページ名（title 型プロパティのテキスト）。 */
   title?: string | null;
   /** ページの最終編集日時（Notion の last_edited_time、変更検知に必須）。 */

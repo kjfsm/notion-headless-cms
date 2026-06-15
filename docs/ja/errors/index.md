@@ -111,6 +111,14 @@ createClient({ sources: {} });
 
 ---
 
+### handler-version_unsupported
+
+**原因**: `versions` / `check` ルートを要素コレクション（`kind: "data"`）に対して呼んだ。要素コレクションは本文・更新検知バージョンを持たないため、これらのエンドポイントに非対応（HTTP 400）。
+
+**対処**: 要素コレクションは `list()` / `get(id)` のみで利用する。URL ルーティングや更新検知ポーリングが必要なら、そのコレクションを `kind: "page"` にして `slugField` を設定する。
+
+---
+
 ## source/
 
 ### source-fetch_items_failed

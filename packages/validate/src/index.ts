@@ -38,16 +38,31 @@ const cacheAdapterSchema = z
 
 const collectionDefSchema = z
   .object({
+    kind: z.enum(["page", "data"]).optional(),
     source: z.unknown().refine((v) => v != null, {
       message: "collection.source は必須です",
     }),
-    slugField: z.string().min(1, "collection.slugField は必須です"),
+    slugField: z
+      .string()
+      .min(1, "collection.slugField は空にできません")
+      .optional(),
     statusField: z.string().optional(),
     publishedStatuses: z.array(z.string()).optional(),
     accessibleStatuses: z.array(z.string()).optional(),
     hooks: z.unknown().optional(),
   })
-  .passthrough();
+  .passthrough()
+  .superRefine((v, ctx) => {
+    // ページコレクション（kind 既定 "page"）は slugField 必須。要素は不要。
+    if (v.kind !== "data" && !v.slugField) {
+      ctx.addIssue({
+        code: "custom",
+        message:
+          'ページコレクションの slugField は必須です（URL を持たない場合は kind: "data" を指定）',
+        path: ["slugField"],
+      });
+    }
+  });
 
 const cmsAdapterSchema = z
   .object({
@@ -119,12 +134,25 @@ const notionPublishOptionsSchema = z.object({
 
 const schemaEntrySchema = z
   .object({
+    kind: z.enum(["page", "data"]).optional(),
     dataSourceId: z.string().min(1, "schema.dataSourceId は必須です"),
-    slugField: z.string().min(1, "schema.slugField は必須です"),
+    slugField: z
+      .string()
+      .min(1, "schema.slugField は空にできません")
+      .optional(),
     statusField: z.string().optional(),
     properties: z.record(z.string(), z.unknown()),
   })
-  .passthrough();
+  .passthrough()
+  .superRefine((v, ctx) => {
+    if (v.kind !== "data" && !v.slugField) {
+      ctx.addIssue({
+        code: "custom",
+        message: "schema.slugField はページコレクションで必須です",
+        path: ["slugField"],
+      });
+    }
+  });
 
 const notionSourceConfigSchema = z
   .object({
@@ -141,6 +169,7 @@ const notionSourceConfigSchema = z
 
 const collectionGenConfigSchema = z
   .object({
+    kind: z.enum(["page", "data"]).optional(),
     databaseId: z.string().optional(),
     dbName: z.string().optional(),
     slugField: z.string().optional(),

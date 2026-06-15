@@ -1,5 +1,9 @@
 import { noopDocOps, noopImgOps } from "./cache/noop";
-import { CollectionClientImpl, type CollectionContext } from "./collection";
+import {
+  CollectionClientImpl,
+  type CollectionContext,
+  DataCollectionClientImpl,
+} from "./collection";
 import { CMSError } from "./errors";
 import { createHandler, type HandlerOptions } from "./handler";
 import { mergeHooks, mergeLoggers, withTraceId } from "./hooks";
@@ -73,11 +77,13 @@ export interface CMSGlobalOps {
   /**
    * Notion ページ ID を全コレクション横断で解決し、該当アイテムを単件ウォームする。
    * 公式 webhook の sparse payload（page id のみ）からミラーを再生成するために使う。
-   * 一致したコレクションと slug を返す。どのコレクションにも属さなければ `null`。
+   * 一致したコレクション名を返す。ページコレクションは `slug` も含む。
+   * URL を持たない要素コレクション（`kind: "data"`）は `slug` を含まない。
+   * どのコレクションにも属さなければ `null`。
    */
   warmByPageId(
     pageId: string,
-  ): Promise<{ collection: string; slug: string } | null>;
+  ): Promise<{ collection: string; slug?: string } | null>;
   /** Web Standard な Request/Response ベースのルートハンドラ (画像プロキシ + webhook)。 */
   handler(opts?: HandlerOptions): (req: Request) => Promise<Response>;
   getCachedImage(hash: string): Promise<StorageBinary | null>;
@@ -238,13 +244,16 @@ export function createClient<S extends CMSSources = CMSSources>(
         nextSteps: ["notionSource(...) を sources に渡しているか確認する"],
       });
     }
-    if (!def.slugField) {
+    // ページコレクション（kind 既定 "page"）は slugField が必須。
+    // 要素コレクション（kind: "data"）は URL を持たないため slugField 不要。
+    if (def.kind !== "data" && !def.slugField) {
       throw new CMSError({
         code: "core/config_invalid",
-        message: `createClient: コレクション "${name}" の slugField は必須です。`,
+        message: `createClient: ページコレクション "${name}" の slugField は必須です（URL を持たない場合は kind: "data" を指定）。`,
         context: { operation: "createClient", collection: name },
         nextSteps: [
           `nhc.config.ts の ${name} コレクションに slugField を設定する`,
+          `URL ルーティングしない要素コレクションなら kind: "data" を指定する`,
         ],
       });
     }
@@ -277,11 +286,14 @@ export function createClient<S extends CMSSources = CMSSources>(
   };
 
   const collectionNames: string[] = [];
-  const collections: Record<string, CollectionClient<BaseContentItem>> = {};
-  // warmByPageId は CollectionClient I/F に無い impl 専用メソッドを呼ぶため、具象も保持する。
-  const collectionImpls: Record<
+  // cms.<name> として返す公開クライアント（ページ or 要素）。
+  const collections: Record<string, unknown> = {};
+  // peekVersion / check は本文を持つページコレクションのみ対応。handler から参照する。
+  const pageImpls: Record<string, CollectionClientImpl<BaseContentItem>> = {};
+  // warmByPageId は公開 I/F に無い impl 専用メソッドのため、ページ・要素とも具象を保持する。
+  const warmImpls: Record<
     string,
-    CollectionClientImpl<BaseContentItem>
+    { warmByPageId(pageId: string): Promise<string | null> }
   > = {};
   for (const [name, def] of Object.entries(collectionsInput)) {
     collectionNames.push(name);
@@ -321,10 +333,40 @@ export function createClient<S extends CMSSources = CMSSources>(
       waitUntil,
       slugField: def.slugField,
     };
-    const impl = new CollectionClientImpl(ctx);
-    collections[name] = impl;
-    collectionImpls[name] = impl;
+    if (def.kind === "data") {
+      const dataImpl = new DataCollectionClientImpl(ctx);
+      collections[name] = dataImpl;
+      warmImpls[name] = dataImpl;
+    } else {
+      const impl = new CollectionClientImpl(ctx);
+      collections[name] = impl;
+      pageImpls[name] = impl;
+      warmImpls[name] = impl;
+    }
   }
+
+  // version / check は本文を持つページコレクション専用。pageImpls に無い場合、
+  // コレクション自体が存在する（= 要素コレクション）なら「version 非対応」、
+  // 存在しないなら「未知コレクション」を区別して投げる。
+  const versionUnsupportedOrUnknown = (
+    operation: string,
+    collection: string,
+    slug: string,
+  ): CMSError =>
+    collection in collectionsInput
+      ? new CMSError({
+          code: "handler/version_unsupported",
+          message: `Collection "${collection}" is a data collection (kind: "data") and does not support version polling.`,
+          context: { operation, collection, slug },
+          nextSteps: [
+            "要素コレクションは list() / get(id) のみ対応。versions / check は使わない",
+          ],
+        })
+      : new CMSError({
+          code: "handler/unknown_collection",
+          message: `Unknown collection: ${collection}`,
+          context: { operation, collection, slug },
+        });
 
   const cacheImage = cacheRes.hasImg
     ? buildCacheImageFn(cacheRes.img, cacheRes.imgName, imageProxyBase, logger)
@@ -391,15 +433,20 @@ export function createClient<S extends CMSSources = CMSSources>(
     },
     async warmByPageId(pageId) {
       for (const name of collectionNames) {
-        const slug = await collectionImpls[name]?.warmByPageId(pageId);
-        if (slug) {
+        const identity = await warmImpls[name]?.warmByPageId(pageId);
+        if (identity) {
+          // ページは slug を返す。要素コレクション（pageImpls に無い）は URL を
+          // 持たないため slug を付けず、id を slug に偽装しない。
+          const slug = pageImpls[name] ? identity : undefined;
           logger?.debug?.("warmByPageId: ページを再ウォーム", {
             operation: "warmByPageId",
             collection: name,
             slug,
             pageId,
           });
-          return { collection: name, slug };
+          return slug !== undefined
+            ? { collection: name, slug }
+            : { collection: name };
         }
       }
       return null;
@@ -433,24 +480,21 @@ export function createClient<S extends CMSSources = CMSSources>(
           },
           revalidate: (scope) => globalOps.invalidate(scope),
           peekVersionFor(collection, slug) {
-            const client = collections[collection];
+            // peekVersion は本文を持つページコレクションのみ対応。
+            const client = pageImpls[collection];
             if (!client) {
-              throw new CMSError({
-                code: "handler/unknown_collection",
-                message: `Unknown collection: ${collection}`,
-                context: { operation: "peekVersionFor", collection, slug },
-              });
+              throw versionUnsupportedOrUnknown(
+                "peekVersionFor",
+                collection,
+                slug,
+              );
             }
             return client.peekVersion(slug);
           },
           async checkFor(collection, slug, currentVersion) {
-            const client = collections[collection];
+            const client = pageImpls[collection];
             if (!client) {
-              throw new CMSError({
-                code: "handler/unknown_collection",
-                message: `Unknown collection: ${collection}`,
-                context: { operation: "checkFor", collection, slug },
-              });
+              throw versionUnsupportedOrUnknown("checkFor", collection, slug);
             }
             const result = await client.check(slug, currentVersion);
             // ItemWithContent は lazy 関数を含むため、HTTP には stale 判定のみ返す

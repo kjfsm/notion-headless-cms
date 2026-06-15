@@ -105,6 +105,11 @@ export interface NotionCollectionSchemaOptions<T extends BaseContentItem>
 export interface NotionCollectionPropertiesOptions
   extends NotionCollectionCommonOptions {
   properties: PropertyMap;
+  /**
+   * slug として使う TS フィールド名（`properties` のキー）。
+   * 未指定の場合は要素コレクション扱いとなり、slug を設定せず空チェックもスキップする。
+   */
+  slugField?: string;
 }
 
 export type NotionCollectionOptions<
@@ -159,9 +164,12 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
     } else if ("properties" in opts && opts.properties && !("fields" in opts)) {
       // CLI 生成 PropertyMap 形式。slug/status は createClient({ collections }) 側で解釈する
       const propMap = opts.properties as PropertyMap;
+      const slugField = (opts as NotionCollectionPropertiesOptions).slugField;
       this.properties = propMap;
       this.itemMapper = ((page: NotionPage) =>
-        mapItemFromPropertyMap(page, propMap)) as (page: NotionPage) => T;
+        mapItemFromPropertyMap(page, propMap, slugField)) as (
+        page: NotionPage,
+      ) => T;
     } else {
       const props: Required<CMSSchemaProperties> = {
         ...DEFAULT_PROPERTIES,

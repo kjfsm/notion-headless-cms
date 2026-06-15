@@ -66,11 +66,11 @@ export interface HandlerAdapter {
   ): Promise<{ stale: boolean } | null>;
   /**
    * Notion ページ ID を全コレクション横断で解決し単件ウォームする（公式 webhook 用）。
-   * 一致したコレクション / slug、無ければ `null`。
+   * 一致したコレクション（ページは slug も含む。要素コレクションは含まない）、無ければ `null`。
    */
   warmByPageId(
     pageId: string,
-  ): Promise<{ collection: string; slug: string } | null>;
+  ): Promise<{ collection: string; slug?: string } | null>;
   /** createCMS で設定された Notion webhook 検証トークンの既定値。 */
   notionWebhookSecret?: string;
   /** 応答送信後もウォームを完走させる実行フック (Cloudflare の `waitUntil` 相当)。 */
@@ -124,6 +124,7 @@ function httpStatusForError(code: string): number | null {
   if (code === "webhook/unknown_collection") return 404;
   if (code === "webhook/payload_invalid") return 400;
   if (code === "handler/unknown_collection") return 404;
+  if (code === "handler/version_unsupported") return 400;
   return null;
 }
 

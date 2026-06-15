@@ -12,6 +12,7 @@
  * | `webhook/unknown_collection` | Webhook の対象コレクションが未知 |
  * | `webhook/not_implemented` | DataSource が parseWebhook を実装していない |
  * | `handler/unknown_collection` | `cms.handler()` のルート (versions / check) が指す対象コレクションが未知 |
+ * | `handler/version_unsupported` | versions / check を要素コレクション (kind: "data") に対して呼んだ |
  * | `source/fetch_items_failed` | `DataSource.list()` 失敗 |
  * | `source/fetch_item_failed` | `DataSource.findByProp()` 失敗 |
  * | `source/load_markdown_failed` | `DataSource.loadMarkdown()` 失敗 |
@@ -44,6 +45,7 @@ export type BuiltInCMSErrorCode =
   | "webhook/unknown_collection"
   | "webhook/not_implemented"
   | "handler/unknown_collection"
+  | "handler/version_unsupported"
   | "source/fetch_items_failed"
   | "source/fetch_item_failed"
   | "source/load_markdown_failed"
@@ -155,6 +157,13 @@ const BUILT_IN_ERROR_HELP: Record<BuiltInCMSErrorCode, ErrorHelp> = {
     nextSteps: [
       "versions / check のルート URL が登録済みのコレクション名を指しているか確認する",
       "createCMS の collections に該当コレクションが定義されているか確認する",
+    ],
+  },
+  "handler/version_unsupported": {
+    docsAnchor: "handler-version_unsupported",
+    nextSteps: [
+      '要素コレクション（kind: "data"）は list() / get(id) のみ対応。versions / check は使わない',
+      "URL ルーティングが必要なら kind を page にして slugField を設定する",
     ],
   },
   "source/fetch_items_failed": {

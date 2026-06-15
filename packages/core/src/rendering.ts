@@ -67,11 +67,13 @@ export async function buildCachedItemContent<T extends BaseContentItem>(
   ctx: RenderContext<T>,
 ): Promise<CachedItemContent> {
   const start = Date.now();
+  // 内部 identity（ページは slug、要素は id）。ログ・フックの識別子に使う。
+  const slug = item.slug ?? item.id;
   ctx.logger?.info?.("コンテンツのレンダリング開始", {
-    slug: item.slug,
+    slug,
     pageId: item.id,
   });
-  ctx.hooks.onRenderStart?.(item.slug);
+  ctx.hooks.onRenderStart?.(slug);
 
   let markdown: string;
   try {
@@ -85,7 +87,7 @@ export async function buildCachedItemContent<T extends BaseContentItem>(
       context: {
         operation: "buildCachedItemContent:loadMarkdown",
         pageId: item.id,
-        slug: item.slug,
+        slug,
       },
     });
   }
@@ -102,7 +104,7 @@ export async function buildCachedItemContent<T extends BaseContentItem>(
       context: {
         operation: "buildCachedItemContent:loadBlocks",
         pageId: item.id,
-        slug: item.slug,
+        slug,
       },
     });
   }
@@ -128,7 +130,7 @@ export async function buildCachedItemContent<T extends BaseContentItem>(
           context: {
             operation: "buildCachedItemContent:loadNotionBlocks",
             pageId: item.id,
-            slug: item.slug,
+            slug,
           },
         });
       }
@@ -163,7 +165,7 @@ export async function buildCachedItemContent<T extends BaseContentItem>(
       context: {
         operation: "buildCachedItemContent:renderMarkdown",
         pageId: item.id,
-        slug: item.slug,
+        slug,
       },
     });
   }
@@ -187,10 +189,10 @@ export async function buildCachedItemContent<T extends BaseContentItem>(
 
   const durationMs = Date.now() - start;
   ctx.logger?.info?.("コンテンツのレンダリング完了", {
-    slug: item.slug,
+    slug,
     durationMs,
   });
-  ctx.hooks.onRenderEnd?.(item.slug, durationMs);
+  ctx.hooks.onRenderEnd?.(slug, durationMs);
 
   return result;
 }

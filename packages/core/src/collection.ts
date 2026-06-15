@@ -15,6 +15,8 @@ import type {
   CMSHooks,
   CollectionCacheOps,
   CollectionClient,
+  DataCollectionCacheOps,
+  DataCollectionClient,
   DataSource,
   DocumentCacheOps,
   FindOptions,
@@ -37,6 +39,15 @@ export function collectionKey(collection: string, slug?: string): string {
   return slug ? `${collection}:${slug}` : collection;
 }
 
+/**
+ * アイテムの内部 identity（キャッシュキー・ログ用）を返す。
+ * ページコレクションは slug、URL を持たない要素コレクションは id でキー管理する。
+ * slug が空文字のときも id にフォールバックし、`""` キーでの衝突を防ぐ（`??` ではなく `||`）。
+ */
+export function itemKey(item: BaseContentItem): string {
+  return item.slug || item.id;
+}
+
 export interface CollectionContext<T extends BaseContentItem> {
   collection: string;
   source: DataSource<T>;
@@ -54,8 +65,9 @@ export interface CollectionContext<T extends BaseContentItem> {
   /**
    * slug として使うフィールド名。`source.properties[slugField].notion` を
    * Notion プロパティ名として `findByProp` を呼び出す。
+   * 要素コレクション（`kind: "data"`）では未指定。
    */
-  slugField: string;
+  slugField?: string;
 }
 
 export class CollectionClientImpl<T extends BaseContentItem>
@@ -83,7 +95,17 @@ export class CollectionClientImpl<T extends BaseContentItem>
     await this.primeItem(item);
     // 一覧の見出し・新規公開・並び順の変化を反映するためリストキャッシュも作り直す。
     await this.refreshList();
-    return item.slug;
+    return itemKey(item);
+  }
+
+  /** Notion page id でアイテムを解決する（本文を伴わない素の取得）。要素コレクションの `get(id)` で使う。 */
+  async getById(id: string): Promise<T | null> {
+    return this.resolveByPageId(id);
+  }
+
+  /** リストキャッシュを最新の取得結果で作り直す（要素コレクションの webhook 再検証で使う）。 */
+  async revalidateList(): Promise<void> {
+    await this.refreshList();
   }
 
   async find(
@@ -156,7 +178,10 @@ export class CollectionClientImpl<T extends BaseContentItem>
 
   async params(): Promise<string[]> {
     const items = await this.fetchList();
-    return items.map((item) => item.slug);
+    // slug を持つアイテムのみページ化対象（空文字・未設定は除外）。
+    return items
+      .map((item) => item.slug)
+      .filter((slug): slug is string => Boolean(slug));
   }
 
   async peekVersion(
@@ -230,9 +255,9 @@ export class CollectionClientImpl<T extends BaseContentItem>
             await this.primeItem(item);
             ok++;
           } catch (err) {
-            failed.push({ slug: item.slug, error: err });
+            failed.push({ slug: itemKey(item), error: err });
             this.ctx.logger?.warn?.("warm: アイテムの事前レンダリングに失敗", {
-              slug: item.slug,
+              slug: itemKey(item),
               pageId: item.id,
               error: err instanceof Error ? err.message : String(err),
             });
@@ -257,9 +282,10 @@ export class CollectionClientImpl<T extends BaseContentItem>
 
   /** 取得済みアイテムからメタ・本文キャッシュを作り直す（warm / prime / warmByPageId 共通）。 */
   private async primeItem(item: T): Promise<void> {
-    await this.persistMeta(item.slug, item);
+    const key = itemKey(item);
+    await this.persistMeta(key, item);
     const content = await buildCachedItemContent(item, this.ctx.render);
-    await this.ctx.docCache.setContent(this.ctx.collection, item.slug, content);
+    await this.ctx.docCache.setContent(this.ctx.collection, key, content);
   }
 
   /** リストキャッシュを最新の取得結果で作り直す。 */
@@ -380,8 +406,8 @@ export class CollectionClientImpl<T extends BaseContentItem>
   }
 
   private attachLazyContent(meta: CachedItemMeta<T>): ItemWithContent<T> {
-    const slug = meta.item.slug;
     const item = meta.item;
+    const slug = itemKey(item);
     // html() / markdown() / blocks() を同じアイテムから複数回呼んでも I/O は 1 回に集約する
     let payloadPromise: Promise<CachedItemContent> | undefined;
     const loadPayload = (): Promise<CachedItemContent> => {
@@ -619,8 +645,9 @@ export class CollectionClientImpl<T extends BaseContentItem>
     };
 
     // PropertyMap が解決できる場合は単一プロパティ filter で 1 ページだけ取得する (高速)
-    const notionPropName =
-      this.ctx.source.properties?.[this.ctx.slugField]?.notion;
+    const notionPropName = this.ctx.slugField
+      ? this.ctx.source.properties?.[this.ctx.slugField]?.notion
+      : undefined;
 
     let item: T | null;
     const findByProp = this.ctx.source.findByProp?.bind(this.ctx.source);
@@ -628,7 +655,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
       item = await withRetry(() => findByProp(notionPropName, slug), retryOpts);
     } else {
       const all = await withRetry(() => this.ctx.source.list(), retryOpts);
-      item = all.find((i) => i.slug === slug) ?? null;
+      item = all.find((i) => itemKey(i) === slug) ?? null;
     }
 
     if (!item) return null;
@@ -640,6 +667,42 @@ export class CollectionClientImpl<T extends BaseContentItem>
       return null;
     }
     return item;
+  }
+}
+
+/**
+ * 要素（データ）コレクションのクライアント。
+ * ページ用 `CollectionClientImpl` を内部に持ち、`list` / `get(id)` / `cache.invalidate` のみ公開する。
+ * 本文レンダリング・slug ルックアップ・`params` は持たない。内部 identity は id。
+ */
+export class DataCollectionClientImpl<T extends BaseContentItem>
+  implements DataCollectionClient<T>
+{
+  readonly cache: DataCollectionCacheOps;
+  private readonly inner: CollectionClientImpl<T>;
+
+  constructor(ctx: CollectionContext<T>) {
+    this.inner = new CollectionClientImpl(ctx);
+    this.cache = { invalidate: () => this.inner.cache.invalidate() };
+  }
+
+  list(opts?: ListOptions<T>): Promise<T[]> {
+    return this.inner.list(opts);
+  }
+
+  get(id: string): Promise<T | null> {
+    return this.inner.getById(id);
+  }
+
+  /**
+   * webhook 再検証で呼ばれる。対象 page がこのコレクションに属すならリストを作り直し、
+   * その identity（id）を返す。属さなければ null。本文を持たないのでリストのみ更新する。
+   */
+  async warmByPageId(pageId: string): Promise<string | null> {
+    const item = await this.inner.getById(pageId);
+    if (!item) return null;
+    await this.inner.revalidateList();
+    return itemKey(item);
   }
 }
 

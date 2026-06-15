@@ -78,7 +78,8 @@ export default defineConfig({
 |---|---|---|
 | `dbName` | (`databaseId` 未指定時) | Notion DB 名（完全一致で検索） |
 | `databaseId` | (`dbName` 未指定時) | Notion DB ID（指定時は `dbName` より優先） |
-| `slugField` | – | slug に使う TS フィールド名（デフォルト `"slug"`） |
+| `kind` | – | `"page"`（既定）= URL ルーティングするページ / `"data"` = URL を持たない要素（`list()` / `get(id)` のみ、slug 不要） |
+| `slugField` | – | slug に使う TS フィールド名（デフォルト `"slug"`、`kind: "data"` では無視） |
 | `statusField` | – | status に使う TS フィールド名（デフォルト `"status"`） |
 | `publishedStatuses` | – | `notionSource({ publishOptions })` への移行用メモ |
 | `accessibleStatuses` | – | 同上 |
