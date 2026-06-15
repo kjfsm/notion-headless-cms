@@ -62,7 +62,7 @@ jobs:
       # Issue #318 (M7): release gate に size-limit を追加。バンドルサイズの
       # リグレッションを PR 単位で検出する。
       - run: pnpm size
-      - uses: codecov/codecov-action@v6
+      - uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: "**/coverage/lcov.info"
