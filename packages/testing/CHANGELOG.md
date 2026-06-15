@@ -1,5 +1,12 @@
 # @notion-headless-cms/testing
 
+## 0.3.4
+
+### Patch Changes
+
+- Updated dependencies [919ec7c]
+  - @notion-headless-cms/core@0.5.4
+
 ## 0.3.3
 
 ### Patch Changes
