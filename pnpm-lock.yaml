@@ -222,6 +222,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.3.0
         version: 4.3.1(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.9.3
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.17
@@ -344,6 +347,9 @@ importers:
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.60.0
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.9.3
       dotenv:
         specifier: 'catalog:'
         version: 17.4.2
@@ -432,6 +438,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.3.0
         version: 4.3.1(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.9.3
       '@types/react':
         specifier: 'catalog:'
         version: 19.2.17
