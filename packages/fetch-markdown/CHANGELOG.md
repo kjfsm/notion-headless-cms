@@ -1,5 +1,12 @@
 # @notion-headless-cms/fetch-markdown
 
+## 0.0.10
+
+### Patch Changes
+
+- Updated dependencies [7097371]
+  - @notion-headless-cms/notion-orm@0.2.5
+
 ## 0.0.9
 
 ### Patch Changes
