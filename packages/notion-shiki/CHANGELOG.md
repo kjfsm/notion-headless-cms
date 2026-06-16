@@ -1,5 +1,12 @@
 # @notion-headless-cms/notion-shiki
 
+## 1.0.5
+
+### Patch Changes
+
+- Updated dependencies [7097371]
+  - @notion-headless-cms/notion-orm@0.2.5
+
 ## 1.0.4
 
 ### Patch Changes
