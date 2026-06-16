@@ -228,6 +228,7 @@ describe("generateSchemaFile", () => {
     expect(code).toContain("export const schema =");
     expect(code).toContain("satisfies SchemaMap");
     expect(code).toContain("dataSourceId: postsDataSourceId");
+    expect(code).toContain('dbName: "ブログ記事DB"');
     expect(code).toContain("properties: postsProperties");
     expect(code).not.toContain("export function createClient");
     expect(code).not.toContain("NhcConfig");
@@ -315,6 +316,7 @@ describe("generateSchemaFile", () => {
   it("kind: data では slug プロパティを生成せず schema に kind: data を出力する", () => {
     const collection = makeCollection({
       name: "settings",
+      dbName: "設定DB",
       config: { dbName: "設定DB", kind: "data", publishedStatuses: [] },
       properties: {
         Key: makeProp("title"),
@@ -326,6 +328,8 @@ describe("generateSchemaFile", () => {
     expect(code).not.toContain("slug: string;");
     expect(code).not.toContain("slugField:");
     expect(code).toContain('kind: "data"');
+    // DB 名は kind: data でも schema に出力し、cms.<collection>.dbName で参照できる。
+    expect(code).toContain('dbName: "設定DB"');
   });
 
   it("notion-source / core から型を import する", () => {

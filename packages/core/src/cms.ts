@@ -332,6 +332,7 @@ export function createClient<S extends CMSSources = CMSSources>(
       maxConcurrent,
       waitUntil,
       slugField: def.slugField,
+      dbName: def.dbName,
     };
     if (def.kind === "data") {
       const dataImpl = new DataCollectionClientImpl(ctx);

@@ -147,6 +147,7 @@ collections: {
 - 要素コレクションは Notion DB に slug プロパティを用意する必要がない。`cms.settings.list()` で全件、`cms.settings.get(id)` で 1 件取得する。
 - 生成されるアイテム型から `slug` は除去されるため、`cms.settings.find(...)` / `.params()` / `item.slug` はコンパイルエラーになる（ページとの誤用を型で防ぐ）。
 - 内部のキャッシュ identity はページが slug、要素が Notion ページ ID。
+- `nhc generate` は introspect 時に取得した Notion DB の表示名を schema に埋め込むため、`cms.settings.dbName` で DB 名を参照できる（ページコレクションも同様に `cms.posts.dbName`）。手書き schema で `dbName` を省略した場合は `undefined`。
 
 ### `notionToken` / `env()`
 

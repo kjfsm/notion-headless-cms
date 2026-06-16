@@ -60,6 +60,7 @@ describe("notionSource", () => {
       settings: {
         kind: "data",
         dataSourceId: "ds-settings",
+        dbName: "設定DB",
         properties: {
           key: { type: "title", notion: "Key" },
           value: { type: "richText", notion: "Value" },
@@ -70,9 +71,11 @@ describe("notionSource", () => {
     const def = adapter.collections.settings as unknown as {
       kind?: string;
       slugField?: string;
+      dbName?: string;
     };
     expect(def.kind).toBe("data");
     expect(def.slugField).toBeUndefined();
+    expect(def.dbName).toBe("設定DB");
     // createNotionCollection にも slugField を渡さない。
     const lastCall = vi.mocked(createNotionCollection).mock.calls.at(-1);
     expect(lastCall?.[0]).not.toHaveProperty("slugField");

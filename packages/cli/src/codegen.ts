@@ -265,6 +265,7 @@ function generateSchemaAggregateBlock(
       return `\t${c.name}: {
 \t\tkind: "data",
 \t\tdataSourceId: ${c.name}DataSourceId,
+\t\tdbName: ${JSON.stringify(c.dbName)},
 \t\tproperties: ${c.name}Properties,
 \t\tstatusField: ${JSON.stringify(statusField)},
 \t},`;
@@ -272,6 +273,7 @@ function generateSchemaAggregateBlock(
     const slugField = c.config.slugField ?? "slug";
     return `\t${c.name}: {
 \t\tdataSourceId: ${c.name}DataSourceId,
+\t\tdbName: ${JSON.stringify(c.dbName)},
 \t\tproperties: ${c.name}Properties,
 \t\tslugField: ${JSON.stringify(slugField)},
 \t\tstatusField: ${JSON.stringify(statusField)},
