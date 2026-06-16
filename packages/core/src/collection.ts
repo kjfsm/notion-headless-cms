@@ -85,7 +85,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
   }
 
   /** データソースの表示名を取得する。DataSource が未対応なら undefined。 */
-  dbName(): Promise<string | undefined> {
+  getDbName(): Promise<string | undefined> {
     return this.ctx.source.getDbName?.() ?? Promise.resolve(undefined);
   }
 
@@ -692,8 +692,8 @@ export class DataCollectionClientImpl<T extends BaseContentItem>
   }
 
   /** データソースの表示名を取得する。DataSource が未対応なら undefined。 */
-  dbName(): Promise<string | undefined> {
-    return this.inner.dbName();
+  getDbName(): Promise<string | undefined> {
+    return this.inner.getDbName();
   }
 
   list(opts?: ListOptions<T>): Promise<T[]> {

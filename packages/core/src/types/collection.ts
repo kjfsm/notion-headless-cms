@@ -125,7 +125,7 @@ export interface CollectionClient<T extends BaseContentItem = BaseContentItem> {
    * 初回呼び出しで解決し、以降はキャッシュした値を返す。
    * 取得できない（DataSource が未対応の）場合は undefined。
    */
-  dbName(): Promise<string | undefined>;
+  getDbName(): Promise<string | undefined>;
 
   /**
    * スラッグで単件取得。アイテム本体に `html()` / `markdown()` / `blocks()` が生える。
@@ -195,7 +195,7 @@ export interface DataCollectionClient<
    * 初回呼び出しで解決し、以降はキャッシュした値を返す。
    * 取得できない（DataSource が未対応の）場合は undefined。
    */
-  dbName(): Promise<string | undefined>;
+  getDbName(): Promise<string | undefined>;
 
   /** 全アイテム一覧を取得する。 */
   list(opts?: ListOptions<T>): Promise<T[]>;

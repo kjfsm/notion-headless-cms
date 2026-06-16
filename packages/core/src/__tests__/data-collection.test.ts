@@ -73,24 +73,24 @@ describe("要素（データ）コレクション", () => {
     expect(items[0]?.slug).toBeUndefined();
   });
 
-  it("source.getDbName があれば cms.<collection>.dbName() で取得できる", async () => {
+  it("source.getDbName があれば cms.<collection>.getDbName() で取得できる", async () => {
     const cms = makeDataCms(async () => makeDataItems(), "設定DB");
     const settings = (
       cms as unknown as {
-        settings: { dbName(): Promise<string | undefined> };
+        settings: { getDbName(): Promise<string | undefined> };
       }
     ).settings;
-    await expect(settings.dbName()).resolves.toBe("設定DB");
+    await expect(settings.getDbName()).resolves.toBe("設定DB");
   });
 
   it("source.getDbName が無ければ undefined", async () => {
     const cms = makeDataCms(async () => makeDataItems());
     const settings = (
       cms as unknown as {
-        settings: { dbName(): Promise<string | undefined> };
+        settings: { getDbName(): Promise<string | undefined> };
       }
     ).settings;
-    await expect(settings.dbName()).resolves.toBeUndefined();
+    await expect(settings.getDbName()).resolves.toBeUndefined();
   });
 
   it("get(id) で id をキーに 1 件取得できる", async () => {
