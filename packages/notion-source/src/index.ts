@@ -69,6 +69,7 @@ export function notionSource<S extends SchemaMap>(
     const slugField = isData ? undefined : entry.slugField;
     const def = {
       ...(isData ? { kind: "data" as const } : {}),
+      ...(entry.dbName ? { dbName: entry.dbName } : {}),
       source: createNotionCollection({
         token: opts.token,
         dataSourceId: entry.dataSourceId,

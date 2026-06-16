@@ -10,6 +10,8 @@ export interface PageCollectionSchemaEntry {
   /** コレクション種別。省略時はページ。 */
   kind?: "page";
   dataSourceId: string;
+  /** Notion DB（data source）の表示名。`nhc generate` の introspect 時に取得して埋め込む。 */
+  dbName?: string;
   properties: PropertyMap;
   /** slug として使う TS フィールド名。 */
   slugField: string;
@@ -20,6 +22,8 @@ export interface PageCollectionSchemaEntry {
 export interface DataCollectionSchemaEntry {
   kind: "data";
   dataSourceId: string;
+  /** Notion DB（data source）の表示名。`nhc generate` の introspect 時に取得して埋め込む。 */
+  dbName?: string;
   properties: PropertyMap;
   statusField?: string;
 }

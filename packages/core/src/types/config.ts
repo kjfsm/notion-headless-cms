@@ -83,6 +83,11 @@ export interface CollectionDef<T extends BaseContentItem = BaseContentItem> {
   /** Notion etc. のデータソース実装。 */
   source: DataSource<T>;
   /**
+   * データソース（Notion DB）の表示名。`nhc generate` が introspect 時に取得して
+   * schema に埋め込み、`cms.<collection>.dbName` で参照できる。手書き schema では任意。
+   */
+  dbName?: string;
+  /**
    * slug として使う TS フィールド名。`source.properties[slugField]` で Notion プロパティ名を解決する。
    * ページコレクション（`kind: "page"`）では必須。要素コレクション（`kind: "data"`）では未指定。
    */

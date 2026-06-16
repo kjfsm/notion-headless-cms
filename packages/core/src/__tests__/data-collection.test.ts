@@ -37,7 +37,10 @@ function makeDataItems(): BaseContentItem[] {
   ];
 }
 
-function makeDataCms(listImpl: () => Promise<BaseContentItem[]>) {
+function makeDataCms(
+  listImpl: () => Promise<BaseContentItem[]>,
+  dbName?: string,
+) {
   return createClient({
     renderer: mockRenderer,
     cache: [memoryCache()],
@@ -47,6 +50,7 @@ function makeDataCms(listImpl: () => Promise<BaseContentItem[]>) {
           settings: {
             kind: "data",
             source: makeMockSource({ list: listImpl }),
+            ...(dbName ? { dbName } : {}),
           },
         },
       },
@@ -65,6 +69,20 @@ describe("要素（データ）コレクション", () => {
     expect(items).toHaveLength(2);
     expect([...items.map((i) => i.id)].sort()).toEqual(["page-a", "page-b"]);
     expect(items[0]?.slug).toBeUndefined();
+  });
+
+  it("dbName を指定すると cms.<collection>.dbName で参照できる", async () => {
+    const cms = makeDataCms(async () => makeDataItems(), "設定DB");
+    const settings = (cms as unknown as { settings: { dbName?: string } })
+      .settings;
+    expect(settings.dbName).toBe("設定DB");
+  });
+
+  it("dbName 未指定なら undefined", async () => {
+    const cms = makeDataCms(async () => makeDataItems());
+    const settings = (cms as unknown as { settings: { dbName?: string } })
+      .settings;
+    expect(settings.dbName).toBeUndefined();
   });
 
   it("get(id) で id をキーに 1 件取得できる", async () => {

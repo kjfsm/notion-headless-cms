@@ -68,14 +68,18 @@ export interface CollectionContext<T extends BaseContentItem> {
    * 要素コレクション（`kind: "data"`）では未指定。
    */
   slugField?: string;
+  /** データソース（Notion DB）の表示名。`cms.<collection>.dbName` で公開する。 */
+  dbName?: string;
 }
 
 export class CollectionClientImpl<T extends BaseContentItem>
   implements CollectionClient<T>
 {
   readonly cache: CollectionCacheOps<T>;
+  readonly dbName: string | undefined;
 
   constructor(private readonly ctx: CollectionContext<T>) {
+    this.dbName = ctx.dbName;
     this.cache = {
       invalidate: () => this.invalidateImpl(),
       invalidateItem: (slug: string) => this.invalidateItemImpl(slug),
@@ -679,9 +683,11 @@ export class DataCollectionClientImpl<T extends BaseContentItem>
   implements DataCollectionClient<T>
 {
   readonly cache: DataCollectionCacheOps;
+  readonly dbName: string | undefined;
   private readonly inner: CollectionClientImpl<T>;
 
   constructor(ctx: CollectionContext<T>) {
+    this.dbName = ctx.dbName;
     this.inner = new CollectionClientImpl(ctx);
     this.cache = { invalidate: () => this.inner.cache.invalidate() };
   }

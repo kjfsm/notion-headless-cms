@@ -121,6 +121,12 @@ export type CheckResult<T extends BaseContentItem> =
  */
 export interface CollectionClient<T extends BaseContentItem = BaseContentItem> {
   /**
+   * データソース（Notion DB）の表示名。`nhc generate` が schema に埋め込んだ場合のみ非 undefined。
+   * 手書き schema で `dbName` を省略した場合は undefined。
+   */
+  readonly dbName: string | undefined;
+
+  /**
    * スラッグで単件取得。アイテム本体に `html()` / `markdown()` / `blocks()` が生える。
    *
    * SWR: TTL 未設定 or 期限内ならキャッシュ即時返却 + バックグラウンド差分チェック。
@@ -183,6 +189,12 @@ export interface DataCollectionCacheOps {
 export interface DataCollectionClient<
   T extends BaseContentItem = BaseContentItem,
 > {
+  /**
+   * データソース（Notion DB）の表示名。`nhc generate` が schema に埋め込んだ場合のみ非 undefined。
+   * 手書き schema で `dbName` を省略した場合は undefined。
+   */
+  readonly dbName: string | undefined;
+
   /** 全アイテム一覧を取得する。 */
   list(opts?: ListOptions<T>): Promise<T[]>;
 
