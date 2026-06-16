@@ -1,5 +1,11 @@
 # @notion-headless-cms/notion-shiki
 
+## 1.0.4
+
+### Patch Changes
+
+- @notion-headless-cms/notion-orm@0.2.4
+
 ## 1.0.3
 
 ### Patch Changes

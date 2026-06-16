@@ -1,7 +1,7 @@
 {
   "name": "example-cloudflare-react-router",
   "private": true,
-  "version": "0.0.70",
+  "version": "0.0.71",
   "type": "module",
   "scripts": {
     "build": "react-router build",

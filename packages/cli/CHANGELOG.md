@@ -1,5 +1,14 @@
 # @notion-headless-cms/cli
 
+## 2.0.6
+
+### Patch Changes
+
+- 29040ac: コレクションから Notion DB の表示名を参照できる `cms.<collection>.dbName` を追加。`nhc generate` が introspect 時に取得した DB 名を schema に埋め込み、ページ・要素（`kind: "data"`）の両コレクションで参照できる。手書き schema で `dbName` を省略した場合は `undefined`。
+- Updated dependencies [29040ac]
+  - @notion-headless-cms/core@0.5.5
+  - @notion-headless-cms/validate@0.1.7
+
 ## 2.0.5
 
 ### Patch Changes
