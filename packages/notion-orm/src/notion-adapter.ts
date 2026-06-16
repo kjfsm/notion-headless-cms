@@ -132,6 +132,8 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
   private readonly dbName: string | undefined;
   private resolvedDataSourceId: string | undefined;
   private resolvingDataSourceId: Promise<string> | undefined;
+  private resolvedDbName: string | undefined;
+  private resolvingDbName: Promise<string | undefined> | undefined;
   private readonly itemMapper: (page: NotionPage) => T;
   private readonly token: string;
   // 動的 fallback 用に保持。明示的に渡された場合は最初から content が入る。
@@ -220,6 +222,49 @@ class NotionCollection<T extends BaseContentItem = BaseContentItem>
       return await this.resolvingDataSourceId;
     } finally {
       this.resolvingDataSourceId = undefined;
+    }
+  }
+
+  /**
+   * データソースの表示名を返す。`dbName` が明示指定されていればそれを使い、
+   * なければ `data_source` を retrieve して title を取り出す。結果はキャッシュする。
+   */
+  async getDbName(): Promise<string | undefined> {
+    if (this.resolvedDbName !== undefined) return this.resolvedDbName;
+    if (this.dbName) {
+      this.resolvedDbName = this.dbName;
+      return this.dbName;
+    }
+    if (this.resolvingDbName) return this.resolvingDbName;
+    this.resolvingDbName = (async () => {
+      try {
+        const dataSourceId = await this.getDataSourceId();
+        const ds = await this.client.dataSources.retrieve({
+          data_source_id: dataSourceId,
+        });
+        if (ds.object !== "data_source") return undefined;
+        const title = (ds as DataSourceObjectResponse).title
+          .map((t) => t.plain_text)
+          .join("");
+        this.resolvedDbName = title;
+        return title;
+      } catch (err) {
+        if (isCMSError(err)) throw err;
+        throw new CMSError({
+          code: "source/fetch_item_failed",
+          message: "Failed to retrieve data source name from Notion.",
+          cause: err,
+          context: {
+            operation: "NotionCollection.getDbName",
+            dataSourceId: this.resolvedDataSourceId,
+          },
+        });
+      }
+    })();
+    try {
+      return await this.resolvingDbName;
+    } finally {
+      this.resolvingDbName = undefined;
     }
   }
 

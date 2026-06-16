@@ -71,14 +71,13 @@ describe("notionSource", () => {
     const def = adapter.collections.settings as unknown as {
       kind?: string;
       slugField?: string;
-      dbName?: string;
     };
     expect(def.kind).toBe("data");
     expect(def.slugField).toBeUndefined();
-    expect(def.dbName).toBe("設定DB");
-    // createNotionCollection にも slugField を渡さない。
+    // dbName は createNotionCollection に渡し、実行時に getDbName で解決する。
     const lastCall = vi.mocked(createNotionCollection).mock.calls.at(-1);
     expect(lastCall?.[0]).not.toHaveProperty("slugField");
+    expect(lastCall?.[0]).toHaveProperty("dbName", "設定DB");
   });
 
   it("fetch オプションを content として createNotionCollection に渡す", () => {

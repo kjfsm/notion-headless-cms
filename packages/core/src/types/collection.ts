@@ -121,10 +121,11 @@ export type CheckResult<T extends BaseContentItem> =
  */
 export interface CollectionClient<T extends BaseContentItem = BaseContentItem> {
   /**
-   * データソース（Notion DB）の表示名。`nhc generate` が schema に埋め込んだ場合のみ非 undefined。
-   * 手書き schema で `dbName` を省略した場合は undefined。
+   * データソース（Notion DB）の表示名を Notion API から取得する。
+   * 初回呼び出しで解決し、以降はキャッシュした値を返す。
+   * 取得できない（DataSource が未対応の）場合は undefined。
    */
-  readonly dbName: string | undefined;
+  dbName(): Promise<string | undefined>;
 
   /**
    * スラッグで単件取得。アイテム本体に `html()` / `markdown()` / `blocks()` が生える。
@@ -190,10 +191,11 @@ export interface DataCollectionClient<
   T extends BaseContentItem = BaseContentItem,
 > {
   /**
-   * データソース（Notion DB）の表示名。`nhc generate` が schema に埋め込んだ場合のみ非 undefined。
-   * 手書き schema で `dbName` を省略した場合は undefined。
+   * データソース（Notion DB）の表示名を Notion API から取得する。
+   * 初回呼び出しで解決し、以降はキャッシュした値を返す。
+   * 取得できない（DataSource が未対応の）場合は undefined。
    */
-  readonly dbName: string | undefined;
+  dbName(): Promise<string | undefined>;
 
   /** 全アイテム一覧を取得する。 */
   list(opts?: ListOptions<T>): Promise<T[]>;

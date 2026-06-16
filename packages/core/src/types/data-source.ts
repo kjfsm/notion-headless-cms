@@ -67,6 +67,12 @@ export interface DataSource<T extends BaseContentItem = BaseContentItem> {
   readonly name: string;
 
   /**
+   * データソース（Notion DB 等）の表示名を返す。`cms.<collection>.dbName()` の実体。
+   * 実装側は API から取得し、結果をキャッシュしてよい。取得できない場合は undefined。
+   */
+  getDbName?(): Promise<string | undefined>;
+
+  /**
    * CLI 生成の `*Properties` に対応するプロパティマップ。
    * Core が `findByProp` の Notion プロパティ名解決に使用する。
    */

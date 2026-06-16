@@ -49,8 +49,10 @@ function makeDataCms(
         collections: {
           settings: {
             kind: "data",
-            source: makeMockSource({ list: listImpl }),
-            ...(dbName ? { dbName } : {}),
+            source: makeMockSource({
+              list: listImpl,
+              ...(dbName ? { getDbName: async () => dbName } : {}),
+            }),
           },
         },
       },
@@ -71,18 +73,24 @@ describe("要素（データ）コレクション", () => {
     expect(items[0]?.slug).toBeUndefined();
   });
 
-  it("dbName を指定すると cms.<collection>.dbName で参照できる", async () => {
+  it("source.getDbName があれば cms.<collection>.dbName() で取得できる", async () => {
     const cms = makeDataCms(async () => makeDataItems(), "設定DB");
-    const settings = (cms as unknown as { settings: { dbName?: string } })
-      .settings;
-    expect(settings.dbName).toBe("設定DB");
+    const settings = (
+      cms as unknown as {
+        settings: { dbName(): Promise<string | undefined> };
+      }
+    ).settings;
+    await expect(settings.dbName()).resolves.toBe("設定DB");
   });
 
-  it("dbName 未指定なら undefined", async () => {
+  it("source.getDbName が無ければ undefined", async () => {
     const cms = makeDataCms(async () => makeDataItems());
-    const settings = (cms as unknown as { settings: { dbName?: string } })
-      .settings;
-    expect(settings.dbName).toBeUndefined();
+    const settings = (
+      cms as unknown as {
+        settings: { dbName(): Promise<string | undefined> };
+      }
+    ).settings;
+    await expect(settings.dbName()).resolves.toBeUndefined();
   });
 
   it("get(id) で id をキーに 1 件取得できる", async () => {
