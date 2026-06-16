@@ -1,6 +1,6 @@
 {
   "name": "@notion-headless-cms/validate",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "description": "Optional zod-based validation for @notion-headless-cms — createClient / notionSource / CLI config を実行時検証",
   "keywords": [
     "notion",
