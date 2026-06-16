@@ -340,6 +340,67 @@ describe("createNotionCollection - dbName 解決", () => {
   });
 });
 
+describe("createNotionCollection - getDbName", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("dataSourceId 指定時は data_source を retrieve して title を返す", async () => {
+    const mockRetrieve = vi.fn().mockResolvedValue({
+      object: "data_source",
+      id: "test-db-id",
+      title: [{ plain_text: "ブログ" }, { plain_text: "記事DB" }],
+    });
+    vi.mocked(createClient).mockReturnValue({
+      dataSources: { retrieve: mockRetrieve },
+    } as never);
+
+    const adapter = createNotionCollection({
+      token: "test-token",
+      dataSourceId: "test-db-id",
+    });
+    await expect(adapter.getDbName?.()).resolves.toBe("ブログ記事DB");
+    expect(mockRetrieve).toHaveBeenCalledWith({ data_source_id: "test-db-id" });
+  });
+
+  it("2 回呼んでも retrieve は 1 回だけでキャッシュを返す", async () => {
+    const mockRetrieve = vi.fn().mockResolvedValue({
+      object: "data_source",
+      id: "test-db-id",
+      title: [{ plain_text: "MyDB" }],
+    });
+    vi.mocked(createClient).mockReturnValue({
+      dataSources: { retrieve: mockRetrieve },
+    } as never);
+
+    const adapter = createNotionCollection({
+      token: "test-token",
+      dataSourceId: "test-db-id",
+    });
+    await adapter.getDbName?.();
+    await adapter.getDbName?.();
+    expect(mockRetrieve).toHaveBeenCalledTimes(1);
+  });
+
+  it("dbName が明示指定されていれば API を叩かずその値を返す", async () => {
+    const mockRetrieve = vi.fn();
+    const mockSearch = vi.fn();
+    vi.mocked(createClient).mockReturnValue({
+      dataSources: { retrieve: mockRetrieve },
+      search: mockSearch,
+    } as never);
+
+    const adapter = createNotionCollection({
+      token: "test-token",
+      dataSourceId: "test-db-id",
+      dbName: "明示DB",
+    });
+    await expect(adapter.getDbName?.()).resolves.toBe("明示DB");
+    expect(mockRetrieve).not.toHaveBeenCalled();
+    expect(mockSearch).not.toHaveBeenCalled();
+  });
+});
+
 describe("createNotionCollection - list() エラー処理", () => {
   const adapter = createNotionCollection({
     token: "test-token",

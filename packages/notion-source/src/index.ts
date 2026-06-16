@@ -69,10 +69,10 @@ export function notionSource<S extends SchemaMap>(
     const slugField = isData ? undefined : entry.slugField;
     const def = {
       ...(isData ? { kind: "data" as const } : {}),
-      ...(entry.dbName ? { dbName: entry.dbName } : {}),
       source: createNotionCollection({
         token: opts.token,
         dataSourceId: entry.dataSourceId,
+        ...(entry.dbName ? { dbName: entry.dbName } : {}),
         properties: entry.properties,
         // parseWebhook が返す InvalidateScope.collection に使う論理名。
         collectionName: name,

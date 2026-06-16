@@ -228,7 +228,8 @@ describe("generateSchemaFile", () => {
     expect(code).toContain("export const schema =");
     expect(code).toContain("satisfies SchemaMap");
     expect(code).toContain("dataSourceId: postsDataSourceId");
-    expect(code).toContain('dbName: "ブログ記事DB"');
+    // dbName は schema に埋め込まず、実行時に cms.<collection>.dbName() で取得する。
+    expect(code).not.toContain("dbName:");
     expect(code).toContain("properties: postsProperties");
     expect(code).not.toContain("export function createClient");
     expect(code).not.toContain("NhcConfig");
@@ -328,8 +329,8 @@ describe("generateSchemaFile", () => {
     expect(code).not.toContain("slug: string;");
     expect(code).not.toContain("slugField:");
     expect(code).toContain('kind: "data"');
-    // DB 名は kind: data でも schema に出力し、cms.<collection>.dbName で参照できる。
-    expect(code).toContain('dbName: "設定DB"');
+    // DB 名は schema に埋め込まず、実行時に cms.<collection>.dbName() で取得する。
+    expect(code).not.toContain("dbName:");
   });
 
   it("notion-source / core から型を import する", () => {
