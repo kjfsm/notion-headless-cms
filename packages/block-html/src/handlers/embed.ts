@@ -148,12 +148,44 @@ export async function renderPdf(
   );
 }
 
+/**
+ * caption が「単一の URL のみ」で構成される場合に、そのリンク URL を返す。
+ * Notion の image ブロックには画像自体のリンクを表す API フィールドが無いため、
+ * caption に URL だけを入れる規約で「クリックでリンクへ飛ぶ画像」を表現する。
+ * 説明テキスト付きリンク (plain_text ≠ URL) は従来どおり figcaption として扱うため除外する。
+ */
+function captionLinkUrl(
+  caption: ImageBlockObjectResponse["image"]["caption"],
+): string | null {
+  const item = caption.length === 1 ? caption[0] : undefined;
+  if (!item) return null;
+  const href =
+    item.type === "text" ? (item.text.link?.url ?? item.href) : item.href;
+  if (!href) return null;
+  if (item.plain_text.trim() !== href.trim()) return null;
+  return href;
+}
+
 export async function renderImage(
   block: ImageBlockObjectResponse,
 ): Promise<string> {
   const url = normalizeUrl(mediaUrl(block.image));
   if (!url) return "";
   const caption = block.image.caption ?? [];
+
+  const linkUrl = captionLinkUrl(caption);
+  if (linkUrl) {
+    // caption が URL のみのため、説明文としての alt は持たせない
+    const img = `<img src="${escapeAttr(url)}" alt="" loading="lazy" />`;
+    return (
+      `<figure class="nhc-image">` +
+      `<a class="nhc-image__link" href="${escapeAttr(normalizeUrl(linkUrl))}" target="_blank" rel="noopener noreferrer">` +
+      img +
+      `</a>` +
+      `</figure>`
+    );
+  }
+
   const alt = caption.map((t) => t.plain_text).join("");
   const captionHtml =
     caption.length > 0

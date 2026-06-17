@@ -433,6 +433,108 @@ describe("renderImage", () => {
     expect(html).toContain("元サイト");
   });
 
+  it("caption が単一 URL のみのとき画像をそのリンクで包む", async () => {
+    const block = {
+      ...blockBase,
+      type: "image",
+      image: {
+        type: "external",
+        external: { url: "https://example.com/x.png" },
+        caption: [
+          {
+            type: "text",
+            text: {
+              content: "https://example.com/dest",
+              link: { url: "https://example.com/dest" },
+            },
+            annotations: {
+              bold: false,
+              italic: false,
+              strikethrough: false,
+              underline: false,
+              code: false,
+              color: "default",
+            },
+            plain_text: "https://example.com/dest",
+            href: "https://example.com/dest",
+          },
+        ],
+      },
+    } as ImageBlockObjectResponse;
+    const html = await renderImage(block);
+    expect(html).toContain(
+      '<a class="nhc-image__link" href="https://example.com/dest" target="_blank" rel="noopener noreferrer">',
+    );
+    expect(html).toContain('<img src="https://example.com/x.png" alt=""');
+    expect(html).not.toContain("nhc-image__caption");
+  });
+
+  it("caption がテキスト付きリンクなら画像を包まず figcaption を出す", async () => {
+    const block = {
+      ...blockBase,
+      type: "image",
+      image: {
+        type: "external",
+        external: { url: "https://example.com/x.png" },
+        caption: [
+          {
+            type: "text",
+            text: {
+              content: "元サイト",
+              link: { url: "https://example.com/" },
+            },
+            annotations: {
+              bold: false,
+              italic: false,
+              strikethrough: false,
+              underline: false,
+              code: false,
+              color: "default",
+            },
+            plain_text: "元サイト",
+            href: "https://example.com/",
+          },
+        ],
+      },
+    } as ImageBlockObjectResponse;
+    const html = await renderImage(block);
+    expect(html).not.toContain("nhc-image__link");
+    expect(html).toContain('class="nhc-image__caption"');
+    expect(html).toContain('<a href="https://example.com/"');
+  });
+
+  it("caption が複数要素なら画像を包まない", async () => {
+    const link = {
+      type: "text",
+      text: {
+        content: "https://example.com/dest",
+        link: { url: "https://example.com/dest" },
+      },
+      annotations: {
+        bold: false,
+        italic: false,
+        strikethrough: false,
+        underline: false,
+        code: false,
+        color: "default",
+      },
+      plain_text: "https://example.com/dest",
+      href: "https://example.com/dest",
+    };
+    const block = {
+      ...blockBase,
+      type: "image",
+      image: {
+        type: "external",
+        external: { url: "https://example.com/x.png" },
+        caption: [link, { ...link }],
+      },
+    } as ImageBlockObjectResponse;
+    const html = await renderImage(block);
+    expect(html).not.toContain("nhc-image__link");
+    expect(html).toContain("nhc-image__caption");
+  });
+
   it("URL なしは空文字", async () => {
     const block = {
       ...blockBase,

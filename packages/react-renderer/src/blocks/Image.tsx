@@ -41,6 +41,24 @@ function buildSrcSet(
     .join(", ");
 }
 
+/**
+ * caption が「単一の URL のみ」で構成される場合に、そのリンク URL を返す。
+ * Notion の image ブロックには画像自体のリンクを表す API フィールドが無いため、
+ * caption に URL だけを入れる規約で「クリックでリンクへ飛ぶ画像」を表現する。
+ * 説明テキスト付きリンク (plain_text ≠ URL) は従来どおり caption として扱うため除外する。
+ */
+function captionLinkUrl(
+  caption: ImageBlockObjectResponse["image"]["caption"],
+): string | null {
+  const item = caption.length === 1 ? caption[0] : undefined;
+  if (!item) return null;
+  const href =
+    item.type === "text" ? (item.text.link?.url ?? item.href) : item.href;
+  if (!href) return null;
+  if (item.plain_text.trim() !== href.trim()) return null;
+  return href;
+}
+
 export function Image({
   block,
   className,
@@ -63,6 +81,31 @@ export function Image({
   const isProxied = !!resolveImageUrl && src !== rawUrl;
   const srcSet =
     isProxied && imageSizes ? buildSrcSet(src, imageSizes) : undefined;
+
+  const linkUrl = captionLinkUrl(block.image.caption);
+  if (linkUrl) {
+    // クリックでリンクへ遷移させるため、ズーム用 Dialog は使わない。
+    // caption は URL のみのため説明文 alt も持たせない。
+    return (
+      <figure className={className}>
+        <a
+          href={linkUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="block"
+        >
+          <Img
+            src={src}
+            srcSet={srcSet}
+            sizes={srcSet ? imageSizesAttr : undefined}
+            alt=""
+            loading="lazy"
+            className="h-auto max-w-full rounded-lg"
+          />
+        </a>
+      </figure>
+    );
+  }
 
   return (
     <figure className={className}>
