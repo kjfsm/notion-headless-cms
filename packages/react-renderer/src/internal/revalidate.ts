@@ -1,4 +1,6 @@
 import { useEffect } from "react";
+import useSWR from "swr";
+import useSWRSubscription from "swr/subscription";
 
 /**
  * 再検証のトリガー。
@@ -8,8 +10,7 @@ import { useEffect } from "react";
 export type NotionRevalidateTrigger = "mount" | "visibility";
 
 /**
- * KV ポーリングのオプション。
- * バックグラウンド SWR 更新の完了を検出してから revalidate するためのもの。
+ * KV ポーリングのオプション（push が無い環境のフォールバック）。
  *
  * `url` は省略でき、その場合 `collection` と `slug`（または `item.slug`）から
  * `cms.handler()` の versions ルート URL を導出する。
@@ -30,18 +31,39 @@ export interface NotionPollOptions {
   basePath?: string;
   /** ポーリング比較基準のバージョン。省略時は `item.lastEditedTime` を使う。 */
   version?: string;
-  /** ポーリング間隔（ms）。既定: 500 */
+  /** ポーリング間隔（ms）。既定: 5000 */
   intervalMs?: number;
-  /** タイムアウト（ms）。既定: 30000 */
+  /** タイムアウト（ms）。互換のため受け取るが vercel/swr 方式では未使用。 */
   timeoutMs?: number;
 }
 
-/** `cms.handler()` の既定 basePath。poll URL 導出のデフォルト。 */
+/**
+ * リアルタイム購読（push）のオプション。設定すると WebSocket でサーバ push を受け、
+ * メッセージ受信で即 revalidate する。`url`（ws/wss）を明示するか、`collection` /
+ * `slug`（または `item`）から `${basePath}${path}?collection=&slug=` を導出する。
+ */
+export interface NotionRealtimeOptions {
+  /** 接続先 WebSocket URL（ws/wss）。明示時は導出より優先。 */
+  url?: string;
+  /** URL 導出に使うコレクション名。`url` 省略時に必須。 */
+  collection?: string;
+  /** URL 導出に使う slug。省略時は `item.slug`。 */
+  slug?: string;
+  /** `slug` を導出するためのアイテム。 */
+  item?: { slug: string };
+  /** URL 導出時のベースパス。既定 `/api/cms`。 */
+  basePath?: string;
+  /** realtime ルートのパス。既定 `/realtime`。 */
+  path?: string;
+}
+
+/** `cms.handler()` の既定 basePath。poll / realtime URL 導出のデフォルト。 */
 const DEFAULT_CMS_BASE_PATH = "/api/cms";
+const DEFAULT_REALTIME_PATH = "/realtime";
+const DEFAULT_POLL_INTERVAL_MS = 5000;
 
 /**
  * poll オプションから実際に叩く URL と比較バージョンを解決する。
- * `url`/`version` を明示しても、`collection`+`item`（or `slug`）からの導出でもよい。
  * どちらでも解決できなければ null（= ポーリングしない）。
  */
 export function resolvePoll(poll: NotionPollOptions | undefined): {
@@ -68,44 +90,95 @@ export function resolvePoll(poll: NotionPollOptions | undefined): {
   };
 }
 
-export interface UseNotionRevalidateOptions {
-  /** 既定値: "mount"。複数指定可。`poll` 指定時はトリガーなしがデフォルト。 */
-  on?: NotionRevalidateTrigger | NotionRevalidateTrigger[];
-  /** KV ポーリングで更新完了後に revalidate する。指定時は `on` の既定が空になる。 */
-  poll?: NotionPollOptions;
+/**
+ * realtime オプションから接続先を解決する。
+ * 明示 `url` はそのまま、導出時は origin 非依存の相対 `path` を返す
+ * （ws/wss スキームの組み立ては呼び出し側で `window.location` を使って行う）。
+ */
+export function resolveRealtime(
+  realtime: NotionRealtimeOptions | undefined,
+): { url: string } | { path: string } | null {
+  if (!realtime) return null;
+  if (realtime.url) return { url: realtime.url };
+  if (!realtime.collection) return null;
+  const slug = realtime.slug ?? realtime.item?.slug;
+  const basePath = realtime.basePath ?? DEFAULT_CMS_BASE_PATH;
+  const path = realtime.path ?? DEFAULT_REALTIME_PATH;
+  const qs = new URLSearchParams({ collection: realtime.collection });
+  if (slug) qs.set("slug", slug);
+  return { path: `${basePath}${path}?${qs.toString()}` };
 }
 
-/** `on` を正規化。未指定時は `poll` があれば `[]`、なければ `["mount"]`。 */
+/** 解決済み realtime descriptor を実際の ws/wss URL へ変換する。 */
+export function wsUrlFromResolved(
+  resolved: { url: string } | { path: string },
+  locationHref: string,
+): string {
+  if ("url" in resolved) return resolved.url;
+  const u = new URL(resolved.path, locationHref);
+  u.protocol = u.protocol === "https:" ? "wss:" : "ws:";
+  return u.toString();
+}
+
+export interface UseNotionRevalidateOptions {
+  /** 既定値: "mount"。複数指定可。`poll` / `realtime` 指定時はトリガーなしがデフォルト。 */
+  on?: NotionRevalidateTrigger | NotionRevalidateTrigger[];
+  /** KV ポーリング（push 無し環境のフォールバック）。 */
+  poll?: NotionPollOptions;
+  /** リアルタイム購読（push 主経路）。 */
+  realtime?: NotionRealtimeOptions;
+}
+
+/** `on` を正規化。未指定時は watcher（poll/realtime）があれば `[]`、なければ `["mount"]`。 */
 const toTriggerList = (
   on: NotionRevalidateTrigger | NotionRevalidateTrigger[] | undefined,
-  hasPoll: boolean,
+  hasWatcher: boolean,
 ): NotionRevalidateTrigger[] => {
   if (on !== undefined) return Array.isArray(on) ? on : [on];
-  return hasPoll ? [] : ["mount"];
+  return hasWatcher ? [] : ["mount"];
+};
+
+interface PeekVersion {
+  notionUpdatedAt: string;
+  cachedAt: number;
+}
+
+const versionFetcher = async (url: string): Promise<PeekVersion | null> => {
+  const res = await fetch(url);
+  if (!res.ok) return null;
+  return (await res.json()) as PeekVersion | null;
 };
 
 /**
  * フレームワーク差分を吸収するための関数 hook。
- * `useRevalidate` には「現ルートを再評価する」関数を渡す:
+ * `revalidate` には「現ルートを再評価する」関数を渡す:
  *   - React Router: `() => useRevalidator().revalidate()`
  *   - Next.js: `() => useRouter().refresh()`
  *
- * 配列を直接 deps に入れると毎レンダリング再実行されるため、
- * 安定したキー文字列にしてから effect 内で再展開している。
+ * 更新検知は 2 経路:
+ *   - realtime（push 主経路）: `useSWRSubscription` で WebSocket を購読し、メッセージで即 revalidate。
+ *   - poll（フォールバック）: `useSWR` の `refreshInterval` で versions を取得し、
+ *     `notionUpdatedAt` がローダ既知 version と変われば revalidate。focus/reconnect でも再検証する。
  */
 export function useRevalidateEffect(
   revalidate: () => void,
   opts: UseNotionRevalidateOptions,
 ): void {
-  const hasPoll = Boolean(opts.poll);
-  const triggerKey = toTriggerList(opts.on, hasPoll).join(",");
-  // poll オブジェクトは毎レンダリングで新インスタンスになる可能性があるため
-  // 解決後の primitive な値に展開してから deps に渡す
+  const resolvedRealtime = resolveRealtime(opts.realtime);
   const resolvedPoll = resolvePoll(opts.poll);
-  const pollUrl = resolvedPoll?.url;
+  const hasWatcher = Boolean(resolvedRealtime || resolvedPoll);
+  const triggerKey = toTriggerList(opts.on, hasWatcher).join(",");
+
+  const pollUrl = resolvedPoll?.url ?? null;
   const pollVersion = resolvedPoll?.version;
-  const pollIntervalMs = resolvedPoll?.intervalMs;
-  const pollTimeoutMs = resolvedPoll?.timeoutMs;
+  const pollIntervalMs = resolvedPoll?.intervalMs ?? DEFAULT_POLL_INTERVAL_MS;
+
+  // realtime は SSR/初回レンダーでも安定値が要るため、location 依存の組み立ては
+  // 文字列キーに落としてから渡す（毎レンダー別オブジェクトになるのを防ぐ）。
+  const wsUrl =
+    resolvedRealtime && typeof window !== "undefined"
+      ? wsUrlFromResolved(resolvedRealtime, window.location.href)
+      : null;
 
   useEffect(() => {
     const triggers = triggerKey
@@ -121,53 +194,27 @@ export function useRevalidateEffect(
     }
   }, [revalidate, triggerKey]);
 
+  // push 主経路: WebSocket を購読し、更新通知メッセージで即 revalidate する。
+  useSWRSubscription(wsUrl, (key, { next }) => {
+    const ws = new WebSocket(key);
+    ws.addEventListener("message", () => revalidate());
+    ws.addEventListener("error", (event) => next(event));
+    return () => ws.close();
+  });
+
+  // フォールバック: versions をポーリングし、version が変われば revalidate する。
+  const { data } = useSWR<PeekVersion | null>(pollUrl, versionFetcher, {
+    refreshInterval: pollIntervalMs,
+    revalidateOnFocus: true,
+    revalidateOnReconnect: true,
+  });
   useEffect(() => {
-    if (!pollUrl || pollVersion === undefined) return;
-    const intervalMs = pollIntervalMs ?? 500;
-    const timeoutMs = pollTimeoutMs ?? 30_000;
-    let initialCachedAt: number | undefined;
-    let stopped = false;
-
-    const timer = setInterval(async () => {
-      if (stopped) return;
-      try {
-        const res = await fetch(pollUrl);
-        if (!res.ok) return;
-        const data = (await res.json()) as {
-          notionUpdatedAt: string;
-          cachedAt: number;
-        } | null;
-        if (!data) return;
-
-        if (initialCachedAt === undefined) {
-          initialCachedAt = data.cachedAt;
-          return;
-        }
-
-        if (data.notionUpdatedAt !== pollVersion) {
-          // Notion 側の更新がキャッシュに反映された
-          stopped = true;
-          clearInterval(timer);
-          revalidate();
-        } else if (data.cachedAt > initialCachedAt) {
-          // 差分なしでバックグラウンド確認が完了した（更新不要）
-          stopped = true;
-          clearInterval(timer);
-        }
-      } catch {
-        // フェッチ失敗は無視してポーリング継続
-      }
-    }, intervalMs);
-
-    const timeout = setTimeout(() => {
-      stopped = true;
-      clearInterval(timer);
-    }, timeoutMs);
-
-    return () => {
-      stopped = true;
-      clearInterval(timer);
-      clearTimeout(timeout);
-    };
-  }, [revalidate, pollUrl, pollVersion, pollIntervalMs, pollTimeoutMs]);
+    if (
+      data &&
+      pollVersion !== undefined &&
+      data.notionUpdatedAt !== pollVersion
+    ) {
+      revalidate();
+    }
+  }, [data, pollVersion, revalidate]);
 }

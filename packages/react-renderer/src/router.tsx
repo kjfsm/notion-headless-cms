@@ -9,6 +9,7 @@ import {
 
 export type {
   NotionPollOptions,
+  NotionRealtimeOptions,
   NotionRevalidateTrigger,
   UseNotionRevalidateOptions,
 } from "./internal/revalidate.js";
