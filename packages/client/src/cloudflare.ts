@@ -21,6 +21,17 @@ export {
   kvCache,
   r2Cache,
 } from "@notion-headless-cms/cache/cloudflare";
+// 更新通知（push）: Durable Object(WebSocket Hibernation) トランスポート。
+// `createCMS({ realtime: durableObjectRealtime({ namespace }) })` で使い、
+// RealtimeHubDO は Worker から re-export して wrangler.toml で binding する。
+export type {
+  DurableObjectNamespaceLike,
+  DurableObjectRealtimeOptions,
+} from "@notion-headless-cms/cache/realtime";
+export {
+  durableObjectRealtime,
+  RealtimeHubDO,
+} from "@notion-headless-cms/cache/realtime";
 
 /** Cloudflare KV REST API に接続するための認証情報。 */
 export interface RestKvOptions {
