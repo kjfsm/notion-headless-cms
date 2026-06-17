@@ -7,6 +7,7 @@ import type {
   FindOptions,
   Logger,
   LogLevel,
+  RealtimeAdapter,
   SWRConfig,
 } from "@notion-headless-cms/core";
 import { createClient, nodePreset } from "@notion-headless-cms/core";
@@ -250,6 +251,12 @@ export interface CreateCMSOptions<
   /** キャッシュ戦略設定。省略時は node 既定（memoryCache + swr 5 分）。 */
   cache?: CmsCacheConfig;
   /**
+   * 更新通知トランスポート（push）。設定すると、SWR 差分検出 / webhook 再ウォームで
+   * キャッシュ最新化した直後に接続中クライアントへ push できる。
+   * Cloudflare では `durableObjectRealtime`（`@notion-headless-cms/client/cloudflare`）を渡す。
+   */
+  realtime?: RealtimeAdapter;
+  /**
    * ログ出力先。未指定ならログを出力しない。
    *
    * @example
@@ -371,6 +378,7 @@ export function createCMS<S extends SchemaMap, M extends ContentMode = "html">(
     ...(cacheConfig.cache ? { cache: cacheConfig.cache } : {}),
     ...(cacheConfig.swr ? { swr: cacheConfig.swr } : {}),
     ...(cacheConfig.waitUntil ? { waitUntil: cacheConfig.waitUntil } : {}),
+    ...(opts.realtime ? { realtime: opts.realtime } : {}),
     ...(opts.notion.webhookSecret
       ? { notionWebhookSecret: opts.notion.webhookSecret }
       : {}),

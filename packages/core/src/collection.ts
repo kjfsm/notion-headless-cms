@@ -23,6 +23,8 @@ import type {
   ItemWithContent,
   ListOptions,
   Logger,
+  RealtimeAdapter,
+  RealtimeEvent,
   SortOption,
   WarmOptions,
   WarmResult,
@@ -62,6 +64,7 @@ export interface CollectionContext<T extends BaseContentItem> {
   retryConfig: RetryConfig;
   maxConcurrent: number;
   waitUntil: ((p: Promise<unknown>) => void) | undefined;
+  realtime: RealtimeAdapter | undefined;
   /**
    * slug として使うフィールド名。`source.properties[slugField].notion` を
    * Notion プロパティ名として `findByProp` を呼び出す。
@@ -100,6 +103,11 @@ export class CollectionClientImpl<T extends BaseContentItem>
     await this.primeItem(item);
     // 一覧の見出し・新規公開・並び順の変化を反映するためリストキャッシュも作り直す。
     await this.refreshList();
+    await this.publishRealtime({
+      collection: this.ctx.collection,
+      slug: itemKey(item),
+      version: this.ctx.source.getLastModified(item),
+    });
     return itemKey(item);
   }
 
@@ -532,6 +540,22 @@ export class CollectionClientImpl<T extends BaseContentItem>
     return items;
   }
 
+  /** 更新通知を fail-soft で発行する。通知失敗が配信・キャッシュ更新を壊さないよう握り潰す。 */
+  private async publishRealtime(event: RealtimeEvent): Promise<void> {
+    const adapter = this.ctx.realtime;
+    if (!adapter) return;
+    try {
+      await adapter.publish(event);
+    } catch (err) {
+      this.ctx.logger?.warn?.("realtime: 更新通知の発行に失敗", {
+        operation: "realtime.publish",
+        collection: event.collection,
+        slug: event.slug,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
   private async checkAndUpdateItemBg(
     slug: string,
     cached: CachedItemMeta<T>,
@@ -551,6 +575,12 @@ export class CollectionClientImpl<T extends BaseContentItem>
         });
         this.ctx.hooks.onCacheRevalidated?.(slug, meta);
         await this.rebuildContentBg(slug, item);
+        // キャッシュ書き込み完了後に通知する（先に通知すると client が古い loader データを掴む）。
+        await this.publishRealtime({
+          collection: this.ctx.collection,
+          slug,
+          version: lm,
+        });
       } else {
         await this.ctx.docCache.setMeta(this.ctx.collection, slug, {
           ...cached,
@@ -605,6 +635,10 @@ export class CollectionClientImpl<T extends BaseContentItem>
           },
         );
         this.ctx.hooks.onListCacheRevalidated?.(listEntry);
+        await this.publishRealtime({
+          collection: this.ctx.collection,
+          version: this.ctx.source.getListVersion(items),
+        });
       } else if (this.ctx.ttlMs !== undefined) {
         await this.ctx.docCache.setList(this.ctx.collection, {
           ...cached,

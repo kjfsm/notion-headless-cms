@@ -33,6 +33,10 @@
       "types": "./dist/cloudflare.d.mts",
       "import": "./dist/cloudflare.mjs"
     },
+    "./realtime": {
+      "types": "./dist/realtime.d.mts",
+      "import": "./dist/realtime.mjs"
+    },
     "./next": {
       "types": "./dist/next.d.mts",
       "import": "./dist/next.mjs"
@@ -45,7 +49,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "tsdown src/index.ts src/cloudflare.ts src/next.ts --format esm --dts --sourcemap --out-dir dist",
+    "build": "tsdown src/index.ts src/cloudflare.ts src/realtime.ts src/next.ts --format esm --dts --sourcemap --out-dir dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",

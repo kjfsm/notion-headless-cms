@@ -265,6 +265,7 @@ export function createClient<S extends CMSSources = CMSSources>(
   const contentConfig = opts.content;
   const rendererFn: RendererFn | undefined = opts.renderer;
   const waitUntil = opts.waitUntil;
+  const realtime = opts.realtime;
   const baseLogger: Logger | undefined = mergeLoggers(
     opts.plugins ?? [],
     opts.logger,
@@ -331,6 +332,7 @@ export function createClient<S extends CMSSources = CMSSources>(
       retryConfig,
       maxConcurrent,
       waitUntil,
+      realtime,
       slugField: def.slugField,
     };
     if (def.kind === "data") {

@@ -77,6 +77,8 @@ export type {
   PropertyDef,
   PropertyMap,
   RateLimiterConfig,
+  RealtimeAdapter,
+  RealtimeEvent,
   RendererFn,
   RendererPluginList,
   RenderOptions,
