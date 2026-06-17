@@ -184,7 +184,15 @@ export function createHandler(
       const hash = rel.slice(imagesPath.length + 1);
       if (!hash) return new Response("Bad Request", { status: 400 });
       const object = await adapter.imageCache.get(hash);
-      if (!object) return new Response("Not Found", { status: 404 });
+      if (!object) {
+        // ハッシュがキャッシュに無い 404 を監視できるよう記録する（期限切れ画像の取り逃し検知用）。
+        adapter.logger?.warn?.("画像プロキシ: ハッシュ未ヒット", {
+          operation: "handler.image",
+          imageHash: hash,
+          status: 404,
+        });
+        return new Response("Not Found", { status: 404 });
+      }
       const headers = new Headers();
       if (object.contentType) headers.set("content-type", object.contentType);
       headers.set("cache-control", "public, max-age=31536000, immutable");

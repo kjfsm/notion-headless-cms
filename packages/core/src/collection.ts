@@ -117,6 +117,13 @@ export class CollectionClientImpl<T extends BaseContentItem>
     slug: string,
     opts: FindOptions = {},
   ): Promise<ItemWithContent<T> | null> {
+    return this.runForeground("find", slug, () => this.findImpl(slug, opts));
+  }
+
+  private async findImpl(
+    slug: string,
+    opts: FindOptions = {},
+  ): Promise<ItemWithContent<T> | null> {
     if (opts.bypassCache) {
       this.ctx.hooks.onCacheMiss?.(slug);
       const item = await this.fetchRaw(slug);
@@ -201,7 +208,9 @@ export class CollectionClientImpl<T extends BaseContentItem>
     slug: string,
     currentVersion: string,
   ): Promise<CheckResult<T> | null> {
-    const raw = await this.fetchRaw(slug);
+    const raw = await this.runForeground("check", slug, () =>
+      this.fetchRaw(slug),
+    );
     if (!raw) return null;
     if (raw.lastEditedTime === currentVersion) return { stale: false };
     const meta = await this.persistMeta(slug, raw);
@@ -447,7 +456,32 @@ export class CollectionClientImpl<T extends BaseContentItem>
     );
   }
 
+  // foreground（ユーザー応答に直結する）取得のハード失敗だけを error として記録する。
+  // SWR バックグラウンド更新は fail-soft で別途 warn 済みのため、ここでは扱わない（二重出力を避ける）。
+  private async runForeground<R>(
+    operation: string,
+    slug: string | undefined,
+    fn: () => Promise<R>,
+  ): Promise<R> {
+    try {
+      return await fn();
+    } catch (err) {
+      this.ctx.logger?.error?.("foreground 取得に失敗", {
+        operation,
+        collection: this.ctx.collection,
+        ...(slug ? { slug } : {}),
+        ...(isCMSError(err) ? { code: err.code } : {}),
+        error: err instanceof Error ? err.message : String(err),
+      });
+      throw err;
+    }
+  }
+
   private async fetchList(): Promise<T[]> {
+    return this.runForeground("list", undefined, () => this.fetchListImpl());
+  }
+
+  private async fetchListImpl(): Promise<T[]> {
     const cached = await this.ctx.docCache.getList<T>(this.ctx.collection);
     if (cached) {
       if (

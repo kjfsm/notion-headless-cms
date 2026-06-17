@@ -717,3 +717,63 @@ describe("リトライ中のロガー", () => {
     );
   });
 });
+
+describe("foreground 取得失敗のロガー", () => {
+  it("list() のハード失敗で logger.error を呼ぶ", async () => {
+    const errorFn = vi.fn();
+    const cms = createClient({
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  throw new Error("boom");
+                },
+              }),
+              slugField: "slug",
+            },
+          },
+        },
+      },
+      renderer: mockRenderer,
+      logger: { error: errorFn },
+    });
+    await expect(cms.posts.list()).rejects.toThrow();
+    expect(errorFn).toHaveBeenCalledWith(
+      "foreground 取得に失敗",
+      expect.objectContaining({ operation: "list", collection: "posts" }),
+    );
+  });
+
+  it("find() のハード失敗で slug 付きの logger.error を呼ぶ", async () => {
+    const errorFn = vi.fn();
+    const cms = createClient({
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                async list() {
+                  throw new Error("boom");
+                },
+              }),
+              slugField: "slug",
+            },
+          },
+        },
+      },
+      renderer: mockRenderer,
+      logger: { error: errorFn },
+    });
+    await expect(cms.posts.find("missing")).rejects.toThrow();
+    expect(errorFn).toHaveBeenCalledWith(
+      "foreground 取得に失敗",
+      expect.objectContaining({
+        operation: "find",
+        slug: "missing",
+        collection: "posts",
+      }),
+    );
+  });
+});

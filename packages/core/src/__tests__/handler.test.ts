@@ -79,6 +79,23 @@ describe("createHandler", () => {
       expect(res.status).toBe(404);
     });
 
+    it("キャッシュミス時に logger.warn でハッシュ未ヒットを記録する", async () => {
+      const warn = vi.fn();
+      const handler = createHandler(makeAdapter({ logger: { warn } }));
+      const res = await handler(
+        new Request("http://localhost/api/cms/images/notexist"),
+      );
+      expect(res.status).toBe(404);
+      expect(warn).toHaveBeenCalledWith(
+        "画像プロキシ: ハッシュ未ヒット",
+        expect.objectContaining({
+          operation: "handler.image",
+          imageHash: "notexist",
+          status: 404,
+        }),
+      );
+    });
+
     it("ハッシュが空の場合は 400 を返す", async () => {
       const handler = createHandler(makeAdapter());
       const res = await handler(
