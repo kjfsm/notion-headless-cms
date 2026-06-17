@@ -55,3 +55,4 @@ export type {
 export type { CMSHooks, MaybePromise } from "./hooks";
 export type { LogContext, Logger } from "./logger";
 export type { CMSPlugin } from "./plugin";
+export type { RealtimeAdapter, RealtimeEvent } from "./realtime";

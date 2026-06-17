@@ -4,6 +4,7 @@ import type { DataSource } from "./data-source";
 import type { CMSHooks } from "./hooks";
 import type { Logger } from "./logger";
 import type { CMSPlugin } from "./plugin";
+import type { RealtimeAdapter } from "./realtime";
 import type { CMSSources } from "./sources";
 
 /** `Logger` の出力を絞り込むログレベル。指定したレベル未満のログを抑制する。 */
@@ -178,6 +179,12 @@ export interface CreateClientOptions<S extends CMSSources = CMSSources> {
   cache?: readonly CacheAdapter[];
   /** SWR（Stale-While-Revalidate）設定。 */
   swr?: SWRConfig;
+  /**
+   * 更新通知トランスポート。設定すると、キャッシュ最新化（SWR 差分検出 / webhook 再ウォーム）
+   * の直後に `publish({ collection, slug, version })` が呼ばれ、接続中クライアントへ
+   * push できる。未設定なら通知しない（既存挙動と同じ）。実装は fail-soft 前提。
+   */
+  realtime?: RealtimeAdapter;
   /**
    * Markdown→HTML レンダラー。
    * 省略時は `@notion-headless-cms/markdown-html` の `renderMarkdown` を動的 import で使用する。
