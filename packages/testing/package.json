@@ -1,6 +1,6 @@
 {
   "name": "@notion-headless-cms/testing",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "Testing utilities for notion-headless-cms — fake DataSource, fake cache, and fixture clients.",
   "keywords": [
     "notion",

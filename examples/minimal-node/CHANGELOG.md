@@ -1,5 +1,15 @@
 # example-minimal-node
 
+## 0.0.15
+
+### Patch Changes
+
+- Updated dependencies [4d81ddb]
+  - @notion-headless-cms/core@0.5.7
+  - @notion-headless-cms/client@0.3.9
+  - @notion-headless-cms/notion-orm@0.2.6
+  - @notion-headless-cms/notion-source@0.2.8
+
 ## 0.0.14
 
 ### Patch Changes
