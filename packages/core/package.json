@@ -80,5 +80,7 @@
       "optional": true
     }
   },
-  "devDependencies": {}
+  "devDependencies": {
+    "@notion-headless-cms/markdown-html": "workspace:*"
+  }
 }

@@ -127,7 +127,9 @@ class FakeWebSocket {
     FakeWebSocket.instances.push(this);
   }
   addEventListener(type: string, cb: (e: unknown) => void): void {
-    (this.listeners[type] ??= []).push(cb);
+    const list = this.listeners[type] ?? [];
+    list.push(cb);
+    this.listeners[type] = list;
   }
   removeEventListener(): void {}
   close(): void {
