@@ -1,5 +1,20 @@
 # @notion-headless-cms/client
 
+## 0.3.10
+
+### Patch Changes
+
+- 4303b7b: 更新通知（push）の Cloudflare トランスポートを追加。`@notion-headless-cms/cache/realtime` に Durable Object(WebSocket Hibernation) ハブ `RealtimeHubDO` と `durableObjectRealtime({ namespace })`（`RealtimeAdapter` 実装）を追加し、`@notion-headless-cms/client/cloudflare` から re-export。`createCMS({ realtime })` で受け取り `createClient` へ流す。クライアントは `?collection=&slug=` 付きで WS 購読し、`publish` が該当 channel tag へ broadcast する。構造型で受けるため `@cloudflare/workers-types` への実依存は持たない。
+- Updated dependencies [4303b7b]
+- Updated dependencies [4303b7b]
+- Updated dependencies [4303b7b]
+  - @notion-headless-cms/core@0.5.8
+  - @notion-headless-cms/cache@0.1.8
+  - @notion-headless-cms/react-renderer@0.1.19
+  - @notion-headless-cms/notion-source@0.2.9
+  - @notion-headless-cms/fetch-blocks@0.0.15
+  - @notion-headless-cms/fetch-markdown@0.0.12
+
 ## 0.3.9
 
 ### Patch Changes
