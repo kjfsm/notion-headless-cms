@@ -1,5 +1,16 @@
 # example-node-express
 
+## 0.0.67
+
+### Patch Changes
+
+- Updated dependencies [8b11e1c]
+  - @notion-headless-cms/core@0.5.9
+  - @notion-headless-cms/client@0.3.11
+  - @notion-headless-cms/notion-orm@0.2.8
+  - @notion-headless-cms/notion-source@0.2.10
+  - @notion-headless-cms/fetch-markdown@0.0.13
+
 ## 0.0.66
 
 ### Patch Changes
