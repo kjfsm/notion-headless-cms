@@ -1,11 +1,16 @@
 import { createCMS, memoryCache } from "@notion-headless-cms/client";
-import { kvCache, r2Cache } from "@notion-headless-cms/client/cloudflare";
+import {
+  durableObjectRealtime,
+  kvCache,
+  r2Cache,
+} from "@notion-headless-cms/client/cloudflare";
 import { schema } from "../generated/nhc";
 
 export interface Env {
   NOTION_TOKEN: string;
   DOC_CACHE?: KVNamespace;
   IMG_BUCKET?: R2Bucket;
+  REALTIME_HUB?: DurableObjectNamespace;
 }
 
 export function makeCms(
@@ -35,5 +40,10 @@ export function makeCms(
         : memoryCache(),
       waitUntil: (p) => ctx.waitUntil(p),
     },
+    // 更新通知（push）: Durable Object が binding されていれば、キャッシュ最新化の直後に
+    // 接続中クライアントへ WebSocket で push する（webhook / SWR 裏チェックの差分検出が契機）。
+    ...(env.REALTIME_HUB
+      ? { realtime: durableObjectRealtime({ namespace: env.REALTIME_HUB }) }
+      : {}),
   });
 }

@@ -12,22 +12,21 @@ import {
 describe("resolvePoll", () => {
   it("url / version を明示した場合はそのまま返す", () => {
     expect(
-      resolvePoll({ url: "/custom/versions/posts/a", version: "v1" }),
+      resolvePoll({ url: "/custom/check/posts/a", version: "v1" }),
     ).toEqual({
-      url: "/custom/versions/posts/a",
+      url: "/custom/check/posts/a",
       version: "v1",
       intervalMs: undefined,
-      timeoutMs: undefined,
     });
   });
 
-  it("collection + slug + version から既定 basePath で URL を導出する", () => {
+  it("collection + slug + version から既定 basePath で check URL を導出する", () => {
     const r = resolvePoll({
       collection: "posts",
       slug: "hello",
       version: "v1",
     });
-    expect(r?.url).toBe("/api/cms/versions/posts/hello");
+    expect(r?.url).toBe("/api/cms/check/posts/hello");
     expect(r?.version).toBe("v1");
   });
 
@@ -36,8 +35,18 @@ describe("resolvePoll", () => {
       collection: "posts",
       item: { slug: "hello", lastEditedTime: "2024-01-01T00:00:00.000Z" },
     });
-    expect(r?.url).toBe("/api/cms/versions/posts/hello");
+    expect(r?.url).toBe("/api/cms/check/posts/hello");
     expect(r?.version).toBe("2024-01-01T00:00:00.000Z");
+  });
+
+  it("intervalMs を明示すればそのまま返す", () => {
+    const r = resolvePoll({
+      collection: "posts",
+      slug: "hello",
+      version: "v1",
+      intervalMs: 5000,
+    });
+    expect(r?.intervalMs).toBe(5000);
   });
 
   it("poll 未指定は null", () => {
@@ -150,6 +159,21 @@ describe("useRevalidateEffect", () => {
     FakeWebSocket.instances = [];
   });
 
+  /**
+   * `{ stale, version }` を返す fetch モックを差し込み、spy を返す。
+   * Response の body は一度しか読めないため、呼び出しごとに新しい Response を返す。
+   */
+  const stubCheckFetch = (stale: boolean, version = "v2") => {
+    const fetchSpy = vi.fn().mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ stale, version }), {
+          headers: { "content-type": "application/json" },
+        }),
+    );
+    vi.stubGlobal("fetch", fetchSpy);
+    return fetchSpy;
+  };
+
   it("realtime: WebSocket message で revalidate する", async () => {
     vi.stubGlobal("WebSocket", FakeWebSocket);
     const revalidate = vi.fn();
@@ -157,6 +181,8 @@ describe("useRevalidateEffect", () => {
     renderHook(
       () =>
         useRevalidateEffect(revalidate, {
+          // mount 契機の直接 revalidate を抑止し、WS push のみを検証する。
+          on: [],
           realtime: {
             url: "wss://site/api/cms/realtime?collection=posts&slug=a",
           },
@@ -173,15 +199,32 @@ describe("useRevalidateEffect", () => {
     expect(revalidate).toHaveBeenCalledTimes(1);
   });
 
-  it("poll: notionUpdatedAt がローダ既知 version と変われば revalidate する", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({ notionUpdatedAt: "v2", cachedAt: 1 }), {
-          headers: { "content-type": "application/json" },
+  it("realtime 設定時は check（fetch）を行わず WebSocket 購読のみ", async () => {
+    vi.stubGlobal("WebSocket", FakeWebSocket);
+    const fetchSpy = stubCheckFetch(true);
+    const revalidate = vi.fn();
+
+    renderHook(
+      () =>
+        useRevalidateEffect(revalidate, {
+          realtime: {
+            url: "wss://site/api/cms/realtime?collection=posts&slug=a",
+          },
+          // realtime 優先のため poll は無視されるはず。
+          poll: {
+            collection: "posts",
+            item: { slug: "a", lastEditedTime: "v1" },
+          },
         }),
-      ),
+      { wrapper },
     );
+
+    await waitFor(() => expect(FakeWebSocket.instances.length).toBe(1));
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("poll: POST /check の戻りが stale なら revalidate する", async () => {
+    const fetchSpy = stubCheckFetch(true);
     const revalidate = vi.fn();
 
     renderHook(
@@ -196,17 +239,15 @@ describe("useRevalidateEffect", () => {
     );
 
     await waitFor(() => expect(revalidate).toHaveBeenCalled());
+
+    // POST で `?v=<version>` 付きの check URL を叩く。
+    const [calledUrl, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+    expect(calledUrl).toBe("/api/cms/check/posts/a?v=v1");
+    expect(init.method).toBe("POST");
   });
 
-  it("poll: version が同じなら revalidate しない", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({ notionUpdatedAt: "v1", cachedAt: 1 }), {
-          headers: { "content-type": "application/json" },
-        }),
-      ),
-    );
+  it("poll: 戻りが stale:false なら revalidate しない", async () => {
+    const fetchSpy = stubCheckFetch(false);
     const revalidate = vi.fn();
 
     renderHook(
@@ -220,7 +261,104 @@ describe("useRevalidateEffect", () => {
       { wrapper },
     );
 
-    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
     expect(revalidate).not.toHaveBeenCalled();
+  });
+
+  it("poll: 既定トリガーは mount + visibility、可視化（hidden→visible）で再 check する", async () => {
+    const fetchSpy = stubCheckFetch(false);
+    const revalidate = vi.fn();
+    // happy-dom の visibilityState 既定は "visible"。可視化イベントで再 check されることを確認する。
+
+    renderHook(
+      () =>
+        useRevalidateEffect(revalidate, {
+          // on 未指定なら既定で mount + visibility。
+          poll: {
+            collection: "posts",
+            item: { slug: "a", lastEditedTime: "v1" },
+          },
+        }),
+      { wrapper },
+    );
+
+    // mount で check が走る。
+    await waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+    const afterMount = fetchSpy.mock.calls.length;
+
+    // visible なまま visibilitychange を発火すると追加で check。
+    act(() => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    await waitFor(() =>
+      expect(fetchSpy.mock.calls.length).toBeGreaterThan(afterMount),
+    );
+  });
+
+  it("poll: intervalMs 明示時のみ定期 check が走る", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchSpy = stubCheckFetch(false);
+      const revalidate = vi.fn();
+
+      renderHook(
+        () =>
+          useRevalidateEffect(revalidate, {
+            on: "mount",
+            poll: {
+              collection: "posts",
+              item: { slug: "a", lastEditedTime: "v1" },
+              intervalMs: 1000,
+            },
+          }),
+        { wrapper },
+      );
+
+      // mount で 1 回。
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+      // interval 経過ごとに追加で check。
+      await act(async () => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(fetchSpy).toHaveBeenCalledTimes(2);
+
+      await act(async () => {
+        vi.advanceTimersByTime(1000);
+      });
+      expect(fetchSpy).toHaveBeenCalledTimes(3);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("poll: intervalMs 未指定なら定期 check は走らない", async () => {
+    vi.useFakeTimers();
+    try {
+      const fetchSpy = stubCheckFetch(false);
+      const revalidate = vi.fn();
+
+      renderHook(
+        () =>
+          useRevalidateEffect(revalidate, {
+            on: "mount",
+            poll: {
+              collection: "posts",
+              item: { slug: "a", lastEditedTime: "v1" },
+            },
+          }),
+        { wrapper },
+      );
+
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+      await act(async () => {
+        vi.advanceTimersByTime(10_000);
+      });
+      // 定期 check は無いので mount の 1 回のみ。
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

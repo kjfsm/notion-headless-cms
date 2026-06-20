@@ -46,7 +46,7 @@ if (post) console.log(await post.render());
 | `sources` | データソースアダプターのマップ（`{ notion: notionSource(...) }` 等）。複数ソースの `collections` は自動マージされる |
 | `collections` | 直接 `CollectionDef` を渡す低レベル API（通常は `sources` を使う） |
 | `cache` | `readonly CacheAdapter[]` — `memoryCache()` / `cloudflareCache(env)` 等を配列で指定 |
-| `swr` | `{ ttlMs?: number }` — SWR の TTL。未指定だとキャッシュは期限なしで永続し、Notion の `lastEditedTime` 差分があれば bg で差し替え。指定するとブロッキング再取得が走る |
+| `swr` | `{ recheckWindowMs?: number; staleBlockMs?: number }` — `recheckWindowMs`（既定 30_000ms）は Notion 再照会の最小間隔（coalescing）。`staleBlockMs` はブロック閾値で、未指定時の既定は webhook secret あり→無期限・なし→7 日（604_800_000ms）。閾値以内なら即キャッシュ表示しつつ recheck ウィンドウ経過後に bg で `lastEditedTime` 差分を突合、閾値超過時はブロッキング再取得 |
 | `renderer` | `RendererFn` — 未指定なら `@notion-headless-cms/renderer` を動的ロード |
 | `imageProxyBase` | 画像プロキシのベース URL（デフォルト `/api/images`） |
 | `waitUntil` | Cloudflare Workers の `ctx.waitUntil` 相当 |

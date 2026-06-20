@@ -86,8 +86,8 @@ if (post) {
 }
 ```
 
-`cache` グループを省略すると Node 既定（インメモリ LRU キャッシュ + 5 分 TTL）になる。
-キャッシュを細かく制御したいときは `cache: { document, image, swr: { ttlMs } }` を渡す。
+`cache` グループを省略すると Node 既定（インメモリ LRU キャッシュ）になる。
+キャッシュを細かく制御したいときは `cache: { document, image, swr: { recheckWindowMs, staleBlockMs } }` を渡す。`recheckWindowMs`（既定 30 秒）は Notion 再照会の最小間隔、`staleBlockMs`（webhook secret あり: 無期限 / なし: 7 日）は最終確認からこの時間を超えたら開いた際にブロッキング再取得する閾値。
 
 ## Cloudflare Workers の場合
 

@@ -31,7 +31,7 @@ function makeMockSource(
 }
 
 describe("SWR（Stale-While-Revalidate）", () => {
-  it("TTL 設定あり・期限切れの find はブロッキングで最新データを返す", async () => {
+  it("staleBlockMs 設定あり・閾値超過の find はブロッキングで最新データを返す", async () => {
     const staleItem: BaseContentItem = {
       id: "page-1",
       slug: "my-post",
@@ -43,7 +43,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
       lastEditedTime: "2024-01-02T00:00:00Z",
     };
 
-    // キャッシュに stale アイテムを事前セット（cachedAt: 0 → 必ず TTL 期限切れ）
+    // キャッシュに stale アイテムを事前セット（cachedAt: 0 → 必ず block 閾値超過）
     const cache = memoryCache();
     await cache.doc?.setMeta("posts", "my-post", {
       item: staleItem,
@@ -65,7 +65,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
       renderer: mockRenderer,
       cache: [cache],
-      swr: { ttlMs: 1000 },
+      swr: { staleBlockMs: 1000 },
       waitUntil,
     });
 
@@ -77,7 +77,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     expect(waitUntil).not.toHaveBeenCalled();
   });
 
-  it("TTL 設定なしの find はキャッシュを即時返却してバックグラウンドで差分チェックする", async () => {
+  it("ブロックなし設定（webhook 管理）の find はキャッシュを即時返却してバックグラウンドで差分チェックする", async () => {
     const cachedItem: BaseContentItem = {
       id: "page-1",
       slug: "my-post",
@@ -93,7 +93,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     await cache.doc?.setMeta("posts", "my-post", {
       item: cachedItem,
       notionUpdatedAt: cachedItem.lastEditedTime,
-      cachedAt: 0, // 古くてもTTLなしなので期限切れにならない
+      cachedAt: 0, // 古くても webhook 管理（blockMs=undefined）なのでブロックしない
     });
 
     const capturedPromises: Promise<unknown>[] = [];
@@ -113,6 +113,10 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
       renderer: mockRenderer,
       cache: [cache],
+      // webhook 管理 → staleBlockMs 既定が無期限（ブロックしない）。
+      // recheckWindowMs:0 でキャッシュヒット時に必ず裏チェックを走らせる。
+      notionWebhookSecret: "wh-secret",
+      swr: { recheckWindowMs: 0 },
       waitUntil,
     });
 
@@ -131,7 +135,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     expect(updated?.item.lastEditedTime).toBe("2024-01-02T00:00:00Z");
   });
 
-  it("TTL 設定なしの list はキャッシュを即時返却してバックグラウンドで差分チェックする", async () => {
+  it("ブロックなし設定の list はキャッシュを即時返却してバックグラウンドで差分チェックする", async () => {
     const cachedItem: BaseContentItem = {
       id: "page-1",
       slug: "my-post",
@@ -141,7 +145,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const cache = memoryCache();
     await cache.doc?.setList("posts", {
       items: [cachedItem],
-      cachedAt: 0, // 古くてもTTLなしなので期限切れにならない
+      cachedAt: 0, // 古くても webhook 管理（blockMs=undefined）なのでブロックしない
     });
 
     const capturedPromises: Promise<unknown>[] = [];
@@ -167,6 +171,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
       renderer: mockRenderer,
       cache: [cache],
+      // webhook 管理 → blockMs=undefined（リストはブロックせず裏で差分チェック）。
+      notionWebhookSecret: "wh-secret",
       waitUntil,
     });
 
@@ -178,7 +184,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     expect(capturedPromises.length).toBeGreaterThan(0);
   });
 
-  it("TTL 設定あり・期限切れの list はブロッキングで最新リストを返す", async () => {
+  it("staleBlockMs 設定あり・閾値超過の list はブロッキングで最新リストを返す", async () => {
     const staleItem: BaseContentItem = {
       id: "page-1",
       slug: "my-post",
@@ -193,7 +199,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     const cache = memoryCache();
     await cache.doc?.setList("posts", {
       items: [staleItem],
-      cachedAt: 0, // 必ず TTL 期限切れ
+      cachedAt: 0, // 必ず block 閾値超過
     });
 
     const waitUntil = vi.fn();
@@ -210,7 +216,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
       renderer: mockRenderer,
       cache: [cache],
-      swr: { ttlMs: 1000 },
+      swr: { staleBlockMs: 1000 },
       waitUntil,
     });
 
@@ -298,7 +304,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     );
   });
 
-  it("TTL 期限切れ時に logger.debug が呼ばれる", async () => {
+  it("block 閾値超過時に logger.debug が呼ばれる", async () => {
     const debugFn = vi.fn();
     const item: BaseContentItem = {
       id: "p1",
@@ -309,7 +315,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     await cache.doc?.setMeta("posts", "post-1", {
       item,
       notionUpdatedAt: item.lastEditedTime,
-      cachedAt: 0, // 必ず TTL 期限切れ
+      cachedAt: 0, // 必ず block 閾値超過
     });
 
     const source = makeMockSource({
@@ -323,14 +329,14 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
       renderer: mockRenderer,
       cache: [cache],
-      swr: { ttlMs: 1000 },
+      swr: { staleBlockMs: 1000 },
       logger: { debug: debugFn },
     });
 
     await cms.posts.find("post-1");
 
     expect(debugFn).toHaveBeenCalledWith(
-      "キャッシュ期限切れ（TTL）、フェッチ",
+      "キャッシュ期限切れ（block 閾値）、フェッチ",
       expect.objectContaining({
         operation: "find",
         slug: "post-1",
@@ -374,6 +380,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
       renderer: mockRenderer,
       cache: [cache],
+      // recheckWindowMs:0 でキャッシュヒット時に必ず裏チェックを走らせる。
+      swr: { recheckWindowMs: 0 },
       logger: { debug: debugFn },
       hooks: { onCacheRevalidated },
       waitUntil: (p) => capturedPromises.push(p),
@@ -383,9 +391,9 @@ describe("SWR（Stale-While-Revalidate）", () => {
     await Promise.all(capturedPromises);
 
     expect(debugFn).toHaveBeenCalledWith(
-      "SWR: 差分を検出、メタを差し替え",
+      "更新検知: 差分を検出、メタを差し替え",
       expect.objectContaining({
-        operation: "find:bg",
+        operation: "refreshFromNotion",
         slug: "post-1",
         collection: "posts",
       }),
@@ -426,7 +434,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
       renderer: mockRenderer,
       cache: [cache],
-      swr: { ttlMs: 60_000 },
+      // recheckWindowMs:0 でキャッシュヒット時に必ず裏チェックを走らせる。
+      swr: { staleBlockMs: 60_000, recheckWindowMs: 0 },
       logger: { debug: debugFn },
       hooks: { onCacheRevalidated },
       waitUntil: (p) => capturedPromises.push(p),
@@ -436,8 +445,11 @@ describe("SWR（Stale-While-Revalidate）", () => {
     await Promise.all(capturedPromises);
 
     expect(debugFn).toHaveBeenCalledWith(
-      "SWR: 差分なし、cachedAt を更新",
-      expect.objectContaining({ operation: "find:bg", slug: "post-1" }),
+      "更新検知: 差分なし、cachedAt を更新",
+      expect.objectContaining({
+        operation: "refreshFromNotion",
+        slug: "post-1",
+      }),
     );
     expect(onCacheRevalidated).not.toHaveBeenCalled();
   });
@@ -491,7 +503,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     );
   });
 
-  it("TTL 設定あり・期限内の find はキャッシュを即時返却してバックグラウンド差分チェックする", async () => {
+  it("staleBlockMs 設定あり・閾値内の find はキャッシュを即時返却してバックグラウンド差分チェックする", async () => {
     const freshItem: BaseContentItem = {
       id: "page-1",
       slug: "my-post",
@@ -499,7 +511,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     };
 
     const cache = memoryCache();
-    // cachedAt: Date.now()、ttlMs: 60_000 → 期限内
+    // cachedAt: Date.now()、staleBlockMs: 60_000 → ブロック閾値内
     await cache.doc?.setMeta("posts", "my-post", {
       item: freshItem,
       notionUpdatedAt: freshItem.lastEditedTime,
@@ -523,7 +535,8 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
       renderer: mockRenderer,
       cache: [cache],
-      swr: { ttlMs: 60_000 },
+      // recheckWindowMs:0 でキャッシュヒット時に必ず裏チェックを走らせる。
+      swr: { staleBlockMs: 60_000, recheckWindowMs: 0 },
       waitUntil,
     });
 
@@ -532,7 +545,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     expect(capturedPromises.length).toBeGreaterThan(0);
   });
 
-  it("リスト SWR が差分なし + TTL あり のとき cachedAt をリセットする", async () => {
+  it("リスト SWR が差分なし + staleBlockMs あり のとき cachedAt をリセットする", async () => {
     const item: BaseContentItem = {
       id: "p1",
       slug: "post-1",
@@ -554,9 +567,9 @@ describe("SWR（Stale-While-Revalidate）", () => {
         mock: { collections: { posts: { source, slugField: "slug" } } },
       },
       renderer: mockRenderer,
-      // ttlMs を設定するとリスト差分なし時に cachedAt がリセットされる
+      // staleBlockMs を設定するとリスト差分なし時に cachedAt がリセットされる
       cache: [cache],
-      swr: { ttlMs: 60_000 },
+      swr: { staleBlockMs: 60_000 },
       waitUntil: (p) => capturedPromises.push(p),
     });
 

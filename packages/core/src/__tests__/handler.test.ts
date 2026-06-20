@@ -12,8 +12,7 @@ function makeAdapter(overrides: Partial<HandlerAdapter> = {}): HandlerAdapter {
     },
     parseWebhookFor: vi.fn().mockResolvedValue({ collection: "posts" }),
     revalidate: vi.fn().mockResolvedValue(undefined),
-    peekVersionFor: vi.fn().mockResolvedValue(null),
-    checkFor: vi.fn().mockResolvedValue({ stale: false }),
+    checkFor: vi.fn().mockResolvedValue({ stale: false, version: "v1" }),
     warmByPageId: vi.fn().mockResolvedValue(null),
     ...overrides,
   };
@@ -267,142 +266,10 @@ describe("createHandler", () => {
     });
   });
 
-  describe("GET {basePath}/versions/:collection/:slug — バージョン照会", () => {
-    it("peekVersion の結果を 200 + JSON で返す", async () => {
-      const version = {
-        notionUpdatedAt: "2024-01-01T00:00:00.000Z",
-        cachedAt: 123,
-      };
+  describe("POST {basePath}/check/:collection/:slug — 更新チェック", () => {
+    it("差分なし (stale: false) を 200 + { stale, version } で返す", async () => {
       const adapter = makeAdapter({
-        peekVersionFor: vi.fn().mockResolvedValue(version),
-      });
-      const handler = createHandler(adapter);
-      const res = await handler(
-        new Request("http://localhost/api/cms/versions/posts/my-slug"),
-      );
-      expect(res.status).toBe(200);
-      expect(res.headers.get("content-type")).toBe("application/json");
-      expect(await res.json()).toEqual(version);
-    });
-
-    it("collection と slug を peekVersionFor に渡す", async () => {
-      const peekVersionFor = vi.fn().mockResolvedValue(null);
-      const handler = createHandler(makeAdapter({ peekVersionFor }));
-      await handler(
-        new Request("http://localhost/api/cms/versions/posts/my-slug"),
-      );
-      expect(peekVersionFor).toHaveBeenCalledWith("posts", "my-slug");
-    });
-
-    it("キャッシュ未登録 (null) でも 200 + null を返す", async () => {
-      const handler = createHandler(makeAdapter());
-      const res = await handler(
-        new Request("http://localhost/api/cms/versions/posts/my-slug"),
-      );
-      expect(res.status).toBe(200);
-      expect(await res.json()).toBeNull();
-    });
-
-    it("slug が欠ける場合は 400 を返す", async () => {
-      const handler = createHandler(makeAdapter());
-      const res = await handler(
-        new Request("http://localhost/api/cms/versions/posts"),
-      );
-      expect(res.status).toBe(400);
-    });
-
-    it("collection が欠ける場合は 400 を返す", async () => {
-      const handler = createHandler(makeAdapter());
-      const res = await handler(
-        new Request("http://localhost/api/cms/versions/"),
-      );
-      expect(res.status).toBe(400);
-    });
-
-    it("handler/unknown_collection CMSError は 404 を返す", async () => {
-      const adapter = makeAdapter({
-        peekVersionFor: vi.fn().mockRejectedValue(
-          new CMSError({
-            code: "handler/unknown_collection",
-            message: "Unknown",
-            context: { operation: "peekVersionFor" },
-          }),
-        ),
-      });
-      const handler = createHandler(adapter);
-      const res = await handler(
-        new Request("http://localhost/api/cms/versions/unknown/my-slug"),
-      );
-      expect(res.status).toBe(404);
-      const body = (await res.json()) as { ok: boolean; code: string };
-      expect(body.ok).toBe(false);
-      expect(body.code).toBe("handler/unknown_collection");
-    });
-
-    it("POST /api/cms/versions/:collection/:slug は 404 を返す（GET のみ有効）", async () => {
-      const handler = createHandler(makeAdapter());
-      const res = await handler(
-        new Request("http://localhost/api/cms/versions/posts/my-slug", {
-          method: "POST",
-        }),
-      );
-      expect(res.status).toBe(404);
-    });
-
-    it("versionsPath を変更できる", async () => {
-      const version = {
-        notionUpdatedAt: "2024-01-01T00:00:00.000Z",
-        cachedAt: 1,
-      };
-      const adapter = makeAdapter({
-        peekVersionFor: vi.fn().mockResolvedValue(version),
-      });
-      const handler = createHandler(adapter, { versionsPath: "/peek" });
-      const res = await handler(
-        new Request("http://localhost/api/cms/peek/posts/my-slug"),
-      );
-      expect(res.status).toBe(200);
-      expect(await res.json()).toEqual(version);
-    });
-  });
-
-  describe("GET|POST {basePath}/check/:collection/:slug — 更新チェック", () => {
-    it("差分なし (stale: false) を 200 で返す", async () => {
-      const adapter = makeAdapter({
-        checkFor: vi.fn().mockResolvedValue({ stale: false }),
-      });
-      const handler = createHandler(adapter);
-      const res = await handler(
-        new Request("http://localhost/api/cms/check/posts/my-slug?v=v1"),
-      );
-      expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ stale: false });
-    });
-
-    it("差分あり (stale: true) を 200 で返す", async () => {
-      const adapter = makeAdapter({
-        checkFor: vi.fn().mockResolvedValue({ stale: true }),
-      });
-      const handler = createHandler(adapter);
-      const res = await handler(
-        new Request("http://localhost/api/cms/check/posts/my-slug?v=v1"),
-      );
-      expect(res.status).toBe(200);
-      expect(await res.json()).toEqual({ stale: true });
-    });
-
-    it("collection / slug / ?v= を checkFor に渡す", async () => {
-      const checkFor = vi.fn().mockResolvedValue({ stale: false });
-      const handler = createHandler(makeAdapter({ checkFor }));
-      await handler(
-        new Request("http://localhost/api/cms/check/posts/my-slug?v=abc"),
-      );
-      expect(checkFor).toHaveBeenCalledWith("posts", "my-slug", "abc");
-    });
-
-    it("POST でも動作する", async () => {
-      const adapter = makeAdapter({
-        checkFor: vi.fn().mockResolvedValue({ stale: true }),
+        checkFor: vi.fn().mockResolvedValue({ stale: false, version: "v1" }),
       });
       const handler = createHandler(adapter);
       const res = await handler(
@@ -411,6 +278,62 @@ describe("createHandler", () => {
         }),
       );
       expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ stale: false, version: "v1" });
+    });
+
+    it("差分あり (stale: true) を 200 + { stale, version } で返す", async () => {
+      const adapter = makeAdapter({
+        checkFor: vi.fn().mockResolvedValue({ stale: true, version: "v2" }),
+      });
+      const handler = createHandler(adapter);
+      const res = await handler(
+        new Request("http://localhost/api/cms/check/posts/my-slug?v=v1", {
+          method: "POST",
+        }),
+      );
+      expect(res.status).toBe(200);
+      expect(await res.json()).toEqual({ stale: true, version: "v2" });
+    });
+
+    it("collection / slug / ?v= を checkFor に渡す", async () => {
+      const checkFor = vi
+        .fn()
+        .mockResolvedValue({ stale: false, version: "abc" });
+      const handler = createHandler(makeAdapter({ checkFor }));
+      await handler(
+        new Request("http://localhost/api/cms/check/posts/my-slug?v=abc", {
+          method: "POST",
+        }),
+      );
+      expect(checkFor).toHaveBeenCalledWith("posts", "my-slug", "abc", {
+        force: false,
+      });
+    });
+
+    it("?force=1 は checkFor の opts.force に true で渡る", async () => {
+      const checkFor = vi
+        .fn()
+        .mockResolvedValue({ stale: false, version: "v1" });
+      const handler = createHandler(makeAdapter({ checkFor }));
+      await handler(
+        new Request(
+          "http://localhost/api/cms/check/posts/my-slug?v=v1&force=1",
+          {
+            method: "POST",
+          },
+        ),
+      );
+      expect(checkFor).toHaveBeenCalledWith("posts", "my-slug", "v1", {
+        force: true,
+      });
+    });
+
+    it("GET は 404 を返す（POST のみ有効）", async () => {
+      const handler = createHandler(makeAdapter());
+      const res = await handler(
+        new Request("http://localhost/api/cms/check/posts/my-slug?v=v1"),
+      );
+      expect(res.status).toBe(404);
     });
 
     it("アイテム未存在 (null) は 404 を返す", async () => {
@@ -419,7 +342,9 @@ describe("createHandler", () => {
       });
       const handler = createHandler(adapter);
       const res = await handler(
-        new Request("http://localhost/api/cms/check/posts/missing?v=v1"),
+        new Request("http://localhost/api/cms/check/posts/missing?v=v1", {
+          method: "POST",
+        }),
       );
       expect(res.status).toBe(404);
     });
@@ -427,7 +352,9 @@ describe("createHandler", () => {
     it("?v= が無い場合は 400 を返す", async () => {
       const handler = createHandler(makeAdapter());
       const res = await handler(
-        new Request("http://localhost/api/cms/check/posts/my-slug"),
+        new Request("http://localhost/api/cms/check/posts/my-slug", {
+          method: "POST",
+        }),
       );
       expect(res.status).toBe(400);
     });
@@ -435,7 +362,9 @@ describe("createHandler", () => {
     it("slug が欠ける場合は 400 を返す", async () => {
       const handler = createHandler(makeAdapter());
       const res = await handler(
-        new Request("http://localhost/api/cms/check/posts?v=v1"),
+        new Request("http://localhost/api/cms/check/posts?v=v1", {
+          method: "POST",
+        }),
       );
       expect(res.status).toBe(400);
     });
@@ -452,14 +381,16 @@ describe("createHandler", () => {
       });
       const handler = createHandler(adapter);
       const res = await handler(
-        new Request("http://localhost/api/cms/check/unknown/my-slug?v=v1"),
+        new Request("http://localhost/api/cms/check/unknown/my-slug?v=v1", {
+          method: "POST",
+        }),
       );
       expect(res.status).toBe(404);
     });
 
     it("checkPath を変更できる", async () => {
       const adapter = makeAdapter({
-        checkFor: vi.fn().mockResolvedValue({ stale: false }),
+        checkFor: vi.fn().mockResolvedValue({ stale: false, version: "v1" }),
       });
       const handler = createHandler(adapter, {
         checkPath: "/revalidate-check",
@@ -467,6 +398,7 @@ describe("createHandler", () => {
       const res = await handler(
         new Request(
           "http://localhost/api/cms/revalidate-check/posts/my-slug?v=v1",
+          { method: "POST" },
         ),
       );
       expect(res.status).toBe(200);

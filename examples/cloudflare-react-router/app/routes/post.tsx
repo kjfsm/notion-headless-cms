@@ -1,4 +1,4 @@
-import { buildPageLinkMap } from "@notion-headless-cms/client";
+import { buildPageLinkMap, isReloadRequest } from "@notion-headless-cms/client";
 import { NotionRevalidator, Renderer } from "@notion-headless-cms/client/react";
 import { data, isRouteErrorResponse } from "react-router";
 import { makeCms } from "../lib/cms";
@@ -23,10 +23,13 @@ function serializeError(err: unknown, depth = 0): SerializedError {
   };
 }
 
-export async function loader({ params, context }: Route.LoaderArgs) {
+export async function loader({ params, request, context }: Route.LoaderArgs) {
   try {
     const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
-    const post = await cms.posts.find(params.slug ?? "");
+    // 明示リロード（F5）時は recheck ウィンドウを無視して Notion を再取得する。
+    const post = await cms.posts.find(params.slug ?? "", {
+      force: isReloadRequest(request),
+    });
     if (!post) throw data("Not Found", { status: 404 });
     const blocks = await post.notionBlocks();
     // Notion 内部リンク（link_to_page / page mention）を自サイト URL に解決するマップ。
@@ -53,8 +56,15 @@ export default function Post({ loaderData }: Route.ComponentProps) {
   const { blocks, pageLinks, item } = loaderData;
   return (
     <article>
-      {/* collection と item から poll URL(/api/cms/versions/...) と version を自動導出する */}
-      <NotionRevalidator poll={{ collection: "posts", item }} />
+      {/*
+        realtime（Durable Object）を主経路にし、WebSocket push で即時 revalidate する。
+        DO 有効時は poll は停止する。poll は DO 未 binding 環境のフォールバック
+        （mount / 再フォーカスで POST /api/cms/check/posts/:slug?v= を叩き stale なら revalidate）。
+      */}
+      <NotionRevalidator
+        realtime={{ collection: "posts", item: { slug: item.slug } }}
+        poll={{ collection: "posts", item }}
+      />
       <h1>{item.title ?? item.slug}</h1>
       {item.publishedAt && <time>{item.publishedAt}</time>}
       <Renderer blocks={blocks} pageLinks={pageLinks} />

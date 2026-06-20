@@ -8,8 +8,6 @@ export interface HandlerOptions {
   imagesPath?: string;
   /** revalidate webhook のパス (basePath 相対)。デフォルト `/revalidate`。 */
   revalidatePath?: string;
-  /** バージョン照会 (peekVersion) のパス (basePath 相対)。デフォルト `/versions`。 */
-  versionsPath?: string;
   /** 更新チェック (check) のパス (basePath 相対)。デフォルト `/check`。 */
   checkPath?: string;
   /** Notion 公式 webhook 受信のパス (basePath 相対)。デフォルト `/notion-webhook`。 */
@@ -47,23 +45,17 @@ export interface HandlerAdapter {
   ): Promise<InvalidateScope>;
   revalidate(scope: InvalidateScope): Promise<void>;
   /**
-   * 指定コレクション / slug の `peekVersion`（KV メタのみ、Notion API 非呼び出し）を返す。
-   * キャッシュ未登録なら `null`。未知コレクション → `handler/unknown_collection` CMSError。
-   */
-  peekVersionFor(
-    collection: string,
-    slug: string,
-  ): Promise<{ notionUpdatedAt: string; cachedAt: number } | null>;
-  /**
-   * 指定コレクション / slug を `currentVersion` と比較し（Notion を実照会）、
-   * 差分があればキャッシュを更新して `stale` を返す。
+   * 指定コレクション / slug を `currentVersion` と比較する（coalescing 付きで Notion を実照会）。
+   * recheck ウィンドウ内（かつ `force` でない）なら Notion を照会せず既知 version で判定する。
+   * 差分があればキャッシュを更新し、stale 判定と現在の version を返す。
    * アイテムが存在しない場合は `null`。未知コレクション → `handler/unknown_collection` CMSError。
    */
   checkFor(
     collection: string,
     slug: string,
     currentVersion: string,
-  ): Promise<{ stale: boolean } | null>;
+    opts?: { force?: boolean },
+  ): Promise<{ stale: boolean; version: string } | null>;
   /**
    * Notion ページ ID を全コレクション横断で解決し単件ウォームする（公式 webhook 用）。
    * 一致したコレクション（ページは slug も含む。要素コレクションは含まない）、無ければ `null`。
@@ -83,7 +75,6 @@ const DEFAULT_OPTS = {
   basePath: "/api/cms",
   imagesPath: "/images",
   revalidatePath: "/revalidate",
-  versionsPath: "/versions",
   checkPath: "/check",
   notionWebhookPath: "/notion-webhook",
 } as const;
@@ -154,10 +145,9 @@ function splitCollectionSlug(
  * Next.js / React Router / Hono / Cloudflare Workers いずれでも使える。
  *
  * ルート:
- * - GET       `{basePath}/images/:hash`               — 画像プロキシ
- * - GET       `{basePath}/versions/:collection/:slug` — peekVersion（更新検知ポーリング）
- * - GET/POST  `{basePath}/check/:collection/:slug?v=` — check（更新を実照会してキャッシュ更新）
- * - POST      `{basePath}/revalidate/:collection`     — Webhook 受信 + $revalidate()
+ * - GET   `{basePath}/images/:hash`                      — 画像プロキシ
+ * - POST  `{basePath}/check/:collection/:slug?v=&force=` — check（coalescing 付きで Notion を実照会しキャッシュ更新）
+ * - POST  `{basePath}/revalidate/:collection`            — Webhook 受信 + $revalidate()
  */
 export function createHandler(
   adapter: HandlerAdapter,
@@ -166,7 +156,6 @@ export function createHandler(
   const basePath = trimTrailingSlash(opts.basePath ?? DEFAULT_OPTS.basePath);
   const imagesPath = opts.imagesPath ?? DEFAULT_OPTS.imagesPath;
   const revalidatePath = opts.revalidatePath ?? DEFAULT_OPTS.revalidatePath;
-  const versionsPath = opts.versionsPath ?? DEFAULT_OPTS.versionsPath;
   const checkPath = opts.checkPath ?? DEFAULT_OPTS.checkPath;
   const notionWebhookPath =
     opts.notionWebhookPath ?? DEFAULT_OPTS.notionWebhookPath;
@@ -199,35 +188,8 @@ export function createHandler(
       return new Response(object.data, { headers });
     }
 
-    if (req.method === "GET" && rel.startsWith(`${versionsPath}/`)) {
-      const target = splitCollectionSlug(rel.slice(versionsPath.length + 1));
-      if (!target) {
-        return new Response(
-          JSON.stringify({ ok: false, reason: "collection and slug required" }),
-          { status: 400, headers: JSON_HEADERS },
-        );
-      }
-      try {
-        const version = await adapter.peekVersionFor(
-          target.collection,
-          target.slug,
-        );
-        // 値が無い場合も 200 + null を返す（ポーリング側は null を「未確定」として継続する）。
-        return new Response(JSON.stringify(version), {
-          status: 200,
-          headers: JSON_HEADERS,
-        });
-      } catch (err) {
-        const res = errorResponse(err);
-        if (res) return res;
-        throw err;
-      }
-    }
-
-    if (
-      (req.method === "GET" || req.method === "POST") &&
-      rel.startsWith(`${checkPath}/`)
-    ) {
+    // 更新チェックは Notion を実照会しキャッシュを更新し得るため POST のみ（副作用付き GET を作らない）。
+    if (req.method === "POST" && rel.startsWith(`${checkPath}/`)) {
       const target = splitCollectionSlug(rel.slice(checkPath.length + 1));
       const currentVersion = url.searchParams.get("v");
       if (!target || !currentVersion) {
@@ -239,11 +201,13 @@ export function createHandler(
           { status: 400, headers: JSON_HEADERS },
         );
       }
+      const force = url.searchParams.get("force") === "1";
       try {
         const result = await adapter.checkFor(
           target.collection,
           target.slug,
           currentVersion,
+          { force },
         );
         if (result === null) {
           return new Response(
@@ -254,10 +218,13 @@ export function createHandler(
             },
           );
         }
-        return new Response(JSON.stringify({ stale: result.stale }), {
-          status: 200,
-          headers: JSON_HEADERS,
-        });
+        return new Response(
+          JSON.stringify({ stale: result.stale, version: result.version }),
+          {
+            status: 200,
+            headers: JSON_HEADERS,
+          },
+        );
       } catch (err) {
         const res = errorResponse(err);
         if (res) return res;

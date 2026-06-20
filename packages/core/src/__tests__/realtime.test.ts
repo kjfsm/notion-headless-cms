@@ -76,6 +76,10 @@ describe("realtime 更新通知", () => {
       renderer: mockRenderer,
       cache: [cache],
       realtime,
+      // webhook 管理（blockMs=undefined でブロックしない）+ recheckWindowMs:0 で
+      // キャッシュヒット時に必ず裏チェック → 差分検出 → publish を走らせる。
+      notionWebhookSecret: "wh-secret",
+      swr: { recheckWindowMs: 0 },
       waitUntil: (p) => {
         captured.push(p);
       },
@@ -209,6 +213,8 @@ describe("realtime 更新通知", () => {
       renderer: mockRenderer,
       cache: [cache],
       realtime,
+      // webhook 管理（blockMs=undefined）でリストをブロックせず裏で差分検出 → publish。
+      notionWebhookSecret: "wh-secret",
       waitUntil: (p) => {
         captured.push(p);
       },
@@ -264,6 +270,9 @@ describe("realtime 更新通知", () => {
       renderer: mockRenderer,
       cache: [cache],
       realtime,
+      // webhook 管理 + recheckWindowMs:0 で裏チェック → 差分検出 → publish を走らせる。
+      notionWebhookSecret: "wh-secret",
+      swr: { recheckWindowMs: 0 },
       waitUntil: (p) => {
         captured.push(p);
       },

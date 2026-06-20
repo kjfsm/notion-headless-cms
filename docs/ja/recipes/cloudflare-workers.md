@@ -124,14 +124,14 @@ Cloudflare Workers **Free プラン**は 1 invocation あたり 50 サブリク�
 
 ## キャッシュ戦略: 永続キャッシュ + 更新検知
 
-`swr.ttlMs` は**指定しない**のが推奨。
+`swr.staleBlockMs` は**指定せず既定に任せる**のが推奨。Notion webhook secret（`notion.webhookSecret`）を設定して push 経路を稼働させると `staleBlockMs` の既定が無期限になり、キャッシュは常に即表示される（更新は webhook で届くため、古さによるブロッキング再取得が起きない）。
 
 - KV キャッシュは期限なしで永続させる。
-- リクエスト時はキャッシュを即時返却し、`waitUntil` 経由でバックグラウンドで Notion の `lastEditedTime` と照合する。
+- リクエスト時はキャッシュを即時返却し、`waitUntil` 経由でバックグラウンドで Notion の `lastEditedTime` と照合する（照会は `recheckWindowMs`（既定 30 秒）で coalescing され、短時間に集中するアクセスは 1 回にまとまる）。
 - 差分があれば KV を差し替え、コンテンツキャッシュを無効化する。
 - 差分が無ければ何もしない（無駄な fetch なし）。
 
-`ttlMs` を入れると期限切れ時にブロッキング再取得が走るため、変更が無くても遅延の原因になる。
+`staleBlockMs` を短く入れると閾値超過時にブロッキング再取得が走るため、変更が無くても遅延の原因になる（webhook 稼働時は既定の無期限のままでよい）。
 
 ## クライアント側の表示更新
 

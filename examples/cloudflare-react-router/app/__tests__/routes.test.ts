@@ -71,6 +71,7 @@ describe("post loader()", () => {
     ]);
     const result = (await postLoader({
       params: { slug: "hello" },
+      request: new Request("https://example.com/posts/hello"),
       context: fakeContext,
     } as never)) as {
       blocks: unknown[];
@@ -89,6 +90,7 @@ describe("post loader()", () => {
     await expect(
       postLoader({
         params: { slug: "not-found" },
+        request: new Request("https://example.com/posts/not-found"),
         context: fakeContext,
       } as never),
     ).rejects.toBeDefined();

@@ -4,7 +4,7 @@ const fakeCms = {
   pages: {
     list: vi.fn(),
     find: vi.fn(),
-    peekVersion: vi.fn(),
+    check: vi.fn(),
     cache: {
       warm: vi.fn(),
       invalidate: vi.fn(),
@@ -34,7 +34,7 @@ vi.mock("@notion-headless-cms/react-renderer/server", () => ({
 
 const { loader: indexLoader } = await import("../routes/index.js");
 const { action: warmAction } = await import("../routes/api/warm.js");
-const { loader: pageCheckLoader } = await import(
+const { action: pageCheckAction } = await import(
   "../routes/api/pages/$slug/check.js"
 );
 
@@ -50,7 +50,10 @@ describe("index loader()", () => {
 
   it("home ページが存在しない場合はリダイレクト", async () => {
     fakeCms.pages.find.mockResolvedValue(null);
-    const result = await indexLoader({ context: fakeContext } as never);
+    const result = await indexLoader({
+      request: new Request("https://example.com/"),
+      context: fakeContext,
+    } as never);
     expect((result as Response).status).toBe(302);
   });
 
@@ -64,7 +67,10 @@ describe("index loader()", () => {
         { object: "block", id: "b1", type: "paragraph" },
       ],
     });
-    const result = await indexLoader({ context: fakeContext } as never);
+    const result = await indexLoader({
+      request: new Request("https://example.com/"),
+      context: fakeContext,
+    } as never);
     const r = result as { blocks: unknown[] };
     expect(r.blocks).toHaveLength(1);
   });
@@ -81,22 +87,53 @@ describe("warm action()", () => {
   });
 });
 
-describe("api/pages/:slug/check loader()", () => {
+describe("api/pages/:slug/check action()", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("Notion ページの version を返す", async () => {
-    fakeCms.pages.peekVersion.mockResolvedValue({
-      slug: "home",
-      lastEditedTime: "2024-01-01T00:00:00Z",
-    });
-    const result = await pageCheckLoader({
+  it("fresh（stale:false）のときは受け取った v をそのまま返す", async () => {
+    fakeCms.pages.check.mockResolvedValue({ stale: false });
+    const result = await pageCheckAction({
       params: { slug: "home" },
+      request: new Request(
+        "https://example.com/api/pages/home/check?v=2024-01-01T00:00:00Z",
+        { method: "POST" },
+      ),
+      context: fakeContext,
+    } as never);
+    expect(fakeCms.pages.check).toHaveBeenCalledWith(
+      "home",
+      "2024-01-01T00:00:00Z",
+    );
+    const json = await (result as Response).json();
+    expect(json).toEqual({ stale: false, version: "2024-01-01T00:00:00Z" });
+  });
+
+  it("stale（stale:true）のときは最新アイテムの lastEditedTime を返す", async () => {
+    fakeCms.pages.check.mockResolvedValue({
+      stale: true,
+      item: { slug: "home", lastEditedTime: "2024-02-02T00:00:00Z" },
+    });
+    const result = await pageCheckAction({
+      params: { slug: "home" },
+      request: new Request(
+        "https://example.com/api/pages/home/check?v=2024-01-01T00:00:00Z",
+        { method: "POST" },
+      ),
       context: fakeContext,
     } as never);
     const json = await (result as Response).json();
-    expect(json).toEqual({
-      slug: "home",
-      lastEditedTime: "2024-01-01T00:00:00Z",
-    });
+    expect(json).toEqual({ stale: true, version: "2024-02-02T00:00:00Z" });
+  });
+
+  it("見つからない場合は 404", async () => {
+    fakeCms.pages.check.mockResolvedValue(null);
+    const result = await pageCheckAction({
+      params: { slug: "missing" },
+      request: new Request("https://example.com/api/pages/missing/check?v=x", {
+        method: "POST",
+      }),
+      context: fakeContext,
+    } as never);
+    expect((result as Response).status).toBe(404);
   });
 });

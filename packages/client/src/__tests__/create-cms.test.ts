@@ -16,7 +16,7 @@ const {
   })),
   nodePresetMock: vi.fn(() => ({
     cache: ["MEMORY"],
-    swr: { ttlMs: 300_000 },
+    swr: {},
   })),
   notionSourceMock: vi.fn((cfg: Record<string, unknown>) => ({
     collections: {},
@@ -43,7 +43,7 @@ vi.mock("@notion-headless-cms/fetch-blocks", () => ({
   blocksFetcher: blocksFetcherMock,
 }));
 
-import { createCMS } from "../index";
+import { createCMS, isReloadRequest } from "../index";
 
 const schema = {
   posts: {
@@ -185,7 +185,7 @@ describe("createCMS", () => {
     expect(nodePresetMock).toHaveBeenCalledTimes(1);
     const opts = lastCall(createClientMock);
     expect(opts.cache).toEqual(["MEMORY"]);
-    expect(opts.swr).toEqual({ ttlMs: 300_000 });
+    expect(opts.swr).toEqual({});
     expect(opts.waitUntil).toBeUndefined();
   });
 
@@ -206,10 +206,10 @@ describe("createCMS", () => {
     expect(lastCall(createClientMock).cache).toEqual(["KV"]);
   });
 
-  it("cache 指定時 swr 省略なら 5 分の既定を使う", () => {
+  it("cache 指定時 swr 省略なら空（core が webhook 有無等で解決）", () => {
     const document = "KV" as unknown as CacheAdapter;
     createCMS({ notion: { schema, token: "t" }, cache: { document } });
-    expect(lastCall(createClientMock).swr).toEqual({ ttlMs: 300_000 });
+    expect(lastCall(createClientMock).swr).toEqual({});
   });
 
   it("cache.swr/waitUntil を createClient へ渡す", () => {
@@ -217,16 +217,51 @@ describe("createCMS", () => {
     const document = "KV" as unknown as CacheAdapter;
     createCMS({
       notion: { schema, token: "t" },
-      cache: { document, swr: { ttlMs: 5 }, waitUntil },
+      cache: { document, swr: { recheckWindowMs: 5 }, waitUntil },
     });
     const opts = lastCall(createClientMock);
-    expect(opts.swr).toEqual({ ttlMs: 5 });
+    expect(opts.swr).toEqual({ recheckWindowMs: 5 });
     expect(opts.waitUntil).toBe(waitUntil);
   });
 
   it("imageProxyBase は /api/cms/images に固定され createClient に渡る", () => {
     createCMS({ notion: { schema, token: "t" } });
     expect(lastCall(createClientMock).imageProxyBase).toBe("/api/cms/images");
+  });
+});
+
+describe("isReloadRequest", () => {
+  it("Cache-Control: no-cache なら true", () => {
+    const req = new Request("https://example.com/", {
+      headers: { "cache-control": "no-cache" },
+    });
+    expect(isReloadRequest(req)).toBe(true);
+  });
+
+  it("Cache-Control: max-age=0 なら true", () => {
+    const req = new Request("https://example.com/", {
+      headers: { "cache-control": "max-age=0" },
+    });
+    expect(isReloadRequest(req)).toBe(true);
+  });
+
+  it("Pragma: no-cache なら true", () => {
+    const req = new Request("https://example.com/", {
+      headers: { pragma: "no-cache" },
+    });
+    expect(isReloadRequest(req)).toBe(true);
+  });
+
+  it("通常リクエスト（ヘッダ無し）なら false", () => {
+    const req = new Request("https://example.com/");
+    expect(isReloadRequest(req)).toBe(false);
+  });
+
+  it("max-age=600 のような通常キャッシュ指定では false", () => {
+    const req = new Request("https://example.com/", {
+      headers: { "cache-control": "max-age=600" },
+    });
+    expect(isReloadRequest(req)).toBe(false);
   });
 });
 

@@ -125,16 +125,17 @@ describe("cloudflarePreset", () => {
       ctx: { waitUntil: vi.fn() },
     });
     expect(Object.keys(result).sort()).toEqual(["cache", "swr", "waitUntil"]);
-    expect(result.swr).toEqual({ ttlMs: 5 * 60_000 });
+    // swr 既定は空（core が webhook 有無等で解決する）。
+    expect(result.swr).toEqual({});
   });
 
   it("opts.swr で SWR 設定を上書きできる", () => {
     const result = cloudflarePreset({
       env: { DOC_CACHE: inMemoryKV() },
       ctx: { waitUntil: vi.fn() },
-      swr: { ttlMs: 30_000 },
+      swr: { recheckWindowMs: 30_000 },
     });
-    expect(result.swr).toEqual({ ttlMs: 30_000 });
+    expect(result.swr).toEqual({ recheckWindowMs: 30_000 });
   });
 
   it("prefix を伝播する", async () => {

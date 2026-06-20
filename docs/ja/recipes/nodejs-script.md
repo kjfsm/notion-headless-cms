@@ -83,7 +83,7 @@ const cms = createClient({
     notion: notionSource({ schema, token: process.env.NOTION_TOKEN! }),
   },
   cache: [memoryCache({ maxItems: 1000 })],
-  swr: { ttlMs: 10 * 60_000 },
+  swr: { recheckWindowMs: 30_000, staleBlockMs: 10 * 60_000 },
 });
 ```
 

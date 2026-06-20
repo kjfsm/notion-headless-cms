@@ -58,7 +58,14 @@ export interface CollectionContext<T extends BaseContentItem> {
   render: RenderContext<T>;
   hooks: CMSHooks<T>;
   logger: Logger | undefined;
-  ttlMs: number | undefined;
+  /**
+   * ブロック閾値（ms）。`cachedAt`（最終確認時刻）からこの時間を超えたら
+   * 開く時にブロッキングで再取得する。`undefined` ならブロックしない（無期限即表示）。
+   * webhook 管理時は `undefined` に解決される。
+   */
+  blockMs: number | undefined;
+  /** 再チェックの最小間隔（coalescing, ms）。この時間内は Notion を再照会しない。 */
+  recheckWindowMs: number;
   publishedStatuses: string[];
   accessibleStatuses: string[];
   retryConfig: RetryConfig;
@@ -132,7 +139,8 @@ export class CollectionClientImpl<T extends BaseContentItem>
     slug: string,
     opts: FindOptions = {},
   ): Promise<ItemWithContent<T> | null> {
-    if (opts.bypassCache) {
+    // 明示リロード（force）/ bypassCache はブロッキングで最新を返し、本文 cache を破棄する。
+    if (opts.bypassCache || opts.force) {
       this.ctx.hooks.onCacheMiss?.(slug);
       const item = await this.fetchRaw(slug);
       if (!item) return null;
@@ -146,12 +154,13 @@ export class CollectionClientImpl<T extends BaseContentItem>
       slug,
     );
     if (cachedMeta) {
-      // TTL 切れはブロッキングで再取得する (stale を返さない要件)
+      // 最終確認から blockMs を超えたら stale を返さずブロッキングで再取得する。
+      // webhook 管理時は blockMs=undefined（決してブロックしない）。
       if (
-        this.ctx.ttlMs !== undefined &&
-        isStale(cachedMeta.cachedAt, this.ctx.ttlMs)
+        this.ctx.blockMs !== undefined &&
+        isStale(cachedMeta.cachedAt, this.ctx.blockMs)
       ) {
-        this.ctx.logger?.debug?.("キャッシュ期限切れ（TTL）、フェッチ", {
+        this.ctx.logger?.debug?.("キャッシュ期限切れ（block 閾値）、フェッチ", {
           operation: "find",
           slug,
           collection: this.ctx.collection,
@@ -164,8 +173,12 @@ export class CollectionClientImpl<T extends BaseContentItem>
         await this.invalidateContentEntry(slug);
         return this.attachLazyContent(meta);
       }
-      const bg = this.checkAndUpdateItemBg(slug, cachedMeta);
-      if (this.ctx.waitUntil) this.ctx.waitUntil(bg);
+      // 新しい → 即キャッシュ返却。recheck ウィンドウを超えていれば裏で Notion と突合する
+      // （ウィンドウ内は照会しない＝複数端末・連続アクセスを集約する）。
+      if (Date.now() - cachedMeta.cachedAt >= this.ctx.recheckWindowMs) {
+        const bg = this.revalidateItemBg(slug);
+        if (this.ctx.waitUntil) this.ctx.waitUntil(bg);
+      }
       this.ctx.logger?.debug?.("キャッシュヒット", {
         operation: "find",
         slug,
@@ -204,26 +217,34 @@ export class CollectionClientImpl<T extends BaseContentItem>
       .filter((slug): slug is string => Boolean(slug));
   }
 
-  async peekVersion(
-    slug: string,
-  ): Promise<{ notionUpdatedAt: string; cachedAt: number } | null> {
-    const meta = await this.ctx.docCache.getMeta<T>(this.ctx.collection, slug);
-    if (!meta) return null;
-    return { notionUpdatedAt: meta.notionUpdatedAt, cachedAt: meta.cachedAt };
-  }
-
   async check(
     slug: string,
     currentVersion: string,
   ): Promise<CheckResult<T> | null> {
-    const raw = await this.runForeground("check", slug, () =>
-      this.fetchRaw(slug),
+    // 公開 API は「必ず実照会」を意図するため force で coalescing を回避する。
+    const r = await this.runForeground("check", slug, () =>
+      this.refreshFromNotion(slug, { force: true }),
     );
-    if (!raw) return null;
-    if (raw.lastEditedTime === currentVersion) return { stale: false };
-    const meta = await this.persistMeta(slug, raw);
-    await this.invalidateContentEntry(slug);
-    return { stale: true, item: this.attachLazyContent(meta) };
+    if (!r) return null;
+    if (r.version === currentVersion) return { stale: false };
+    return { stale: true, item: this.attachLazyContent(r.meta) };
+  }
+
+  /**
+   * クライアント鮮度エンドポイント（`POST /check`）用。coalescing 付きで Notion と突合し、
+   * クライアントが提示した `currentVersion` に対する stale 判定と現在の version を返す。
+   * アイテムが存在しなければ `null`。
+   */
+  async checkVersion(
+    slug: string,
+    currentVersion: string,
+    opts: { force?: boolean } = {},
+  ): Promise<{ stale: boolean; version: string } | null> {
+    const r = await this.runForeground("check", slug, () =>
+      this.refreshFromNotion(slug, { force: opts.force }),
+    );
+    if (!r) return null;
+    return { stale: r.version !== currentVersion, version: r.version };
   }
 
   async adjacent(
@@ -493,8 +514,8 @@ export class CollectionClientImpl<T extends BaseContentItem>
     const cached = await this.ctx.docCache.getList<T>(this.ctx.collection);
     if (cached) {
       if (
-        this.ctx.ttlMs !== undefined &&
-        isStale(cached.cachedAt, this.ctx.ttlMs)
+        this.ctx.blockMs !== undefined &&
+        isStale(cached.cachedAt, this.ctx.blockMs)
       ) {
         this.ctx.logger?.debug?.("リストキャッシュ期限切れ（TTL）、フェッチ", {
           operation: "list",
@@ -556,42 +577,68 @@ export class CollectionClientImpl<T extends BaseContentItem>
     }
   }
 
-  private async checkAndUpdateItemBg(
+  /**
+   * coalescing 付きで Notion と突合する更新検知の中核。
+   * - recheck ウィンドウ内（かつ `force` でない）なら Notion を照会せず既知 version を返す。
+   * - 差分あり → メタ更新 + 本文 cache 無効化 +（`eagerRebuild` 時）本文再生成 + realtime 通知。
+   * - 差分なし → `cachedAt` を更新してウィンドウを再起算。
+   * アイテムが存在しなければ `null`。エラーは握り潰さず呼び出し側へ伝播する。
+   */
+  private async refreshFromNotion(
     slug: string,
-    cached: CachedItemMeta<T>,
-  ): Promise<void> {
+    opts: { force?: boolean; eagerRebuild?: boolean } = {},
+  ): Promise<{
+    changed: boolean;
+    version: string;
+    meta: CachedItemMeta<T>;
+  } | null> {
+    const cached = await this.ctx.docCache.getMeta<T>(
+      this.ctx.collection,
+      slug,
+    );
+    if (
+      !opts.force &&
+      cached &&
+      Date.now() - cached.cachedAt < this.ctx.recheckWindowMs
+    ) {
+      return { changed: false, version: cached.notionUpdatedAt, meta: cached };
+    }
+    const item = await this.fetchRaw(slug);
+    if (!item) return null;
+    const version = this.ctx.source.getLastModified(item);
+    if (!cached || version !== cached.notionUpdatedAt) {
+      const meta = await this.persistMeta(slug, item);
+      await this.invalidateContentEntry(slug);
+      this.ctx.logger?.debug?.("更新検知: 差分を検出、メタを差し替え", {
+        operation: "refreshFromNotion",
+        slug,
+        collection: this.ctx.collection,
+        notionUpdatedAt: cached?.notionUpdatedAt,
+      });
+      this.ctx.hooks.onCacheRevalidated?.(slug, meta);
+      if (opts.eagerRebuild) await this.rebuildContentBg(slug, item);
+      // キャッシュ書き込み完了後に通知する（先に通知すると client が古い loader データを掴む）。
+      await this.publishRealtime({
+        collection: this.ctx.collection,
+        slug,
+        version,
+      });
+      return { changed: true, version, meta };
+    }
+    const bumped: CachedItemMeta<T> = { ...cached, cachedAt: Date.now() };
+    await this.ctx.docCache.setMeta(this.ctx.collection, slug, bumped);
+    this.ctx.logger?.debug?.("更新検知: 差分なし、cachedAt を更新", {
+      operation: "refreshFromNotion",
+      slug,
+      collection: this.ctx.collection,
+    });
+    return { changed: false, version, meta: bumped };
+  }
+
+  /** find() のバックグラウンド更新検知。fail-soft で `refreshFromNotion`（本文も再生成）を回す。 */
+  private async revalidateItemBg(slug: string): Promise<void> {
     try {
-      const item = await this.fetchRaw(slug);
-      if (!item) return;
-      const lm = this.ctx.source.getLastModified(item);
-      if (lm !== cached.notionUpdatedAt) {
-        const meta = await this.persistMeta(slug, item);
-        await this.invalidateContentEntry(slug);
-        this.ctx.logger?.debug?.("SWR: 差分を検出、メタを差し替え", {
-          operation: "find:bg",
-          slug,
-          collection: this.ctx.collection,
-          notionUpdatedAt: cached.notionUpdatedAt,
-        });
-        this.ctx.hooks.onCacheRevalidated?.(slug, meta);
-        await this.rebuildContentBg(slug, item);
-        // キャッシュ書き込み完了後に通知する（先に通知すると client が古い loader データを掴む）。
-        await this.publishRealtime({
-          collection: this.ctx.collection,
-          slug,
-          version: lm,
-        });
-      } else {
-        await this.ctx.docCache.setMeta(this.ctx.collection, slug, {
-          ...cached,
-          cachedAt: Date.now(),
-        });
-        this.ctx.logger?.debug?.("SWR: 差分なし、cachedAt を更新", {
-          operation: "find:bg",
-          slug,
-          collection: this.ctx.collection,
-        });
-      }
+      await this.refreshFromNotion(slug, { eagerRebuild: true });
     } catch (err) {
       const cmsErr = isCMSError(err)
         ? err
@@ -600,7 +647,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
             message: "SWR background item check failed.",
             cause: err,
             context: {
-              operation: "swr.checkAndUpdateItemBg",
+              operation: "swr.revalidateItemBg",
               collection: this.ctx.collection,
               slug,
             },
@@ -639,12 +686,12 @@ export class CollectionClientImpl<T extends BaseContentItem>
           collection: this.ctx.collection,
           version: this.ctx.source.getListVersion(items),
         });
-      } else if (this.ctx.ttlMs !== undefined) {
+      } else if (this.ctx.blockMs !== undefined) {
         await this.ctx.docCache.setList(this.ctx.collection, {
           ...cached,
           cachedAt: Date.now(),
         });
-        this.ctx.logger?.debug?.("SWR: リスト差分なし、TTL をリセット", {
+        this.ctx.logger?.debug?.("SWR: リスト差分なし、確認時刻をリセット", {
           operation: "list:bg",
           collection: this.ctx.collection,
         });

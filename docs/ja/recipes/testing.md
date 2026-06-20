@@ -108,7 +108,7 @@ import { createFixtureClient, createFakeNotionSource } from "@notion-headless-cm
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
-it("TTL 切れで再取得が走る", async () => {
+it("staleBlockMs 超過で再取得が走る", async () => {
   let version = 1;
   const items = () => [
     { id: "1", slug: "x", title: `v${version}`, lastEditedTime: `2024-01-0${version}` },
@@ -119,18 +119,19 @@ it("TTL 切れで再取得が走る", async () => {
 
   const cms = createFixtureClient({
     sources: { notion: adapter },
-    swr: { ttlMs: 1_000 },
+    // recheckWindowMs: 0 で coalescing を無効化し、staleBlockMs で挙動を検証
+    swr: { recheckWindowMs: 0, staleBlockMs: 1_000 },
   });
 
   await cms.posts.list();
   expect(listSpy).toHaveBeenCalledTimes(1);
 
-  // TTL 内 → キャッシュヒット
+  // staleBlockMs 以内 → 即キャッシュ表示
   vi.advanceTimersByTime(500);
   await cms.posts.list();
   expect(listSpy).toHaveBeenCalledTimes(1);
 
-  // TTL 切れ → ブロッキング再取得
+  // staleBlockMs 超過 → ブロッキング再取得
   vi.advanceTimersByTime(1_500);
   await cms.posts.list();
   expect(listSpy).toHaveBeenCalledTimes(2);

@@ -36,6 +36,10 @@ import type {
 } from "./types/sources";
 
 const DEFAULT_IMAGE_PROXY_BASE = "/api/images";
+/** 再チェックの最小間隔（coalescing）の既定。 */
+const DEFAULT_RECHECK_WINDOW_MS = 30_000;
+/** webhook 非管理時のブロック閾値の既定（7 日）。 */
+const DEFAULT_STALE_BLOCK_MS = 7 * 24 * 60 * 60 * 1000;
 
 export type CMSClient<C extends CollectionsConfig> = {
   [K in keyof C]: CollectionClient<InferCollectionItem<C[K]>>;
@@ -260,7 +264,14 @@ export function createClient<S extends CMSSources = CMSSources>(
   }
 
   const cacheRes = resolveCache(opts.cache);
-  const ttlMs = opts.swr?.ttlMs;
+  const recheckWindowMs =
+    opts.swr?.recheckWindowMs ?? DEFAULT_RECHECK_WINDOW_MS;
+  // ブロック閾値: 明示指定が最優先。未指定なら webhook 管理時は無期限（ブロックしない）、
+  // 非管理時は既定 7 日。webhook が更新の度にキャッシュを最新化する前提で即表示にする。
+  const webhookManaged = Boolean(opts.notionWebhookSecret);
+  const blockMs =
+    opts.swr?.staleBlockMs ??
+    (webhookManaged ? undefined : DEFAULT_STALE_BLOCK_MS);
   const imageProxyBase = opts.imageProxyBase ?? DEFAULT_IMAGE_PROXY_BASE;
   const contentConfig = opts.content;
   const rendererFn: RendererFn | undefined = opts.renderer;
@@ -289,7 +300,7 @@ export function createClient<S extends CMSSources = CMSSources>(
   const collectionNames: string[] = [];
   // cms.<name> として返す公開クライアント（ページ or 要素）。
   const collections: Record<string, unknown> = {};
-  // peekVersion / check は本文を持つページコレクションのみ対応。handler から参照する。
+  // check は本文を持つページコレクションのみ対応。handler から参照する。
   const pageImpls: Record<string, CollectionClientImpl<BaseContentItem>> = {};
   // warmByPageId は公開 I/F に無い impl 専用メソッドのため、ページ・要素とも具象を保持する。
   const warmImpls: Record<
@@ -322,7 +333,8 @@ export function createClient<S extends CMSSources = CMSSources>(
       render: renderCtx,
       hooks: collectionHooks,
       logger,
-      ttlMs,
+      blockMs,
+      recheckWindowMs,
       publishedStatuses: def.publishedStatuses
         ? [...def.publishedStatuses]
         : [],
@@ -481,27 +493,17 @@ export function createClient<S extends CMSSources = CMSSources>(
             return ds.parseWebhook(req, { secret: webhookSecret });
           },
           revalidate: (scope) => globalOps.invalidate(scope),
-          peekVersionFor(collection, slug) {
-            // peekVersion は本文を持つページコレクションのみ対応。
-            const client = pageImpls[collection];
-            if (!client) {
-              throw versionUnsupportedOrUnknown(
-                "peekVersionFor",
-                collection,
-                slug,
-              );
-            }
-            return client.peekVersion(slug);
-          },
-          async checkFor(collection, slug, currentVersion) {
+          async checkFor(collection, slug, currentVersion, opts) {
+            // check は本文を持つページコレクションのみ対応。
             const client = pageImpls[collection];
             if (!client) {
               throw versionUnsupportedOrUnknown("checkFor", collection, slug);
             }
-            const result = await client.check(slug, currentVersion);
-            // ItemWithContent は lazy 関数を含むため、HTTP には stale 判定のみ返す
-            // （差分ありの場合 check() が副作用でキャッシュ更新済み。利用側は loader 再実行で本文取得）。
-            return result === null ? null : { stale: result.stale };
+            // coalescing 付きで Notion と突合し、stale 判定と現在の version を返す
+            // （差分ありの場合は副作用でキャッシュ更新済み。利用側は loader 再実行で本文取得）。
+            return client.checkVersion(slug, currentVersion, {
+              force: opts?.force,
+            });
           },
         },
         handlerOpts,

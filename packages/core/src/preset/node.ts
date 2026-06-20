@@ -6,7 +6,7 @@ import type { CacheAdapter, SWRConfig } from "../types/index";
 export interface NodePresetOptions {
   /** メモリキャッシュの設定。 */
   cache?: MemoryCacheOptions;
-  /** SWR（Stale-While-Revalidate）設定。デフォルト: ttlMs 5 分。 */
+  /** SWR（Stale-While-Revalidate）設定。未指定なら core 既定（recheck 30 秒 / block は webhook 有無で自動）。 */
   swr?: SWRConfig;
 }
 
@@ -30,6 +30,6 @@ export function nodePreset(opts: NodePresetOptions = {}): {
 } {
   return {
     cache: [memoryCache(opts.cache)],
-    swr: opts.swr ?? { ttlMs: 5 * 60_000 },
+    swr: opts.swr ?? {},
   };
 }

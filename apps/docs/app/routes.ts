@@ -13,7 +13,7 @@ import {
 // - /docs/*                 md ドキュメント（splat で /docs/ja/recipes/foo 等の階層に対応）
 // - /api/cms/images/:hash   Notion 画像プロキシ（createCMS の固定 imageProxyBase /api/cms/images に一致）
 // - /api/warm               キャッシュ warm-up
-// - /api/pages/:slug/check  Notion ページの version 確認（クライアント側ポーリング用）
+// - /api/pages/:slug/check  Notion ページの更新検知（クライアント側 POST check 用）
 // - /api/revalidate         Notion Webhook 受け口
 export default [
   route("/", "routes/index.tsx"),

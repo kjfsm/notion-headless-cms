@@ -1692,9 +1692,10 @@ describe("CollectionClient — slugField + findByProp", () => {
 
 describe("CollectionClient — cache.prime", () => {
   it("単件を取得してメタ・本文キャッシュを作り直す", async () => {
+    const cache = memoryCache();
     const cms = createClient({
       renderer: mockRenderer,
-      cache: [memoryCache()],
+      cache: [cache],
       sources: {
         mock: {
           collections: {
@@ -1711,15 +1712,16 @@ describe("CollectionClient — cache.prime", () => {
       },
     });
     await cms.posts.cache.prime("alpha");
-    const version = await cms.posts.peekVersion("alpha");
-    expect(version).not.toBeNull();
-    expect(version?.notionUpdatedAt).toBe("2024-01-01T00:00:00Z");
+    const meta = await cache.doc?.getMeta<BaseContentItem>("posts", "alpha");
+    expect(meta).not.toBeNull();
+    expect(meta?.notionUpdatedAt).toBe("2024-01-01T00:00:00Z");
   });
 
   it("存在しない slug は何もしない", async () => {
+    const cache = memoryCache();
     const cms = createClient({
       renderer: mockRenderer,
-      cache: [memoryCache()],
+      cache: [cache],
       sources: {
         mock: {
           collections: {
@@ -1736,7 +1738,9 @@ describe("CollectionClient — cache.prime", () => {
       },
     });
     await cms.posts.cache.prime("missing");
-    expect(await cms.posts.peekVersion("missing")).toBeNull();
+    expect(
+      await cache.doc?.getMeta<BaseContentItem>("posts", "missing"),
+    ).toBeNull();
   });
 });
 
@@ -1747,9 +1751,10 @@ describe("cms.warmByPageId", () => {
       .mockImplementation(
         async (id: string) => makeItems().find((i) => i.id === id) ?? null,
       );
+    const cache = memoryCache();
     const cms = createClient({
       renderer: mockRenderer,
-      cache: [memoryCache()],
+      cache: [cache],
       sources: {
         mock: {
           collections: {
@@ -1769,7 +1774,9 @@ describe("cms.warmByPageId", () => {
     const result = await cms.warmByPageId("3");
     expect(result).toEqual({ collection: "posts", slug: "gamma" });
     expect(findById).toHaveBeenCalledWith("3");
-    expect(await cms.posts.peekVersion("gamma")).not.toBeNull();
+    expect(
+      await cache.doc?.getMeta<BaseContentItem>("posts", "gamma"),
+    ).not.toBeNull();
   });
 
   it("findById 未実装なら list を id で走査して解決する", async () => {
@@ -1817,5 +1824,380 @@ describe("cms.warmByPageId", () => {
       },
     });
     expect(await cms.warmByPageId("nonexistent")).toBeNull();
+  });
+});
+
+describe("CollectionClient — find() 更新検知（recheckWindowMs / staleBlockMs / force）", () => {
+  it("recheckWindowMs 内のキャッシュヒットでは裏チェック（Notion 照会）が走らない", async () => {
+    const item: BaseContentItem = {
+      id: "1",
+      slug: "post-1",
+      lastEditedTime: "2024-01-01T00:00:00Z",
+    };
+    const cache = memoryCache();
+    // cachedAt を直前にして recheck ウィンドウ内にする。
+    await cache.doc?.setMeta("posts", "post-1", {
+      item,
+      notionUpdatedAt: item.lastEditedTime,
+      cachedAt: Date.now(),
+    });
+    const findByProp = vi.fn().mockResolvedValue(item);
+    const captured: Promise<unknown>[] = [];
+    const cms = createClient({
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                findByProp,
+                properties: { slug: { type: "richText", notion: "Slug" } },
+              }),
+              slugField: "slug",
+            },
+          },
+        },
+      },
+      renderer: mockRenderer,
+      cache: [cache],
+      // 既定 30s のウィンドウ内なので裏チェックは走らない。
+      swr: { recheckWindowMs: 30_000 },
+      waitUntil: (p) => captured.push(p),
+    });
+
+    await cms.posts.find("post-1");
+    await Promise.all(captured);
+
+    // 裏チェックが走らない＝Notion 照会（findByProp）は 0 回。
+    expect(findByProp).not.toHaveBeenCalled();
+  });
+
+  it("recheckWindowMs を超えるとキャッシュヒットでも裏チェック（Notion 照会）が走る", async () => {
+    const item: BaseContentItem = {
+      id: "1",
+      slug: "post-1",
+      lastEditedTime: "2024-01-01T00:00:00Z",
+    };
+    const cache = memoryCache();
+    await cache.doc?.setMeta("posts", "post-1", {
+      item,
+      notionUpdatedAt: item.lastEditedTime,
+      cachedAt: Date.now(),
+    });
+    const findByProp = vi.fn().mockResolvedValue(item);
+    const captured: Promise<unknown>[] = [];
+    const cms = createClient({
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                findByProp,
+                properties: { slug: { type: "richText", notion: "Slug" } },
+              }),
+              slugField: "slug",
+            },
+          },
+        },
+      },
+      renderer: mockRenderer,
+      cache: [cache],
+      // ウィンドウ 0 → cachedAt が現在でも裏チェックが走る。
+      swr: { recheckWindowMs: 0 },
+      waitUntil: (p) => captured.push(p),
+    });
+
+    await cms.posts.find("post-1");
+    await Promise.all(captured);
+
+    expect(findByProp).toHaveBeenCalledTimes(1);
+  });
+
+  it("force はキャッシュヒットでもブロッキングで Notion から最新を取得する", async () => {
+    const cachedItem: BaseContentItem = {
+      id: "1",
+      slug: "post-1",
+      lastEditedTime: "2024-01-01T00:00:00Z",
+    };
+    const freshItem: BaseContentItem = {
+      id: "1",
+      slug: "post-1",
+      lastEditedTime: "2024-01-02T00:00:00Z",
+    };
+    const cache = memoryCache();
+    await cache.doc?.setMeta("posts", "post-1", {
+      item: cachedItem,
+      notionUpdatedAt: cachedItem.lastEditedTime,
+      cachedAt: Date.now(),
+    });
+    const findByProp = vi.fn().mockResolvedValue(freshItem);
+    const cms = createClient({
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                findByProp,
+                properties: { slug: { type: "richText", notion: "Slug" } },
+              }),
+              slugField: "slug",
+            },
+          },
+        },
+      },
+      renderer: mockRenderer,
+      cache: [cache],
+    });
+
+    const result = await cms.posts.find("post-1", { force: true });
+    expect(findByProp).toHaveBeenCalledTimes(1);
+    expect(result?.lastEditedTime).toBe("2024-01-02T00:00:00Z");
+  });
+
+  it("staleBlockMs 超過のキャッシュヒットはブロッキングで再取得し最新を返す", async () => {
+    const cachedItem: BaseContentItem = {
+      id: "1",
+      slug: "post-1",
+      lastEditedTime: "2024-01-01T00:00:00Z",
+    };
+    const freshItem: BaseContentItem = {
+      id: "1",
+      slug: "post-1",
+      lastEditedTime: "2024-01-02T00:00:00Z",
+    };
+    const cache = memoryCache();
+    // cachedAt: 0 → block 閾値超過。
+    await cache.doc?.setMeta("posts", "post-1", {
+      item: cachedItem,
+      notionUpdatedAt: cachedItem.lastEditedTime,
+      cachedAt: 0,
+    });
+    const findByProp = vi.fn().mockResolvedValue(freshItem);
+    const waitUntil = vi.fn();
+    const cms = createClient({
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                findByProp,
+                properties: { slug: { type: "richText", notion: "Slug" } },
+              }),
+              slugField: "slug",
+            },
+          },
+        },
+      },
+      renderer: mockRenderer,
+      cache: [cache],
+      swr: { staleBlockMs: 1000 },
+      waitUntil,
+    });
+
+    const result = await cms.posts.find("post-1");
+    // ブロッキング再取得なので最新が返り、裏タスク（waitUntil）は使われない。
+    expect(result?.lastEditedTime).toBe("2024-01-02T00:00:00Z");
+    expect(findByProp).toHaveBeenCalledTimes(1);
+    expect(waitUntil).not.toHaveBeenCalled();
+  });
+
+  it("notionWebhookSecret 設定時は staleBlockMs 既定が無期限となりブロックしない", async () => {
+    const cachedItem: BaseContentItem = {
+      id: "1",
+      slug: "post-1",
+      lastEditedTime: "2024-01-01T00:00:00Z",
+    };
+    const cache = memoryCache();
+    // 7 日を遥かに超えて古いが、webhook 管理なのでブロックしない。
+    await cache.doc?.setMeta("posts", "post-1", {
+      item: cachedItem,
+      notionUpdatedAt: cachedItem.lastEditedTime,
+      cachedAt: 0,
+    });
+    const findByProp = vi.fn().mockResolvedValue(cachedItem);
+    const captured: Promise<unknown>[] = [];
+    const cms = createClient({
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                findByProp,
+                properties: { slug: { type: "richText", notion: "Slug" } },
+              }),
+              slugField: "slug",
+            },
+          },
+        },
+      },
+      renderer: mockRenderer,
+      cache: [cache],
+      // staleBlockMs 未指定 + webhook secret → blockMs=undefined（ブロックしない）。
+      notionWebhookSecret: "wh-secret",
+      waitUntil: (p) => captured.push(p),
+    });
+
+    const result = await cms.posts.find("post-1");
+
+    // 7 日を遥かに超えて古いキャッシュでも、webhook 管理なら即返却（ブロッキング再取得しない）。
+    // 鮮度確認は裏（waitUntil）に回るので応答はブロックされない。
+    expect(result?.lastEditedTime).toBe("2024-01-01T00:00:00Z");
+    expect(captured.length).toBeGreaterThan(0);
+
+    await Promise.all(captured);
+  });
+});
+
+describe("CollectionClientImpl — checkVersion()（coalescing / force）", () => {
+  /** impl 専用メソッド checkVersion へアクセスするためのキャスト型。 */
+  type WithCheckVersion = {
+    checkVersion(
+      slug: string,
+      currentVersion: string,
+      opts?: { force?: boolean },
+    ): Promise<{ stale: boolean; version: string } | null>;
+  };
+
+  it("recheck ウィンドウ内（force なし）は Notion を照会せず既知 version を返す", async () => {
+    const item: BaseContentItem = {
+      id: "1",
+      slug: "post-1",
+      lastEditedTime: "2024-01-01T00:00:00Z",
+    };
+    const cache = memoryCache();
+    await cache.doc?.setMeta("posts", "post-1", {
+      item,
+      notionUpdatedAt: item.lastEditedTime,
+      cachedAt: Date.now(),
+    });
+    const findByProp = vi.fn().mockResolvedValue(item);
+    const cms = createClient({
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                findByProp,
+                properties: { slug: { type: "richText", notion: "Slug" } },
+              }),
+              slugField: "slug",
+            },
+          },
+        },
+      },
+      renderer: mockRenderer,
+      cache: [cache],
+      swr: { recheckWindowMs: 30_000 },
+    });
+
+    const posts = cms.posts as unknown as WithCheckVersion;
+    const result = await posts.checkVersion("post-1", "2024-01-01T00:00:00Z");
+
+    // ウィンドウ内なので Notion 非照会で既知 version を返す。
+    expect(findByProp).not.toHaveBeenCalled();
+    expect(result).toEqual({ stale: false, version: "2024-01-01T00:00:00Z" });
+  });
+
+  it("force ではウィンドウ内でも Notion を実照会する", async () => {
+    const item: BaseContentItem = {
+      id: "1",
+      slug: "post-1",
+      lastEditedTime: "2024-01-01T00:00:00Z",
+    };
+    const cache = memoryCache();
+    await cache.doc?.setMeta("posts", "post-1", {
+      item,
+      notionUpdatedAt: item.lastEditedTime,
+      cachedAt: Date.now(),
+    });
+    const findByProp = vi.fn().mockResolvedValue(item);
+    const cms = createClient({
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                findByProp,
+                properties: { slug: { type: "richText", notion: "Slug" } },
+              }),
+              slugField: "slug",
+            },
+          },
+        },
+      },
+      renderer: mockRenderer,
+      cache: [cache],
+      swr: { recheckWindowMs: 30_000 },
+    });
+
+    const posts = cms.posts as unknown as WithCheckVersion;
+    const result = await posts.checkVersion("post-1", "2024-01-01T00:00:00Z", {
+      force: true,
+    });
+
+    expect(findByProp).toHaveBeenCalledTimes(1);
+    expect(result).toEqual({ stale: false, version: "2024-01-01T00:00:00Z" });
+  });
+
+  it("差分があるとき { stale: true, version } を返す", async () => {
+    const cachedItem: BaseContentItem = {
+      id: "1",
+      slug: "post-1",
+      lastEditedTime: "2024-01-01T00:00:00Z",
+    };
+    const freshItem: BaseContentItem = {
+      id: "1",
+      slug: "post-1",
+      lastEditedTime: "2024-01-02T00:00:00Z",
+    };
+    const cache = memoryCache();
+    await cache.doc?.setMeta("posts", "post-1", {
+      item: cachedItem,
+      notionUpdatedAt: cachedItem.lastEditedTime,
+      cachedAt: Date.now(),
+    });
+    const findByProp = vi.fn().mockResolvedValue(freshItem);
+    const cms = createClient({
+      sources: {
+        mock: {
+          collections: {
+            posts: {
+              source: makeMockSource({
+                findByProp,
+                properties: { slug: { type: "richText", notion: "Slug" } },
+              }),
+              slugField: "slug",
+            },
+          },
+        },
+      },
+      renderer: mockRenderer,
+      cache: [cache],
+      swr: { recheckWindowMs: 30_000 },
+    });
+
+    const posts = cms.posts as unknown as WithCheckVersion;
+    // force で実照会させ、現在の version (fresh) と提示 version (old) の差分を検出する。
+    const result = await posts.checkVersion("post-1", "2024-01-01T00:00:00Z", {
+      force: true,
+    });
+
+    expect(result).toEqual({ stale: true, version: "2024-01-02T00:00:00Z" });
+  });
+
+  it("存在しない slug は null を返す", async () => {
+    const cms = createClient({
+      sources: {
+        mock: {
+          collections: {
+            posts: { source: makeMockSource(), slugField: "slug" },
+          },
+        },
+      },
+      renderer: mockRenderer,
+      cache: [memoryCache()],
+    });
+
+    const posts = cms.posts as unknown as WithCheckVersion;
+    expect(await posts.checkVersion("missing", "v1")).toBeNull();
   });
 });
