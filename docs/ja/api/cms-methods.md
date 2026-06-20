@@ -21,7 +21,7 @@ const cms = createClient({
     notion: notionSource({ schema, token: process.env.NOTION_TOKEN! }),
   },
   cache?: CacheAdapter[],
-  swr?: { ttlMs?: number },
+  swr?: { recheckWindowMs?: number; staleBlockMs?: number },
   renderer?: RendererFn,
 });
 
@@ -61,19 +61,26 @@ cms.imageProxyBase     // string（createCMS では "/api/cms/images" に固定�
 
 ### SWR (Stale-While-Revalidate) のキャッシュ挙動
 
-`find()` / `list()` は SWR キャッシュ経由で動作する。挙動は以下のとおり:
+`find()` / `list()` は SWR キャッシュ経由で動作する。挙動は 2 つのパラメータで制御する:
+
+| パラメータ | 既定 | 意味 |
+|---|---|---|
+| `swr.recheckWindowMs` | `30_000`（30 秒） | Notion 再照会の最小間隔（coalescing）。この時間内は裏側の突合でも Notion を再照会しない。複数端末・連続アクセスを 1 回の照会に集約する |
+| `swr.staleBlockMs` | webhook secret あり: 無期限 / なし: `604_800_000`（7 日） | ブロック閾値。最終確認（`cachedAt`）からこの時間を超えたアイテムを開くと、ブロッキングで再取得してから返す |
+
+挙動は「最終確認からの経過時間」で分岐する:
 
 | キャッシュ状態 | 挙動 |
 |---|---|
 | キャッシュなし | source から取得・キャッシュ書き込み・呼び出し側に返却（ブロッキング） |
-| キャッシュあり / TTL 内 | キャッシュをそのまま返す（fetch なし） |
-| キャッシュあり / **TTL 切れ** | **ブロッキングで source から再取得**しキャッシュを更新してから返す |
+| キャッシュあり / `staleBlockMs` 以内（webhook 稼働時は常にこちら） | **即キャッシュ表示**。`recheckWindowMs` を過ぎていれば裏で Notion と突合（ウィンドウ内なら照会しない） |
+| キャッシュあり / `staleBlockMs` 超過 | **ブロッキングで source から再取得**しキャッシュを更新してから返す |
 
-> 注: 一般的な SWR ライブラリは TTL 切れでも一旦 stale を返してバックグラウンド更新するが、本ライブラリは **TTL 切れは必ずブロッキングで再取得する**。これは「TTL を過ぎたデータは古いとみなして返さない」というユーザー要件に従う設計上の選択。古いデータを許容したい場合は `swr.ttlMs` を長めに設定する。
+> 設計意図: Notion webhook secret を設定して push 経路（`notion-webhook`）が稼働しているときは `staleBlockMs` の既定が無期限になり、キャッシュは常に即表示される（更新は webhook で届く）。webhook を使わない場合は既定 7 日でブロックし、古すぎるデータを返さない。`recheckWindowMs` は短時間に集中するアクセスをまとめ、Notion への照会回数を抑える（複数端末・連続リクエストの coalescing）。
 
 バックグラウンドの更新検知 (Webhook 受信時や `check()` 呼び出し時) は別経路で、こちらは fail-soft（バックグラウンドのエラーは `onError` フック / logger に記録されるが、リクエスト本体は失敗しない）。
 
-`find(slug, { fresh: true })` を指定すると、キャッシュの有無 / TTL を問わずブロッキングで再取得し、本文キャッシュも破棄する。
+`find(slug, { bypassCache: true })` を指定すると、`recheckWindowMs` / `staleBlockMs` を無視してブロッキングで再取得し、本文キャッシュも破棄する。`find(slug, { force: true })`（明示リロード相当）は recheck ウィンドウを無視して実照会する。
 
 ### `find(slug, opts?)`
 
@@ -94,7 +101,13 @@ if (post) {
 
 `notionBlocks()` は `DataSource.loadNotionBlocks` を実装している場合のみ非 `undefined` を返す（`@notion-headless-cms/notion-orm` は対応済み）。`@notion-headless-cms/react-renderer` の `<NotionRenderer blocks={...} />` に渡すブロックツリーをキャッシュ経由で取得するために使う。core はゼロ依存のため型は `unknown[] | undefined` であり、低レベル `createClient` 経由で使う場合のみ利用側で `NotionBlock[]` へキャストする。`@notion-headless-cms/client` の `createCMS({ render: { content: "react" } })` 経由なら `NotionBlock[]` に型付け済みでキャスト不要。
 
-`opts.fresh === true` を渡すと TTL に関わらずブロッキングで再取得し、本文キャッシュも破棄する。
+`opts.bypassCache === true` を渡すと recheck ウィンドウ・`staleBlockMs` を無視してブロッキングで再取得し、本文キャッシュも破棄する。`opts.force === true`（明示リロード相当）は recheck ウィンドウを無視して実照会する。SSR ローダーでは `isReloadRequest(request)`（後述）と組み合わせ、F5 等の明示リロード時だけ最新化できる:
+
+```ts
+import { isReloadRequest } from "@notion-headless-cms/client";
+
+const post = await cms.posts.find(slug, { force: isReloadRequest(request) });
+```
 
 ### `list(opts?)`
 
@@ -152,56 +165,7 @@ if (result === null) {
 - 差分あり(`stale: true`)のときはメタを更新しコンテンツキャッシュを無効化する
 - アイテムが存在しない場合は `null` を返す
 
-**Cloudflare Workers + React Router での使用例:**
-
-```ts
-// サーバー: /api/posts/:slug/check?v={version}
-const result = await cms.posts.check(slug, clientVersion);
-if (result === null) return new Response("Not Found", { status: 404 });
-if (!result.stale) return Response.json({ stale: false });
-const html = await result.item.html();
-return Response.json({ stale: true, html, version: result.item.updatedAt });
-
-// クライアント: マウント時に1回だけ更新チェック
-useEffect(() => {
-  fetch(`/api/posts/${slug}/check?v=${encodeURIComponent(version)}`)
-    .then((res) => res.ok ? res.json() : null)
-    .then((data) => { if (data?.stale) setHtml(data.html); })
-    .catch((err) => console.warn("更新チェック失敗:", err));
-}, []);
-```
-
-### `peekVersion(slug)`
-
-KV **のみ**を読んで `{ notionUpdatedAt, cachedAt }` を返す。Notion API を叩かないため安価。
-クライアント側ポーリングで「SWR バックグラウンド更新が完了したか」を確認するためのもの。
-
-```ts
-const version = await cms.posts.peekVersion("hello-world");
-// => { notionUpdatedAt: "2024-01-01T00:00:00.000Z", cachedAt: 1704067200000 }
-// => null (キャッシュ未作成の場合)
-```
-
-- キャッシュが存在しない場合は `null` を返す
-- Notion API 呼び出しなし（KV 1 読み取りのみ）
-- `NotionRevalidator` の `poll` オプションと組み合わせて使う
-
-**Cloudflare Workers + React Router での使用例:**
-
-```ts
-// サーバー: /api/posts/:slug/check
-export async function loader({ params, context }: Route.LoaderArgs) {
-  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
-  const version = await cms.posts.peekVersion(params.slug ?? "");
-  return Response.json(version);
-}
-```
-
-```tsx
-// クライアント: バックグラウンド更新完了後に自動再描画。
-// collection と item を渡せば poll URL(/api/cms/versions/...) と version は自動導出される。
-<NotionRevalidator poll={{ collection: "posts", item }} />
-```
+クライアントの更新検知は、専用エンドポイントを書かずとも `cms.handler()` がマウントする `POST {basePath}/check/{collection}/{slug}?v={version}` を mount / 再フォーカス時に叩くだけでよい（後述の `<NotionRevalidator>` がこれを内部で行う）。Notion を coalescing 付きで実照会し `{ stale, version }` を返す（未存在は `404`）。
 
 ## コレクション別キャッシュ操作 (`CollectionCacheOps<T>`)
 
@@ -273,8 +237,7 @@ const blocks = await resolveBlockImageUrls(notionBlocks, cms.cacheImage);
 `basePath` (デフォルト `/api/cms`) 以下に以下のルートをマウント:
 
 - `GET {basePath}/images/:hash` — 画像プロキシ
-- `GET {basePath}/versions/:collection/:slug` — `peekVersion()`（更新検知ポーリング用、KV メタのみ）。未登録は `200` + `null`、未知コレクションは `404`
-- `GET|POST {basePath}/check/:collection/:slug?v={version}` — `check()`（Notion を実照会し差分があればキャッシュ更新）。`{ stale }` を返す。未存在は `404`、未知コレクションは `404`
+- `POST {basePath}/check/:collection/:slug?v={version}&force=1` — クライアント更新検知の唯一の入口。Notion を coalescing（recheck ウィンドウ）付きで実照会し、差分があればキャッシュを更新して `{ stale, version }` を返す。`force=1` で recheck ウィンドウを無視して実照会。未存在・未知コレクションは `404`
 - `POST {basePath}/revalidate` — Webhook 受信 → `invalidate(scope)`（DataSource の `parseWebhook` 方式・共有シークレット）
 - `POST {basePath}/notion-webhook` — Notion 公式 webhook 受信 → `warmByPageId()`（下記）
 
@@ -296,18 +259,19 @@ const cms = createCMS({
 // POST /api/cms/notion-webhook が自動マウントされる（cms.handler() を既に配線していれば追加コード不要）
 ```
 
-`NotionRevalidator` の `poll` は `collection` と `item`（または `slug`）を渡すだけでよい。URL は
-versions ルートの規約 `${basePath}/versions/${collection}/${slug}`（basePath 既定 `/api/cms`）から、
-`version` は `item.lastEditedTime` から自動導出される（専用ルートの自前実装も URL 文字列の手書きも不要）:
+`<NotionRevalidator>`（`@notion-headless-cms/client/react`）はポーリングを行わず、内部で `POST {basePath}/check/{collection}/{slug}` を叩き、`stale: true` のときだけ revalidate する。既定トリガーは mount と visibility（再フォーカス）。連続インターバルは既定なし（`poll.intervalMs` を明示した場合のみ）。`realtime`（Durable Object / WebSocket）を設定すると push が主経路になり、ポーリングは停止する。
+
+`poll` には `collection` と `item:{ slug, lastEditedTime }`（または `slug` + `version`）を渡す。URL は `${basePath}/check/${collection}/${slug}`（basePath 既定 `/api/cms`）から、`version` は `item.lastEditedTime` から自動導出される:
 
 ```tsx
-// item から slug と version を、collection から URL を導出
+// item から slug と version を、collection から /check URL を導出
 <NotionRevalidator poll={{ collection: "posts", item }} />
 
 // 個別指定や別マウント先（basePath）も可能
 <NotionRevalidator poll={{ collection: "posts", slug, version, basePath: "/api/notion" }} />
-// url を直接渡す従来形も引き続き有効
-<NotionRevalidator poll={{ url: `/api/cms/versions/posts/${slug}`, version }} />
+
+// インターバルを明示した場合のみ定期チェックを追加（既定は mount + visibility のみ）
+<NotionRevalidator poll={{ collection: "posts", item, intervalMs: 60_000 }} />
 ```
 
 ```ts
@@ -350,7 +314,7 @@ const cms = createClient({
     },
   },
   cache?: CacheAdapter[],
-  swr?: { ttlMs?: number },
+  swr?: { recheckWindowMs?: number; staleBlockMs?: number },
   content?: ContentConfig,     // imageProxyBase, remarkPlugins, rehypePlugins
   renderer?: RendererFn,       // 未指定時は @notion-headless-cms/renderer を動的 import
   hooks?: CMSHooks,

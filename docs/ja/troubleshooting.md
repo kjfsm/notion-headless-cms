@@ -15,7 +15,7 @@
 ### 原因
 
 Notion API は 1 秒あたり 3 リクエスト程度のハード制限があります。`warm` で多数の
-ページを並列に取得したり、フロント側で短時間に何度も TTL 切れキャッシュにアクセスすると
+ページを並列に取得したり、フロント側で短時間に何度も staleBlockMs 超過のキャッシュにアクセスすると
 429 が連続発生します。
 
 ### 対処
@@ -23,7 +23,7 @@ Notion API は 1 秒あたり 3 リクエスト程度のハード制限があり
 1. `createClient({ rateLimiter: { maxConcurrent, maxRetries, baseDelayMs, retryOn } })` を設定。
    既定値は `DEFAULT_RATE_LIMITER` を参照 (`maxConcurrent: 3`, `retryOn: [429, 502, 503]`,
    `maxRetries: 4`, `baseDelayMs: 1000`)
-2. `swr.ttlMs` を長めにして TTL 切れの頻度を減らす
+2. `swr.recheckWindowMs` を長めにして Notion 再照会の集約間隔を広げる（webhook 稼働時は `staleBlockMs` 既定の無期限のままにし、ブロッキング再取得を起こさない）
 3. `cms.posts.warm({ concurrency: 1 })` で warm 時の並列度を絞る
 4. Cloudflare では `cache.waitUntil` に `(p) => ctx.waitUntil(p)` を必ず渡し、SWR バックグラウンド
    更新を `waitUntil` 経由でレスポンス送信後に逃がす
@@ -51,23 +51,22 @@ Notion API は 1 秒あたり 3 リクエスト程度のハード制限があり
 
 ---
 
-## TTL と `updatedAt` の優先度
+## `staleBlockMs` / `recheckWindowMs` と `updatedAt` の優先度
 
 ### 仕様
 
-`createClient` の SWR は以下の順で stale 判定します:
+`createClient` の SWR は以下の順で判定します:
 
-1. `cachedAt + ttlMs < now` ? → TTL 切れ → **ブロッキングで再フェッチ** (ユーザー要件: stale を返さない)
-2. キャッシュにヒット → `cachedAt` を更新しつつバックグラウンドで Notion の `last_edited_time` と比較
+1. `cachedAt + staleBlockMs < now` ? → ブロック閾値超過 → **ブロッキングで再フェッチ** (古すぎるデータは返さない)。webhook secret 設定時の既定は無期限のため、ここには入らず常に即表示
+2. 閾値以内 → **即キャッシュ表示**。`cachedAt + recheckWindowMs < now`（recheck ウィンドウ経過）のときだけバックグラウンドで Notion の `last_edited_time` と比較。ウィンドウ内なら照会しない（coalescing）
 3. 差分があれば再フェッチして HTML を再生成、`onCacheRevalidated` フックを呼ぶ
 
 ### よくある誤解
 
-- TTL 切れでも「とりあえず古い値を返す」ことはしません。これは `core/cms.ts` 設計の明示的な
+- `staleBlockMs` 超過でも「とりあえず古い値を返す」ことはしません。これは `core/cms.ts` 設計の明示的な
   仕様です ([CLAUDE.md 設計方針]) 。秒間レイテンシより整合性を優先したい用途に向きます
-- Webhook 経由の `invalidate` は即時、`warm` も即時ですが、**TTL > 0 ならその後の `find/list`
-  は TTL 内ならキャッシュを返します**。即座に再フェッチさせるには `swr.ttlMs: 0` または
-  `find(slug, { bypassCache: true })` を使ってください
+- `recheckWindowMs`（既定 30 秒）内は、裏側の突合でも Notion を再照会しません。複数端末・連続アクセスを 1 回の照会に集約するためです
+- Webhook 経由の `invalidate` / `warm` は即時です。**recheck ウィンドウや閾値を無視して即座に最新化させるには** `find(slug, { bypassCache: true })`（強制ブロッキング再取得 + 本文キャッシュ破棄）または `find(slug, { force: true })`（ウィンドウ無視で実照会）を使ってください
 
 ---
 

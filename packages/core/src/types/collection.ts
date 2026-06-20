@@ -44,8 +44,13 @@ export interface AdjacencyOptions<T extends BaseContentItem = BaseContentItem> {
 
 /** `find()` のオプション。 */
 export interface FindOptions {
-  /** true なら TTL に関わらずブロッキングで再取得し、本文 cache を破棄する。 */
+  /** true なら閾値・キャッシュに関わらずブロッキングで再取得し、本文 cache を破棄する。 */
   bypassCache?: boolean;
+  /**
+   * true なら recheck ウィンドウ・ブロック閾値を無視して Notion を必ず実照会し、
+   * 最新をブロッキングで返す。明示リロード（`Cache-Control: no-cache` 等）向け。
+   */
+  force?: boolean;
 }
 
 /**
@@ -144,18 +149,9 @@ export interface CollectionClient<T extends BaseContentItem = BaseContentItem> {
   params(): Promise<string[]>;
 
   /**
-   * KV だけを読んで `{ notionUpdatedAt, cachedAt }` を返す。Notion API を叩かない。
-   * クライアント側ポーリングで「バックグラウンド更新が完了したか」を安価に確認するためのもの。
-   * キャッシュに存在しない場合は `null`。
-   */
-  peekVersion(
-    slug: string,
-  ): Promise<{ notionUpdatedAt: string; cachedAt: number } | null>;
-
-  /**
    * Notion から最新版を取得し、`currentVersion`（`item.lastEditedTime`）と比較する。
-   * 差分があればキャッシュを更新してアイテムを返す。
-   * ページ表示後の1回限りのクライアント再検証エンドポイント用。
+   * 差分があればキャッシュを更新してアイテムを返す（公開 API は coalescing を回避して必ず実照会する）。
+   * ページ表示後のクライアント再検証用。
    *
    * @returns 差分なし: `{ stale: false }`、差分あり: `{ stale: true; item }`、
    *          アイテムが存在しない: `null`

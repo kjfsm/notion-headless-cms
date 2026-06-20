@@ -165,26 +165,30 @@ describe("要素（データ）コレクション", () => {
     expect(result && "slug" in result).toBe(false);
   });
 
-  it("要素コレクションへの versions リクエストは version_unsupported (400) を返す", async () => {
+  it("要素コレクションへの check リクエストは version_unsupported (400) を返す", async () => {
     const cms = makeDataCms(async () => makeDataItems());
     const handler = (
       cms as unknown as { handler(): (req: Request) => Promise<Response> }
     ).handler();
     const res = await handler(
-      new Request("http://localhost/api/cms/versions/settings/anything"),
+      new Request("http://localhost/api/cms/check/settings/anything?v=v1", {
+        method: "POST",
+      }),
     );
     expect(res.status).toBe(400);
     const body = (await res.json()) as { code?: string };
     expect(body.code).toBe("handler/version_unsupported");
   });
 
-  it("未知コレクションへの versions リクエストは unknown_collection (404) を返す", async () => {
+  it("未知コレクションへの check リクエストは unknown_collection (404) を返す", async () => {
     const cms = makeDataCms(async () => makeDataItems());
     const handler = (
       cms as unknown as { handler(): (req: Request) => Promise<Response> }
     ).handler();
     const res = await handler(
-      new Request("http://localhost/api/cms/versions/nope/anything"),
+      new Request("http://localhost/api/cms/check/nope/anything?v=v1", {
+        method: "POST",
+      }),
     );
     expect(res.status).toBe(404);
     const body = (await res.json()) as { code?: string };

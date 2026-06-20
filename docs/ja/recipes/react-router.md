@@ -148,8 +148,7 @@ import { type RouteConfig, route } from "@react-router/dev/routes";
 export default [
   route("/", "routes/home.tsx"),
   route("/posts/:slug", "routes/post.tsx"),
-  route("/api/images/:hash", "routes/images.ts"),       // 画像プロキシ
-  route("/api/posts/:slug/check", "routes/check.ts"),   // 再検証ポーリング用
+  route("/api/cms/*", "routes/api.cms.$.ts"),           // cms.handler() を splat で配線（画像 / check / webhook）
 ] satisfies RouteConfig;
 ```
 
@@ -157,8 +156,7 @@ export default [
 |---|---|
 | `/` (`home.tsx`) | `cms.posts.list()` で一覧 |
 | `/posts/:slug` (`post.tsx`) | `cms.posts.find()` → `notionBlocks()` → React 描画 |
-| `/api/images/:hash` (`images.ts`) | `cms.getCachedImage()` を返す画像配信 |
-| `/api/posts/:slug/check` (`check.ts`) | `cms.posts.peekVersion()`（KV ポーリング再検証） |
+| `/api/cms/*` (`api.cms.$.ts`) | `cms.handler()`。画像プロキシ・`POST /check/:collection/:slug`（更新検知）・Webhook を一括配信 |
 
 ## 一覧ページ
 
@@ -193,14 +191,16 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 
 ```tsx
 // app/routes/post.tsx
+import { isReloadRequest } from "@notion-headless-cms/client";
 import { NotionRevalidator, Renderer } from "@notion-headless-cms/client/react";
 import { data } from "react-router";
 import { makeCms } from "../lib/cms";
 import type { Route } from "./+types/post";
 
-export async function loader({ params, context }: Route.LoaderArgs) {
+export async function loader({ params, request, context }: Route.LoaderArgs) {
   const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
-  const post = await cms.posts.find(params.slug ?? "");
+  // F5 等の明示リロード時のみ recheck ウィンドウを無視して最新化
+  const post = await cms.posts.find(params.slug ?? "", { force: isReloadRequest(request) });
   if (!post) throw data("Not Found", { status: 404 });
   const blocks = await post.notionBlocks(); // NotionBlock[]（キャスト不要）
   return {
@@ -213,7 +213,7 @@ export default function Post({ loaderData }: Route.ComponentProps) {
   const { blocks, item } = loaderData;
   return (
     <article>
-      {/* collection と item だけで poll URL(/api/cms/versions/...) と version を自動導出 */}
+      {/* collection と item だけで poll URL(/api/cms/check/...) と version を自動導出 */}
       <NotionRevalidator poll={{ collection: "posts", item }} />
       <h1>{item.title ?? item.slug}</h1>
       <Renderer blocks={blocks} />
@@ -224,49 +224,29 @@ export default function Post({ loaderData }: Route.ComponentProps) {
 
 ## 表示の自動更新（`<NotionRevalidator>`）
 
-`@notion-headless-cms/client/react` の `NotionRevalidator` は内部で
-`useRevalidator()` を呼び、loader を再走させる。2 つのモードがある。
+`@notion-headless-cms/client/react` の `NotionRevalidator` はポーリングを行わない。内部で
+`POST {basePath}/check/{collection}/{slug}` を叩き、`stale: true`（更新あり）のときだけ
+`useRevalidator()` で loader を再走させる。既定トリガーは **mount** と **visibility（再フォーカス）**。
 
-### マウント時に一度だけ再検証
-
-```tsx
-<NotionRevalidator />
-```
-
-サーバ側 `waitUntil` が前回訪問時に KV を最新化済みなら、再マウント時に新内容が即時返る。
-
-### KV ポーリングで確実に最新化
-
-ポーリング先は専用ルートを自前で書く（`peekVersion` を返すだけ）か、`cms.handler()`
-の versions ルートをそのまま使える。
-
-```ts
-// app/routes/check.ts — 自前で書く場合
-export async function loader({ params, context }: Route.LoaderArgs) {
-  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
-  return Response.json(await cms.posts.peekVersion(params.slug ?? ""));
-}
-```
-
-`cms.handler()` を 1 つの splat ルート（`app/routes/api.cms.$.ts`）にマウント済みなら、画像プロキシ・
-Webhook と同じ口で `GET {basePath}/versions/:collection/:slug` が `peekVersion` を返す。専用ルートは不要。
-`poll` には `collection` と `item` を渡すだけで、URL も `version` も自動導出される:
+### 推奨: collection + item を渡す
 
 ```tsx
-// 推奨: collection + item で URL(/api/cms/versions/posts/:slug) と version を導出
+// URL(/api/cms/check/posts/:slug) と version(item.lastEditedTime) を自動導出
 <NotionRevalidator poll={{ collection: "posts", item }} />
 
-// URL を直接渡す従来形（別マウント先や自前 check ルートを使う場合）も有効
-<NotionRevalidator poll={{ url: `/api/cms/versions/posts/${item.slug}`, version: item.lastEditedTime }} />
+// slug + version を直接渡す形も可
+<NotionRevalidator poll={{ collection: "posts", slug: item.slug, version: item.lastEditedTime }} />
 ```
 
-ポーリングは `notionUpdatedAt` の変化（更新あり → revalidate）または `cachedAt` の変化
-（確認完了・更新なし → 停止）を検出した時点で自動停止する。既定タイムアウトは 30 秒。
+`POST /check` は Notion を coalescing（`recheckWindowMs`）付きで実照会し、差分があればその場で
+キャッシュを更新して `{ stale, version }` を返す。差分時はキャッシュ更新済みのため、`stale: true` を
+受けた `NotionRevalidator` が loader を再走させれば最新本文が得られる。
 
-`versions`（KV のみの受動ポーリング）に対し、`GET|POST {basePath}/check/:collection/:slug?v={version}`
-は Notion を実照会してその場でキャッシュ更新し `{ stale }` を返す能動版。即時に確実な更新確認を
-したい場合に使う（`cms.[collection].check()` をハンドラ経由で呼ぶ。差分時はキャッシュ更新済みなので
-loader 再実行で最新本文が得られる）。
+### 定期チェックを足す / push 経路に切り替える
+
+- 連続インターバルは既定なし。`poll.intervalMs` を明示したときだけ定期チェックが加わる
+  （`<NotionRevalidator poll={{ collection: "posts", item, intervalMs: 60_000 }} />`）。
+- `realtime`（Durable Object / WebSocket）を設定すると push が主経路になり、ポーリングは停止する。
 
 ## 画像プロキシ
 
@@ -291,13 +271,18 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 
 ## キャッシュ戦略: 永続 KV + バックグラウンド更新検知
 
-`cache.swr.ttlMs` は **指定しない** のが推奨（Cloudflare 構成の既定挙動に従う）。
+`cache.swr.staleBlockMs` は **指定せず既定に任せる** のが推奨。Notion webhook secret を設定して
+push 経路を稼働させると `staleBlockMs` の既定が無期限になり、KV キャッシュは常に即表示される。
 
 - KV キャッシュは期限なしで永続させ、リクエスト時は即時返却する。
-- `waitUntil` 経由でバックグラウンドに Notion の `lastEditedTime` と照合する。
+- `waitUntil` 経由でバックグラウンドに Notion の `lastEditedTime` と照合する（照会は
+  `recheckWindowMs`（既定 30 秒）で coalescing される）。
 - 差分があれば KV を差し替え、コンテンツキャッシュを無効化する。差分が無ければ何もしない。
 
-`ttlMs` を入れると期限切れ時にブロッキング再取得が走り、変更が無くても遅延の原因になる。
+`staleBlockMs` を短く入れると閾値超過時にブロッキング再取得が走り、変更が無くても遅延の原因になる
+（webhook 稼働時は既定の無期限のままでよい）。F5 等の明示リロードで最新化したいなら、loader 側で
+`cms.posts.find(slug, { force: isReloadRequest(request) })` を使う（`isReloadRequest` は
+`@notion-headless-cms/client` から export）。
 
 ## 関連
 

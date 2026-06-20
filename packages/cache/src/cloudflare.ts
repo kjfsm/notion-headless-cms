@@ -397,7 +397,8 @@ export interface CloudflarePresetOptions {
   /** キャッシュキーのプレフィックス。デフォルト: '' */
   prefix?: string;
   /**
-   * SWR（Stale-While-Revalidate）設定。デフォルト: ttlMs 5 分。
+   * SWR（Stale-While-Revalidate）設定。未指定なら core 既定
+   * （recheck 30 秒 / block は webhook 有無で自動）。
    * Issue #313 (M2) で preset 契約を `{ cache, swr, waitUntil }` に対称化した。
    */
   swr?: SWRConfig;
@@ -436,7 +437,7 @@ export function cloudflarePreset(opts: CloudflarePresetOptions): {
   const ctx = opts.ctx;
   // ExecutionContext.waitUntil は `this` を必要とするため、参照を切り出すには再ラップする
   const waitUntil = (p: Promise<unknown>) => ctx.waitUntil(p);
-  return { cache, swr: opts.swr ?? { ttlMs: 5 * 60_000 }, waitUntil };
+  return { cache, swr: opts.swr ?? {}, waitUntil };
 }
 
 /**
@@ -454,5 +455,5 @@ cloudflarePreset.forTest = (
     { docCache: opts.env.DOC_CACHE, imgBucket: opts.env.IMG_BUCKET },
     { prefix: opts.prefix },
   );
-  return { cache, swr: { ttlMs: 5 * 60_000 } };
+  return { cache, swr: {} };
 };

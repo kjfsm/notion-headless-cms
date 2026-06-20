@@ -59,7 +59,7 @@
   `import { nextCache } from "@notion-headless-cms/client/next";`。
 
 - **Node（既定）**: `runtime` を省略していた場合は `cache` も省略する
-  （インメモリ LRU + 5 分 TTL の既定が適用される）。
+  （インメモリ LRU の既定が適用される）。
 
 #### 移行手順
 
@@ -67,7 +67,7 @@
 2. `content` / `ogp` を `render: { ... }` の中へ移す（空なら省略）。`imageProxyBase` は廃止（`/api/cms/images` 固定）なので削除する。
 3. `runtime` を上記ルールで `cache` グループへ展開し、`cloudflarePreset` の import を
    `kvCache` / `r2Cache` の import に置き換える。
-4. `cache.swr.ttlMs`（既定 5 分）や `cache.waitUntil` も `cache` グループの中で指定する。
+4. `cache.swr`（`recheckWindowMs` / `staleBlockMs`。旧 `ttlMs` は廃止）や `cache.waitUntil` も `cache` グループの中で指定する。旧 `ttlMs` を使っていた場合はブロック閾値 `staleBlockMs` に読み替える（webhook 稼働時は既定の無期限に任せるのが推奨）。
 
 ## v1.0.0 で削除予定
 

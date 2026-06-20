@@ -15,7 +15,7 @@ export { nextCache } from "@notion-headless-cms/cache/next";
 export interface NextPresetOptions {
   /** メモリキャッシュ設定。 */
   cache?: MemoryCacheOptions;
-  /** SWR (Stale-While-Revalidate) 設定。デフォルト ttlMs 5 分。 */
+  /** SWR (Stale-While-Revalidate) 設定。未指定なら core 既定（recheck 30 秒 / block は webhook 有無で自動）。 */
   swr?: SWRConfig;
 }
 
@@ -30,7 +30,7 @@ export function nextPreset(opts: NextPresetOptions = {}): {
 } {
   return {
     cache: [memoryCache(opts.cache)],
-    swr: opts.swr ?? { ttlMs: 5 * 60_000 },
+    swr: opts.swr ?? {},
   };
 }
 

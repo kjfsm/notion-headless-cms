@@ -158,7 +158,7 @@ const cms = createClient({
     redisCache(redis, "myapp:"),
     s3ImageCache(),
   ],
-  swr: { ttlMs: 5 * 60_000 },
+  swr: { recheckWindowMs: 30_000, staleBlockMs: 5 * 60_000 },
 });
 ```
 

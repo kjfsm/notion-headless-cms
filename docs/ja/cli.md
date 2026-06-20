@@ -284,7 +284,7 @@ const cms = createClient({
     }),
   },
   cache: [memoryCache()],
-  swr: { ttlMs: 5 * 60_000 },
+  swr: { recheckWindowMs: 30_000, staleBlockMs: 5 * 60_000 },
 });
 
 // posts は CollectionClient<Post> として推論される

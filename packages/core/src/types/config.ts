@@ -43,8 +43,19 @@ export interface ContentConfig {
 
 /** SWR（Stale-While-Revalidate）設定。 */
 export interface SWRConfig {
-  /** SWR の有効期間 (ミリ秒)。未設定時は TTL なし（失効まで stale を返す）。 */
-  ttlMs?: number;
+  /**
+   * 再チェックの最小間隔（coalescing, ミリ秒）。最後に Notion と突合してから
+   * この時間内は Notion を再照会しない（複数端末・連続アクセスの照会を集約する）。
+   * 既定 30_000（30 秒）。
+   */
+  recheckWindowMs?: number;
+  /**
+   * ブロック閾値（ミリ秒）。キャッシュの最終確認からこの時間を超えたアイテムを
+   * 開いたときは、stale を返さずブロッキングで Notion から再取得する。
+   * 未設定時の既定は「Notion webhook secret あり → 無期限（ブロックしない）/
+   * なし → 7 日」。明示設定すると webhook 有無に関わらずその値を使う。
+   */
+  staleBlockMs?: number;
 }
 
 /**

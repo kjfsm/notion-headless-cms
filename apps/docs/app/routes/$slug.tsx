@@ -1,11 +1,15 @@
+import { isReloadRequest } from "@notion-headless-cms/client";
 import { NotionRevalidator, Renderer } from "@notion-headless-cms/client/react";
 import { data } from "react-router";
 import { makeCms } from "../lib/cms";
 import type { Route } from "./+types/$slug";
 
-export async function loader({ params, context }: Route.LoaderArgs) {
+export async function loader({ params, request, context }: Route.LoaderArgs) {
   const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
-  const page = await cms.pages.find(params.slug ?? "");
+  // 明示リロード（F5）時は recheck ウィンドウを無視して Notion を再取得する。
+  const page = await cms.pages.find(params.slug ?? "", {
+    force: isReloadRequest(request),
+  });
   if (!page) throw data("Not Found", { status: 404 });
   const blocks = await page.notionBlocks();
   return {

@@ -225,7 +225,7 @@ export interface CmsCacheConfig {
   document?: CacheAdapter;
   /** 画像キャッシュのアダプタ。 */
   image?: CacheAdapter;
-  /** SWR（Stale-While-Revalidate）戦略。省略時は ttlMs 5 分。 */
+  /** SWR（Stale-While-Revalidate）戦略。省略時は core 既定（recheck 30 秒 / block は webhook 有無で自動）。 */
   swr?: SWRConfig;
   /**
    * SWR バックグラウンド更新を応答送信後も完走させる実行フック。
@@ -406,6 +406,28 @@ export function createCMS<S extends SchemaMap, M extends ContentMode = "html">(
 }
 
 /**
+ * リクエストが明示リロード（F5 / ハードリロード）かを `Cache-Control` / `Pragma` から判定する。
+ * 通常のリンク遷移・SPA 内遷移では付かないため、SSR ローダーで
+ * `cms.posts.find(slug, { force: isReloadRequest(request) })` のように使い、
+ * recheck ウィンドウを無視して Notion を再取得させる。
+ *
+ * @example
+ * export async function loader({ params, request }) {
+ *   const item = await cms.posts.find(params.slug, { force: isReloadRequest(request) });
+ *   return { item };
+ * }
+ */
+export function isReloadRequest(req: Request): boolean {
+  const cacheControl = req.headers.get("cache-control") ?? "";
+  const pragma = req.headers.get("pragma") ?? "";
+  // ブラウザはリロード時のドキュメント要求に no-cache / max-age=0 を付ける。
+  return (
+    /(?:^|[\s,])(?:no-cache|max-age=0)(?:[\s,]|$)/.test(cacheControl) ||
+    pragma.includes("no-cache")
+  );
+}
+
+/**
  * `cache` 設定を `createClient` が受け取るフラットな `{ cache, swr, waitUntil }` へ変換する。
  * - 未指定: `nodePreset()`（memoryCache が document/image 兼用 + swr 5 分）にフォールバック。
  * - 指定あり: `document` → `image` の順に並べた配列を返す。省略された役割はそのまま無し
@@ -423,7 +445,7 @@ function resolveCacheConfig(cache: CmsCacheConfig | undefined): {
   if (cache.image) adapters.push(cache.image);
   return {
     cache: adapters,
-    swr: cache.swr ?? { ttlMs: 5 * 60_000 },
+    swr: cache.swr ?? {},
     waitUntil: cache.waitUntil,
   };
 }

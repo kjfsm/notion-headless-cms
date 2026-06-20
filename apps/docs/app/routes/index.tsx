@@ -1,11 +1,15 @@
+import { isReloadRequest } from "@notion-headless-cms/client";
 import { NotionRevalidator, Renderer } from "@notion-headless-cms/client/react";
 import { Link, redirect } from "react-router";
 import { makeCms } from "../lib/cms";
 import type { Route } from "./+types/index";
 
-export async function loader({ context }: Route.LoaderArgs) {
+export async function loader({ request, context }: Route.LoaderArgs) {
   const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
-  const page = await cms.pages.find("home");
+  // 明示リロード（F5）時は recheck ウィンドウを無視して Notion を再取得する。
+  const page = await cms.pages.find("home", {
+    force: isReloadRequest(request),
+  });
   if (!page) return redirect("/docs");
   // fetch-blocks 戦略で Notion BlockObjectResponse ツリーを取得し、
   // react-renderer の <Renderer> で callout / column / embed を React コンポーネントに展開する。

@@ -105,7 +105,7 @@ createClient({ sources: {} });
 
 ### handler-unknown_collection
 
-**原因**: `cms.handler()` のルート（`GET {basePath}/versions/:collection/:slug` または `GET|POST {basePath}/check/:collection/:slug`）が指す collection が `createCMS` の `collections` に登録されていない。
+**原因**: `cms.handler()` のルート（`POST {basePath}/check/:collection/:slug`）が指す collection が `createCMS` の `collections` に登録されていない。
 
 **対処**: ポーリング / チェック URL が登録済みのコレクション名を指しているか確認し、必要なら `collections` に追加する。
 
@@ -235,7 +235,7 @@ SWR バックグラウンド更新中の失敗。`onError` フック / logger �
 
 **原因**: SWR バックグラウンドの本文再生成失敗（renderer / loadMarkdown のいずれか）。
 
-**対処**: `cms.posts.find(slug, { fresh: true })` で再現を確認し、必要なら renderer / fetch 戦略を見直す。
+**対処**: `cms.posts.find(slug, { bypassCache: true })` で再現を確認し、必要なら renderer / fetch 戦略を見直す。
 
 ---
 

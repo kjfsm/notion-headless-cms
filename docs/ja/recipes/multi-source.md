@@ -60,7 +60,7 @@ const cms = createClient({
     }),
   },
   cache: [memoryCache()],
-  swr: { ttlMs: 5 * 60_000 },
+  swr: { recheckWindowMs: 30_000, staleBlockMs: 5 * 60_000 },
 });
 
 // 各コレクションは個別の CollectionClient として推論される
@@ -101,7 +101,7 @@ export default {
         }),
       },
       cache: cloudflareCache(env),
-      swr: { ttlMs: 5 * 60_000 },
+      swr: { recheckWindowMs: 30_000, staleBlockMs: 5 * 60_000 },
     });
 
     const url = new URL(request.url);

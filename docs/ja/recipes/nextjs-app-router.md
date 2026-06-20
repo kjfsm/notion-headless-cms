@@ -123,7 +123,7 @@ export default async function Page({ params }) {
 }
 ```
 
-`<NotionRevalidator on="visibility" />` でタブ可視化のたびに、`<NotionRevalidator on={["mount", "visibility"]} />` で両方発火させられる（既定はマウント時 1 回のみ）。
+既定トリガーは mount と visibility（タブ可視化・再フォーカス）。`on` を明示すれば片方だけにもできる（`<NotionRevalidator on="visibility" />` / `<NotionRevalidator on="mount" />`）。連続インターバルは既定なしで、`poll.intervalMs` を明示したときだけ加わる。
 
 ## 画像配信・Webhook の統合ルート
 
