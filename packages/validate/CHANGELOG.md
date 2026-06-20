@@ -1,5 +1,12 @@
 # @notion-headless-cms/validate
 
+## 0.1.11
+
+### Patch Changes
+
+- Updated dependencies [8b11e1c]
+  - @notion-headless-cms/core@0.5.9
+
 ## 0.1.10
 
 ### Patch Changes
