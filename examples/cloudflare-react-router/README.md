@@ -35,12 +35,30 @@ DB は `nhc.config.ts` の `dbName`（既定 "ブログ記事DB"）で検索さ�
 | ルート | ファイル | 役割 |
 |---|---|---|
 | `/` | `app/routes/home.tsx` | `cms.posts.list()` で記事一覧 |
-| `/posts/:slug` | `app/routes/post.tsx` | `cms.posts.find()` → `notionBlocks()` → `<Renderer>` で React 描画 + `<NotionRevalidator poll>` |
+| `/posts/:slug` | `app/routes/post.tsx` | `cms.posts.find(slug, { force: isReloadRequest(request) })` → `notionBlocks()` → `<Renderer>` で React 描画 + `<NotionRevalidator realtime poll>` |
 | `/api/cms/*` | `app/routes/api.cms.ts` | `cms.handler()` に委譲。画像プロキシ(`/api/cms/images/:hash`)・更新検知(`POST /api/cms/check/:collection/:slug?v=`)・Webhook(`/api/cms/revalidate/:collection`) をまとめて処理 |
+| `/api/cms/realtime` | `workers/app.ts` | WebSocket 購読を Durable Object（`RealtimeHubDO`）へ橋渡し（更新 push の主経路） |
 | `/api/warm` | `app/routes/warm.ts` | `cms.posts.cache.warm()` で全記事を事前キャッシュ（action） |
 
 CMS の生成は `app/lib/cms.ts` の `makeCms(env, ctx)` に集約。`workers/app.ts` が
 `createRequestHandler` で `cloudflare: { env, ctx }` を各 loader に渡す。
+
+## 更新検知（Durable Object リアルタイム push）
+
+Notion の更新をページに反映する経路は 2 段:
+
+- **主経路（push）**: `makeCms` が `realtime: durableObjectRealtime({ namespace: env.REALTIME_HUB })` を設定すると、
+  webhook 受信や SWR 裏チェックでキャッシュが最新化された直後に `RealtimeHubDO` 経由で接続中クライアントへ
+  WebSocket push する。`<NotionRevalidator realtime={{ collection, item }} />` が購読し、受信で即 revalidate。
+  **DO 有効時はポーリングを停止する。**
+- **フォールバック（pull）**: DO 未 binding の環境では `<NotionRevalidator poll>` が mount / 再フォーカス時に
+  `POST /api/cms/check/posts/:slug?v=` を叩き、サーバーが Notion と突合して `stale` のときだけ revalidate する。
+
+明示リロード（F5）時は loader の `find(slug, { force: isReloadRequest(request) })` が recheck ウィンドウを
+無視して Notion を再取得する。
+
+Durable Object は `workers/app.ts` で `export { RealtimeHubDO }` し、`wrangler.toml` の
+`durable_objects.bindings` と `migrations` で登録している（`pnpm cf-typegen` で `Env` 型を再生成）。
 
 ## スクリプト
 

@@ -23,6 +23,17 @@ binding = "IMG_BUCKET"
 bucket_name = "nhc-example-cache"
 preview_bucket_name = "nhc-example-cache-preview"
 
+# 更新通知 push 用の Durable Object（WebSocket Hibernation）。
+# class は workers/app.ts から re-export した RealtimeHubDO を指す。
+[[durable_objects.bindings]]
+name = "REALTIME_HUB"
+class_name = "RealtimeHubDO"
+
+# 新規 DO クラスの登録（SQLite ストレージバックエンド）。
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["RealtimeHubDO"]
+
 # ランタイムシークレットは初回デプロイ前に以下で設定してください:
 # wrangler secret put NOTION_TOKEN
 # KV / R2 バインディングは wrangler kv namespace create / wrangler r2 bucket create で作成する

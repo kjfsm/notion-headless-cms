@@ -56,8 +56,15 @@ export default function Post({ loaderData }: Route.ComponentProps) {
   const { blocks, pageLinks, item } = loaderData;
   return (
     <article>
-      {/* collection と item から check URL(POST /api/cms/check/posts/:slug?v=) と version を自動導出する */}
-      <NotionRevalidator poll={{ collection: "posts", item }} />
+      {/*
+        realtime（Durable Object）を主経路にし、WebSocket push で即時 revalidate する。
+        DO 有効時は poll は停止する。poll は DO 未 binding 環境のフォールバック
+        （mount / 再フォーカスで POST /api/cms/check/posts/:slug?v= を叩き stale なら revalidate）。
+      */}
+      <NotionRevalidator
+        realtime={{ collection: "posts", item: { slug: item.slug } }}
+        poll={{ collection: "posts", item }}
+      />
       <h1>{item.title ?? item.slug}</h1>
       {item.publishedAt && <time>{item.publishedAt}</time>}
       <Renderer blocks={blocks} pageLinks={pageLinks} />
