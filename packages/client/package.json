@@ -1,6 +1,6 @@
 {
   "name": "@notion-headless-cms/client",
-  "version": "0.3.11",
+  "version": "0.3.12",
   "description": "notion-headless-cms 単一エントリ — createCMS で schema(構造) と振る舞いを分離して組み立てる",
   "keywords": [
     "notion",

@@ -1,5 +1,11 @@
 # @notion-headless-cms/fetch-markdown
 
+## 0.0.14
+
+### Patch Changes
+
+- @notion-headless-cms/notion-orm@0.2.9
+
 ## 0.0.13
 
 ### Patch Changes
