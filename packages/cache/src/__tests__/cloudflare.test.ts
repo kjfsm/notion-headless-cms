@@ -313,6 +313,19 @@ describe("r2Cache", () => {
     expect(await adapter.img?.has?.("nope")).toBe(false);
   });
 
+  it("R2BucketLike.head は body 無しオブジェクトを返すバケットも受け入れる（型回帰ガード）", () => {
+    // 実 Cloudflare R2Bucket.head は json/arrayBuffer を持たない R2Object を返す。
+    // head の戻り型を R2ObjectLike に戻すとこの satisfies が typecheck で落ちる。
+    const headOnlyBucket = {
+      get: async () => null,
+      head: async () => ({ httpMetadata: { contentType: "image/png" } }),
+      put: async () => {},
+      delete: async () => {},
+      list: async () => ({ objects: [], truncated: false as const }),
+    } satisfies R2BucketLike;
+    expect(headOnlyBucket).toBeDefined();
+  });
+
   it("doc.setMeta / getMeta が往復する (doc: true)", async () => {
     const adapter = r2Cache({ bucket: inMemoryBucket(), doc: true });
     await adapter.doc?.setMeta("posts", "hello", meta("hello"));

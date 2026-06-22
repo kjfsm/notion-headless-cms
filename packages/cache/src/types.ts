@@ -17,9 +17,14 @@ export interface R2BucketLike {
   get(key: string): Promise<R2ObjectLike | null>;
   /**
    * メタデータのみ取得（本体 DL なし）。存在確認に使う（任意）。
-   * Cloudflare R2 の `head` と構造的に互換。未提供のスタブでは `get` にフォールバックする。
+   * Cloudflare R2 の `head` は body を持たない `R2Object` を返すため、戻り値は
+   * `R2ObjectLike`（json/arrayBuffer 必須）ではなく `httpMetadata` だけの最小型にする。
+   * これを `R2ObjectLike` にすると実 `R2Bucket` が構造的に代入できなくなる。
+   * 未提供のスタブでは `get` にフォールバックする。
    */
-  head?(key: string): Promise<R2ObjectLike | null>;
+  head?(
+    key: string,
+  ): Promise<{ httpMetadata?: { contentType?: string } } | null>;
   put(
     key: string,
     value: ArrayBuffer | string,
