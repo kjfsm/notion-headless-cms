@@ -1,5 +1,11 @@
 # @notion-headless-cms/notion-katex
 
+## 1.0.9
+
+### Patch Changes
+
+- @notion-headless-cms/notion-orm@0.2.9
+
 ## 1.0.8
 
 ### Patch Changes
