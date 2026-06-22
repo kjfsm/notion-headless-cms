@@ -56,7 +56,7 @@ jobs:
     # CLOUDFLARE_API_TOKEN / CLOUDFLARE_ACCOUNT_ID / NOTION_TOKEN を登録する。
     environment: cloudflare-examples
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # pnpm のバージョンは package.json の packageManager フィールドから自動検出させる
       - uses: pnpm/action-setup@v6
