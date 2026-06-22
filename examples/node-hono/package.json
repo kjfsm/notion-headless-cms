@@ -14,7 +14,7 @@
     "test:e2e": "PLAYWRIGHT_HTML_OPEN=never playwright test e2e/navigation.spec.ts"
   },
   "dependencies": {
-    "@hono/node-server": "^2.0.3",
+    "@hono/node-server": "^2.0.5",
     "@notion-headless-cms/client": "workspace:*",
     "@notion-headless-cms/core": "workspace:*",
     "@notion-headless-cms/fetch-markdown": "workspace:*",

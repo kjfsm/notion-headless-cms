@@ -25,7 +25,7 @@
     "@notion-headless-cms/notion-orm": "workspace:*",
     "@notion-headless-cms/notion-shiki": "workspace:*",
     "@notion-headless-cms/notion-source": "workspace:*",
-    "astro": "^6.3.4",
+    "astro": "^6.4.8",
     "katex": "catalog:",
     "shiki": "catalog:",
     "zod": "catalog:"

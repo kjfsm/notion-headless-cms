@@ -41,7 +41,7 @@
     "zod": "catalog:"
   },
   "devDependencies": {
-    "@cloudflare/vite-plugin": "^1.37.1",
+    "@cloudflare/vite-plugin": "^1.42.1",
     "@notion-headless-cms/cli": "workspace:*",
     "@playwright/test": "catalog:",
     "@react-router/dev": "^7.15.1",
