@@ -99,8 +99,8 @@
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "lucide-react": "^1.16.0",
-    "radix-ui": "^1.4.3",
+    "lucide-react": "^1.21.0",
+    "radix-ui": "^1.6.0",
     "swr": "^2.3.0",
     "tailwind-merge": "^3.6.0"
   },
@@ -109,7 +109,7 @@
     "@testing-library/react": "^16.3.2",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "happy-dom": "^20.9.0",
+    "happy-dom": "^20.10.6",
     "katex": "catalog:",
     "next": "^16.2.6",
     "react": "catalog:",
