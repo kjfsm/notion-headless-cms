@@ -58,6 +58,9 @@ const noopImg: ImageCacheOps = {
   set(): Promise<void> {
     return Promise.resolve();
   },
+  has(): Promise<boolean> {
+    return Promise.resolve(false);
+  },
 };
 
 /**

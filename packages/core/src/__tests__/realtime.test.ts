@@ -171,9 +171,16 @@ describe("realtime 更新通知", () => {
     const result = await cms.warmByPageId("page-1");
 
     expect(result).toEqual({ collection: "posts", slug: "my-post" });
+    // item チャンネル（slug あり）
     expect(realtime.publish).toHaveBeenCalledWith({
       collection: "posts",
       slug: "my-post",
+      version: "2024-01-03T00:00:00Z",
+    });
+    // list チャンネル（slug なし）— 一覧購読クライアントへの通知。
+    // 新規公開・並び順変化を webhook 経路でも push できるようにする。
+    expect(realtime.publish).toHaveBeenCalledWith({
+      collection: "posts",
       version: "2024-01-03T00:00:00Z",
     });
   });

@@ -70,6 +70,12 @@ export interface DocumentCacheOps {
 export interface ImageCacheOps {
   get(hash: string): Promise<StorageBinary | null>;
   set(hash: string, data: ArrayBuffer, contentType: string): Promise<void>;
+  /**
+   * hash の存在のみを確認する（任意実装）。`fetchAndCacheImage` のキャッシュ確認に使う。
+   * R2 等では本体ダウンロードを伴う `get` ではなく `head` 相当で安価に判定できる。
+   * 未実装なら呼び出し側は `get` にフォールバックする（後方互換）。
+   */
+  has?(hash: string): Promise<boolean>;
 }
 
 /**

@@ -311,6 +311,13 @@ class R2ImageOps implements ImageCacheOps {
     };
   }
 
+  async has(hash: string): Promise<boolean> {
+    const key = `${this.prefix}images/${hash}`;
+    // head があれば本体 DL なしで存在判定。無ければ get にフォールバック。
+    if (this.bucket.head) return (await this.bucket.head(key)) !== null;
+    return (await this.bucket.get(key)) !== null;
+  }
+
   async set(
     hash: string,
     data: ArrayBuffer,

@@ -69,6 +69,9 @@ Notion DB
 
 - `$handler` に webhook エンドポイントを登録し、Notion 変更通知を受信
 - `revalidate()` でキャッシュ全体または特定スラッグを即時無効化
+- webhook で更新を即時反映する構成では push が主経路になるため、バックグラウンド差分チェックの
+  間隔 `swr.recheckWindowMs`（既定 30 秒＝webhook なし基準）は長め（例: 5 分）にして
+  Notion API 消費を抑えてよい。フォアグラウンドは常にキャッシュ即返しのため体感速度には影響しない
 
 ## Notion 更新検知
 

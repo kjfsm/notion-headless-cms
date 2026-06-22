@@ -168,6 +168,15 @@ export class RealtimeHubDO {
     _reason: string,
     _wasClean: boolean,
   ): void {
-    ws.close(code);
+    // 予約コード（1005/1006/1015）や範囲外を close() に渡すと RangeError になるため、
+    // 正常域のときだけコードを引き継ぎ、それ以外は引数なしで閉じる。
+    if (isValidCloseCode(code)) ws.close(code);
+    else ws.close();
   }
+}
+
+/** WebSocket close に渡して安全なコードか判定する（1000–4999、予約コードを除く）。 */
+function isValidCloseCode(code: number): boolean {
+  if (code < 1000 || code > 4999) return false;
+  return code !== 1005 && code !== 1006 && code !== 1015;
 }

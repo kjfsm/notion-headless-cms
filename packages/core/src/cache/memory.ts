@@ -201,6 +201,11 @@ class MemoryImageOps implements ImageCacheOps {
     return Promise.resolve(entry ?? null);
   }
 
+  has(hash: string): Promise<boolean> {
+    // 存在確認は LRU touch / hit カウントを汚さない（純粋な参照判定）。
+    return Promise.resolve(this.store.has(hash));
+  }
+
   snapshot(): { entries: number; sizeBytes: number } {
     return { entries: this.store.size, sizeBytes: this.totalBytes };
   }
