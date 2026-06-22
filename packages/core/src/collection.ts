@@ -331,13 +331,22 @@ export class CollectionClientImpl<T extends BaseContentItem>
     await this.ctx.docCache.setContent(this.ctx.collection, key, content);
   }
 
-  /** リストキャッシュを最新の取得結果で作り直す。 */
-  private async refreshList(): Promise<void> {
+  /**
+   * リストキャッシュを最新の取得結果で作り直し、list チャンネル（slug なし）へ通知する。
+   * webhook 由来の `warmByPageId` / `revalidateList` から呼ばれ、一覧購読クライアントへ
+   * 新規公開・並び順変化を push する。差分判定は呼び出し文脈（webhook=常に最新化）に委ねる。
+   */
+  private async refreshList(): Promise<T[]> {
     const items = await this.fetchListRaw();
     await this.ctx.docCache.setList(this.ctx.collection, {
       items,
       cachedAt: Date.now(),
     });
+    await this.publishRealtime({
+      collection: this.ctx.collection,
+      version: this.ctx.source.getListVersion(items),
+    });
+    return items;
   }
 
   /** Notion page id からアクセス可能なアイテムを解決する。`findById` 優先、無ければ list を走査。 */

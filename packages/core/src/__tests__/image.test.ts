@@ -180,6 +180,60 @@ describe("buildCacheImageFn / fetchAndCacheImage", () => {
     );
   });
 
+  it("Notion 署名 URL は署名クエリが変わっても同一ハッシュに収束し再 fetch しない", async () => {
+    const cache = makeImageCache();
+    const cacheImage = buildCacheImageFn(cache, "memory", "/api/images");
+    vi.mocked(globalThis.fetch).mockResolvedValue(
+      makeResponse(200, new ArrayBuffer(4), "image/png"),
+    );
+
+    const base =
+      "https://prod-files-secure.s3.us-west-2.amazonaws.com/abc/img.png";
+    const first = await cacheImage(`${base}?X-Amz-Signature=AAA`);
+    vi.clearAllMocks();
+    // 署名クエリのみ異なる同一画像 → キー正規化で同一ハッシュ → fetch されない
+    const second = await cacheImage(`${base}?X-Amz-Signature=BBB`);
+
+    expect(second).toBe(first);
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
+  it("外部画像 URL はクエリを保持し、クエリ違いは別ハッシュとして再 fetch する", async () => {
+    const cache = makeImageCache();
+    const cacheImage = buildCacheImageFn(cache, "memory", "/api/images");
+    // Response の body は 1 度しか読めないため、呼び出しごとに新しい Response を返す
+    vi.mocked(globalThis.fetch).mockImplementation(async () =>
+      makeResponse(200, new ArrayBuffer(4), "image/jpeg"),
+    );
+
+    const base = "https://images.unsplash.com/photo";
+    const a = await cacheImage(`${base}?w=100`);
+    const b = await cacheImage(`${base}?w=200`);
+
+    expect(a).not.toBe(b);
+    expect(globalThis.fetch).toHaveBeenCalledTimes(2);
+  });
+
+  it("has を実装した cache では存在確認に has を使い get/fetch を呼ばない", async () => {
+    const store = new Map<
+      string,
+      { data: ArrayBuffer; contentType?: string }
+    >();
+    const cache: ImageCacheOps = {
+      get: vi.fn(async (hash: string) => store.get(hash) ?? null),
+      set: vi.fn(),
+      has: vi.fn(async () => true),
+    };
+    const cacheImage = buildCacheImageFn(cache, "memory", "/api/images");
+
+    const result = await cacheImage("https://example.com/has.png");
+
+    expect(result).toMatch(/^\/api\/images\//);
+    expect(cache.has).toHaveBeenCalledOnce();
+    expect(cache.get).not.toHaveBeenCalled();
+    expect(globalThis.fetch).not.toHaveBeenCalled();
+  });
+
   it("キャッシュヒット時に logger.debug が「キャッシュヒット」で呼ばれ fetch しない", async () => {
     const debugFn = vi.fn();
     const cache = makeImageCache();

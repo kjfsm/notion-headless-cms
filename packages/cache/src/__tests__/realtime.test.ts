@@ -154,4 +154,38 @@ describe("RealtimeHubDO broadcast", () => {
   });
 });
 
+describe("RealtimeHubDO webSocketClose", () => {
+  const makeHub = () =>
+    new RealtimeHubDO({
+      acceptWebSocket: vi.fn(),
+      getWebSockets: vi.fn().mockReturnValue([]),
+    });
+
+  it("予約コード（1006）は引数なしで close し throw しない", () => {
+    const closed: number[] = [];
+    const ws: HibernatableWebSocketLike = {
+      send: () => {},
+      // 実ランタイムは予約コードを渡すと RangeError を投げる挙動を模す
+      close: (code?: number) => {
+        if (code === 1005 || code === 1006 || code === 1015) {
+          throw new RangeError("invalid close code");
+        }
+        closed.push(code ?? -1);
+      },
+    };
+    expect(() => makeHub().webSocketClose(ws, 1006, "", false)).not.toThrow();
+    expect(closed).toEqual([-1]);
+  });
+
+  it("正常コード（1000）はそのまま引き継ぐ", () => {
+    const closed: number[] = [];
+    const ws: HibernatableWebSocketLike = {
+      send: () => {},
+      close: (code?: number) => closed.push(code ?? -1),
+    };
+    makeHub().webSocketClose(ws, 1000, "", true);
+    expect(closed).toEqual([1000]);
+  });
+});
+
 import type { DurableObjectStubLike } from "../types";

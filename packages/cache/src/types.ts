@@ -15,6 +15,11 @@ export interface R2ListResult {
 /** R2Bucket の最小インターフェース。 */
 export interface R2BucketLike {
   get(key: string): Promise<R2ObjectLike | null>;
+  /**
+   * メタデータのみ取得（本体 DL なし）。存在確認に使う（任意）。
+   * Cloudflare R2 の `head` と構造的に互換。未提供のスタブでは `get` にフォールバックする。
+   */
+  head?(key: string): Promise<R2ObjectLike | null>;
   put(
     key: string,
     value: ArrayBuffer | string,

@@ -75,6 +75,9 @@ function makeCms(env: Env, ctx: ExecutionContext) {
       // DOC_CACHE は optional 型なので未設定時は memoryCache() へフォールバック。
       document: env.DOC_CACHE ? kvCache({ namespace: env.DOC_CACHE }) : memoryCache(),
       image: r2Cache({ bucket: env.IMG_BUCKET }),
+      // webhook で即時反映する構成では push が主経路。裏 SWR チェックはフォールバックなので
+      // recheck を長め（5 分）にして Notion API 消費を抑える（既定 30 秒は webhook なし基準）。
+      swr: { recheckWindowMs: 300_000 },
       // waitUntil を渡さないと SWR の bg 更新が打ち切られて古いキャッシュが残る。
       waitUntil: (p) => ctx.waitUntil(p),
     },

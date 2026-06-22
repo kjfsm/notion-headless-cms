@@ -58,6 +58,9 @@ const inMemoryBucket = (): R2BucketLike => {
     async get(key) {
       return toObject(store.get(key));
     },
+    async head(key) {
+      return toObject(store.get(key));
+    },
     async put(key, value, opts) {
       store.set(key, { value, contentType: opts?.httpMetadata?.contentType });
     },
@@ -285,6 +288,29 @@ describe("r2Cache", () => {
   it("img.get は未保存時 null", async () => {
     const adapter = r2Cache({ bucket: inMemoryBucket() });
     expect(await adapter.img?.get("nope")).toBeNull();
+  });
+
+  it("img.has は head で存在判定する（保存後 true / 未保存 false）", async () => {
+    const bucket = inMemoryBucket();
+    const headSpy = vi.spyOn(bucket, "head");
+    const adapter = r2Cache({ bucket });
+    await adapter.img?.set("h1", new ArrayBuffer(4), "image/png");
+
+    expect(await adapter.img?.has?.("h1")).toBe(true);
+    expect(await adapter.img?.has?.("nope")).toBe(false);
+    // head 経由（本体 DL を伴う get ではない）で判定している
+    expect(headSpy).toHaveBeenCalled();
+  });
+
+  it("img.has は head 未提供のバケットでは get にフォールバックする", async () => {
+    const bucket = inMemoryBucket();
+    // head を持たない構造型（旧バケット互換）を再現する
+    const { head: _omit, ...noHead } = bucket;
+    const adapter = r2Cache({ bucket: noHead as R2BucketLike });
+    await adapter.img?.set("h1", new ArrayBuffer(4), "image/png");
+
+    expect(await adapter.img?.has?.("h1")).toBe(true);
+    expect(await adapter.img?.has?.("nope")).toBe(false);
   });
 
   it("doc.setMeta / getMeta が往復する (doc: true)", async () => {
