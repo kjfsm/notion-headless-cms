@@ -4,6 +4,9 @@
 export type { BlockSwitchProps } from "./BlockSwitch.js";
 export { BlockSwitch } from "./BlockSwitch.js";
 export * as Blocks from "./blocks/index.js";
+export { Callout } from "./components/callout.js";
+export { CodeCollapsibleWrapper } from "./components/code-collapsible-wrapper.js";
+export { CopyButton } from "./components/copy-button.js";
 export type { NotionRendererContextValue } from "./context.js";
 export { useNotionContext } from "./context.js";
 export * as Embeds from "./embeds/index.js";

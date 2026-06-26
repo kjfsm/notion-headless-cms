@@ -57,6 +57,10 @@
     "shiki": "catalog:"
   },
   "dependencies": {
-    "@shikijs/rehype": "^4.0.2"
+    "rehype-pretty-code": "^0.14.1",
+    "rehype-stringify": "catalog:",
+    "remark-parse": "catalog:",
+    "remark-rehype": "catalog:",
+    "unified": "catalog:"
   }
 }
