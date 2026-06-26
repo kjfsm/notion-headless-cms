@@ -1,5 +1,13 @@
 # @notion-headless-cms/cli
 
+## 2.0.15
+
+### Patch Changes
+
+- 1e3db3b: コード生成のフォールバックフィールド型を BaseContentItem と一致させる
+
+  `status` と `publishedAt` のフォールバック型が `string` だったが、`BaseContentItem` は `string | null` を許容するため型不整合が生じていた。また `isInTrash` が生成インターフェースに含まれていなかった。
+
 ## 2.0.14
 
 ### Patch Changes
