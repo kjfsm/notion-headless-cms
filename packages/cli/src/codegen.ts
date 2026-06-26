@@ -187,6 +187,8 @@ function generateCollectionBlock(
     "\tcreatedAt?: string;",
     "\t/** アーカイブ済み / ゴミ箱に入っている場合 true。core の list() から自動除外される。 */",
     "\tisArchived?: boolean;",
+    "\t/** ゴミ箱に入っている場合 true。core の list() から自動除外される。 */",
+    "\tisInTrash?: boolean;",
     "\t/** カバー画像 URL。未設定の場合は null。 */",
     "\tcoverImageUrl?: string | null;",
     "\t/** 絵文字アイコン。絵文字以外 / 未設定の場合は null。 */",
@@ -212,7 +214,8 @@ function generateCollectionBlock(
     itemFieldLines.push("\t/** URL key。 */", "\tslug: string;");
   }
   if (!hasStatus) {
-    itemFieldLines.push("\t/** ステータス。 */", "\tstatus?: string;");
+    // BaseContentItem.status が string | null なので null を許容する
+    itemFieldLines.push("\t/** ステータス。 */", "\tstatus?: string | null;");
   }
   if (!hasTitle) {
     itemFieldLines.push(
@@ -221,9 +224,10 @@ function generateCollectionBlock(
     );
   }
   if (!hasPublishedAt) {
+    // BaseContentItem.publishedAt が string | null なので null を許容する
     itemFieldLines.push(
       "\t/** 公開日時 (ISO8601)。 */",
-      "\tpublishedAt?: string;",
+      "\tpublishedAt?: string | null;",
     );
   }
 

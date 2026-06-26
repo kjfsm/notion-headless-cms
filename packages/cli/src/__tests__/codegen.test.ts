@@ -356,4 +356,29 @@ describe("generateSchemaFile", () => {
     const code = generateSchemaFile([collection]);
     expect(code).toContain("スキップ: Files");
   });
+
+  it("BaseContentItem の全フィールドが生成インターフェースに含まれ型が一致する", () => {
+    // status / publishedAt が props にない kind: data コレクションでフォールバック型を検証する
+    const collection = makeCollection({
+      name: "items",
+      dbName: "アイテムDB",
+      config: { dbName: "アイテムDB", kind: "data", publishedStatuses: [] },
+      properties: {
+        Name: makeProp("title"),
+        Body: makeProp("rich_text"),
+      },
+    });
+    const code = generateSchemaFile([collection]);
+
+    // BaseContentItem.status = string | null — null 非許容にしてはならない
+    expect(code).toContain("status?: string | null;");
+    expect(code).not.toContain("status?: string;");
+
+    // BaseContentItem.publishedAt = string | null — null 非許容にしてはならない
+    expect(code).toContain("publishedAt?: string | null;");
+    expect(code).not.toContain("publishedAt?: string;");
+
+    // BaseContentItem.isInTrash が生成されること
+    expect(code).toContain("isInTrash?: boolean;");
+  });
 });
