@@ -24,7 +24,10 @@ export interface PageIndexSource {
 }
 
 export interface BuildPageIndexOptions {
-  /** 走査対象のコレクション名。未指定なら `source.collections` 全件。 */
+  /**
+   * 走査対象のコレクション名。未指定なら `source.collections` 全件。
+   * いずれの場合も、対象から data コレクション（`kind: "data"`）は自動的に除外される。
+   */
   collections?: readonly string[];
 }
 
@@ -46,14 +49,27 @@ function asCollectionClient(
   const client = (source as unknown as Record<string, unknown>)[name] as
     | CollectionClient<BaseContentItem>
     | undefined;
-  // collections に名前はあっても spread されていない / list を持たない値は無視する。
-  if (!client || typeof client.list !== "function") return undefined;
+  // リンク解決対象は slug を持つ kind: "page" のみ。
+  // data コレクション（DataCollectionClient）は find を持たず、slug 無しで
+  // index に 1 件も寄与しないため、ここで除外して無駄な list() を避ける。
+  // （collections に名前はあっても spread されていない値も list/find 不在で弾かれる）
+  if (
+    !client ||
+    typeof client.list !== "function" ||
+    typeof client.find !== "function"
+  ) {
+    return undefined;
+  }
   return client;
 }
 
 /**
- * 全コレクションを `list()` で走査し、pageId → {collection, slug, title} の逆引きマップを構築する。
+ * page コレクション（slug を持つ `kind: "page"`）を `list()` で走査し、
+ * pageId → {collection, slug, title} の逆引きマップを構築する。
  * Notion 内部リンク（link_to_page / page mention など）を自サイト URL へ解決するための材料。
+ *
+ * slug を持たない data コレクション（`kind: "data"`）は逆引き対象外のため自動的にスキップし、
+ * 不要な `list()` を発行しない。
  *
  * `list()` は SWR ドキュメントキャッシュ経由のためウォーム後は安価。
  */
