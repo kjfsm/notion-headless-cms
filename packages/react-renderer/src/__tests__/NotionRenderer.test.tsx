@@ -147,6 +147,34 @@ const bullet = (id: string, text: string): NotionBlock =>
     },
   }) as unknown as NotionBlock;
 
+const callout = (id: string, text: string, emoji = "💡"): NotionBlock =>
+  ({
+    object: "block",
+    id,
+    type: "callout",
+    has_children: false,
+    callout: {
+      rich_text: [
+        {
+          type: "text",
+          plain_text: text,
+          href: null,
+          text: { content: text, link: null },
+          annotations: {
+            bold: false,
+            italic: false,
+            strikethrough: false,
+            underline: false,
+            code: false,
+            color: "default",
+          },
+        },
+      ],
+      icon: { type: "emoji", emoji },
+      color: "default",
+    },
+  }) as unknown as NotionBlock;
+
 function CustomParagraph({
   block,
 }: BlockComponentProps<ParagraphBlockObjectResponse>) {
@@ -301,6 +329,39 @@ describe("NotionRenderer", () => {
       );
       expect(container.querySelector(".shiki")).not.toBeNull();
       expect(container.textContent).toContain("注釈");
+    });
+
+    it("ヘッダーに言語ラベルとコピーボタンを出す", () => {
+      const { container } = render(
+        <NotionRenderer
+          blocks={[codeBlock("c4", "const x = 1;", "typescript")]}
+        />,
+      );
+      expect(container.textContent).toContain("typescript");
+      expect(
+        container.querySelector('[data-slot="copy-button"]'),
+      ).not.toBeNull();
+    });
+
+    it("fallback で行番号用の data-line を出す", () => {
+      const { container } = render(
+        <NotionRenderer
+          blocks={[codeBlock("c5", "const a = 1;\nconst b = 2;", "typescript")]}
+        />,
+      );
+      expect(container.querySelector("code[data-line-numbers]")).not.toBeNull();
+      expect(container.querySelectorAll("[data-line]").length).toBe(2);
+    });
+  });
+
+  describe("Callout ブロック", () => {
+    it("公式 Callout（Alert）で本文とアイコンを描画する", () => {
+      const { container } = render(
+        <NotionRenderer blocks={[callout("co1", "メモ本文", "💡")]} />,
+      );
+      expect(container.querySelector('[role="alert"]')).not.toBeNull();
+      expect(container.textContent).toContain("メモ本文");
+      expect(container.textContent).toContain("💡");
     });
   });
 
