@@ -295,7 +295,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     await cms.posts.find("post-1");
 
     expect(debugFn).toHaveBeenCalledWith(
-      "キャッシュヒット",
+      "キャッシュヒット [posts] post-1",
       expect.objectContaining({
         operation: "find",
         slug: "post-1",
@@ -392,7 +392,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
     await Promise.all(capturedPromises);
 
     expect(infoFn).toHaveBeenCalledWith(
-      "swr: ミラーを更新 (find)",
+      "swr: ミラーを更新 (find) [posts] post-1",
       expect.objectContaining({
         operation: "refreshFromNotion",
         slug: "post-1",
@@ -400,7 +400,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
       }),
     );
     expect(debugFn).toHaveBeenCalledWith(
-      "swr: ミラーを確認 (find)",
+      "swr: ミラーを確認 (find) [posts] post-1",
       expect.objectContaining({
         operation: "refreshFromNotion",
         slug: "post-1",
@@ -455,14 +455,14 @@ describe("SWR（Stale-While-Revalidate）", () => {
     await Promise.all(capturedPromises);
 
     expect(debugFn).toHaveBeenCalledWith(
-      "swr: ミラーを確認 (find)",
+      "swr: ミラーを確認 (find) [posts] post-1",
       expect.objectContaining({
         operation: "refreshFromNotion",
         slug: "post-1",
       }),
     );
     expect(infoFn).not.toHaveBeenCalledWith(
-      "swr: ミラーを更新 (find)",
+      "swr: ミラーを更新 (find) [posts] post-1",
       expect.anything(),
     );
     expect(onCacheRevalidated).not.toHaveBeenCalled();
@@ -512,11 +512,11 @@ describe("SWR（Stale-While-Revalidate）", () => {
     await Promise.all(capturedPromises);
 
     expect(infoFn).toHaveBeenCalledWith(
-      "swr: ミラーを更新 (list)",
+      "swr: ミラーを更新 (list) [posts]",
       expect.objectContaining({ operation: "list:bg", collection: "posts" }),
     );
     expect(debugFn).toHaveBeenCalledWith(
-      "swr: ミラーを確認 (list)",
+      "swr: ミラーを確認 (list) [posts]",
       expect.objectContaining({ operation: "list:bg", collection: "posts" }),
     );
     expect(onListCacheRevalidated).toHaveBeenCalledOnce();
