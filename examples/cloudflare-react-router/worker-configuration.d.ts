@@ -5,12 +5,10 @@ interface __BaseEnv_Env {
 	DOC_CACHE: KVNamespace;
 	IMG_BUCKET: R2Bucket;
 	NOTION_TOKEN: string;
-	REALTIME_HUB: DurableObjectNamespace<import("./workers/app").RealtimeHubDO>;
 }
 declare namespace Cloudflare {
 	interface GlobalProps {
 		mainModule: typeof import("./workers/app");
-		durableNamespaces: "RealtimeHubDO";
 	}
 	interface Env extends __BaseEnv_Env {}
 }
