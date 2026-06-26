@@ -314,6 +314,20 @@ describe("generateSchemaFile", () => {
     expect(code).not.toContain("accessibleStatuses:");
   });
 
+  it("DB に status / publishedAt プロパティが存在しない場合のフォールバック型は string | null", () => {
+    const collection = makeCollection({
+      properties: {
+        Slug: makeProp("title"),
+        // status / publishedAt なし
+      },
+    });
+    const code = generateSchemaFile([collection]);
+    expect(code).toContain("status?: string | null;");
+    expect(code).not.toContain("status?: string;");
+    expect(code).toContain("publishedAt?: string | null;");
+    expect(code).not.toContain("publishedAt?: string;");
+  });
+
   it("kind: data では slug プロパティを生成せず schema に kind: data を出力する", () => {
     const collection = makeCollection({
       name: "settings",

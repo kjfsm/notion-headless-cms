@@ -212,7 +212,7 @@ function generateCollectionBlock(
     itemFieldLines.push("\t/** URL key。 */", "\tslug: string;");
   }
   if (!hasStatus) {
-    itemFieldLines.push("\t/** ステータス。 */", "\tstatus?: string;");
+    itemFieldLines.push("\t/** ステータス。 */", "\tstatus?: string | null;");
   }
   if (!hasTitle) {
     itemFieldLines.push(
@@ -223,7 +223,7 @@ function generateCollectionBlock(
   if (!hasPublishedAt) {
     itemFieldLines.push(
       "\t/** 公開日時 (ISO8601)。 */",
-      "\tpublishedAt?: string;",
+      "\tpublishedAt?: string | null;",
     );
   }
 
