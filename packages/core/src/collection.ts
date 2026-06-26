@@ -179,7 +179,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
         const bg = this.revalidateItemBg(slug);
         if (this.ctx.waitUntil) this.ctx.waitUntil(bg);
       }
-      this.ctx.logger?.debug?.("キャッシュヒット", {
+      this.ctx.logger?.debug?.(`キャッシュヒット [${this.ctx.collection}] ${slug}`, {
         operation: "find",
         slug,
         collection: this.ctx.collection,
@@ -541,7 +541,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
       }
       const bg = this.checkAndUpdateListBg(cached);
       if (this.ctx.waitUntil) this.ctx.waitUntil(bg);
-      this.ctx.logger?.debug?.("リストキャッシュヒット", {
+      this.ctx.logger?.debug?.(`リストキャッシュヒット [${this.ctx.collection}]`, {
         operation: "list",
         collection: this.ctx.collection,
         cacheAdapter: this.ctx.docCacheName,
@@ -550,7 +550,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
       return cached.items;
     }
 
-    this.ctx.logger?.debug?.("リストキャッシュミス、フェッチ", {
+    this.ctx.logger?.debug?.(`リストキャッシュミス、フェッチ [${this.ctx.collection}]`, {
       operation: "list",
       collection: this.ctx.collection,
       cacheAdapter: this.ctx.docCacheName,
@@ -621,7 +621,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
     const item = await this.fetchRaw(slug);
     if (!item) return null;
     const version = this.ctx.source.getLastModified(item);
-    this.ctx.logger?.debug?.("swr: ミラーを確認 (find)", {
+    this.ctx.logger?.debug?.(`swr: ミラーを確認 (find) [${this.ctx.collection}] ${slug}`, {
       operation: "refreshFromNotion",
       slug,
       collection: this.ctx.collection,
@@ -631,7 +631,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
     if (!cached || version !== cached.notionUpdatedAt) {
       const meta = await this.persistMeta(slug, item);
       await this.invalidateContentEntry(slug);
-      this.ctx.logger?.info?.("swr: ミラーを更新 (find)", {
+      this.ctx.logger?.info?.(`swr: ミラーを更新 (find) [${this.ctx.collection}] ${slug}`, {
         operation: "refreshFromNotion",
         slug,
         collection: this.ctx.collection,
@@ -685,7 +685,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
   private async checkAndUpdateListBg(cached: CachedItemList<T>): Promise<void> {
     try {
       const items = await this.fetchListRaw();
-      this.ctx.logger?.debug?.("swr: ミラーを確認 (list)", {
+      this.ctx.logger?.debug?.(`swr: ミラーを確認 (list) [${this.ctx.collection}]`, {
         operation: "list:bg",
         collection: this.ctx.collection,
       });
@@ -695,7 +695,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
       ) {
         const listEntry = { items, cachedAt: Date.now() };
         await this.ctx.docCache.setList(this.ctx.collection, listEntry);
-        this.ctx.logger?.info?.("swr: ミラーを更新 (list)", {
+        this.ctx.logger?.info?.(`swr: ミラーを更新 (list) [${this.ctx.collection}]`, {
           operation: "list:bg",
           collection: this.ctx.collection,
         });
