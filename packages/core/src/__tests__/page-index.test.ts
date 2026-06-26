@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   buildPageIndex,
   buildPageLinkMap,
@@ -7,10 +7,11 @@ import {
 } from "../page-index";
 import type { BaseContentItem } from "../types/content";
 
-// list() だけを持つ最小のコレクションクライアントを偽装する。
-// （逆引きは list() の id/slug/title しか参照しないため他メソッドは不要）
+// page コレクション（kind: "page"）の最小偽装。
+// 逆引きは list() の id/slug/title しか参照しないが、buildPageIndex は
+// find の有無で page/data を判定するため find を持たせる（中身はダミー）。
 function fakeCollection(items: BaseContentItem[]) {
-  return { list: async () => items };
+  return { list: async () => items, find: async () => null };
 }
 
 function fakeItem(
@@ -71,9 +72,32 @@ describe("buildPageIndex", () => {
 
     const undefinedList = {
       collections: ["posts"],
-      posts: { list: async () => undefined },
+      posts: { list: async () => undefined, find: async () => null },
     } as unknown as PageIndexSource;
     await expect(buildPageIndex(undefinedList)).resolves.toEqual(new Map());
+  });
+
+  it("data コレクション（find を持たない）は走査せず index から除外する", async () => {
+    // data コレクション（kind: "data"）は slug を持たず逆引きに寄与しない。
+    // find の有無で判定し、list() すら呼ばずスキップする（無駄な照会をしない）。
+    const dataListSpy = vi.fn(async () => [
+      fakeItem("dddddddd-1111-1111-1111-111111111111", "ignored"),
+    ]);
+    const source = {
+      collections: ["posts", "services"],
+      posts: fakeCollection([
+        fakeItem("eeeeeeee-2222-2222-2222-222222222222", "kept", "Kept"),
+      ]),
+      services: { list: dataListSpy },
+    } as unknown as PageIndexSource;
+
+    const index = await buildPageIndex(source);
+
+    expect(index.size).toBe(1);
+    expect(
+      index.get(normalizePageId("eeeeeeee222222222222222222222222")),
+    ).toBeDefined();
+    expect(dataListSpy).not.toHaveBeenCalled();
   });
 
   it("collections オプションで走査対象を限定できる", async () => {
