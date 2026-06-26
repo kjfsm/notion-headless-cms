@@ -117,7 +117,7 @@ importers:
         specifier: ^2.9.18
         version: 2.9.18
       typescript:
-        specifier: 'catalog:'
+        specifier: 6.0.3
         version: 6.0.3
       vitest:
         specifier: 'catalog:'
