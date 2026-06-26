@@ -179,13 +179,16 @@ export class CollectionClientImpl<T extends BaseContentItem>
         const bg = this.revalidateItemBg(slug);
         if (this.ctx.waitUntil) this.ctx.waitUntil(bg);
       }
-      this.ctx.logger?.debug?.("キャッシュヒット", {
-        operation: "find",
-        slug,
-        collection: this.ctx.collection,
-        cacheAdapter: this.ctx.docCacheName,
-        cachedAt: cachedMeta.cachedAt,
-      });
+      this.ctx.logger?.debug?.(
+        `キャッシュヒット [${this.ctx.collection}] ${slug}`,
+        {
+          operation: "find",
+          slug,
+          collection: this.ctx.collection,
+          cacheAdapter: this.ctx.docCacheName,
+          cachedAt: cachedMeta.cachedAt,
+        },
+      );
       this.ctx.hooks.onCacheHit?.(slug, cachedMeta);
       return this.attachLazyContent(cachedMeta);
     }
@@ -541,20 +544,26 @@ export class CollectionClientImpl<T extends BaseContentItem>
       }
       const bg = this.checkAndUpdateListBg(cached);
       if (this.ctx.waitUntil) this.ctx.waitUntil(bg);
-      this.ctx.logger?.debug?.("リストキャッシュヒット", {
-        operation: "list",
-        collection: this.ctx.collection,
-        cacheAdapter: this.ctx.docCacheName,
-      });
+      this.ctx.logger?.debug?.(
+        `リストキャッシュヒット [${this.ctx.collection}]`,
+        {
+          operation: "list",
+          collection: this.ctx.collection,
+          cacheAdapter: this.ctx.docCacheName,
+        },
+      );
       this.ctx.hooks.onListCacheHit?.(cached);
       return cached.items;
     }
 
-    this.ctx.logger?.debug?.("リストキャッシュミス、フェッチ", {
-      operation: "list",
-      collection: this.ctx.collection,
-      cacheAdapter: this.ctx.docCacheName,
-    });
+    this.ctx.logger?.debug?.(
+      `リストキャッシュミス、フェッチ [${this.ctx.collection}]`,
+      {
+        operation: "list",
+        collection: this.ctx.collection,
+        cacheAdapter: this.ctx.docCacheName,
+      },
+    );
     this.ctx.hooks.onListCacheMiss?.();
     const items = await this.fetchListRaw();
     const cachedAt = Date.now();
@@ -621,22 +630,28 @@ export class CollectionClientImpl<T extends BaseContentItem>
     const item = await this.fetchRaw(slug);
     if (!item) return null;
     const version = this.ctx.source.getLastModified(item);
-    this.ctx.logger?.debug?.("swr: ミラーを確認 (find)", {
-      operation: "refreshFromNotion",
-      slug,
-      collection: this.ctx.collection,
-      version,
-      cachedVersion: cached?.notionUpdatedAt,
-    });
-    if (!cached || version !== cached.notionUpdatedAt) {
-      const meta = await this.persistMeta(slug, item);
-      await this.invalidateContentEntry(slug);
-      this.ctx.logger?.info?.("swr: ミラーを更新 (find)", {
+    this.ctx.logger?.debug?.(
+      `swr: ミラーを確認 (find) [${this.ctx.collection}] ${slug}`,
+      {
         operation: "refreshFromNotion",
         slug,
         collection: this.ctx.collection,
-        notionUpdatedAt: cached?.notionUpdatedAt,
-      });
+        version,
+        cachedVersion: cached?.notionUpdatedAt,
+      },
+    );
+    if (!cached || version !== cached.notionUpdatedAt) {
+      const meta = await this.persistMeta(slug, item);
+      await this.invalidateContentEntry(slug);
+      this.ctx.logger?.info?.(
+        `swr: ミラーを更新 (find) [${this.ctx.collection}] ${slug}`,
+        {
+          operation: "refreshFromNotion",
+          slug,
+          collection: this.ctx.collection,
+          notionUpdatedAt: cached?.notionUpdatedAt,
+        },
+      );
       this.ctx.hooks.onCacheRevalidated?.(slug, meta);
       if (opts.eagerRebuild) await this.rebuildContentBg(slug, item);
       // キャッシュ書き込み完了後に通知する（先に通知すると client が古い loader データを掴む）。
@@ -685,20 +700,26 @@ export class CollectionClientImpl<T extends BaseContentItem>
   private async checkAndUpdateListBg(cached: CachedItemList<T>): Promise<void> {
     try {
       const items = await this.fetchListRaw();
-      this.ctx.logger?.debug?.("swr: ミラーを確認 (list)", {
-        operation: "list:bg",
-        collection: this.ctx.collection,
-      });
+      this.ctx.logger?.debug?.(
+        `swr: ミラーを確認 (list) [${this.ctx.collection}]`,
+        {
+          operation: "list:bg",
+          collection: this.ctx.collection,
+        },
+      );
       if (
         this.ctx.source.getListVersion(items) !==
         this.ctx.source.getListVersion(cached.items)
       ) {
         const listEntry = { items, cachedAt: Date.now() };
         await this.ctx.docCache.setList(this.ctx.collection, listEntry);
-        this.ctx.logger?.info?.("swr: ミラーを更新 (list)", {
-          operation: "list:bg",
-          collection: this.ctx.collection,
-        });
+        this.ctx.logger?.info?.(
+          `swr: ミラーを更新 (list) [${this.ctx.collection}]`,
+          {
+            operation: "list:bg",
+            collection: this.ctx.collection,
+          },
+        );
         this.ctx.hooks.onListCacheRevalidated?.(listEntry);
         await this.publishRealtime({
           collection: this.ctx.collection,
