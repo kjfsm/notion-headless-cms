@@ -474,6 +474,37 @@ describe("createHandler", () => {
       expect(warmByPageId).toHaveBeenCalledWith("page-42");
     });
 
+    it("page entity を検知したら logger.info で更新検知を記録する", async () => {
+      const info = vi.fn();
+      const warmByPageId = vi
+        .fn()
+        .mockResolvedValue({ collection: "posts", slug: "hello" });
+      const handler = createHandler(
+        makeAdapter({ warmByPageId, logger: { info } }),
+        {
+          notionWebhook: { secret: SECRET },
+        },
+      );
+      const raw = JSON.stringify({
+        type: "page.content_updated",
+        entity: { id: "page-42", type: "page" },
+      });
+      await handler(
+        new Request("http://localhost/api/cms/notion-webhook", {
+          method: "POST",
+          headers: { "X-Notion-Signature": await signNotion(SECRET, raw) },
+          body: raw,
+        }),
+      );
+      expect(info).toHaveBeenCalledWith(
+        "webhook: Notion 更新を検知",
+        expect.objectContaining({
+          operation: "notionWebhook",
+          pageId: "page-42",
+        }),
+      );
+    });
+
     it("adapter.notionWebhookSecret を既定 secret として使う", async () => {
       const warmByPageId = vi.fn().mockResolvedValue(null);
       const handler = createHandler(
