@@ -1,5 +1,13 @@
 # @notion-headless-cms/client
 
+## 0.3.16
+
+### Patch Changes
+
+- Updated dependencies [f4451f3]
+  - @notion-headless-cms/react-renderer@0.1.21
+  - @notion-headless-cms/fetch-blocks@0.0.21
+
 ## 0.3.15
 
 ### Patch Changes
