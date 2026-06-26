@@ -277,6 +277,11 @@ export function createHandler(
         return jsonResponse({ ok: true, skipped: "no page entity" }, 200);
       }
 
+      adapter.logger?.info?.("webhook: Notion 更新を検知", {
+        operation: "notionWebhook",
+        pageId,
+      });
+
       const doWarm = async () => {
         const result = await adapter.warmByPageId(pageId);
         if (result) {

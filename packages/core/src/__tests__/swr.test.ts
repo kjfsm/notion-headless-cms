@@ -345,8 +345,9 @@ describe("SWR（Stale-While-Revalidate）", () => {
     );
   });
 
-  it("SWR が差分を検出したとき logger.debug と onCacheRevalidated が呼ばれる", async () => {
+  it("SWR が差分を検出したとき logger.info と onCacheRevalidated が呼ばれる", async () => {
     const debugFn = vi.fn();
+    const infoFn = vi.fn();
     const onCacheRevalidated = vi.fn();
 
     const cachedItem: BaseContentItem = {
@@ -382,7 +383,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
       cache: [cache],
       // recheckWindowMs:0 でキャッシュヒット時に必ず裏チェックを走らせる。
       swr: { recheckWindowMs: 0 },
-      logger: { debug: debugFn },
+      logger: { debug: debugFn, info: infoFn },
       hooks: { onCacheRevalidated },
       waitUntil: (p) => capturedPromises.push(p),
     });
@@ -390,8 +391,16 @@ describe("SWR（Stale-While-Revalidate）", () => {
     await cms.posts.find("post-1");
     await Promise.all(capturedPromises);
 
+    expect(infoFn).toHaveBeenCalledWith(
+      "swr: ミラーを更新 (find)",
+      expect.objectContaining({
+        operation: "refreshFromNotion",
+        slug: "post-1",
+        collection: "posts",
+      }),
+    );
     expect(debugFn).toHaveBeenCalledWith(
-      "更新検知: 差分を検出、メタを差し替え",
+      "swr: ミラーを確認 (find)",
       expect.objectContaining({
         operation: "refreshFromNotion",
         slug: "post-1",
@@ -405,8 +414,9 @@ describe("SWR（Stale-While-Revalidate）", () => {
     );
   });
 
-  it("SWR が差分なしのとき logger.debug が呼ばれ onCacheRevalidated は呼ばれない", async () => {
+  it("SWR が差分なしのとき確認 debug が呼ばれ onCacheRevalidated は呼ばれない", async () => {
     const debugFn = vi.fn();
+    const infoFn = vi.fn();
     const onCacheRevalidated = vi.fn();
 
     const item: BaseContentItem = {
@@ -436,7 +446,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
       cache: [cache],
       // recheckWindowMs:0 でキャッシュヒット時に必ず裏チェックを走らせる。
       swr: { staleBlockMs: 60_000, recheckWindowMs: 0 },
-      logger: { debug: debugFn },
+      logger: { debug: debugFn, info: infoFn },
       hooks: { onCacheRevalidated },
       waitUntil: (p) => capturedPromises.push(p),
     });
@@ -445,17 +455,23 @@ describe("SWR（Stale-While-Revalidate）", () => {
     await Promise.all(capturedPromises);
 
     expect(debugFn).toHaveBeenCalledWith(
-      "更新検知: 差分なし、cachedAt を更新",
+      "swr: ミラーを確認 (find)",
       expect.objectContaining({
         operation: "refreshFromNotion",
         slug: "post-1",
       }),
     );
+    expect(infoFn).not.toHaveBeenCalledWith(
+      "swr: ミラーを更新 (find)",
+      expect.anything(),
+    );
     expect(onCacheRevalidated).not.toHaveBeenCalled();
   });
 
-  it("SWR がリスト差分を検出したとき onListCacheRevalidated が呼ばれる", async () => {
+  it("SWR がリスト差分を検出したとき logger.info と onListCacheRevalidated が呼ばれる", async () => {
     const onListCacheRevalidated = vi.fn();
+    const debugFn = vi.fn();
+    const infoFn = vi.fn();
 
     const oldItem: BaseContentItem = {
       id: "p1",
@@ -487,6 +503,7 @@ describe("SWR（Stale-While-Revalidate）", () => {
       },
       renderer: mockRenderer,
       cache: [cache],
+      logger: { debug: debugFn, info: infoFn },
       hooks: { onListCacheRevalidated },
       waitUntil: (p) => capturedPromises.push(p),
     });
@@ -494,6 +511,14 @@ describe("SWR（Stale-While-Revalidate）", () => {
     await cms.posts.list();
     await Promise.all(capturedPromises);
 
+    expect(infoFn).toHaveBeenCalledWith(
+      "swr: ミラーを更新 (list)",
+      expect.objectContaining({ operation: "list:bg", collection: "posts" }),
+    );
+    expect(debugFn).toHaveBeenCalledWith(
+      "swr: ミラーを確認 (list)",
+      expect.objectContaining({ operation: "list:bg", collection: "posts" }),
+    );
     expect(onListCacheRevalidated).toHaveBeenCalledOnce();
     expect(onListCacheRevalidated).toHaveBeenCalledWith(
       expect.objectContaining({

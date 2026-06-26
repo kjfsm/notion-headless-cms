@@ -576,6 +576,12 @@ export class CollectionClientImpl<T extends BaseContentItem>
     if (!adapter) return;
     try {
       await adapter.publish(event);
+      this.ctx.logger?.debug?.("realtime: 更新を通知", {
+        operation: "realtime.publish",
+        collection: event.collection,
+        slug: event.slug,
+        version: event.version,
+      });
     } catch (err) {
       this.ctx.logger?.warn?.("realtime: 更新通知の発行に失敗", {
         operation: "realtime.publish",
@@ -615,10 +621,17 @@ export class CollectionClientImpl<T extends BaseContentItem>
     const item = await this.fetchRaw(slug);
     if (!item) return null;
     const version = this.ctx.source.getLastModified(item);
+    this.ctx.logger?.debug?.("swr: ミラーを確認 (find)", {
+      operation: "refreshFromNotion",
+      slug,
+      collection: this.ctx.collection,
+      version,
+      cachedVersion: cached?.notionUpdatedAt,
+    });
     if (!cached || version !== cached.notionUpdatedAt) {
       const meta = await this.persistMeta(slug, item);
       await this.invalidateContentEntry(slug);
-      this.ctx.logger?.debug?.("更新検知: 差分を検出、メタを差し替え", {
+      this.ctx.logger?.info?.("swr: ミラーを更新 (find)", {
         operation: "refreshFromNotion",
         slug,
         collection: this.ctx.collection,
@@ -636,11 +649,6 @@ export class CollectionClientImpl<T extends BaseContentItem>
     }
     const bumped: CachedItemMeta<T> = { ...cached, cachedAt: Date.now() };
     await this.ctx.docCache.setMeta(this.ctx.collection, slug, bumped);
-    this.ctx.logger?.debug?.("更新検知: 差分なし、cachedAt を更新", {
-      operation: "refreshFromNotion",
-      slug,
-      collection: this.ctx.collection,
-    });
     return { changed: false, version, meta: bumped };
   }
 
@@ -677,19 +685,20 @@ export class CollectionClientImpl<T extends BaseContentItem>
   private async checkAndUpdateListBg(cached: CachedItemList<T>): Promise<void> {
     try {
       const items = await this.fetchListRaw();
+      this.ctx.logger?.debug?.("swr: ミラーを確認 (list)", {
+        operation: "list:bg",
+        collection: this.ctx.collection,
+      });
       if (
         this.ctx.source.getListVersion(items) !==
         this.ctx.source.getListVersion(cached.items)
       ) {
         const listEntry = { items, cachedAt: Date.now() };
         await this.ctx.docCache.setList(this.ctx.collection, listEntry);
-        this.ctx.logger?.debug?.(
-          "SWR: リスト差分を検出、キャッシュを差し替え",
-          {
-            operation: "list:bg",
-            collection: this.ctx.collection,
-          },
-        );
+        this.ctx.logger?.info?.("swr: ミラーを更新 (list)", {
+          operation: "list:bg",
+          collection: this.ctx.collection,
+        });
         this.ctx.hooks.onListCacheRevalidated?.(listEntry);
         await this.publishRealtime({
           collection: this.ctx.collection,
@@ -699,10 +708,6 @@ export class CollectionClientImpl<T extends BaseContentItem>
         await this.ctx.docCache.setList(this.ctx.collection, {
           ...cached,
           cachedAt: Date.now(),
-        });
-        this.ctx.logger?.debug?.("SWR: リスト差分なし、確認時刻をリセット", {
-          operation: "list:bg",
-          collection: this.ctx.collection,
         });
       }
     } catch (err) {
