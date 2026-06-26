@@ -7,5 +7,13 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
-  "ignore": []
+  "ignore": [
+    "example-cloudflare-astro",
+    "example-cloudflare-hono",
+    "example-cloudflare-react-router",
+    "example-minimal-node",
+    "example-node-express",
+    "example-node-hono",
+    "example-vercel-nextjs"
+  ]
 }
