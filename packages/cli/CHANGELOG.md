@@ -1,5 +1,13 @@
 # @notion-headless-cms/cli
 
+## 2.0.14
+
+### Patch Changes
+
+- Updated dependencies [a3b567f]
+  - @notion-headless-cms/core@0.5.13
+  - @notion-headless-cms/validate@0.1.15
+
 ## 2.0.13
 
 ### Patch Changes
