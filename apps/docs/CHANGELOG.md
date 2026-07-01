@@ -1,5 +1,15 @@
 # example-docs-site
 
+## 0.0.23
+
+### Patch Changes
+
+- Updated dependencies [0dbc727]
+  - @notion-headless-cms/core@0.5.14
+  - @notion-headless-cms/client@0.3.17
+  - @notion-headless-cms/notion-orm@0.2.13
+  - @notion-headless-cms/notion-source@0.2.15
+
 ## 0.0.22
 
 ### Patch Changes

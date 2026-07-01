@@ -1,5 +1,11 @@
 # @notion-headless-cms/fetch-blocks
 
+## 0.0.22
+
+### Patch Changes
+
+- @notion-headless-cms/notion-orm@0.2.13
+
 ## 0.0.21
 
 ### Patch Changes
