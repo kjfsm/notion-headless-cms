@@ -208,7 +208,7 @@ export class CollectionClientImpl<T extends BaseContentItem>
   }
 
   async list(opts?: ListOptions<T>): Promise<T[]> {
-    const allItems = await this.fetchList();
+    const allItems = await this.fetchList(opts?.force);
     return applyListOptions(allItems, opts);
   }
 
@@ -518,12 +518,17 @@ export class CollectionClientImpl<T extends BaseContentItem>
     }
   }
 
-  private async fetchList(): Promise<T[]> {
-    return this.runForeground("list", undefined, () => this.fetchListImpl());
+  private async fetchList(force = false): Promise<T[]> {
+    return this.runForeground("list", undefined, () =>
+      this.fetchListImpl(force),
+    );
   }
 
-  private async fetchListImpl(): Promise<T[]> {
-    const cached = await this.ctx.docCache.getList<T>(this.ctx.collection);
+  private async fetchListImpl(force = false): Promise<T[]> {
+    // 明示リロード（force）はキャッシュを読まずブロッキングで実照会し、結果でキャッシュを上書きする。
+    const cached = force
+      ? null
+      : await this.ctx.docCache.getList<T>(this.ctx.collection);
     if (cached) {
       if (
         this.ctx.blockMs !== undefined &&

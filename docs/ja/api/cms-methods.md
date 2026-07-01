@@ -121,10 +121,19 @@ interface ListOptions<T> {
   sort?: { by: keyof T & string; dir?: "asc" | "desc" };
   limit?: number;
   skip?: number;
+  force?: boolean;  // recheck ウィンドウを無視してブロッキングで実照会（明示リロード相当）
 }
 
 const posts = await cms.posts.list({ limit: 10 });
 const featured = await cms.posts.list({ tag: "featured" });
+```
+
+`opts.force === true` を渡すと `find()` の `force` と同様、キャッシュを読まずブロッキングで Notion から一覧を再取得し、結果でキャッシュを上書きする。SSR ローダーでは `isReloadRequest(request)` と組み合わせ、F5 等の明示リロード時だけ最新化できる:
+
+```ts
+import { isReloadRequest } from "@notion-headless-cms/client";
+
+const posts = await cms.posts.list({ force: isReloadRequest(request) });
 ```
 
 ### `params()`
