@@ -35,6 +35,11 @@ export interface ListOptions<T extends BaseContentItem = BaseContentItem> {
   limit?: number;
   /** スキップ件数。 */
   skip?: number;
+  /**
+   * true なら recheck ウィンドウ・ブロック閾値を無視して Notion を必ず実照会し、
+   * 最新をブロッキングで返す。明示リロード（`Cache-Control: no-cache` 等）向け。
+   */
+  force?: boolean;
 }
 
 /** `cache.adjacent` のオプション。 */
@@ -142,7 +147,12 @@ export interface CollectionClient<T extends BaseContentItem = BaseContentItem> {
    */
   find(slug: string, opts?: FindOptions): Promise<ItemWithContent<T> | null>;
 
-  /** 公開済みアイテム一覧を取得する。 */
+  /**
+   * 公開済みアイテム一覧を取得する。
+   *
+   * SWR: キャッシュ即時返却 + バックグラウンド差分チェック。`opts.force === true`
+   * なら recheck ウィンドウを無視してブロッキングで実照会する（明示リロード向け）。
+   */
   list(opts?: ListOptions<T>): Promise<T[]>;
 
   /** コレクション内の全スラッグを返す。`generateStaticParams` 等の SSG パラメータ生成に利用する。 */

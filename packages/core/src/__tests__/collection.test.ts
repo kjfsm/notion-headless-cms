@@ -2047,6 +2047,69 @@ describe("CollectionClient — find() 更新検知（recheckWindowMs / staleBloc
   });
 });
 
+describe("CollectionClient — list() 更新検知（force）", () => {
+  it("list({ force: true }) はキャッシュヒットでもブロッキングで Notion から最新を取得する", async () => {
+    const freshItem: BaseContentItem = {
+      id: "2",
+      slug: "fresh",
+      lastEditedTime: "2024-02-01T00:00:00Z",
+    };
+    let callCount = 0;
+    const source = makeMockSource({
+      async list() {
+        callCount++;
+        return callCount === 1 ? makeItems() : [freshItem];
+      },
+    });
+    const cache = memoryCache();
+    const cms = createClient({
+      renderer: mockRenderer,
+      sources: {
+        mock: { collections: { posts: { source, slugField: "slug" } } },
+      },
+      cache: [cache],
+      // recheck ウィンドウを長く取り、force なしでは裏チェックが走らないようにする。
+      swr: { recheckWindowMs: 60_000 },
+    });
+
+    await cms.posts.list();
+    const second = await cms.posts.list({ force: true });
+
+    expect(callCount).toBe(2);
+    expect(second).toHaveLength(1);
+    expect(second[0]?.slug).toBe("fresh");
+  });
+
+  it("force なしはキャッシュヒットならバックグラウンド更新に関わらずキャッシュ済みの内容を返す", async () => {
+    const freshItem: BaseContentItem = {
+      id: "9",
+      slug: "should-not-appear",
+      lastEditedTime: "2024-03-01T00:00:00Z",
+    };
+    let callCount = 0;
+    const source = makeMockSource({
+      async list() {
+        callCount++;
+        return callCount === 1 ? makeItems() : [freshItem];
+      },
+    });
+    const cache = memoryCache();
+    const cms = createClient({
+      renderer: mockRenderer,
+      sources: {
+        mock: { collections: { posts: { source, slugField: "slug" } } },
+      },
+      cache: [cache],
+    });
+
+    const first = await cms.posts.list();
+    const second = await cms.posts.list();
+
+    expect(first).toHaveLength(3);
+    expect(second.some((it) => it.slug === "should-not-appear")).toBe(false);
+  });
+});
+
 describe("CollectionClientImpl — checkVersion()（coalescing / force）", () => {
   /** impl 専用メソッド checkVersion へアクセスするためのキャスト型。 */
   type WithCheckVersion = {
