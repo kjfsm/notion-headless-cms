@@ -1,5 +1,16 @@
 # @notion-headless-cms/client
 
+## 0.3.17
+
+### Patch Changes
+
+- Updated dependencies [0dbc727]
+  - @notion-headless-cms/core@0.5.14
+  - @notion-headless-cms/cache@0.1.14
+  - @notion-headless-cms/notion-source@0.2.15
+  - @notion-headless-cms/fetch-blocks@0.0.22
+  - @notion-headless-cms/fetch-markdown@0.0.18
+
 ## 0.3.16
 
 ### Patch Changes
