@@ -7,7 +7,9 @@
 export type BuiltInCMSErrorCode =
   | "schema/status_property_required"
   | "schema/invalid_property"
-  | "query/unsupported_sort_field";
+  | "query/unsupported_sort_field"
+  | "store/rest_request_failed"
+  | "store/rest_env_missing";
 
 export type CMSErrorCode = BuiltInCMSErrorCode | (string & {});
 

@@ -15,6 +15,14 @@
     ".": {
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
+    },
+    "./node": {
+      "types": "./dist/node.d.mts",
+      "import": "./dist/node.mjs"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.mts",
+      "import": "./dist/testing.mjs"
     }
   },
   "files": [
@@ -24,15 +32,23 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "tsdown src/index.ts --format esm --dts --sourcemap --out-dir dist",
+    "build": "tsdown src/index.ts src/node.ts src/testing.ts --format esm --dts --sourcemap --out-dir dist --external vitest",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text"
   },
   "peerDependencies": {
-    "@notionhq/client": "^5.20.0"
+    "@notionhq/client": "^5.20.0",
+    "vitest": "^4"
+  },
+  "peerDependenciesMeta": {
+    "vitest": {
+      "optional": true
+    }
   },
   "devDependencies": {
-    "@notionhq/client": "catalog:"
+    "@notionhq/client": "catalog:",
+    "@types/node": "catalog:",
+    "vitest": "catalog:"
   }
 }

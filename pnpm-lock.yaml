@@ -1067,6 +1067,9 @@ importers:
       '@notionhq/client':
         specifier: 'catalog:'
         version: 5.22.0
+      '@types/node':
+        specifier: 'catalog:'
+        version: 25.9.3
 
   packages/validate:
     dependencies:
