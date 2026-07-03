@@ -1,5 +1,9 @@
-import { buildPageLinkMap, isReloadRequest } from "@notion-headless-cms/client";
-import { NotionRevalidator, Renderer } from "@notion-headless-cms/client/react";
+import { NotionRenderer } from "@notion-headless-cms/react-renderer";
+import { useNotionRevalidate } from "@notion-headless-cms/react-renderer/router";
+import {
+  denormalizeBlocks,
+  toPageLinkMap,
+} from "@notion-headless-cms/react-renderer/v3";
 import { data, isRouteErrorResponse } from "react-router";
 import { makeCms } from "../lib/cms";
 import type { Route } from "./+types/post";
@@ -23,28 +27,12 @@ function serializeError(err: unknown, depth = 0): SerializedError {
   };
 }
 
-export async function loader({ params, request, context }: Route.LoaderArgs) {
+export async function loader({ params, context }: Route.LoaderArgs) {
   try {
     const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
-    // 明示リロード（F5）時は recheck ウィンドウを無視して Notion を再取得する。
-    const post = await cms.posts.find(params.slug ?? "", {
-      force: isReloadRequest(request),
-    });
+    const post = await cms.posts.find(params.slug ?? "");
     if (!post) throw data("Not Found", { status: 404 });
-    const blocks = await post.notionBlocks();
-    // Notion 内部リンク（link_to_page / page mention）を自サイト URL に解決するマップ。
-    // プレーンオブジェクトなので loader 経由でそのままコンポーネントに渡せる。
-    const pageLinks = await buildPageLinkMap(cms);
-    return {
-      blocks,
-      pageLinks,
-      item: {
-        slug: post.slug,
-        title: post.title,
-        publishedAt: post.publishedAt,
-        lastEditedTime: post.lastEditedTime,
-      },
-    };
+    return { post };
   } catch (err) {
     if (isRouteErrorResponse(err)) throw err;
     console.error("[posts loader] エラー:", err);
@@ -53,21 +41,24 @@ export async function loader({ params, request, context }: Route.LoaderArgs) {
 }
 
 export default function Post({ loaderData }: Route.ComponentProps) {
-  const { blocks, pageLinks, item } = loaderData;
+  const { post } = loaderData;
+  const meta = post.meta as {
+    title?: string | null;
+    publishedAt?: string | null;
+  };
+  // RealtimeHubDO からの push を主経路にし、WebSocket 受信で即 revalidate する
+  // （DO 有効時はポーリングを行わない）。
+  useNotionRevalidate({
+    realtime: { collection: "posts", slug: post.slug },
+  });
   return (
     <article>
-      {/*
-        realtime（Durable Object）を主経路にし、WebSocket push で即時 revalidate する。
-        DO 有効時は poll は停止する。poll は DO 未 binding 環境のフォールバック
-        （mount / 再フォーカスで POST /api/cms/check/posts/:slug?v= を叩き stale なら revalidate）。
-      */}
-      <NotionRevalidator
-        realtime={{ collection: "posts", item: { slug: item.slug } }}
-        poll={{ collection: "posts", item }}
+      <h1>{meta.title ?? post.slug}</h1>
+      {meta.publishedAt && <time>{meta.publishedAt}</time>}
+      <NotionRenderer
+        blocks={denormalizeBlocks(post.blocks)}
+        pageLinks={toPageLinkMap(post.links)}
       />
-      <h1>{item.title ?? item.slug}</h1>
-      {item.publishedAt && <time>{item.publishedAt}</time>}
-      <Renderer blocks={blocks} pageLinks={pageLinks} />
     </article>
   );
 }

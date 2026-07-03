@@ -1,39 +1,45 @@
-import { createCMS, memoryCache } from "@notion-headless-cms/client";
-import { kvCache, r2Cache } from "@notion-headless-cms/client/cloudflare";
-import { schema } from "../generated/nhc";
+import { createCMS } from "@notion-headless-cms/cms";
+import {
+  durableObjectRealtime,
+  durableObjectSyncDelegate,
+  kvDocStore,
+  r2BlobStore,
+} from "@notion-headless-cms/cms/cloudflare";
+import { schema } from "../schema.js";
 
 export interface Env {
-  NOTION_TOKEN: string;
-  DOC_CACHE?: KVNamespace;
-  IMG_BUCKET?: R2Bucket;
+  readonly NOTION_TOKEN: string;
+  readonly DOC_CACHE: KVNamespace;
+  readonly IMG_BUCKET: R2Bucket;
+  readonly SYNC_COORDINATOR: DurableObjectNamespace;
+  readonly REALTIME_HUB: DurableObjectNamespace;
 }
 
+/**
+ * 読者用の stateless Worker 側インスタンス。KV/R2 の読み取り（`find`/`list`）は
+ * ここで直接行い、Notion API への直列アクセスは `SyncCoordinatorDO`
+ * （`app/lib/do.ts`）に一元化する（`syncDelegate` 経由で転送する）。
+ * 更新通知は `RealtimeHubDO` 経由で push し、`onRealtimeUpgrade` で
+ * `/api/cms/realtime` への WebSocket アップグレードを DO へ橋渡しする。
+ */
 export function makeCms(
   env: Env,
   ctx: { waitUntil(p: Promise<unknown>): void },
 ) {
+  const syncId = env.SYNC_COORDINATOR.idFromName("global");
+  const syncStub = env.SYNC_COORDINATOR.get(syncId);
   return createCMS({
-    notion: {
-      schema,
-      token: env.NOTION_TOKEN,
-      collections: {
-        posts: {
-          published: ["公開済み"],
-          accessible: ["下書き", "編集中", "公開済み"],
-        },
-      },
+    schema,
+    stores: {
+      docs: kvDocStore(env.DOC_CACHE),
+      blobs: r2BlobStore(env.IMG_BUCKET),
     },
-    // content:"react" は blocks 取得戦略。loader で notionBlocks() を React 描画する。
-    render: { content: "react" },
-    // binding があれば KV/R2、無ければ in-process memory（ローカル / テスト用）にフォールバック。
-    cache: {
-      document: env.DOC_CACHE
-        ? kvCache({ namespace: env.DOC_CACHE })
-        : memoryCache(),
-      image: env.IMG_BUCKET
-        ? r2Cache({ bucket: env.IMG_BUCKET })
-        : memoryCache(),
-      waitUntil: (p) => ctx.waitUntil(p),
+    syncDelegate: durableObjectSyncDelegate({ stub: syncStub }),
+    realtime: durableObjectRealtime({ namespace: env.REALTIME_HUB }),
+    onRealtimeUpgrade: (request) => {
+      const id = env.REALTIME_HUB.idFromName("global");
+      return env.REALTIME_HUB.get(id).fetch(request);
     },
+    waitUntil: (p: Promise<unknown>) => ctx.waitUntil(p),
   });
 }

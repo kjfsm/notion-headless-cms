@@ -5,7 +5,6 @@ declare global {
   namespace Cloudflare {
     interface Env {
       NOTION_TOKEN: string;
-      NOTION_DATA_SOURCE_ID: string;
     }
   }
   interface Env {
