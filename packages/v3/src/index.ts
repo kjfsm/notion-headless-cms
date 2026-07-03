@@ -9,6 +9,7 @@ export {
   isCMSErrorInNamespace,
   matchCMSError,
 } from "./errors.js";
+export * from "./http/index.js";
 export type {
   ImagePipeline,
   ImageVariantRequest,
