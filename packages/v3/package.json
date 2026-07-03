@@ -39,9 +39,17 @@
   },
   "peerDependencies": {
     "@notionhq/client": "^5.20.0",
+    "katex": "^0.16.11",
+    "shiki": "^4.0.2",
     "vitest": "^4"
   },
   "peerDependenciesMeta": {
+    "katex": {
+      "optional": true
+    },
+    "shiki": {
+      "optional": true
+    },
     "vitest": {
       "optional": true
     }
@@ -49,6 +57,8 @@
   "devDependencies": {
     "@notionhq/client": "catalog:",
     "@types/node": "catalog:",
+    "katex": "catalog:",
+    "shiki": "catalog:",
     "vitest": "catalog:"
   }
 }

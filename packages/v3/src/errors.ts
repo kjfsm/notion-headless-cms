@@ -6,9 +6,15 @@
  */
 export type BuiltInCMSErrorCode =
   | "schema/status_property_required"
+  | "schema/reserved_collection_name"
+  | "schema/notion_config_missing"
   | "store/rest_request_failed"
   | "store/rest_env_missing"
-  | "handler/signature_invalid";
+  | "handler/signature_invalid"
+  | "handler/ogp_url_forbidden"
+  | "handler/ogp_fetch_failed"
+  | "sync/notion_query_failed"
+  | "sync/slug_missing";
 
 export type CMSErrorCode = BuiltInCMSErrorCode | (string & {});
 

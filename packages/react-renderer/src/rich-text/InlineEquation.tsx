@@ -4,18 +4,28 @@ import { useEffect, useState } from "react";
 
 export interface InlineEquationProps {
   expression: string;
+  /**
+   * 同期時（`@notion-headless-cms/v3` の katex TransformStage 等）に事前組版された
+   * HTML。あれば SSR からそのまま確定描画し、クライアント側の katex 読み込みをスキップする。
+   */
+  cachedHtml?: string;
 }
 
 /**
  * インライン数式の既定描画。
- * SSR 段では等幅フォントの素のテキストを返し、クライアント水和後に動的 import で
- * `katex` を読み込み `displayMode: false` で組版した HTML に置換する。
+ * `cachedHtml` があればそれを SSR から確定描画する。無ければ SSR 段で等幅フォントの
+ * 素のテキストを返し、クライアント水和後に動的 import で `katex` を読み込み
+ * `displayMode: false` で組版した HTML に置換する。
  * `katex` が peer として入っていない場合はテキストのままフォールバックする。
  */
-export function InlineEquation({ expression }: InlineEquationProps) {
-  const [html, setHtml] = useState<string | null>(null);
+export function InlineEquation({
+  expression,
+  cachedHtml,
+}: InlineEquationProps) {
+  const [html, setHtml] = useState<string | null>(cachedHtml ?? null);
 
   useEffect(() => {
+    if (cachedHtml) return;
     let cancelled = false;
     (async () => {
       try {
@@ -32,7 +42,7 @@ export function InlineEquation({ expression }: InlineEquationProps) {
     return () => {
       cancelled = true;
     };
-  }, [expression]);
+  }, [cachedHtml, expression]);
 
   if (html) {
     return (

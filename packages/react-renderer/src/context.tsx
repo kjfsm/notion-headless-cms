@@ -49,6 +49,8 @@ export interface NotionRendererContextValue {
   imageSizes?: ImageSizes;
   /** `Image` ブロックに渡す `sizes` 属性 (`srcSet` と組合せて使う)。 */
   imageSizesAttr?: string;
+  /** OGP カードのページアクセス時取得エンドポイント。`useOgp` が参照する。 */
+  ogpEndpoint?: string;
 }
 
 export const NotionContext = createContext<NotionRendererContextValue>({

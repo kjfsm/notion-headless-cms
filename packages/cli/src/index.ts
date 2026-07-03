@@ -42,6 +42,29 @@ export interface CollectionGenConfig {
 }
 
 /**
+ * `nhc pull` / `nhc check`（v3, #437）が使う 1 コレクション分の Notion DB 解決情報。
+ * `databaseId`/`dbName` の意味は v2 の `CollectionGenConfig` と同じ（どちらか一方必須）。
+ */
+export interface V3CollectionSourceConfig {
+  readonly databaseId?: string;
+  readonly dbName?: string;
+}
+
+/**
+ * v3(#437)向けの pull/check 設定。スキーマ本体は TS ファースト（`defineCollection`/
+ * `defineSchema`、codegen 廃止）のままで、ここに置くのは Notion 側の解決情報と
+ * ファイルパスのみ。
+ */
+export interface V3Config {
+  /** `nhc pull` が生成する雛形の出力先ディレクトリ。既定 "src/collections"。 */
+  readonly scaffoldDir?: string;
+  /** `nhc check` が読み込む、ユーザーが書いた TS スキーマモジュールのパス。 */
+  readonly schemaModule?: string;
+  /** コレクション名 → Notion DB 解決情報。キーは `defineCollection` の export 名と一致させる。 */
+  readonly collections: Record<string, V3CollectionSourceConfig>;
+}
+
+/**
  * `nhc.config.ts` のエクスポート型。
  *
  * @example
@@ -55,7 +78,12 @@ export interface CollectionGenConfig {
  *       statusField: "status",
  *       publishedStatuses: ["公開済み"],
  *     }
- *   }
+ *   },
+ *   // v3(#437) を使う場合はこちらも定義する
+ *   v3: {
+ *     schemaModule: "src/schema.ts",
+ *     collections: { posts: { dbName: "ブログ記事DB" } },
+ *   },
  * });
  */
 export interface CMSConfig {
@@ -65,6 +93,8 @@ export interface CMSConfig {
   notionToken?: string;
   /** コレクション定義のマップ。キーがコレクション名 (cms.posts なら "posts")。 */
   collections: Record<string, CollectionGenConfig>;
+  /** v3(#437)向けの `nhc pull`/`nhc check` 設定。省略時はそれらのコマンドが使えない。 */
+  v3?: V3Config;
 }
 
 /** `nhc.config.ts` で使う設定ヘルパー。型推論のみで実体は恒等関数。 */

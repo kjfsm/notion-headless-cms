@@ -49,9 +49,15 @@ function RichTextItem({ item }: { item: RichTextItemResponse }) {
 
   if (item.type === "equation") {
     const InlineEquation = components.InlineEquation ?? DefaultInlineEquation;
+    const cachedHtml = (
+      item.equation as { expression: string; __cachedHtml?: string }
+    ).__cachedHtml;
     return (
       <Annotated annotations={item.annotations} href={item.href}>
-        <InlineEquation expression={item.equation.expression} />
+        <InlineEquation
+          expression={item.equation.expression}
+          cachedHtml={cachedHtml}
+        />
       </Annotated>
     );
   }
