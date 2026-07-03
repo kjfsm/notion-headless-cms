@@ -21,12 +21,12 @@ export default function Home({ loaderData }: Route.ComponentProps) {
       <h1>記事一覧</h1>
       <ul>
         {items.map((post) => {
-          const meta = post.meta as { publishedAt?: string | null };
+          const meta = post.meta as { 公開日?: string | null };
           return (
             <li key={post.slug}>
               <Link to={`/posts/${post.slug}`}>
                 <strong>{post.slug}</strong>
-                {meta.publishedAt && <time>{meta.publishedAt}</time>}
+                {meta.公開日 && <time>{meta.公開日}</time>}
               </Link>
             </li>
           );

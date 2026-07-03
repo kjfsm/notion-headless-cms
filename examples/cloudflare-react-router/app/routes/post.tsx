@@ -46,15 +46,15 @@ export async function loader({ params, context }: Route.LoaderArgs) {
 export default function Post({ loaderData }: Route.ComponentProps) {
   const { post } = loaderData;
   const meta = post.meta as {
-    title?: string | null;
-    publishedAt?: string | null;
+    名前?: string | null;
+    公開日?: string | null;
   };
   // mount / 再フォーカス時に loader を再走させ、裏で進んだ同期結果を反映する。
   useNotionRevalidate();
   return (
     <article>
-      <h1>{meta.title ?? post.slug}</h1>
-      {meta.publishedAt && <time>{meta.publishedAt}</time>}
+      <h1>{meta.名前 ?? post.slug}</h1>
+      {meta.公開日 && <time>{meta.公開日}</time>}
       <NotionRenderer
         blocks={denormalizeBlocks(post.blocks)}
         pageLinks={toPageLinkMap(post.links)}
