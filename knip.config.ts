@@ -91,6 +91,13 @@ export default {
       // ルート (.) では不要なので optional のまま明示的に無視する。
       ignoreDependencies: ["next", "react", "react-dom", "react-router"],
     },
+    "packages/v3": {
+      // package.json の exports サブパス (./, ./node, ./testing)
+      entry: ["src/index.ts", "src/node.ts", "src/testing.ts"],
+      project: ["src/**/*.ts"],
+      // vitest は ./testing サブパスから使う optional peerDep
+      ignoreDependencies: ["vitest"],
+    },
     "packages/*": {
       entry: ["src/index.ts"],
       project: ["src/**/*.ts"],

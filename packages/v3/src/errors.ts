@@ -6,10 +6,9 @@
  */
 export type BuiltInCMSErrorCode =
   | "schema/status_property_required"
-  | "schema/invalid_property"
-  | "query/unsupported_sort_field"
   | "store/rest_request_failed"
-  | "store/rest_env_missing";
+  | "store/rest_env_missing"
+  | "handler/signature_invalid";
 
 export type CMSErrorCode = BuiltInCMSErrorCode | (string & {});
 

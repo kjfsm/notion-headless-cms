@@ -11,14 +11,14 @@ import { prop } from "../types/property.js";
 describe("CMSError", () => {
   it("code と context を保持する", () => {
     const err = new CMSError({
-      code: "schema/invalid_property",
+      code: "schema/status_property_required",
       message: "test",
       context: { operation: "test" },
     });
-    expect(err.is("schema/invalid_property")).toBe(true);
+    expect(err.is("schema/status_property_required")).toBe(true);
     expect(err.inNamespace("schema/")).toBe(true);
     expect(isCMSError(err)).toBe(true);
-    expect(isCMSErrorInNamespace(err, "query/")).toBe(false);
+    expect(isCMSErrorInNamespace(err, "store/")).toBe(false);
   });
 
   it("matchCMSError でコードごとに分岐できる", () => {

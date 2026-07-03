@@ -92,3 +92,22 @@ return { post }; // JSON.stringify 可能なプレーンデータのみ。関数
 `.` / `./react` / `./html` / `./cloudflare` / `./testing` のサブパス + 別パッケージの CLI に収束させる
 （fixed versioning）。S1〜S9 の開発中は `packages/v3` に型・純関数・ストレージ・DO・ハンドラを積み上げ、
 レンダリング（S8）は既存 `packages/react-renderer`、CLI（S9）は既存 `packages/cli` に機能追加する形で進める。
+
+## 実装状況（S1〜S9 完了時点）
+
+| サブissue | 内容 | 実装場所 |
+|---|---|---|
+| [#438](https://github.com/kjfsm/notion-headless-cms/issues/438) S1 | 型とインターフェース確定 | `packages/v3/src/types/`, `errors.ts`, `store.ts` 系 |
+| [#439](https://github.com/kjfsm/notion-headless-cms/issues/439) S2 | コンテンツパイプライン純関数化 | `packages/v3/src/pipeline/` |
+| [#440](https://github.com/kjfsm/notion-headless-cms/issues/440) S3 | ストレージ層 | `packages/v3/src/store/` |
+| [#441](https://github.com/kjfsm/notion-headless-cms/issues/441) S4 | SyncCoordinator DO | `packages/v3/src/sync/` |
+| [#442](https://github.com/kjfsm/notion-headless-cms/issues/442) S5 | 読者向けクエリ API | `packages/v3/src/query/` |
+| [#443](https://github.com/kjfsm/notion-headless-cms/issues/443) S6 | HTTP ハンドラ統合 | `packages/v3/src/http/` |
+| [#444](https://github.com/kjfsm/notion-headless-cms/issues/444) S7 | プレビューと編集者即時性 | `packages/v3/src/preview/` |
+| [#445](https://github.com/kjfsm/notion-headless-cms/issues/445) S8 | レンダリング統合 | `packages/v3/src/render/`, `packages/react-renderer/src/v3.ts` |
+| [#446](https://github.com/kjfsm/notion-headless-cms/issues/446) S9 | CLI 刷新 | `packages/cli/src/v3/` |
+| [#447](https://github.com/kjfsm/notion-headless-cms/issues/447) S10 | E2E・移行検証・ドキュメント・リリース準備 | 本ドキュメント + `docs/ja/rfc/v3-status.md` |
+
+型テスト・契約テスト・ユニットテストは各サブissueのコミットに含まれ、`pnpm build && pnpm typecheck && pnpm test`
+がモノレポ全体（既存 v2 パッケージ含む）で green であることを都度確認しながら積み上げた。
+未完了の項目・実サイト検証の状況は [`v3-status.md`](./v3-status.md) を参照。
