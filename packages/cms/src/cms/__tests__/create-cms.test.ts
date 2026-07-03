@@ -329,4 +329,79 @@ describe("createCMS", () => {
     expectTypeOf<NewsMeta["heading"]>().toEqualTypeOf<string>();
     expectTypeOf<NewsMeta>().not.toHaveProperty("status");
   });
+
+  it("syncDelegate 未指定で scheduler も無ければ CMSError(schema/scheduler_missing) を投げる", () => {
+    const client = makeFakeClient({});
+    expect(() =>
+      createCMS({
+        schema,
+        notion: { client },
+        stores: makeStores(),
+      }),
+    ).toThrowError(
+      expect.objectContaining({ code: "schema/scheduler_missing" }),
+    );
+  });
+
+  it("syncDelegate 指定時は notion/scheduler 無しでも動作し、sync.* が委譲先を呼ぶ", async () => {
+    const stores = makeStores();
+    // find/list が読めることを確認するため、事前にストアへ直接書き込んでおく
+    // (syncDelegate 使用時はローカルの SyncCoordinatorCore を持たないため kick() 経由の同期はできない)。
+    await stores.docs.put(
+      "index:posts:0",
+      JSON.stringify({
+        collection: "posts",
+        page: 0,
+        entries: [
+          {
+            slug: "hello",
+            version: "v1",
+            listed: true,
+            meta: { title: "Hello" },
+          },
+        ],
+      }),
+    );
+
+    const delegate = {
+      kick: vi.fn().mockResolvedValue(undefined),
+      onWebhook: vi.fn().mockResolvedValue(undefined),
+      reconcile: vi.fn().mockResolvedValue({ removed: ["gone"] }),
+      getState: vi.fn().mockResolvedValue({
+        cursor: null,
+        lastSyncAt: "2026-01-01T00:00:00.000Z",
+        lastReconcileAt: null,
+        failures: [],
+      }),
+      stats: vi.fn().mockResolvedValue({
+        lastSyncAt: "2026-01-01T00:00:00.000Z",
+        lastReconcileAt: null,
+        failureCount: 0,
+        recentFailures: [],
+      }),
+    };
+
+    const cms = createCMS({ schema, stores, syncDelegate: delegate });
+
+    await cms.sync.kick();
+    expect(delegate.kick).toHaveBeenCalledTimes(1);
+
+    await cms.sync.onWebhook();
+    expect(delegate.onWebhook).toHaveBeenCalledTimes(1);
+
+    const reconcileResult = await cms.sync.reconcile();
+    expect(reconcileResult).toEqual({ removed: ["gone"] });
+
+    const state = await cms.sync.getState();
+    expect(state.lastSyncAt).toBe("2026-01-01T00:00:00.000Z");
+
+    const stats = await cms.sync.stats();
+    expect(stats.lastSyncAt).toBe("2026-01-01T00:00:00.000Z");
+
+    await cms.scheduled();
+    expect(delegate.reconcile).toHaveBeenCalledTimes(2);
+
+    const list = await cms.posts.list();
+    expect(list.items.map((i) => i.slug)).toEqual(["hello"]);
+  });
 });

@@ -8,6 +8,7 @@ export type BuiltInCMSErrorCode =
   | "schema/status_property_required"
   | "schema/reserved_collection_name"
   | "schema/notion_config_missing"
+  | "schema/scheduler_missing"
   | "store/rest_request_failed"
   | "store/rest_env_missing"
   | "handler/signature_invalid"

@@ -10,3 +10,25 @@ export type {
   R2BucketLike,
   R2ObjectLike,
 } from "./store/cloudflare-types.js";
+export type {
+  DurableObjectNamespaceLike,
+  DurableObjectStubLike,
+  HibernatableWebSocketLike,
+  RealtimeDurableObjectStateLike,
+} from "./sync/durable-object-types.js";
+export type { DurableObjectRealtimeOptions } from "./sync/realtime-hub-do.js";
+export {
+  broadcastToSockets,
+  durableObjectRealtime,
+  parseSubscribeChannel,
+  RealtimeHubDO,
+} from "./sync/realtime-hub-do.js";
+export type {
+  DurableObjectSyncDelegateOptions,
+  SyncCoordinatorCMS,
+  SyncCoordinatorDOOptions,
+} from "./sync/sync-coordinator-do.js";
+export {
+  createSyncCoordinatorDO,
+  durableObjectSyncDelegate,
+} from "./sync/sync-coordinator-do.js";

@@ -1,6 +1,7 @@
 export type {
   CMS,
   CMSSyncControls,
+  CMSSyncDelegate,
   CollectionHandle,
   CreateCMSNotionOptions,
   CreateCMSOptions,

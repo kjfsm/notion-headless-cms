@@ -208,6 +208,49 @@ describe("createCollectionDriver", () => {
     });
   });
 
+  it("syncEntry: realtime 指定時は同期完了後に version 同梱で publish する(#437 ADR-5)", async () => {
+    const notionPage = page({ id: "p1", slug: "hello", title: "Hello World" });
+    const client = makeClient({
+      dataSources: {
+        query: vi.fn().mockResolvedValue({
+          results: [notionPage],
+          next_cursor: null,
+          has_more: false,
+        }),
+      },
+    });
+    const { entryStore, indexStore, blobs, rateLimiter } = makeDeps();
+    const publish = vi.fn().mockResolvedValue(undefined);
+    const driver = createCollectionDriver({
+      collection: "posts",
+      def,
+      client,
+      rateLimiter,
+      entryStore,
+      indexStore,
+      blobs,
+      realtime: { publish },
+    });
+
+    const { changes } = await driver.listChanged(null, 10);
+    const [change] = changes;
+    if (!change) throw new Error("change が空です");
+    await driver.syncEntry(change);
+
+    expect(publish).toHaveBeenCalledWith(
+      "c:posts",
+      expect.objectContaining({
+        collection: "posts",
+        slug: "hello",
+        version: "2026-01-01T00:00:00.000Z",
+      }),
+    );
+    expect(publish).toHaveBeenCalledWith(
+      "c:posts:hello",
+      expect.objectContaining({ collection: "posts", slug: "hello" }),
+    );
+  });
+
   it("syncEntry: chunkCache 経由で listChanged 直後は pages.retrieve を呼ばない", async () => {
     const notionPage = page({ id: "p1", slug: "hello" });
     const retrieve = vi.fn();

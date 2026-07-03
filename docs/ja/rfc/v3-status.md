@@ -101,7 +101,8 @@ S1〜S10 の基盤の上に、以下 4 機能を追加した。
 |---|---|
 | `schema/status_property_required` | `published`/`accessible` を指定したが `statusProperty` が未指定、または `statusProperty` が status 型でない |
 | `schema/reserved_collection_name` | コレクション名が `sync`/`fetch`/`scheduled`/`stats` と衝突している（`createCMS`） |
-| `schema/notion_config_missing` | `createCMS` の `notion.client` / `notion.token` のどちらも指定されていない |
+| `schema/notion_config_missing` | `createCMS` の `notion.client` / `notion.token` のどちらも指定されていない（`syncDelegate` 未指定時） |
+| `schema/scheduler_missing` | `createCMS` の `scheduler` が指定されていない（`syncDelegate` 未指定時） |
 | `store/rest_request_failed` | REST 経由の KV/R2 アクセス（warm コマンド用）が失敗 |
 | `store/rest_env_missing` | warm に必要な環境変数（`CLOUDFLARE_ACCOUNT_ID` 等）が未設定 |
 | `handler/signature_invalid` | webhook の HMAC 署名検証失敗（`createFetchHandler` の HTTP レスポンスコード） |
@@ -112,6 +113,27 @@ S1〜S10 の基盤の上に、以下 4 機能を追加した。
 
 各サブissueの実装が進むごとにコードを追加していく方針（`packages/cms/src/errors.ts` の
 `BuiltInCMSErrorCode` を参照）。
+
+## SyncCoordinatorDO / RealtimeHubDO（パッケージ統合イテレーションで追加）
+
+S6（#443）で「DO クラスを export する規約」として想定されていたが未実装だった、実際に
+`wrangler.toml` から binding できる Durable Object クラスを追加した。
+
+- `RealtimeHubDO`（`packages/cms/src/sync/realtime-hub-do.ts`）: v2 の
+  `packages/cache/src/realtime.ts` をほぼそのまま移植。WebSocket Hibernation で購読を
+  受理し、`durableObjectRealtime()` からの broadcast を該当 channel tag へ配信する
+- `createSyncCoordinatorDO()`（`packages/cms/src/sync/sync-coordinator-do.ts`）: DO
+  クラスを生成するファクトリ。DO の `constructor` で利用者提供の `createCMS(state, env)`
+  を呼び、`scheduler: createDurableObjectSyncScheduler(state)` を渡した `CMS` インスタンスを
+  保持する。`alarm()` は `cms.sync.kick()` を呼び直す（DO インスタンスがエビクトされても
+  再構築できるよう、都度 `createCMS` を呼ぶ設計）。`/kick` `/webhook` `/reconcile` `/state`
+  `/stats` の内部エンドポイントを持つ
+- `durableObjectSyncDelegate(stub)`: 読者用の stateless Worker 側で `createCMS({ syncDelegate })`
+  に渡す、DO stub への転送実装。読者リクエストの処理中に Notion API を呼ばないという
+  v3 の北極星を保つため、読み取り（`find`/`list`）は KV/R2 から直接行い、sync 制御
+  （kick/webhook/reconcile/state/stats）だけを DO に委譲する
+- `createCMS()` に `realtime`（同期完了時に version 同梱で push、#437 ADR-5）と
+  `syncDelegate`（上記の委譲口。指定時は `notion`/`scheduler` 不要）を追加した
 
 ## 既知のギャップ（この環境で完了できなかった項目）
 

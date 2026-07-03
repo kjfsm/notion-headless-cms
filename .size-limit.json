@@ -37,6 +37,6 @@
   {
     "name": "cms/cloudflare",
     "path": "packages/cms/dist/cloudflare.mjs",
-    "limit": "5 kB"
+    "limit": "15 kB"
   }
 ]

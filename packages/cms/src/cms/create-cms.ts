@@ -14,10 +14,12 @@ import type { ListRuntimeParams } from "../query/list.js";
 import { listEntries } from "../query/list.js";
 import type { SyncStats } from "../query/stats.js";
 import { getSyncStats } from "../query/stats.js";
+import type { RealtimeAdapter } from "../realtime.js";
 import { createEntryStore } from "../store/entry-store.js";
 import { createIndexStore } from "../store/index-store.js";
 import type { BlobStore, DocStore } from "../store/types.js";
 import type { VersionedCacheLayer } from "../store/versioned-cache.js";
+import type { SyncState } from "../sync/coordinator.js";
 import { SyncCoordinatorCore } from "../sync/coordinator.js";
 import { createMultiSourceDeps } from "../sync/multi-source.js";
 import type { NotionClientLike } from "../sync/notion-driver.js";
@@ -62,11 +64,34 @@ export interface CreateCMSSyncOptions {
   readonly retry?: RetryConfig;
 }
 
+/**
+ * sync 制御を外部（Durable Object 等）に委譲する場合の差し替え口。指定時は
+ * `notion`/`scheduler` を使ったローカルの `SyncCoordinatorCore` 構築を丸ごとスキップし、
+ * `sync.*` と webhook/scheduled ハンドラをすべてこちらに委譲する。
+ *
+ * 用途: 無料プランの読者用 stateless Worker は KV/R2 の読み取りのみ行い、Notion API への
+ * 直列アクセスは `SyncCoordinatorDO`（`@notion-headless-cms/cms/cloudflare`）に一元化したい場合。
+ * `durableObjectSyncDelegate(stub)` が DO stub への転送実装を提供する。
+ */
+export interface CMSSyncDelegate {
+  kick(): Promise<void>;
+  onWebhook(): Promise<void>;
+  reconcile(): Promise<{ removed: readonly string[] }>;
+  getState(): Promise<SyncState | null>;
+  stats(): Promise<SyncStats>;
+}
+
 export interface CreateCMSOptions<S extends SchemaDef> {
   readonly schema: S;
-  readonly notion: CreateCMSNotionOptions;
   readonly stores: CreateCMSStoresOptions;
-  readonly scheduler: SyncScheduler;
+  /** `syncDelegate` 未指定時は必須（ローカルで `SyncCoordinatorCore` を組み立てるため）。 */
+  readonly notion?: CreateCMSNotionOptions;
+  /** `syncDelegate` 未指定時は必須。 */
+  readonly scheduler?: SyncScheduler;
+  /** 同期完了時に version 同梱で push する（#437 ADR-5）。省略時は push しない。 */
+  readonly realtime?: RealtimeAdapter;
+  /** 指定時は notion/scheduler によるローカル同期を行わず、こちらに委譲する。 */
+  readonly syncDelegate?: CMSSyncDelegate;
   /** shiki/katex 等の事前レンダー拡張。省略時はページアクセス時のクライアント側レンダリングに委ねる。 */
   readonly transforms?: readonly TransformStage[];
   /** HTTP ハンドラのマウントパス。既定 `/api/cms`。 */
@@ -188,42 +213,101 @@ export function createCMS<const S extends SchemaDef>(
     }
   }
 
-  const client = resolveClient(opts.notion);
   const entryStore = createEntryStore(opts.stores.blobs);
   const indexStore = createIndexStore(opts.stores.docs);
-  const rateLimiter = createRateLimiter({
-    requestsPerSecond: opts.sync?.requestsPerSecond ?? 3,
-  });
   const routes = opts.routes ?? "/api/cms";
   const imagesPath = opts.imagesPath ?? "/images";
   const pageIndex = () => buildPageIndex(opts.schema, indexStore);
 
-  const drivers: Record<string, ReturnType<typeof createCollectionDriver>> = {};
-  for (const collection of collectionKeys) {
-    const def = opts.schema.collections[collection];
-    if (!def) continue;
-    drivers[collection] = createCollectionDriver({
-      collection,
-      def,
-      client,
-      rateLimiter,
-      retry: opts.sync?.retry,
-      entryStore,
-      indexStore,
-      blobs: opts.stores.blobs,
-      transforms: opts.transforms,
-      imagesPath,
-      pageIndex,
-    });
-  }
+  let sync: CMSSyncControls;
+  let onWebhookEvent: () => Promise<void> | void;
+  let scheduledHandler: () => Promise<void>;
 
-  const multiSourceDeps = createMultiSourceDeps({ drivers });
-  const coordinator = new SyncCoordinatorCore(opts.scheduler, {
-    ...multiSourceDeps,
-    chunkSize: opts.sync?.chunkSize,
-    chunkDelayMs: opts.sync?.chunkDelayMs,
-    debounceMs: opts.sync?.debounceMs,
-  });
+  if (opts.syncDelegate) {
+    // sync 制御は DO 等の外部委譲先に一任し、ローカルの SyncCoordinatorCore は作らない
+    // （notion/scheduler 未指定でも read-only な Worker として動作させたい用途）。
+    const delegate = opts.syncDelegate;
+    sync = {
+      kick: () => delegate.kick(),
+      onWebhook: () => delegate.onWebhook(),
+      reconcile: () => delegate.reconcile(),
+      getState: async () =>
+        (await delegate.getState()) ?? {
+          cursor: null,
+          lastSyncAt: null,
+          lastReconcileAt: null,
+          failures: [],
+        },
+      stats: () => delegate.stats(),
+    };
+    onWebhookEvent = () => delegate.onWebhook();
+    scheduledHandler = async () => {
+      await delegate.reconcile();
+    };
+  } else {
+    if (!opts.notion) {
+      throw new CMSError({
+        code: "schema/notion_config_missing",
+        message:
+          "notion.client または notion.token のいずれかの指定が必要です（もしくは syncDelegate を指定してください）",
+        context: { operation: "createCMS" },
+      });
+    }
+    if (!opts.scheduler) {
+      throw new CMSError({
+        code: "schema/scheduler_missing",
+        message:
+          "scheduler の指定が必要です（もしくは syncDelegate を指定してください）",
+        context: { operation: "createCMS" },
+      });
+    }
+    const client = resolveClient(opts.notion);
+    const scheduler = opts.scheduler;
+    const rateLimiter = createRateLimiter({
+      requestsPerSecond: opts.sync?.requestsPerSecond ?? 3,
+    });
+
+    const drivers: Record<
+      string,
+      ReturnType<typeof createCollectionDriver>
+    > = {};
+    for (const collection of collectionKeys) {
+      const def = opts.schema.collections[collection];
+      if (!def) continue;
+      drivers[collection] = createCollectionDriver({
+        collection,
+        def,
+        client,
+        rateLimiter,
+        retry: opts.sync?.retry,
+        entryStore,
+        indexStore,
+        blobs: opts.stores.blobs,
+        transforms: opts.transforms,
+        imagesPath,
+        pageIndex,
+        realtime: opts.realtime,
+      });
+    }
+
+    const multiSourceDeps = createMultiSourceDeps({ drivers });
+    const coordinator = new SyncCoordinatorCore(scheduler, {
+      ...multiSourceDeps,
+      chunkSize: opts.sync?.chunkSize,
+      chunkDelayMs: opts.sync?.chunkDelayMs,
+      debounceMs: opts.sync?.debounceMs,
+    });
+
+    sync = {
+      kick: () => coordinator.kick(),
+      onWebhook: () => coordinator.onWebhook(),
+      reconcile: () => coordinator.reconcile(),
+      getState: () => coordinator.getState(),
+      stats: () => getSyncStats(scheduler),
+    };
+    onWebhookEvent = () => coordinator.onWebhook();
+    scheduledHandler = createScheduledHandler(coordinator);
+  }
 
   // CollectionHandle<C> は公開 API の型（InferEntry<C> による厳密な型推論）を表現するが、
   // C は createCMS<S> の中では未解決の型変数のため、ここでは型消去して構築し、
@@ -258,7 +342,7 @@ export function createCMS<const S extends SchemaDef>(
     images: opts.stores.blobs,
     webhookSecret: opts.webhookSecret,
     onVerificationToken: opts.onVerificationToken,
-    onWebhookEvent: () => coordinator.onWebhook(),
+    onWebhookEvent,
     onRealtimeUpgrade: opts.onRealtimeUpgrade,
     onPreview: opts.onPreview,
     onOgp: opts.ogp === false ? undefined : createOgpHandler(opts.ogp),
@@ -266,15 +350,6 @@ export function createCMS<const S extends SchemaDef>(
   };
   const httpOptions: HttpHandlerOptions = { routes };
   const fetchHandler = createFetchHandler(httpAdapter, httpOptions);
-  const scheduledHandler = createScheduledHandler(coordinator);
-
-  const sync: CMSSyncControls = {
-    kick: () => coordinator.kick(),
-    onWebhook: () => coordinator.onWebhook(),
-    reconcile: () => coordinator.reconcile(),
-    getState: () => coordinator.getState(),
-    stats: () => getSyncStats(opts.scheduler),
-  };
 
   return {
     ...collections,

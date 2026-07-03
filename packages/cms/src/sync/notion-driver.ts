@@ -12,6 +12,8 @@ import { mapProperties, mapPropertyValue } from "../pipeline/properties.js";
 import { resolveImageUrls } from "../pipeline/resolve-images.js";
 import type { TransformStage } from "../pipeline/transform-stage.js";
 import { runTransformStages } from "../pipeline/transform-stage.js";
+import type { RealtimeAdapter } from "../realtime.js";
+import { publishVersionUpdate } from "../realtime.js";
 import type { EntryStore } from "../store/entry-store.js";
 import type { IndexStore } from "../store/index-store.js";
 import type { BlobStore } from "../store/types.js";
@@ -83,6 +85,8 @@ export interface CollectionDriverDeps {
   /** 内部リンク解決用の PageIndex(スキーマ全体を横断する合成層が提供)。 */
   readonly pageIndex?: () => Promise<PageIndex>;
   readonly fetchImpl?: typeof fetch;
+  /** 同期完了時に version 同梱で push する(#437 ADR-5)。省略時は push しない。 */
+  readonly realtime?: RealtimeAdapter;
 }
 
 export interface CollectionDriver {
@@ -363,6 +367,15 @@ export function createCollectionDriver(
         listed: isListed(def, status),
         meta,
       });
+
+      if (deps.realtime) {
+        await publishVersionUpdate(
+          deps.realtime,
+          collection,
+          slug,
+          page.last_edited_time,
+        );
+      }
     },
 
     async removeEntry(slug) {
