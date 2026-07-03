@@ -997,6 +997,9 @@ importers:
 
   packages/react-renderer:
     dependencies:
+      '@notion-headless-cms/v3':
+        specifier: workspace:*
+        version: link:../v3
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1070,6 +1073,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 25.9.3
+      vitest:
+        specifier: 'catalog:'
+        version: 4.1.8(@types/node@25.9.3)(@vitest/coverage-v8@4.1.8)(happy-dom@20.10.3)(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))
 
   packages/validate:
     dependencies:

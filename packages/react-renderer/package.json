@@ -44,6 +44,10 @@
       "types": "./dist/mermaid.d.mts",
       "import": "./dist/mermaid.mjs"
     },
+    "./v3": {
+      "types": "./dist/v3.d.mts",
+      "import": "./dist/v3.mjs"
+    },
     "./theme.css": "./styles/theme.css"
   },
   "files": [
@@ -54,7 +58,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "build": "tsdown src/index.ts src/server.ts src/router.tsx src/next.tsx src/mermaid.tsx --format esm --dts --sourcemap --out-dir dist",
+    "build": "tsdown src/index.ts src/server.ts src/router.tsx src/next.tsx src/mermaid.tsx src/v3.ts --format esm --dts --sourcemap --out-dir dist",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
@@ -97,6 +101,7 @@
     }
   },
   "dependencies": {
+    "@notion-headless-cms/v3": "workspace:*",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.16.0",

@@ -11,5 +11,6 @@ export type { PageIndex, PageIndexEntry } from "./links.js";
 export { normalizePageId, resolvePageLinks } from "./links.js";
 export type { RawNotionProperty } from "./properties.js";
 export { mapProperties, mapPropertyValue } from "./properties.js";
+export { resolveImageUrls } from "./resolve-images.js";
 export type { TransformStage } from "./transform-stage.js";
 export { runTransformStages } from "./transform-stage.js";
