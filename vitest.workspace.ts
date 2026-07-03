@@ -14,4 +14,5 @@ export default defineWorkspace([
   "packages/testing",
   "packages/validate",
   "packages/client",
+  "packages/v3",
 ]);
