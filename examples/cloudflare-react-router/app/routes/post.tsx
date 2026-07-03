@@ -58,6 +58,7 @@ export default function Post({ loaderData }: Route.ComponentProps) {
       <NotionRenderer
         blocks={denormalizeBlocks(post.blocks)}
         pageLinks={toPageLinkMap(post.links)}
+        ogpEndpoint="/api/cms/ogp"
       />
     </article>
   );
