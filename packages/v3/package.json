@@ -1,0 +1,64 @@
+{
+  "name": "@notion-headless-cms/v3",
+  "version": "0.0.0",
+  "private": true,
+  "description": "v3 ゼロベース再設計（#437）のステージングパッケージ。S10 でパッケージ統合を行うまでの作業場所。",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kjfsm/notion-headless-cms.git",
+    "directory": "packages/v3"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./node": {
+      "types": "./dist/node.d.mts",
+      "import": "./dist/node.mjs"
+    },
+    "./testing": {
+      "types": "./dist/testing.d.mts",
+      "import": "./dist/testing.mjs"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts src/node.ts src/testing.ts --format esm --dts --sourcemap --out-dir dist --external vitest",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text"
+  },
+  "peerDependencies": {
+    "@notionhq/client": "^5.20.0",
+    "katex": "^0.16.11",
+    "shiki": "^4.0.2",
+    "vitest": "^4"
+  },
+  "peerDependenciesMeta": {
+    "katex": {
+      "optional": true
+    },
+    "shiki": {
+      "optional": true
+    },
+    "vitest": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@notionhq/client": "catalog:",
+    "@types/node": "catalog:",
+    "katex": "catalog:",
+    "shiki": "catalog:",
+    "vitest": "catalog:"
+  }
+}
