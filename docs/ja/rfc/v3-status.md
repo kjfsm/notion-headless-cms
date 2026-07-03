@@ -135,6 +135,25 @@ S6（#443）で「DO クラスを export する規約」として想定されて
 - `createCMS()` に `realtime`（同期完了時に version 同梱で push、#437 ADR-5）と
   `syncDelegate`（上記の委譲口。指定時は `notion`/`scheduler` 不要）を追加した
 
+## プロパティ名の別名解決（実例の動作検証で発見した欠陥の修正）
+
+S1（#438）の `PropDef`/`mapProperties()` は、スキーマの `properties` キーをそのまま生の
+Notion プロパティ名として `raw[key]` で引く実装で、キーと実プロパティ名が食い違う別名解決の
+仕組みが無かった。`nhc pull` の非 ASCII 名フォールバック（`unnamedTitle` 等）や英語名でも
+大文字小文字が異なるケース（Notion 側 `"Title"` に対しスキーマキー `title`）で、生成された
+スキーマが常に値を取得できない状態になっていた（`examples/cloudflare-react-router` の実DB
+検証で発覚）。
+
+- `PropDef`（`packages/cms/src/types/property.ts`）の全 16 種に `notion?: string` を追加し、
+  `prop.*()` ビルダーの末尾引数として実際の Notion プロパティ名を渡せるようにした
+  （例: `prop.title("名前")`）。省略時はスキーマキー自身が実名とみなされる
+- `mapProperties()`（`packages/cms/src/pipeline/properties.ts`）と `notion-driver.ts` の
+  `slugOf()`/`statusOf()` を `raw[def.notion ?? key]` で解決するよう修正
+- `nhc.config.ts` の `v3.collections[].fieldMappings`（`packages/cli/src/index.ts`）を追加し、
+  `nhc pull` がこれを読んで識別子と `notion` 別名を生成コードに反映する。`nhc check` も同じ
+  解決順で drift を照合する。fieldMappings 未指定でも `nhc pull` の自動フォールバック識別子は
+  常に `notion` 別名付きで出力されるため機能的には正しく動く（読みやすさのための任意設定になった）
+
 ## 既知のギャップ（この環境で完了できなかった項目）
 
 以下は #447 の完了条件に含まれるが、この作業環境の制約により実施できていない。実際にリリースする前に

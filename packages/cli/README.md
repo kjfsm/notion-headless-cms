@@ -176,14 +176,19 @@ export default defineConfig({
     schemaModule: "src/schema.ts", // nhc check が読む、ユーザーが書いた TS スキーマ
     scaffoldDir: "src/collections", // nhc pull の出力先。既定 "src/collections"
     collections: {
-      posts: { dbName: "ブログ記事DB" }, // または { databaseId: "..." }
+      posts: {
+        dbName: "ブログ記事DB", // または { databaseId: "..." }
+        // 日本語などのプロパティ名は明示マッピングしておくと nhc pull の出力が
+        // 読みやすい識別子になり、nhc check の照合にも使われる
+        fieldMappings: { 名前: "title", URL: "slug", ステータス: "status" },
+      },
     },
   },
 });
 ```
 
-- `nhc pull` — `v3.collections` の各 DB を introspect し、`defineCollection` の雛形 TS コードを `v3.scaffoldDir` に出力する。既存ファイルは上書きしない（生成物の所有権はユーザーに移る）
-- `nhc check` — `v3.schemaModule` のスキーマと実 Notion DB との drift（プロパティ追加・削除・型変更・options 変更）を検証する。drift があれば非ゼロ終了する（CI 向け）。`--json` で機械可読な出力も可能
+- `nhc pull` — `v3.collections` の各 DB を introspect し、`defineCollection` の雛形 TS コードを `v3.scaffoldDir` に出力する。既存ファイルは上書きしない（生成物の所有権はユーザーに移る）。`fieldMappings` に無いプロパティは ASCII 識別子へ自動変換される（非 ASCII 名は `unnamedTitle` のような種別ベースの識別子にフォールバック）
+- `nhc check` — `v3.schemaModule` のスキーマと実 Notion DB との drift（プロパティ追加・削除・型変更・options 変更）を検証する。drift があれば非ゼロ終了する（CI 向け）。`--json` で機械可読な出力も可能。`fieldMappings` は `nhc pull` と同じ解決順で照合に使われる
 
 ```bash
 npx nhc pull

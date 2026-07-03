@@ -81,6 +81,27 @@ describe("golden: properties.mapProperties", () => {
       raw: mismatched.title,
     });
   });
+
+  it("notion 別名を指定すると raw 側は実際の Notion プロパティ名で引く", () => {
+    const aliased = {
+      title: prop.title("名前"),
+      status: prop.status(["下書き", "公開済み"] as const, "ステータス"),
+    };
+    const rawAliased = {
+      名前: {
+        id: "title",
+        type: "title",
+        title: [{ type: "text", plain_text: "テスト記事" }],
+      },
+      ステータス: {
+        id: "s1",
+        type: "status",
+        status: { id: "st1", name: "公開済み", color: "green" },
+      },
+    } as unknown as PageObjectResponse["properties"];
+    const result = mapProperties(aliased, rawAliased);
+    expect(result).toEqual({ title: "テスト記事", status: "公開済み" });
+  });
 });
 
 describe("golden: blocks.normalizeBlockTree", () => {

@@ -46,17 +46,21 @@ function optionNames(options: readonly { name: string }[]): string[] {
 /**
  * TS スキーマ定義(`properties`)と実 Notion DB の drift を検証する(`nhc check`)。
  * プロパティ追加・削除・型変更・status/select/multiSelect の options 変更を検出する。
+ * `fieldMappings` はスキーマ側で使っている明示的な別名。指定が無いプロパティは
+ * `assignIdentifiers()` の自動変換にフォールバックする(`nhc pull` と同じ解決順)。
  */
 export function diffSchema(
   dataSource: DataSourceObjectResponse,
   properties: PropertyMap,
+  fieldMappings: Record<string, string> = {},
 ): SchemaDrift {
   const changes: PropertyDrift[] = [];
   const seenKeys = new Set<string>();
   const identifiers = assignIdentifiers(dataSource.properties);
 
   for (const [name, notionProp] of Object.entries(dataSource.properties)) {
-    const key = identifiers.get(name)?.identifier ?? name;
+    const key =
+      fieldMappings[name] ?? identifiers.get(name)?.identifier ?? name;
     const expected = properties[key];
     if (!expected) {
       changes.push({

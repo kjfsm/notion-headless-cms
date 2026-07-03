@@ -165,7 +165,10 @@ export function mapProperties<P extends PropertyMap>(
   for (const key of Object.keys(properties) as (keyof P)[]) {
     const def = properties[key];
     if (!def) continue;
-    result[key] = mapPropertyValue(def.kind, raw[key as string]);
+    result[key] = mapPropertyValue(
+      def.kind,
+      raw[def.notion ?? (key as string)],
+    );
   }
   return result;
 }

@@ -208,6 +208,66 @@ describe("createCollectionDriver", () => {
     });
   });
 
+  it("notion 別名指定時は slug/status も実際のプロパティ名で解決する", async () => {
+    const aliasedDef = defineCollection({
+      dataSourceId: "ds-posts",
+      slug: "slug",
+      properties: {
+        title: prop.title("名前"),
+        slug: prop.richText("URL"),
+        status: prop.status(["下書き", "公開済み"] as const, "ステータス"),
+      },
+      statusProperty: "status",
+      published: ["公開済み"],
+      accessible: ["下書き", "公開済み"],
+    });
+    const notionPage = {
+      object: "page",
+      id: "p1",
+      url: "https://notion.so/p1",
+      last_edited_time: "2026-01-01T00:00:00.000Z",
+      properties: {
+        名前: { type: "title", title: richText("テスト記事") },
+        URL: { type: "rich_text", rich_text: richText("hello") },
+        ステータス: { type: "status", status: { name: "公開済み" } },
+      },
+    };
+    const client = makeClient({
+      dataSources: {
+        query: vi.fn().mockResolvedValue({
+          results: [notionPage],
+          next_cursor: null,
+          has_more: false,
+        }),
+      },
+    });
+    const { entryStore, indexStore, blobs, rateLimiter } = makeDeps();
+    const driver = createCollectionDriver({
+      collection: "posts",
+      def: aliasedDef,
+      client,
+      rateLimiter,
+      entryStore,
+      indexStore,
+      blobs,
+    });
+
+    const { changes } = await driver.listChanged(null, 10);
+    expect(changes).toEqual([
+      { slug: "hello", lastEditedTime: "2026-01-01T00:00:00.000Z" },
+    ]);
+    const [change] = changes;
+    if (!change) throw new Error("change が空です");
+    await driver.syncEntry(change);
+
+    const snapshot = await entryStore.get("posts", "hello");
+    expect(snapshot?.meta).toMatchObject({
+      title: "テスト記事",
+      slug: "hello",
+      status: "公開済み",
+    });
+  });
+
   it("syncEntry: realtime 指定時は同期完了後に version 同梱で publish する(#437 ADR-5)", async () => {
     const notionPage = page({ id: "p1", slug: "hello", title: "Hello World" });
     const client = makeClient({

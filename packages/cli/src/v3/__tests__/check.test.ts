@@ -102,6 +102,15 @@ describe("diffSchema", () => {
     expect(diffSchema(dataSource, properties).hasDrift).toBe(false);
   });
 
+  it("fieldMappings で明示した識別子で照合する(自動フォールバックより優先)", () => {
+    const dataSource = makeDataSource({
+      名前: makeProp("title"),
+    });
+    const properties: PropertyMap = { title: prop.title("名前") };
+    const result = diffSchema(dataSource, properties, { 名前: "title" });
+    expect(result.hasDrift).toBe(false);
+  });
+
   it("日本語のみのプロパティ名は nhc pull と同じフォールバック識別子で照合する(衝突回避後の識別子と一致)", () => {
     const dataSource = makeDataSource({
       タイトル: makeProp("title"),

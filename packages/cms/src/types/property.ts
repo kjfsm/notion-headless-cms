@@ -15,70 +15,92 @@ export type RollupResultType =
   | "date"
   | "array";
 
+/**
+ * 実際の Notion プロパティ名。省略時はスキーマのプロパティキー自身を実名とみなす
+ * （`mapProperties()` 等が `raw[def.notion ?? key]` で解決する）。
+ * 日本語などスキーマキーに使えない実名は `prop.title("名前")` のように明示する。
+ */
 export interface TitlePropDef {
   readonly kind: "title";
+  readonly notion?: string;
 }
 export interface RichTextPropDef {
   readonly kind: "richText";
+  readonly notion?: string;
 }
 export interface SelectPropDef<
   Options extends readonly string[] = readonly string[],
 > {
   readonly kind: "select";
   readonly options?: Options;
+  readonly notion?: string;
 }
 export interface StatusPropDef<
   Options extends readonly string[] = readonly string[],
 > {
   readonly kind: "status";
   readonly options: Options;
+  readonly notion?: string;
 }
 export interface MultiSelectPropDef<
   Options extends readonly string[] = readonly string[],
 > {
   readonly kind: "multiSelect";
   readonly options?: Options;
+  readonly notion?: string;
 }
 export interface DatePropDef {
   readonly kind: "date";
+  readonly notion?: string;
 }
 export interface NumberPropDef {
   readonly kind: "number";
+  readonly notion?: string;
 }
 export interface CheckboxPropDef {
   readonly kind: "checkbox";
+  readonly notion?: string;
 }
 export interface UrlPropDef {
   readonly kind: "url";
+  readonly notion?: string;
 }
 export interface FormulaPropDef<
   T extends FormulaResultType = FormulaResultType,
 > {
   readonly kind: "formula";
   readonly resultType: T;
+  readonly notion?: string;
 }
 export interface RollupPropDef<T extends RollupResultType = RollupResultType> {
   readonly kind: "rollup";
   readonly resultType: T;
+  readonly notion?: string;
 }
 export interface RelationPropDef {
   readonly kind: "relation";
   readonly targetCollection?: string;
+  readonly notion?: string;
 }
 export interface PeoplePropDef {
   readonly kind: "people";
+  readonly notion?: string;
 }
 export interface FilesPropDef {
   readonly kind: "files";
+  readonly notion?: string;
 }
 export interface UniqueIdPropDef {
   readonly kind: "uniqueId";
+  readonly notion?: string;
 }
 export interface CreatedTimePropDef {
   readonly kind: "createdTime";
+  readonly notion?: string;
 }
 export interface LastEditedByPropDef {
   readonly kind: "lastEditedBy";
+  readonly notion?: string;
 }
 
 export type PropDef =
@@ -180,59 +202,88 @@ export type InferPropValue<D extends PropDef> = D extends TitlePropDef
                                   : UnsupportedValue;
 
 /**
- * プロパティ定義ビルダー。
+ * プロパティ定義ビルダー。各ビルダーは末尾に実際の Notion プロパティ名を
+ * 任意で受け取る（省略時はスキーマキー自身が実名とみなされる）。
  *
  * @example
  * properties: {
  *   title: prop.title(),
  *   status: prop.status(["draft", "published"] as const),
  *   tags: prop.multiSelect(),
+ *   // スキーマキーが実際のNotionプロパティ名と異なる場合は明示する
+ *   name: prop.title("名前"),
  * }
  */
 export const prop = {
-  title: (): TitlePropDef => ({ kind: "title" }),
-  richText: (): RichTextPropDef => ({ kind: "richText" }),
+  title: (notion?: string): TitlePropDef => ({ kind: "title", notion }),
+  richText: (notion?: string): RichTextPropDef => ({
+    kind: "richText",
+    notion,
+  }),
   select: <const Options extends readonly string[]>(
     options?: Options,
+    notion?: string,
   ): SelectPropDef<Options> => ({
     kind: "select",
     options,
+    notion,
   }),
   status: <const Options extends readonly string[]>(
     options: Options,
+    notion?: string,
   ): StatusPropDef<Options> => ({
     kind: "status",
     options,
+    notion,
   }),
   multiSelect: <const Options extends readonly string[]>(
     options?: Options,
+    notion?: string,
   ): MultiSelectPropDef<Options> => ({
     kind: "multiSelect",
     options,
+    notion,
   }),
-  date: (): DatePropDef => ({ kind: "date" }),
-  number: (): NumberPropDef => ({ kind: "number" }),
-  checkbox: (): CheckboxPropDef => ({ kind: "checkbox" }),
-  url: (): UrlPropDef => ({ kind: "url" }),
+  date: (notion?: string): DatePropDef => ({ kind: "date", notion }),
+  number: (notion?: string): NumberPropDef => ({ kind: "number", notion }),
+  checkbox: (notion?: string): CheckboxPropDef => ({
+    kind: "checkbox",
+    notion,
+  }),
+  url: (notion?: string): UrlPropDef => ({ kind: "url", notion }),
   formula: <const T extends FormulaResultType>(
     resultType: T,
+    notion?: string,
   ): FormulaPropDef<T> => ({
     kind: "formula",
     resultType,
+    notion,
   }),
   rollup: <const T extends RollupResultType>(
     resultType: T,
+    notion?: string,
   ): RollupPropDef<T> => ({
     kind: "rollup",
     resultType,
+    notion,
   }),
-  relation: (targetCollection?: string): RelationPropDef => ({
+  relation: (targetCollection?: string, notion?: string): RelationPropDef => ({
     kind: "relation",
     targetCollection,
+    notion,
   }),
-  people: (): PeoplePropDef => ({ kind: "people" }),
-  files: (): FilesPropDef => ({ kind: "files" }),
-  uniqueId: (): UniqueIdPropDef => ({ kind: "uniqueId" }),
-  createdTime: (): CreatedTimePropDef => ({ kind: "createdTime" }),
-  lastEditedBy: (): LastEditedByPropDef => ({ kind: "lastEditedBy" }),
+  people: (notion?: string): PeoplePropDef => ({ kind: "people", notion }),
+  files: (notion?: string): FilesPropDef => ({ kind: "files", notion }),
+  uniqueId: (notion?: string): UniqueIdPropDef => ({
+    kind: "uniqueId",
+    notion,
+  }),
+  createdTime: (notion?: string): CreatedTimePropDef => ({
+    kind: "createdTime",
+    notion,
+  }),
+  lastEditedBy: (notion?: string): LastEditedByPropDef => ({
+    kind: "lastEditedBy",
+    notion,
+  }),
 } as const;

@@ -108,7 +108,9 @@ function slugOf(
   const slugKey = def.slug as string;
   const propDef = def.properties[slugKey];
   if (!propDef) return null;
-  const raw = (page.properties as Record<string, unknown>)[slugKey];
+  const raw = (page.properties as Record<string, unknown>)[
+    propDef.notion ?? slugKey
+  ];
   const value = mapPropertyValue(
     propDef.kind,
     raw as Parameters<typeof mapPropertyValue>[1],
@@ -122,8 +124,10 @@ function statusOf(
   page: PageObjectResponse,
 ): string | null {
   if (!def.statusProperty) return null;
+  const statusKey = def.statusProperty as string;
+  const propDef = def.properties[statusKey];
   const raw = (page.properties as Record<string, unknown>)[
-    def.statusProperty as string
+    propDef?.notion ?? statusKey
   ];
   const value = mapPropertyValue(
     "status",

@@ -120,7 +120,7 @@ export async function runCheck(opts: CheckOptions): Promise<void> {
     const dataSource = await notionClient.retrieveDataSource(dataSourceId);
     results.push({
       collection: name,
-      drift: diffSchema(dataSource, properties),
+      drift: diffSchema(dataSource, properties, source.fieldMappings),
     });
   }
 
