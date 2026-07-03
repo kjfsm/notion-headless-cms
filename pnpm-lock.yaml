@@ -743,6 +743,9 @@ importers:
       '@notion-headless-cms/core':
         specifier: workspace:*
         version: link:../core
+      '@notion-headless-cms/v3':
+        specifier: workspace:*
+        version: link:../v3
       '@notion-headless-cms/validate':
         specifier: workspace:*
         version: link:../validate

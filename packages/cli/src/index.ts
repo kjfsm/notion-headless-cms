@@ -1,3 +1,8 @@
+// v3(#437 ゼロベース再設計)向けの新コマンド群(pull/check/doctor/sync)。
+// 詳細は ./v3/index.ts を参照。旧来の codegen 中心コマンド(generate/init)とは
+// 独立して段階的に追加していく。
+export * from "./v3/index.js";
+
 /**
  * 1 コレクション分の生成設定。
  * `collections: { posts: { databaseId, slugField, ... } }` の値部分。
