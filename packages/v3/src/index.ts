@@ -17,6 +17,7 @@ export type {
 export * from "./pipeline/index.js";
 export type { RealtimeAdapter, RealtimePayload } from "./realtime.js";
 export * from "./store/index.js";
+export * from "./sync/index.js";
 export type { SyncScheduler } from "./sync-scheduler.js";
 export type {
   CollectionConfig,
