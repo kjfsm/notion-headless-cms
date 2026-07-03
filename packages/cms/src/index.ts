@@ -21,7 +21,6 @@ export * from "./preview/index.js";
 export * from "./query/index.js";
 export type { RealtimeAdapter, RealtimePayload } from "./realtime.js";
 export { channelTag, publishVersionUpdate } from "./realtime.js";
-export * from "./render/index.js";
 export * from "./store/index.js";
 export * from "./sync/index.js";
 export type { SyncScheduler } from "./sync-scheduler.js";

@@ -15,7 +15,7 @@ order: 2
 S1〜S9（[#438](https://github.com/kjfsm/notion-headless-cms/issues/438)〜
 [#446](https://github.com/kjfsm/notion-headless-cms/issues/446)）はすべて実装済みで、
 `pnpm build && pnpm typecheck && pnpm test` がモノレポ全体（既存 v2 の 14 パッケージ + 新規
-`packages/v3` + `packages/cli` の v3 コマンド + `packages/react-renderer` の v3 アダプタ）で green。
+`packages/cms` + `packages/cli` の v3 コマンド + `packages/react-renderer` の v3 アダプタ）で green。
 詳細は [`v3-architecture.md`](./v3-architecture.md) の実装状況表を参照。
 
 ## v2 → v3 移行例
@@ -63,18 +63,18 @@ S1〜S10 の基盤の上に、以下 4 機能を追加した。
 - 既定は**ページアクセス時のクライアント側レンダリング**。`packages/react-renderer` の
   `Code.tsx`（shiki）・`Equation.tsx`/`InlineEquation.tsx`（katex、既存）が水和後に動的 import
   してレンダリングする。Worker の CPU 10ms/invocation 予算を消費しない
-- オプトインで同期時に事前レンダーしたい場合は `packages/v3/src/transforms/{shiki,katex}.ts` の
+- オプトインで同期時に事前レンダーしたい場合は `packages/cms/src/transforms/{shiki,katex}.ts` の
   `createShikiTransform()` / `createKatexTransform()` を `createCMS({ transforms: [...] })` に渡す。
   `NormalizedBlock.data.__cachedHtml`（equation は inline も含む）に焼き込み、上記コンポーネントが
   それを最優先で使う。shiki/katex は動的 import + optional peerDependency（未インストール時は素通し）
 
-### 高度な HTML（`packages/v3/src/render/html.ts` / `render/embeds.ts`）
+### 高度な HTML（`packages/cms/src/render/html.ts` / `render/embeds.ts`）
 
 - v2 `block-html` 相当のブロック網羅（table/column/synced/child/link_to_page/bookmark/embed/
   link_preview/video/audio/file/pdf/breadcrumb/table_of_contents）を追加
 - **OGP 取得は同期時ではなくページアクセス時**。`render/embeds.ts` の `renderOgpShell()` は
   fetch せず `data-nhc-ogp-url` 属性つきのシェルのみ返す。実際の取得は
-  `packages/v3/src/http/ogp.ts` の `createOgpHandler()`（`GET {routes}/ogp?url=...`）が担う
+  `packages/cms/src/http/ogp.ts` の `createOgpHandler()`（`GET {routes}/ogp?url=...`）が担う
   （SSRF ガード・redirect 追跡・タイムアウト・本文サイズ上限・edge cache 用 `cache-control`）。
   React 側は `react-renderer` の `useOgp()` フックが同エンドポイントをクライアントから叩く
 - embed の iframe 直埋め込みは YouTube（動画 ID 抽出のみ、fetch 不要）と `allowedEmbedHosts`
@@ -82,16 +82,16 @@ S1〜S10 の基盤の上に、以下 4 機能を追加した。
 
 ### マルチソース（複数コレクションの束ね）
 
-- `packages/v3/src/sync/notion-driver.ts` の `createCollectionDriver()` が 1 コレクション分の
+- `packages/cms/src/sync/notion-driver.ts` の `createCollectionDriver()` が 1 コレクション分の
   Notion 同期（差分クエリ・block tree 取得・画像・transforms・プロパティ変換・内部リンク解決）を実装
-- `packages/v3/src/sync/multi-source.ts` の `createMultiSourceDeps()` が複数 `CollectionDriver` を
+- `packages/cms/src/sync/multi-source.ts` の `createMultiSourceDeps()` が複数 `CollectionDriver` を
   `SyncCoordinatorDeps`（`sync/coordinator.ts`、無改修）へ合成する。slug は `"{collection}:{slug}"`
   で名前空間化し、カーソルは `{ c: コレクション, nc: Notion カーソル }` を JSON 化して多重化する。
   単一コーディネータ + 合成 deps を採用（DO の Alarm は 1 つしか持てず、レートリミッタも
   全コレクションで厳密に共有する必要があるため）
-- `packages/v3/src/sync/page-index.ts` の `buildPageIndex()` がスキーマ全体の index シャードから
+- `packages/cms/src/sync/page-index.ts` の `buildPageIndex()` がスキーマ全体の index シャードから
   内部リンク解決用の `PageIndex` を読み取り専用で構築する（KV 書き込みゼロ）
-- `packages/v3/src/cms/create-cms.ts` の `createCMS()` が schema の全コレクション分の driver・
+- `packages/cms/src/cms/create-cms.ts` の `createCMS()` が schema の全コレクション分の driver・
   合成 deps・`SyncCoordinatorCore`・HTTP ハンドラ（webhook/images/ogp）・scheduled ハンドラを
   一括結線する利用者向けファクトリ
 
@@ -110,7 +110,7 @@ S1〜S10 の基盤の上に、以下 4 機能を追加した。
 | `sync/notion_query_failed` | Notion API 呼び出し（`dataSources.query`/`pages.retrieve`）が失敗、または対応ページが見つからない |
 | `sync/slug_missing` | slug に使うプロパティ値が空で、代替の page id も解決できない |
 
-各サブissueの実装が進むごとにコードを追加していく方針（`packages/v3/src/errors.ts` の
+各サブissueの実装が進むごとにコードを追加していく方針（`packages/cms/src/errors.ts` の
 `BuiltInCMSErrorCode` を参照）。
 
 ## 既知のギャップ（この環境で完了できなかった項目）
@@ -127,12 +127,14 @@ S1〜S10 の基盤の上に、以下 4 機能を追加した。
    オプトインの shiki/katex TransformStage を使う場合は、コードブロック数の多いページで
    CPU 10ms/invocation を超過しないかも合わせて実測すること（既定のクライアント側レンダリングには
    このリスクは無い）
-3. **examples の v3 刷新 + Playwright E2E** — 既存 `examples/cloudflare-*` は v2 API のままで、
-   v3 API での書き直しと E2E 追加は未着手
+3. **examples の v3 刷新 + Playwright E2E** — 対応中。`examples/cloudflare-*` を含む7つを
+   v3 API へ順次書き直している（進行状況は本ドキュメント末尾「パッケージ統合・examples刷新の進捗」参照）
 4. **パッケージ統合の実施**（14 パッケージ → 1 パッケージ + サブパス + CLI、changesets fixed group 化、
-   旧パッケージの deprecate 方針）— ユーザーからの指示により本イテレーションではスコープ外
-   （`packages/v3` はステージング用の `private: true` パッケージのまま）
-5. **CI への型テスト・契約テスト・miniflare E2E の統合** — `pnpm verify:ci` は `packages/v3` を含む
+   旧パッケージの deprecate 方針）— 対応済み。`packages/cms` を公開パッケージ `@notion-headless-cms/cms`
+   へ改名・昇格した（exports: `.`/`./html`/`./cloudflare`/`./node`/`./testing`）。fixed group 化は
+   不要と判断（各パッケージが独立バージョニングで運用されており、fixed group に入れる相手が
+   実質存在しないため）。旧14パッケージは削除せず、examples 移行完了後に deprecated 表記を追加する方針
+5. **CI への型テスト・契約テスト・miniflare E2E の統合** — `pnpm verify:ci` は `packages/cms` を含む
    モノレポ全体の build/typecheck/test を既に実行するが、`@cloudflare/vitest-pool-workers` を使った
    miniflare 実行環境（実 DO/KV/R2 挙動の検証）はこのリポジトリに未導入。追加する場合は
    `packages/cache` 同様、構造型フェイクによる単体テストとの役割分担を設計すること
@@ -142,7 +144,7 @@ S1〜S10 の基盤の上に、以下 4 機能を追加した。
    再同期キュー投入」機能は無い。次イテレーションで reconcile を拡張するか検討すること
 7. **`nhc doctor`/`nhc sync` の CLI 結線は未実施** — `nhc pull`/`nhc check` は
    `nhc.config.ts` の `v3` セクションから結線したが、doctor/sync はデプロイ先 Worker への
-   到達性（binding 疎通・kick 経路）が絡むため、`packages/v3/src/http/index.ts` や
+   到達性（binding 疎通・kick 経路）が絡むため、`packages/cms/src/http/index.ts` や
    `packages/cli/src/v3/{doctor,sync-command}.ts` の純ロジックのみ用意し CLI コマンド化は
    見送った
 8. **`EntrySnapshot<Meta extends JsonValue>` の generic instantiation 制約** —
@@ -150,7 +152,7 @@ S1〜S10 の基盤の上に、以下 4 機能を追加した。
    具体的なオブジェクト型を `EntrySnapshot<ConcreteType>` として直接インスタンス化しようとすると
    型チェックに失敗する。`createCMS` の `CollectionHandle<C>` はこれを避けるため
    `Omit<EntrySnapshot, "meta"> & { meta: InferEntry<C> }` という交差型で回避している
-   （`packages/v3/src/cms/create-cms.ts` の `CollectionEntrySnapshot<C>` 参照）。将来
+   （`packages/cms/src/cms/create-cms.ts` の `CollectionEntrySnapshot<C>` 参照）。将来
    `EntrySnapshot` の generic 境界を見直す場合はこの回避策も合わせて整理すること
 9. **`IndexEntry.meta` は「縮小版」ではなく全プロパティを格納する簡略化** — RFC の設計時点では
    「where/sort に必要な最小限のメタのみ」を想定していたが、事前にどのプロパティが使われるか
@@ -160,6 +162,6 @@ S1〜S10 の基盤の上に、以下 4 機能を追加した。
 
 ## 次にやること
 
-上記ギャップは実際の Cloudflare アカウント・対象サイトへのアクセスが前提のため、次のイテレーションで
-（1）`packages/v3` を正式な公開パッケージへ改名・統合し、（2）examples を作り直し、（3）実サイトで
-検証、の順で進めることを推奨する。
+`packages/cms` への改名・統合（ギャップ4）は完了した。残るギャップ1・2・5〜9は実際の
+Cloudflare アカウント・対象サイトへのアクセスが前提のため、examples 刷新（ギャップ3、進行中）の
+完了後に着手することを推奨する。

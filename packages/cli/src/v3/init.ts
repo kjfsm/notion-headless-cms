@@ -42,7 +42,7 @@ crons = ["0 * * * *"]
 
 /** `nhc init` が生成する最小マウントコードの雛形(利用側が binding 名を差し替えて使う)。 */
 export function generateMountCodeTemplate(): string {
-  return `import { createFetchHandler, createScheduledHandler } from "@notion-headless-cms/v3";
+  return `import { createFetchHandler, createScheduledHandler } from "@notion-headless-cms/cms";
 // TODO: SyncCoordinatorDO の具体的な結線(binding からのインスタンス取得・
 // coordinator 構築)はプロジェクトの wrangler.toml 設定に合わせて実装してください。
 
@@ -61,7 +61,7 @@ export default {
 
 /** `nhc init` が生成する最小スキーマ雛形。 */
 export function generateSchemaTemplate(): string {
-  return `import { defineCollection, defineSchema, prop } from "@notion-headless-cms/v3";
+  return `import { defineCollection, defineSchema, prop } from "@notion-headless-cms/cms";
 
 const posts = defineCollection({
   dataSourceId: "REPLACE_WITH_DATA_SOURCE_ID",

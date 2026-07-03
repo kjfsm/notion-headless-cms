@@ -51,7 +51,7 @@
   },
   "dependencies": {
     "@notion-headless-cms/core": "workspace:*",
-    "@notion-headless-cms/v3": "workspace:*",
+    "@notion-headless-cms/cms": "workspace:*",
     "@notion-headless-cms/validate": "workspace:*",
     "@notionhq/client": "catalog:",
     "commander": "^15.0.0",

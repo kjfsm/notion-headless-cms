@@ -38,7 +38,7 @@ describe("generateCollectionScaffold", () => {
       dataSourceId: "ds1",
     });
     expect(code).toContain(
-      'import { defineCollection, prop } from "@notion-headless-cms/v3";',
+      'import { defineCollection, prop } from "@notion-headless-cms/cms";',
     );
     expect(code).toContain("title: prop.title(),");
     expect(code).toContain("slug: prop.richText(),");

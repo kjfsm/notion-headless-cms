@@ -1,8 +1,8 @@
 import type {
   SyncCoordinatorDeps,
   SyncScheduler,
-} from "@notion-headless-cms/v3";
-import { SyncCoordinatorCore } from "@notion-headless-cms/v3";
+} from "@notion-headless-cms/cms";
+import { SyncCoordinatorCore } from "@notion-headless-cms/cms";
 import { describe, expect, it } from "vitest";
 import { runSyncCommand } from "../sync-command.js";
 

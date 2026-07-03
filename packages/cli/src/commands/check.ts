@@ -1,6 +1,6 @@
 import path from "node:path";
+import type { PropertyMap } from "@notion-headless-cms/cms";
 import { CMSError } from "@notion-headless-cms/core";
-import type { PropertyMap } from "@notion-headless-cms/v3";
 import { loadConfig } from "../config-loader.js";
 import {
   createNotionCLIClient,

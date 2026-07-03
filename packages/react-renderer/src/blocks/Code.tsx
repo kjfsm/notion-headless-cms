@@ -96,7 +96,7 @@ function normalizeLanguage(lang: string): string {
  * デフォルトの Code 描画。shadcn docs 風の枠（ヘッダー: ファイル名 + 言語ラベル +
  * コピーボタン、本体: シンタックスハイライト）。
  *
- * - `__cachedHtml`（`@notion-headless-cms/v3` の `createShikiTransform` 等が同期時に
+ * - `__cachedHtml`（`@notion-headless-cms/cms` の `createShikiTransform` 等が同期時に
  *   付与する事前ハイライト済み HTML）があればそれを最優先で描画する
  * - 無ければクライアント水和後に `shiki` を動的 import してハイライトする
  *   （Worker の CPU 予算を消費しない既定経路。`shiki` が peer として無ければスキップ）

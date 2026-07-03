@@ -33,7 +33,7 @@ describe("generateSchemaTemplate / generateMountCodeTemplate", () => {
   it("スキーマ雛形が defineSchema/defineCollection/prop を import する", () => {
     const code = generateSchemaTemplate();
     expect(code).toContain(
-      'import { defineCollection, defineSchema, prop } from "@notion-headless-cms/v3";',
+      'import { defineCollection, defineSchema, prop } from "@notion-headless-cms/cms";',
     );
     expect(code).toContain("export const schema = defineSchema({ posts });");
   });

@@ -1,9 +1,3 @@
-export { kvDocStore, r2BlobStore } from "./cloudflare.js";
-export type {
-  KVNamespaceLike,
-  R2BucketLike,
-  R2ObjectLike,
-} from "./cloudflare-types.js";
 export type { EntryStore } from "./entry-store.js";
 export { createEntryStore } from "./entry-store.js";
 export type { IndexStore } from "./index-store.js";

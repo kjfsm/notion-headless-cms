@@ -1,5 +1,5 @@
-import type { PropertyMap } from "@notion-headless-cms/v3";
-import { prop } from "@notion-headless-cms/v3";
+import type { PropertyMap } from "@notion-headless-cms/cms";
+import { prop } from "@notion-headless-cms/cms";
 import { describe, expect, it } from "vitest";
 import type { DataSourceObjectResponse } from "../../notion-client.js";
 import { diffSchema } from "../check.js";

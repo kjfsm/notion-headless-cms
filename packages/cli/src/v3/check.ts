@@ -1,4 +1,4 @@
-import type { PropertyMap } from "@notion-headless-cms/v3";
+import type { PropertyMap } from "@notion-headless-cms/cms";
 import type { DataSourceObjectResponse } from "../notion-client.js";
 
 const NOTION_TYPE_FOR_KIND: Record<string, string> = {

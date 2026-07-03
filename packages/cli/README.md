@@ -164,7 +164,7 @@ export const schema = {
 
 ## `nhc pull` / `nhc check`（v3, #437）
 
-v3（`@notion-headless-cms/v3` の `defineCollection`/`defineSchema`）は codegen ではなく TS ファーストでスキーマを書く。`nhc pull`/`nhc check` は `nhc.config.ts` の `v3` セクションを読み、Notion DB の introspect 結果と TS スキーマを橋渡しする補助コマンド。
+v3（`@notion-headless-cms/cms` の `defineCollection`/`defineSchema`）は codegen ではなく TS ファーストでスキーマを書く。`nhc pull`/`nhc check` は `nhc.config.ts` の `v3` セクションを読み、Notion DB の introspect 結果と TS スキーマを橋渡しする補助コマンド。
 
 ```ts
 // nhc.config.ts（既存の v2 設定に v3 セクションを追加できる）

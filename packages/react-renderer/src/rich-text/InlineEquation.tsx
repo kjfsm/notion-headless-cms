@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 export interface InlineEquationProps {
   expression: string;
   /**
-   * 同期時（`@notion-headless-cms/v3` の katex TransformStage 等）に事前組版された
+   * 同期時（`@notion-headless-cms/cms` の katex TransformStage 等）に事前組版された
    * HTML。あれば SSR からそのまま確定描画し、クライアント側の katex 読み込みをスキップする。
    */
   cachedHtml?: string;

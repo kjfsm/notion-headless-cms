@@ -321,7 +321,7 @@ export default {
 
 ## `nhc pull` / `nhc check`（v3, #437）
 
-v3（`@notion-headless-cms/v3` の `defineCollection`/`defineSchema`）は codegen ではなく
+v3（`@notion-headless-cms/cms` の `defineCollection`/`defineSchema`）は codegen ではなく
 TS ファーストでスキーマを書く。`nhc pull`/`nhc check` は `nhc.config.ts` の `v3` セクションを
 読み、Notion DB の introspect 結果と TS スキーマを橋渡しする補助コマンド。
 

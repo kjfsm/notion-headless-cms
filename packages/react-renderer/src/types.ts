@@ -219,7 +219,7 @@ export interface NotionRendererProps {
   imageSizesAttr?: string;
   /**
    * OGP カード（bookmark/embed/link_preview）をページアクセス時にクライアントで取得する
-   * エンドポイント（`@notion-headless-cms/v3` の `createOgpHandler()` が処理する URL）。
+   * エンドポイント（`@notion-headless-cms/cms` の `createOgpHandler()` が処理する URL）。
    * 指定すると `block.ogp` 未付与時に `useOgp` が `{ogpEndpoint}?url=...` を fetch する。
    */
   ogpEndpoint?: string;

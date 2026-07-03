@@ -1,4 +1,4 @@
-import type { SyncCoordinatorCore, SyncState } from "@notion-headless-cms/v3";
+import type { SyncCoordinatorCore, SyncState } from "@notion-headless-cms/cms";
 
 export interface SyncCommandResult {
   readonly ok: boolean;

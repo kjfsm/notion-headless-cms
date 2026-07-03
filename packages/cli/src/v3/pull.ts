@@ -107,7 +107,7 @@ export function generateCollectionScaffold(
 
   const slugKey = titleKey ? toTsIdentifier(titleKey) : "title";
 
-  return `import { defineCollection, prop } from "@notion-headless-cms/v3";
+  return `import { defineCollection, prop } from "@notion-headless-cms/cms";
 
 export const ${opts.collectionName} = defineCollection({
   dataSourceId: ${JSON.stringify(opts.dataSourceId)},

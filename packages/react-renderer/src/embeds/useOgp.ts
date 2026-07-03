@@ -14,7 +14,7 @@ interface OgpEndpointResponse {
  * `ogpEndpoint` が Context に無い場合・`url` が falsy（`block.ogp` を既に持つ場合に
  * 呼び出し側が渡す）な場合は何もしない。
  *
- * `@notion-headless-cms/v3` の `createOgpHandler()` が返す
+ * `@notion-headless-cms/cms` の `createOgpHandler()` が返す
  * `{ ok: boolean, ogp?: OgCardData }` 形式のレスポンスを期待する。
  */
 export function useOgp(url: string | null | undefined): OgCardData | undefined {
