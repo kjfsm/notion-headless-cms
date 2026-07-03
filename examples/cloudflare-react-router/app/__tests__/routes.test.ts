@@ -40,8 +40,13 @@ const PARAGRAPH_BLOCK = {
   },
 };
 
+// v8_middleware 有効時、loader/action の context は RouterContextProvider に
+// なるため、テストでも context.get() を持つフェイクで代替する。
 const fakeContext = {
-  cloudflare: { env: { NOTION_TOKEN: "test-token" }, ctx: { waitUntil() {} } },
+  get: () => ({
+    env: { NOTION_TOKEN: "test-token" },
+    ctx: { waitUntil() {} },
+  }),
 };
 
 describe("home loader()", () => {

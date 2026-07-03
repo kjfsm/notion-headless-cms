@@ -1,4 +1,5 @@
 import { ensureSynced, makeCms } from "../lib/cms";
+import { cloudflareContext } from "../lib/context";
 import type { Route } from "./+types/warm";
 
 /**
@@ -6,7 +7,8 @@ import type { Route } from "./+types/warm";
  * cold isolate に対して今すぐ全件同期を完了させたい場合にこのエンドポイントを叩く。
  */
 export async function action({ context }: Route.ActionArgs) {
-  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
+  const { env, ctx } = context.get(cloudflareContext);
+  const cms = makeCms(env, ctx);
   await ensureSynced(cms);
   const state = await cms.sync.getState();
   return Response.json({ state });

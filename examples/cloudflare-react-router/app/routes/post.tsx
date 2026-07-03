@@ -6,6 +6,7 @@ import {
 } from "@notion-headless-cms/react-renderer/v3";
 import { data, isRouteErrorResponse } from "react-router";
 import { ensureSynced, makeCms } from "../lib/cms";
+import { cloudflareContext } from "../lib/context";
 import type { Route } from "./+types/post";
 
 type SerializedError = {
@@ -29,7 +30,8 @@ function serializeError(err: unknown, depth = 0): SerializedError {
 
 export async function loader({ params, context }: Route.LoaderArgs) {
   try {
-    const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
+    const { env, ctx } = context.get(cloudflareContext);
+    const cms = makeCms(env, ctx);
     await ensureSynced(cms);
     const post = await cms.posts.find(params.slug ?? "");
     if (!post) throw data("Not Found", { status: 404 });

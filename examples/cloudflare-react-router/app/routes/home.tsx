@@ -1,10 +1,12 @@
 import { useNotionRevalidate } from "@notion-headless-cms/react-renderer/router";
 import { Link } from "react-router";
 import { ensureSynced, makeCms } from "../lib/cms";
+import { cloudflareContext } from "../lib/context";
 import type { Route } from "./+types/home";
 
 export async function loader({ context }: Route.LoaderArgs) {
-  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
+  const { env, ctx } = context.get(cloudflareContext);
+  const cms = makeCms(env, ctx);
   await ensureSynced(cms);
   const { items } = await cms.posts.list();
   return { items };
