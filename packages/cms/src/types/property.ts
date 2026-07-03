@@ -212,6 +212,9 @@ export type InferPropValue<D extends PropDef> = D extends TitlePropDef
  *   tags: prop.multiSelect(),
  *   // スキーマキーが実際のNotionプロパティ名と異なる場合は明示する
  *   name: prop.title("名前"),
+ *   // select/multiSelect は options が先頭の任意引数なので、
+ *   // options を省略して notion だけ渡す場合は undefined を明示する
+ *   author: prop.select(undefined, "著者"),
  * }
  */
 export const prop = {

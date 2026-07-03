@@ -76,7 +76,7 @@ describe("post loader()", () => {
       collection: "posts",
       slug: "hello",
       version: "v1",
-      meta: { 名前: "Hello", 公開日: "2024-01-01" },
+      meta: { title: "Hello", publishedAt: "2024-01-01" },
       blocks: [PARAGRAPH_BLOCK],
       images: {},
       links: {},
