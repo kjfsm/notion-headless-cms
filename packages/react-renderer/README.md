@@ -207,6 +207,29 @@ import { MermaidCode } from "@notion-headless-cms/react-renderer/mermaid";
 > **prose は併用しない**。各ブロックは余白・サイズを自前で当てているため、
 > `@tailwindcss/typography` の `prose` を被せると二重適用で崩れる。
 
+## v3 との統合（`./v3` サブパス）
+
+[`@notion-headless-cms/v3`](../v3)（#437 ゼロベース再設計）の `find()` は正規化済みブロック（`NormalizedBlock[]`、完全に JSON 互換）を返す。`react-renderer/v3` サブパスの変換関数を通せば、既存のブロックコンポーネント約 30 種を無改修のまま再利用できる。
+
+```tsx
+import { NotionRenderer } from "@notion-headless-cms/react-renderer";
+import { denormalizeBlocks, toPageLinkMap } from "@notion-headless-cms/react-renderer/v3";
+
+const post = await cms.posts.find(slug);
+if (!post) return null;
+
+return (
+  <NotionRenderer
+    blocks={denormalizeBlocks(post.blocks)}
+    pageLinks={toPageLinkMap(post.links)}
+  />
+);
+```
+
+- `denormalizeBlocks(blocks)` — v3 の `NormalizedBlock[]` を既存コンポーネントが期待する `NotionBlock[]`（`BlockObjectResponse` 形状）へ変換する
+- `toPageLinkMap(links)` — v3 の `EntrySnapshot.links` を `NotionRenderer` の `pageLinks` プロップ形式に変換する（v2 の `buildPageLinkMap(cms)` 手動呼び出しが不要になる）
+- `Code` / `Equation` / `InlineEquation` / `Bookmark` / `LinkPreview` は、v3 側で事前レンダーされた `__cachedHtml` があればそれを優先描画し、無ければ従来通りクライアント側で shiki/katex を動的 import する
+
 ## Notion 更新の表示反映 (`/router`, `/next`)
 
 Notion のページを編集したあと、開いている画面を**静かに最新化**するためのフックとコンポーネント。クエリ無し・別 API への fetch 無しで、フレームワーク本来の再評価機構（loader / RSC）だけを使う。

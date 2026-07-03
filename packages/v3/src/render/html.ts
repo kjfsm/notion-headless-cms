@@ -190,7 +190,7 @@ function renderMediaBlock(
       renderEmbedIframe(url, allowedEmbedHosts) ?? renderOgpShell(url, "embed");
     return `<div class="nhc-video">${iframe}${caption}</div>`;
   }
-  return `<div class="nhc-video"><video class="nhc-video__player" src="${escapeHtml(url)}" controls></video>${caption}</div>`;
+  return `<div class="nhc-video"><video class="nhc-video__player" src="${escapeHtml(sanitizeHref(url))}" controls></video>${caption}</div>`;
 }
 
 /**

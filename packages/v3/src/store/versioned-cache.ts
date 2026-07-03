@@ -43,11 +43,20 @@ export function createVersionedCacheLayer(
   return {
     async get(collection, slug, version) {
       if (!opts.cache) return undefined;
-      return opts.cache.match(versionedKey(collection, slug, version));
+      try {
+        return await opts.cache.match(versionedKey(collection, slug, version));
+      } catch {
+        // Cache API 例外時も読者パスは KV+R2 直読みで成立するため、この層は無視して透過させる。
+        return undefined;
+      }
     },
     async put(collection, slug, version, response) {
       if (!opts.cache) return;
-      await opts.cache.put(versionedKey(collection, slug, version), response);
+      try {
+        await opts.cache.put(versionedKey(collection, slug, version), response);
+      } catch {
+        // 加速層への書き込み失敗は読者パスに影響しないため無視する。
+      }
     },
   };
 }

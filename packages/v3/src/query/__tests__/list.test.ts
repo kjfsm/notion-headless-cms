@@ -71,6 +71,14 @@ describe("listEntries", () => {
     expect(page3.nextCursor).toBeNull();
   });
 
+  it("limit に負数を渡しても 0 件クランプで安全に扱う(cursor 同様の符号サニタイズ)", async () => {
+    const store = createIndexStore(memoryDocStore());
+    await store.upsertEntry("posts", entry("a", true));
+    const result = await listEntries(store, "posts", { limit: -5 });
+    expect(result.items).toEqual([]);
+    expect(result.hasMore).toBe(true);
+  });
+
   it("空コレクションは空配列を返す", async () => {
     const store = createIndexStore(memoryDocStore());
     const result = await listEntries(store, "posts", {});
