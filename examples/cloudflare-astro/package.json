@@ -25,14 +25,14 @@
     "@notion-headless-cms/notion-orm": "workspace:*",
     "@notion-headless-cms/notion-shiki": "workspace:*",
     "@notion-headless-cms/notion-source": "workspace:*",
-    "astro": "^6.3.4",
+    "astro": "^7.0.6",
     "katex": "catalog:",
     "shiki": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
-    "@astrojs/cloudflare": "^13.5.2",
+    "@astrojs/cloudflare": "^14.1.1",
     "@notion-headless-cms/cli": "workspace:*",
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",
