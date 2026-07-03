@@ -5,6 +5,8 @@ const fakeCms = {
     list: vi.fn(),
     find: vi.fn(),
   },
+  sync: { kick: vi.fn().mockResolvedValue(undefined) },
+  fetch: vi.fn().mockResolvedValue(new Response("{}", { status: 200 })),
 };
 
 vi.mock("../lib/cms.js", () => ({
@@ -22,13 +24,25 @@ const fakeCtx = {
   props: {},
 } as unknown as ExecutionContext;
 
+const PARAGRAPH_BLOCK = {
+  id: "b1",
+  type: "paragraph",
+  data: {
+    rich_text: [
+      { type: "text", plain_text: "内容", annotations: {}, href: null },
+    ],
+  },
+};
+
 describe("GET /posts", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("ページリストを返す", async () => {
-    fakeCms.posts.list.mockResolvedValue([
-      { slug: "hello", title: "Hello World" },
-    ]);
+    fakeCms.posts.list.mockResolvedValue({
+      items: [{ slug: "hello", version: "v1", listed: true, meta: {} }],
+      nextCursor: null,
+      hasMore: false,
+    });
     const res = await app.request("/posts", {}, fakeEnv, fakeCtx);
     expect(res.status).toBe(200);
     const body = (await res.json()) as { items: { slug: string }[] };
@@ -42,9 +56,18 @@ describe("GET /posts/:slug", () => {
 
   it("ページ詳細と HTML を返す", async () => {
     fakeCms.posts.find.mockResolvedValue({
-      id: "id-1",
+      collection: "posts",
       slug: "hello",
-      html: vi.fn().mockResolvedValue("<p>内容</p>"),
+      version: "v1",
+      meta: {
+        id: "id-1",
+        slug: "hello",
+        lastEditedTime: "v1",
+        status: "公開済み",
+      },
+      blocks: [PARAGRAPH_BLOCK],
+      images: {},
+      links: {},
     });
     const res = await app.request("/posts/hello", {}, fakeEnv, fakeCtx);
     expect(res.status).toBe(200);
@@ -57,5 +80,20 @@ describe("GET /posts/:slug", () => {
     fakeCms.posts.find.mockResolvedValue(null);
     const res = await app.request("/posts/not-found", {}, fakeEnv, fakeCtx);
     expect(res.status).toBe(404);
+  });
+});
+
+describe("POST /api/sync/kick", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("cms.sync.kick を呼ぶ", async () => {
+    const res = await app.request(
+      "/api/sync/kick",
+      { method: "POST" },
+      fakeEnv,
+      fakeCtx,
+    );
+    expect(res.status).toBe(200);
+    expect(fakeCms.sync.kick).toHaveBeenCalledTimes(1);
   });
 });

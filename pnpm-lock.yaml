@@ -294,7 +294,7 @@ importers:
         version: 0.9.9(prettier@3.8.4)(typescript@6.0.3)
       '@astrojs/cloudflare':
         specifier: ^13.5.2
-        version: 13.7.0(@types/node@25.9.3)(astro@6.4.6(@types/node@25.9.3)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.62.0)(tsx@4.22.4)(yaml@2.9.0))(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(workerd@1.20260611.1)(wrangler@4.100.0(@cloudflare/workers-types@4.20260615.1))(yaml@2.9.0)
+        version: 13.7.0(@types/node@25.9.3)(astro@6.4.6(@types/node@25.9.3)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.62.0)(tsx@4.22.4)(yaml@2.9.0))(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(wrangler@4.100.0(@cloudflare/workers-types@4.20260615.1))(yaml@2.9.0)
       '@notion-headless-cms/cli':
         specifier: workspace:*
         version: link:../../packages/cli
@@ -319,40 +319,19 @@ importers:
 
   examples/cloudflare-hono:
     dependencies:
-      '@notion-headless-cms/client':
+      '@notion-headless-cms/cms':
         specifier: workspace:*
-        version: link:../../packages/client
-      '@notion-headless-cms/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@notion-headless-cms/fetch-markdown':
-        specifier: workspace:*
-        version: link:../../packages/fetch-markdown
-      '@notion-headless-cms/notion-orm':
-        specifier: workspace:*
-        version: link:../../packages/notion-orm
-      '@notion-headless-cms/notion-source':
-        specifier: workspace:*
-        version: link:../../packages/notion-source
+        version: link:../../packages/cms
       hono:
         specifier: 'catalog:'
         version: 4.12.25
-      zod:
-        specifier: 'catalog:'
-        version: 4.4.3
     devDependencies:
-      '@notion-headless-cms/cli':
-        specifier: workspace:*
-        version: link:../../packages/cli
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.60.0
       '@types/node':
         specifier: 'catalog:'
         version: 25.9.3
-      dotenv:
-        specifier: 'catalog:'
-        version: 17.4.2
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -7660,11 +7639,11 @@ snapshots:
       - prettier
       - prettier-plugin-astro
 
-  '@astrojs/cloudflare@13.7.0(@types/node@25.9.3)(astro@6.4.6(@types/node@25.9.3)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.62.0)(tsx@4.22.4)(yaml@2.9.0))(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(workerd@1.20260611.1)(wrangler@4.100.0(@cloudflare/workers-types@4.20260615.1))(yaml@2.9.0)':
+  '@astrojs/cloudflare@13.7.0(@types/node@25.9.3)(astro@6.4.6(@types/node@25.9.3)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.62.0)(tsx@4.22.4)(yaml@2.9.0))(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(wrangler@4.100.0(@cloudflare/workers-types@4.20260615.1))(yaml@2.9.0)':
     dependencies:
       '@astrojs/internal-helpers': 0.10.0
       '@astrojs/underscore-redirects': 1.0.3
-      '@cloudflare/vite-plugin': 1.40.2(vite@7.3.5(@types/node@25.9.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))(workerd@1.20260611.1)(wrangler@4.100.0(@cloudflare/workers-types@4.20260615.1))
+      '@cloudflare/vite-plugin': 1.40.2(vite@7.3.5(@types/node@25.9.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))(wrangler@4.100.0(@cloudflare/workers-types@4.20260615.1))
       astro: 6.4.6(@types/node@25.9.3)(jiti@2.7.0)(lightningcss@1.32.0)(rollup@4.62.0)(tsx@4.22.4)(yaml@2.9.0)
       piccolore: 0.1.3
       tinyglobby: 0.2.17
@@ -8186,7 +8165,7 @@ snapshots:
     optionalDependencies:
       workerd: 1.20260611.1
 
-  '@cloudflare/vite-plugin@1.40.2(vite@7.3.5(@types/node@25.9.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))(workerd@1.20260611.1)(wrangler@4.100.0(@cloudflare/workers-types@4.20260615.1))':
+  '@cloudflare/vite-plugin@1.40.2(vite@7.3.5(@types/node@25.9.3)(jiti@2.7.0)(lightningcss@1.32.0)(tsx@4.22.4)(yaml@2.9.0))(wrangler@4.100.0(@cloudflare/workers-types@4.20260615.1))':
     dependencies:
       '@cloudflare/unenv-preset': 2.16.1(unenv@2.0.0-rc.24)(workerd@1.20260611.1)
       miniflare: 4.20260611.0
