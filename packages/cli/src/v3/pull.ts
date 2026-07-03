@@ -1,15 +1,5 @@
 import type { DataSourceObjectResponse } from "../notion-client.js";
-
-/** Notion プロパティ名 → TypeScript camelCase 識別子。 */
-function toTsIdentifier(name: string): string {
-  const normalized = name
-    .replace(/[\s-]+(.)/g, (_, c: string) => c.toUpperCase())
-    .replace(/[^a-zA-Z0-9_]/g, "");
-  if (!normalized) return "unnamed";
-  const withLowerFirst =
-    normalized.charAt(0).toLowerCase() + normalized.slice(1);
-  return /^[0-9]/.test(withLowerFirst) ? `_${withLowerFirst}` : withLowerFirst;
-}
+import { assignIdentifiers } from "./identifier.js";
 
 type NotionProperty = DataSourceObjectResponse["properties"][string];
 
@@ -90,13 +80,19 @@ export function generateCollectionScaffold(
   opts: PullOptions,
 ): string {
   const lines: string[] = [];
+  const identifiers = assignIdentifiers(dataSource.properties);
   const titleKey = Object.entries(dataSource.properties).find(
     ([, p]) => p.type === "title",
   )?.[0];
 
   for (const [name, prop] of Object.entries(dataSource.properties)) {
-    const identifier = toTsIdentifier(name);
+    const assigned = identifiers.get(name);
+    if (!assigned) continue;
+    const { identifier, usedFallback } = assigned;
     const { call, comment } = propCallFor(prop);
+    if (usedFallback) {
+      lines.push(`  /** 元のプロパティ名: ${JSON.stringify(name)} */`);
+    }
     if (!call) {
       lines.push(`  // ${identifier}: ${comment}`);
       continue;
@@ -105,7 +101,8 @@ export function generateCollectionScaffold(
     lines.push(`  ${identifier}: ${call},`);
   }
 
-  const slugKey = titleKey ? toTsIdentifier(titleKey) : "title";
+  const slugKey =
+    (titleKey && identifiers.get(titleKey)?.identifier) || "title";
 
   return `import { defineCollection, prop } from "@notion-headless-cms/cms";
 

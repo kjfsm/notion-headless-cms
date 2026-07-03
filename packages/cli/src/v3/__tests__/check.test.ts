@@ -101,4 +101,23 @@ describe("diffSchema", () => {
     };
     expect(diffSchema(dataSource, properties).hasDrift).toBe(false);
   });
+
+  it("日本語のみのプロパティ名は nhc pull と同じフォールバック識別子で照合する(衝突回避後の識別子と一致)", () => {
+    const dataSource = makeDataSource({
+      タイトル: makeProp("title"),
+      ステータス: makeProp("status", {
+        status: { options: [{ name: "draft" }, { name: "published" }] },
+      }),
+      公開状態: makeProp("status", {
+        status: { options: [{ name: "yes" }, { name: "no" }] },
+      }),
+    });
+    // nhc pull が生成する識別子(unnamedTitle/unnamedStatus/unnamedStatus2)と同じキーで定義した場合、drift なし
+    const properties: PropertyMap = {
+      unnamedTitle: prop.title(),
+      unnamedStatus: prop.status(["draft", "published"] as const),
+      unnamedStatus2: prop.status(["yes", "no"] as const),
+    };
+    expect(diffSchema(dataSource, properties).hasDrift).toBe(false);
+  });
 });

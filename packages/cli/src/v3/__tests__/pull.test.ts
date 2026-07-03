@@ -105,7 +105,7 @@ describe("generateCollectionScaffold", () => {
     expect(code).not.toContain("email: prop.email()");
   });
 
-  it("日本語プロパティ名は camelCase 識別子に変換する", () => {
+  it("日本語のみのプロパティ名はプロパティ種別ベースの識別子にフォールバックする(衝突しない)", () => {
     const dataSource = makeDataSource({
       タイトル: makeProp("title"),
       本文: makeProp("rich_text"),
@@ -114,8 +114,42 @@ describe("generateCollectionScaffold", () => {
       collectionName: "posts",
       dataSourceId: "ds1",
     });
-    // 日本語は識別子から除去されるため "unnamed" にフォールバックする(2件あるので同名衝突の可能性はテスト対象外)。
-    expect(code).toContain("prop.title()");
-    expect(code).toContain("prop.richText()");
+    expect(code).toContain("unnamedTitle: prop.title(),");
+    expect(code).toContain("unnamedRichText: prop.richText(),");
+    expect(code).toContain('/** 元のプロパティ名: "タイトル" */');
+    expect(code).toContain('/** 元のプロパティ名: "本文" */');
+  });
+
+  it("同じ種別の日本語プロパティ名が複数あっても連番で衝突を避ける", () => {
+    const dataSource = makeDataSource({
+      ステータス: makeProp("status", {
+        status: { options: [{ name: "draft" }] },
+      }),
+      公開状態: makeProp("status", {
+        status: { options: [{ name: "published" }] },
+      }),
+    });
+    const code = generateCollectionScaffold(dataSource, {
+      collectionName: "posts",
+      dataSourceId: "ds1",
+    });
+    expect(code).toContain("unnamedStatus:");
+    expect(code).toContain("unnamedStatus2:");
+    // 2つの識別子が別物であることを確認する(衝突していない)
+    expect(code.match(/unnamedStatus2:/g)).toHaveLength(1);
+    expect(code.match(/unnamedStatus:/g)).toHaveLength(1);
+  });
+
+  it("英数字の名前とプロパティ種別ベースの識別子は独立してカウントする", () => {
+    const dataSource = makeDataSource({
+      名前: makeProp("title"),
+      Title: makeProp("title"),
+    });
+    const code = generateCollectionScaffold(dataSource, {
+      collectionName: "posts",
+      dataSourceId: "ds1",
+    });
+    expect(code).toContain("unnamedTitle: prop.title(),");
+    expect(code).toContain("title: prop.title(),");
   });
 });
