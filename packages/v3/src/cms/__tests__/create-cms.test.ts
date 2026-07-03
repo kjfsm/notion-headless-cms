@@ -199,6 +199,24 @@ describe("createCMS", () => {
     );
   });
 
+  it('"stats" はトップレベル API と衝突しないため予約名扱いしない(sync.stats() の内側にネストされるだけ)', () => {
+    const okSchema = defineSchema({
+      stats: defineCollection({
+        dataSourceId: "ds",
+        slug: "slug",
+        properties: { slug: prop.richText() },
+      }),
+    });
+    expect(() =>
+      createCMS({
+        schema: okSchema,
+        notion: { client: makeFakeClient({}) },
+        stores: makeStores(),
+        scheduler: createNodeSyncScheduler(),
+      }),
+    ).not.toThrow();
+  });
+
   it('コレクション名に ":" を含む場合は CMSError(schema/reserved_collection_name) を投げる', () => {
     const badSchema = defineSchema({
       "a:b": defineCollection({

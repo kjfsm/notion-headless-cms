@@ -37,7 +37,7 @@ import type { EntrySnapshot } from "../types/entry-snapshot.js";
 import type { JsonValue } from "../types/json-value.js";
 import type { ListParams, ListResult } from "../types/query.js";
 
-const RESERVED_KEYS = ["sync", "fetch", "scheduled", "stats"] as const;
+const RESERVED_KEYS = ["sync", "fetch", "scheduled"] as const;
 
 export interface CreateCMSNotionOptions {
   /** テスト・DO 内で共有インスタンスを注入する場合はこちら。指定時は `token` は無視される。 */

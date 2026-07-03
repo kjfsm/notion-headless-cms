@@ -1,3 +1,4 @@
+import { CMSError } from "../errors.js";
 import type { EntryChange, SyncCoordinatorDeps } from "./coordinator.js";
 import type { CollectionDriver } from "./notion-driver.js";
 
@@ -64,7 +65,11 @@ export function createMultiSourceDeps(
   function driverFor(collection: string): CollectionDriver {
     const driver = opts.drivers[collection];
     if (!driver) {
-      throw new Error(`unknown collection in multi-source deps: ${collection}`);
+      throw new CMSError({
+        code: "sync/unknown_collection",
+        message: `unknown collection in multi-source deps: ${collection}`,
+        context: { operation: "multiSourceDeps", collection },
+      });
     }
     return driver;
   }

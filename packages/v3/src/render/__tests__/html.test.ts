@@ -456,6 +456,21 @@ describe("renderBlocksToHtml", () => {
     expect(renderBlocksToHtml(blocks)).toContain("<video");
   });
 
+  it("video(Notionホストファイル)の href が javascript: スキームなら # にフォールバックする(XSS対策)", () => {
+    const blocks: NormalizedBlock[] = [
+      {
+        id: "v2",
+        type: "video",
+        data: {
+          type: "file",
+          file: { url: "javascript:alert(1)" },
+        },
+      },
+    ];
+    const html = renderBlocksToHtml(blocks);
+    expect(html).toContain('src="#"');
+  });
+
   it("audio は <audio> タグになる", () => {
     const blocks: NormalizedBlock[] = [
       {

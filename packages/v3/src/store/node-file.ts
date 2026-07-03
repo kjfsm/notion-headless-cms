@@ -3,8 +3,9 @@ import { dirname, join } from "node:path";
 import type { BlobHead, BlobPutOptions, BlobStore, DocStore } from "./types.js";
 
 function keyToPath(root: string, key: string): string {
-  // key はコロン区切り(`index:posts:0` 等)を想定。ファイルシステム安全な形に変換する。
-  return join(root, `${key.replace(/[:/]/g, "__")}.dat`);
+  // encodeURIComponent は `:` `/` を可逆的に区別してエスケープするため、
+  // list() 側の decodeURIComponent で元の key に一意に復元できる。
+  return join(root, `${encodeURIComponent(key)}.dat`);
 }
 
 /** Node ランタイム向けファイル永続化 `DocStore`(CI ローカルキャッシュ・オフライン開発用)。 */
@@ -26,7 +27,7 @@ export function fileDocStore(root: string): DocStore {
       try {
         const files = await readdir(root);
         return files
-          .map((f) => f.replace(/\.dat$/, "").replace(/__/g, ":"))
+          .map((f) => decodeURIComponent(f.replace(/\.dat$/, "")))
           .filter((k) => k.startsWith(prefix));
       } catch {
         return [];

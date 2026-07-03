@@ -162,6 +162,36 @@ export const schema = {
 } as const satisfies SchemaMap;
 ```
 
+## `nhc pull` / `nhc check`（v3, #437）
+
+v3（`@notion-headless-cms/v3` の `defineCollection`/`defineSchema`）は codegen ではなく TS ファーストでスキーマを書く。`nhc pull`/`nhc check` は `nhc.config.ts` の `v3` セクションを読み、Notion DB の introspect 結果と TS スキーマを橋渡しする補助コマンド。
+
+```ts
+// nhc.config.ts（既存の v2 設定に v3 セクションを追加できる）
+export default defineConfig({
+  notionToken: env("NOTION_TOKEN"),
+  output: "src/generated/nhc.ts",
+  collections: {},
+  v3: {
+    schemaModule: "src/schema.ts", // nhc check が読む、ユーザーが書いた TS スキーマ
+    scaffoldDir: "src/collections", // nhc pull の出力先。既定 "src/collections"
+    collections: {
+      posts: { dbName: "ブログ記事DB" }, // または { databaseId: "..." }
+    },
+  },
+});
+```
+
+- `nhc pull` — `v3.collections` の各 DB を introspect し、`defineCollection` の雛形 TS コードを `v3.scaffoldDir` に出力する。既存ファイルは上書きしない（生成物の所有権はユーザーに移る）
+- `nhc check` — `v3.schemaModule` のスキーマと実 Notion DB との drift（プロパティ追加・削除・型変更・options 変更）を検証する。drift があれば非ゼロ終了する（CI 向け）。`--json` で機械可読な出力も可能
+
+```bash
+npx nhc pull
+npx nhc check --json
+```
+
+詳細は [`docs/ja/cli.md`](../../docs/ja/cli.md) を参照。
+
 ## エラーコード
 
 CLI が throw するエラーは `CMSError` の `cli/*` 名前空間で分類される:
