@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 import { isCMSError } from "@notion-headless-cms/core";
 import { Command } from "commander";
+import { runCheck } from "./commands/check.js";
 import { runGenerate } from "./commands/generate.js";
 import { runInit } from "./commands/init.js";
+import { runPull } from "./commands/pull.js";
 
 const COMMON_PITFALLS = `
 よくある詰まり所:
@@ -99,5 +101,56 @@ program
   )
   .addHelpText("after", COMMON_PITFALLS)
   .action(run(runGenerate));
+
+program
+  .command("pull")
+  .description(
+    "nhc.config.ts の v3.collections を introspect し、defineCollection の雛形コードを生成します(#437)",
+  )
+  .option("-c, --config <path>", "設定ファイルのパス", "nhc.config.ts")
+  .option(
+    "-t, --token <token>",
+    "Notion API トークン（省略時は NOTION_TOKEN 環境変数を使用）",
+  )
+  .option(
+    "-e, --env-file <path>",
+    "環境変数ファイルのパス（例: .dev.vars, .env.local）",
+  )
+  .option(
+    "--scaffold-dir <path>",
+    "雛形の出力先ディレクトリ（既定: v3.scaffoldDir または src/collections）",
+  )
+  .option("-s, --silent", "ログ出力を抑制する")
+  .option("-v, --verbose", "詳細ログを出力する")
+  .option(
+    "--debug",
+    "スタックトレースを含む最大詳細ログを出力する (失敗時のみ意味あり)",
+  )
+  .addHelpText("after", COMMON_PITFALLS)
+  .action(run(runPull));
+
+program
+  .command("check")
+  .description(
+    "nhc.config.ts の v3.schemaModule と実 Notion DB の差分(drift)を検証します。CI 向け(#437)",
+  )
+  .option("-c, --config <path>", "設定ファイルのパス", "nhc.config.ts")
+  .option(
+    "-t, --token <token>",
+    "Notion API トークン（省略時は NOTION_TOKEN 環境変数を使用）",
+  )
+  .option(
+    "-e, --env-file <path>",
+    "環境変数ファイルのパス（例: .dev.vars, .env.local）",
+  )
+  .option("--json", "機械可読な JSON で結果を出力する")
+  .option("-s, --silent", "ログ出力を抑制する")
+  .option("-v, --verbose", "詳細ログを出力する")
+  .option(
+    "--debug",
+    "スタックトレースを含む最大詳細ログを出力する (失敗時のみ意味あり)",
+  )
+  .addHelpText("after", COMMON_PITFALLS)
+  .action(run(runCheck));
 
 program.parse();

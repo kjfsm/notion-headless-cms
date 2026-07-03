@@ -8,6 +8,7 @@ export interface HttpHandlerOptions {
   readonly webhookPath?: string;
   readonly realtimePath?: string;
   readonly previewPath?: string;
+  readonly ogpPath?: string;
 }
 
 const DEFAULTS = {
@@ -15,6 +16,7 @@ const DEFAULTS = {
   webhookPath: "/webhook",
   realtimePath: "/realtime",
   previewPath: "/preview",
+  ogpPath: "/ogp",
 } as const;
 
 export interface HttpHandlerAdapter {
@@ -29,6 +31,11 @@ export interface HttpHandlerAdapter {
   onRealtimeUpgrade?(request: Request): Promise<Response> | Response;
   /** 署名付きプレビューの委譲先(#444 で実装)。 */
   onPreview?(request: Request, rel: string): Promise<Response> | Response;
+  /**
+   * OGP エンドポイント(`GET {routes}/ogp?url=...`)の委譲先。
+   * `createOgpHandler()` の戻り値をそのまま渡す想定（ページアクセス時に fetch する）。
+   */
+  onOgp?(request: Request): Promise<Response> | Response;
   /** レスポンス送信後もバックグラウンド処理を完走させるフック(Workers の `waitUntil` 相当)。 */
   waitUntil?(p: Promise<unknown>): void;
 }
@@ -59,6 +66,7 @@ export function createFetchHandler(
   const webhookPath = opts.webhookPath ?? DEFAULTS.webhookPath;
   const realtimePath = opts.realtimePath ?? DEFAULTS.realtimePath;
   const previewPath = opts.previewPath ?? DEFAULTS.previewPath;
+  const ogpPath = opts.ogpPath ?? DEFAULTS.ogpPath;
 
   return async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
@@ -88,6 +96,11 @@ export function createFetchHandler(
     if (rel.startsWith(`${previewPath}/`)) {
       if (adapter.onPreview)
         return adapter.onPreview(request, rel.slice(previewPath.length + 1));
+      return new Response("Not Found", { status: 404 });
+    }
+
+    if (request.method === "GET" && rel === ogpPath) {
+      if (adapter.onOgp) return adapter.onOgp(request);
       return new Response("Not Found", { status: 404 });
     }
 

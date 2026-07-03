@@ -165,8 +165,11 @@ export interface ComponentOverrides {
     BlockComponentProps<MeetingNotesBlockObjectResponse>
   >;
   Unsupported?: ComponentType<BlockComponentProps>;
-  /** rich_text 内のインライン equation (`$...$`) を描画する slot。既定は lazy KaTeX。 */
-  InlineEquation?: ComponentType<{ expression: string }>;
+  /**
+   * rich_text 内のインライン equation (`$...$`) を描画する slot。既定は lazy KaTeX。
+   * `cachedHtml` は同期時に事前組版された HTML（あれば優先描画する）。
+   */
+  InlineEquation?: ComponentType<{ expression: string; cachedHtml?: string }>;
 }
 
 /**
@@ -214,4 +217,10 @@ export interface NotionRendererProps {
   imageSizes?: readonly number[];
   /** `<img sizes="...">` 属性。`imageSizes` と組み合わせて使う。 */
   imageSizesAttr?: string;
+  /**
+   * OGP カード（bookmark/embed/link_preview）をページアクセス時にクライアントで取得する
+   * エンドポイント（`@notion-headless-cms/v3` の `createOgpHandler()` が処理する URL）。
+   * 指定すると `block.ogp` 未付与時に `useOgp` が `{ogpEndpoint}?url=...` を fetch する。
+   */
+  ogpEndpoint?: string;
 }

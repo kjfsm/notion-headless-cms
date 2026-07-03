@@ -172,6 +172,24 @@ describe("createFetchHandler", () => {
     expect(waitUntil).toHaveBeenCalledTimes(1);
   });
 
+  it("ogp は onOgp に委譲する", async () => {
+    const onOgp = vi.fn().mockResolvedValue(new Response("ogp ok"));
+    const handler = createFetchHandler(makeAdapter({ onOgp }), {
+      routes: ROUTES,
+    });
+    const res = await handler(
+      new Request(`https://x${ROUTES}/ogp?url=https://example.com`),
+    );
+    expect(await res.text()).toBe("ogp ok");
+    expect(onOgp).toHaveBeenCalledWith(expect.any(Request));
+  });
+
+  it("onOgp 未設定なら ogp は 404", async () => {
+    const handler = createFetchHandler(makeAdapter(), { routes: ROUTES });
+    const res = await handler(new Request(`https://x${ROUTES}/ogp?url=x`));
+    expect(res.status).toBe(404);
+  });
+
   it("page entity を含まない webhook はスキップする", async () => {
     const secret = "s3cr3t";
     const body = JSON.stringify({ entity: { type: "database", id: "db-1" } });

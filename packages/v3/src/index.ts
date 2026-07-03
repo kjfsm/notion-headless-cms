@@ -1,3 +1,4 @@
+export * from "./cms/index.js";
 export type {
   BuiltInCMSErrorCode,
   CMSErrorCode,
@@ -24,6 +25,7 @@ export * from "./render/index.js";
 export * from "./store/index.js";
 export * from "./sync/index.js";
 export type { SyncScheduler } from "./sync-scheduler.js";
+export * from "./transforms/index.js";
 export type {
   CollectionConfig,
   CollectionDef,

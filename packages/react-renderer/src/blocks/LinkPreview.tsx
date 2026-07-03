@@ -10,6 +10,7 @@ import {
 } from "../components/ui/hover-card.js";
 import { useNotionContext } from "../context";
 import { OgCard, type OgCardData } from "../embeds/OgCard";
+import { useOgp } from "../embeds/useOgp.js";
 import { cn } from "../lib/utils";
 import type { BlockComponentProps } from "../types";
 
@@ -17,13 +18,20 @@ type LinkPreviewBlockMaybeWithOgp = LinkPreviewBlockObjectResponse & {
   ogp?: OgCardData;
 };
 
+/**
+ * link_preview ブロックの既定描画。`block.ogp`（同期時付与）優先、無ければ `useOgp`
+ * がページアクセス時にクライアントから取得する。それも無ければリンクのみの
+ * HoverCard にフォールバックする。
+ */
 export function LinkPreview({
   block,
   className,
 }: BlockComponentProps<LinkPreviewBlockObjectResponse>) {
   const { Link: LinkSlot } = useNotionContext();
   const url = block.link_preview.url;
-  const ogp = (block as LinkPreviewBlockMaybeWithOgp).ogp;
+  const preloadedOgp = (block as LinkPreviewBlockMaybeWithOgp).ogp;
+  const fetchedOgp = useOgp(preloadedOgp ? null : url);
+  const ogp = preloadedOgp ?? fetchedOgp;
 
   if (ogp) {
     return (
