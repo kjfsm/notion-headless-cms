@@ -15,6 +15,7 @@ export type {
   ImageVariantResult,
 } from "./image-pipeline.js";
 export * from "./pipeline/index.js";
+export * from "./query/index.js";
 export type { RealtimeAdapter, RealtimePayload } from "./realtime.js";
 export * from "./store/index.js";
 export * from "./sync/index.js";
