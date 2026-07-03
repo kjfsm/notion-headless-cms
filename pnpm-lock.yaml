@@ -555,30 +555,9 @@ importers:
 
   examples/vercel-nextjs:
     dependencies:
-      '@notion-headless-cms/block-html':
+      '@notion-headless-cms/cms':
         specifier: workspace:*
-        version: link:../../packages/block-html
-      '@notion-headless-cms/cache':
-        specifier: workspace:*
-        version: link:../../packages/cache
-      '@notion-headless-cms/client':
-        specifier: workspace:*
-        version: link:../../packages/client
-      '@notion-headless-cms/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@notion-headless-cms/fetch-markdown':
-        specifier: workspace:*
-        version: link:../../packages/fetch-markdown
-      '@notion-headless-cms/notion-orm':
-        specifier: workspace:*
-        version: link:../../packages/notion-orm
-      '@notion-headless-cms/notion-shiki':
-        specifier: workspace:*
-        version: link:../../packages/notion-shiki
-      '@notion-headless-cms/notion-source':
-        specifier: workspace:*
-        version: link:../../packages/notion-source
+        version: link:../../packages/cms
       '@notion-headless-cms/react-renderer':
         specifier: workspace:*
         version: link:../../packages/react-renderer
@@ -600,13 +579,7 @@ importers:
       shiki:
         specifier: 'catalog:'
         version: 4.2.0
-      zod:
-        specifier: 'catalog:'
-        version: 4.4.3
     devDependencies:
-      '@notion-headless-cms/cli':
-        specifier: workspace:*
-        version: link:../../packages/cli
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.60.0
@@ -622,9 +595,6 @@ importers:
       '@types/react-dom':
         specifier: 'catalog:'
         version: 19.2.3(@types/react@19.2.17)
-      dotenv:
-        specifier: 'catalog:'
-        version: 17.4.2
       tailwindcss:
         specifier: 'catalog:'
         version: 4.3.1
