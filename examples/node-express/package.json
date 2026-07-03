@@ -7,7 +7,6 @@
     "dev": "tsx watch src/index.ts",
     "start": "node --env-file-if-exists=.env dist/index.js",
     "build": "tsc",
-    "generate": "nhc generate",
     "seed": "tsx scripts/seed-test-page.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
@@ -15,17 +14,10 @@
     "test:e2e": "PLAYWRIGHT_HTML_OPEN=never playwright test e2e/navigation.spec.ts"
   },
   "dependencies": {
-    "@notion-headless-cms/block-html": "workspace:*",
-    "@notion-headless-cms/client": "workspace:*",
-    "@notion-headless-cms/core": "workspace:*",
-    "@notion-headless-cms/fetch-markdown": "workspace:*",
-    "@notion-headless-cms/notion-orm": "workspace:*",
-    "@notion-headless-cms/notion-source": "workspace:*",
-    "express": "^5.2.1",
-    "zod": "catalog:"
+    "@notion-headless-cms/cms": "workspace:*",
+    "express": "^5.2.1"
   },
   "devDependencies": {
-    "@notion-headless-cms/cli": "workspace:*",
     "@notionhq/client": "catalog:",
     "@playwright/test": "catalog:",
     "@types/express": "^5.0.6",

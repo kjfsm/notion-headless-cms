@@ -22,7 +22,9 @@ import "dotenv/config";
 
 import { createHash } from "node:crypto";
 import { Client } from "@notionhq/client";
-import { postsDataSourceId } from "../src/generated/nhc.js";
+import { schema } from "../src/schema.js";
+
+const postsDataSourceId = schema.collections.posts.dataSourceId;
 
 const TOKEN = process.env.NOTION_TOKEN;
 if (!TOKEN) {

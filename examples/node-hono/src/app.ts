@@ -1,4 +1,4 @@
-import { notionRevalidatorScript } from "@notion-headless-cms/core/html";
+import { renderBlocksToHtml } from "@notion-headless-cms/cms/html";
 import { Hono } from "hono";
 import { html, raw } from "hono/html";
 import { cms } from "./lib/cms.js";
@@ -8,33 +8,40 @@ export const app = new Hono();
 // --- JSON API ---
 
 app.get("/posts", async (c) => {
-  const items = await cms.posts.list();
+  const { items } = await cms.posts.list();
   return c.json({ items });
 });
 
 app.get("/posts/:slug", async (c) => {
   const post = await cms.posts.find(c.req.param("slug"));
   if (!post) return c.json({ error: "Not Found" }, 404);
-  const [renderedHtml, markdown] = await Promise.all([
-    post.html(),
-    post.markdown(),
-  ]);
+  const renderedHtml = renderBlocksToHtml(post.blocks, { links: post.links });
   return c.json({
-    item: { id: post.id, slug: post.slug, status: post.status },
+    item: { id: post.meta.id, slug: post.slug, status: post.meta.status },
     html: renderedHtml,
-    markdown,
   });
 });
 
 app.get("/posts/:slug/adjacent", async (c) => {
-  const { prev, next } = await cms.posts.adjacent(c.req.param("slug"));
-  return c.json({ prev, next });
+  const slug = c.req.param("slug");
+  const { items } = await cms.posts.list({
+    sort: [{ by: "publishedAt", direction: "desc" }],
+  });
+  const index = items.findIndex((item) => item.slug === slug);
+  const prev = index > 0 ? items[index - 1] : null;
+  const next = index >= 0 && index < items.length - 1 ? items[index + 1] : null;
+  return c.json({ prev: prev?.slug ?? null, next: next?.slug ?? null });
 });
 
-const handler = cms.handler({ basePath: "/api/cms" });
-app.all("/api/cms/*", (c) => handler(c.req.raw));
+app.all("/api/cms/*", (c) => cms.fetch(c.req.raw));
 
 // --- HTML UI ---
+
+// React を使わないテンプレート向けの再検証スクリプト（タブ可視化のたびに reload し、
+// サーバ側で同期済みの最新スナップショットを取得し直す）。
+function revalidatorScript(): string {
+  return '<script>document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")location.reload()});</script>';
+}
 
 function layout(title: string, body: string) {
   return html`<!doctype html>
@@ -57,29 +64,28 @@ function layout(title: string, body: string) {
   <body>
     <nav><a href="/ui">トップ</a> › <a href="/ui/posts">記事一覧</a></nav>
     ${raw(body)}
-    ${raw(notionRevalidatorScript())}
+    ${raw(revalidatorScript())}
   </body>
 </html>`;
 }
 
 app.get("/", (c) => c.redirect("/ui"));
 
+const COLLECTION_NAMES = ["posts"] as const;
+
 app.get("/ui", (c) => {
-  const links = cms.collections
-    .map((col: string) => `<li><a href="/ui/${col}">${col}</a></li>`)
-    .join("");
+  const list = COLLECTION_NAMES.map(
+    (col) => `<li><a href="/ui/${col}">${col}</a></li>`,
+  ).join("");
   return c.html(
-    layout("Notion CMS", `<h1>Notion Headless CMS</h1><ul>${links}</ul>`),
+    layout("Notion CMS", `<h1>Notion Headless CMS</h1><ul>${list}</ul>`),
   );
 });
 
 app.get("/ui/posts", async (c) => {
-  const items = await cms.posts.list();
+  const { items } = await cms.posts.list();
   const links = items
-    .map(
-      (item: { slug: string }) =>
-        `<li><a href="/ui/posts/${item.slug}">${item.slug}</a></li>`,
-    )
+    .map((item) => `<li><a href="/ui/posts/${item.slug}">${item.slug}</a></li>`)
     .join("");
   return c.html(layout("記事一覧", `<h1>記事一覧</h1><ul>${links}</ul>`));
 });
@@ -91,7 +97,7 @@ app.get("/ui/posts/:slug", async (c) => {
       layout("Not Found", "<h1>404 - 記事が見つかりません</h1>"),
       404,
     );
-  const content = await post.html();
+  const content = renderBlocksToHtml(post.blocks, { links: post.links });
   return c.html(
     layout(post.slug, `<h1>${post.slug}</h1><article>${content}</article>`),
   );

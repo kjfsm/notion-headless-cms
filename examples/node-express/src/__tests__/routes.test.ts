@@ -7,20 +7,33 @@ vi.mock("../lib/cms.js", () => ({
       list: vi.fn(),
       find: vi.fn(),
     },
-    $getCachedImage: vi.fn(),
+    fetch: vi.fn().mockResolvedValue(new Response("{}", { status: 200 })),
   },
+  syncAll: vi.fn(),
 }));
 
 const { cms } = await import("../lib/cms.js");
 const { app } = await import("../app.js");
 
+const PARAGRAPH_BLOCK = {
+  id: "b1",
+  type: "paragraph",
+  data: {
+    rich_text: [
+      { type: "text", plain_text: "内容", annotations: {}, href: null },
+    ],
+  },
+};
+
 describe("GET /posts", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("ページリストを返す", async () => {
-    vi.mocked(cms.posts.list).mockResolvedValue([
-      { slug: "hello", title: "Hello World" } as never,
-    ]);
+    vi.mocked(cms.posts.list).mockResolvedValue({
+      items: [{ slug: "hello", version: "v1", listed: true, meta: {} }],
+      nextCursor: null,
+      hasMore: false,
+    });
     const res = await request(app).get("/posts");
     expect(res.status).toBe(200);
     expect(res.body.items).toHaveLength(1);
@@ -33,9 +46,18 @@ describe("GET /posts/:slug", () => {
 
   it("ページ詳細と HTML を返す", async () => {
     vi.mocked(cms.posts.find).mockResolvedValue({
-      id: "id-1",
+      collection: "posts",
       slug: "hello",
-      html: vi.fn().mockResolvedValue("<p>内容</p>"),
+      version: "v1",
+      meta: {
+        id: "id-1",
+        slug: "hello",
+        lastEditedTime: "v1",
+        status: "公開済み",
+      },
+      blocks: [PARAGRAPH_BLOCK],
+      images: {},
+      links: {},
     } as never);
     const res = await request(app).get("/posts/hello");
     expect(res.status).toBe(200);
