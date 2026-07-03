@@ -1,5 +1,36 @@
 # @notion-headless-cms/react-renderer
 
+## 0.1.22
+
+### Patch Changes
+
+- 2a37266: v3 ゼロベース再設計（#437）の基盤を `packages/v3`（非公開ステージングパッケージ）に追加し、既存パッケージに橋渡しを追加した。
+
+  - `react-renderer`: `./v3` サブパスを追加。`denormalizeBlocks` が v3 の正規化 block（`NormalizedBlock`）を既存の `BlockObjectResponse` 形状へ復元するため、既存のブロックコンポーネント約 30 種を無改修のまま再利用できる。`toPageLinkMap` で `EntrySnapshot.links` を既存の `pageLinks` プロップ形式に変換する。`Image` コンポーネントは任意の `_dimensions`（v3 パイプラインが焼き込む width/height）があれば付与する CLS 対応を追加（無ければ従来どおり）
+  - `cli`: `packages/cli/src/v3/` に pull（スキーマ雛形生成）・check（drift 検証）・doctor（診断）・sync（手動 kick）・init（wrangler 設定雛形）のロジックを追加。既存の `generate`/`init` コマンドとは独立
+
+  `packages/v3` 自体は非公開（`private: true`）のステージングパッケージで、公開パッケージへの統合は別途行う。
+
+- d030538: v3（#437）に不足していた数式・シンタックスハイライト・高度な HTML・マルチソースの実装を `packages/v3`（非公開ステージングパッケージ）に追加し、既存パッケージに橋渡しを追加した。
+
+  - `react-renderer`: `Code.tsx` にクライアント遅延 shiki ハイライトを追加（`__cachedHtml` が無い場合、水和後に動的 import してハイライトする。既定はページアクセス時のレンダリングで Worker の CPU 予算を消費しない）。`InlineEquation`/`RichText` が同期時に事前組版された数式 `__cachedHtml` を受け取れるようにした。`Bookmark`/`LinkPreview` に `useOgp` フックを追加し、`block.ogp` が無い場合に `NotionRenderer` の `ogpEndpoint` 経由でページアクセス時に OGP メタデータを取得できるようにした
+  - `cli`: `nhc.config.ts` に `v3` セクションを追加し、`nhc pull`（Notion DB introspect → `defineCollection` 雛形生成、既存ファイルは上書きしない）と `nhc check`（TS スキーマと実 DB の drift 検証、CI 向け）を新設した
+
+  `packages/v3` 側の主な追加（非公開のため changeset 対象外）:
+
+  - `transforms/{shiki,katex}.ts`: 同期時の事前レンダー用 TransformStage（オプトイン）
+  - `render/{html,embeds}.ts` 拡張: table/column/synced/child/bookmark/embed/link_preview/video/audio/file/pdf 等の HTML 出力、OGP はシェルのみ返しページアクセス時に取得する設計
+  - `http/ogp.ts`: OGP エンドポイント（SSRF ガード・redirect 追跡・edge cache 対応）
+  - `sync/{notion-driver,multi-source,page-index}.ts`: 複数コレクション（複数 data_source_id）を単一の同期エンジンで束ねるマルチソース実装
+  - `cms/create-cms.ts`: schema からドライバ・同期・HTTP ハンドラを一括結線する `createCMS()` ファクトリ
+
+- f607b31: v3 ゼロベース再設計（#437）のコードレビューで検出した問題を修正。
+
+  - `react-renderer`: README に `./v3` サブパス（`denormalizeBlocks`/`toPageLinkMap`）の使い方セクションを追加
+  - `cli`: README に `nhc pull`/`nhc check`（v3 スキーマ drift 検証）のセクションを追加
+
+  `packages/v3`（非公開）側の修正（video ブロックの `sanitizeHref` 適用漏れ、`multi-source.ts` の生 `Error` throw を `CMSError` 化、`listEntries` の `limit` 負数サニタイズ、REST ストアの契約テスト追加等）は非公開パッケージのため changeset 対象外。
+
 ## 0.1.21
 
 ### Patch Changes
