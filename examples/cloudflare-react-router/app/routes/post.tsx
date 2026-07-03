@@ -5,7 +5,7 @@ import {
   toPageLinkMap,
 } from "@notion-headless-cms/react-renderer/v3";
 import { data, isRouteErrorResponse } from "react-router";
-import { makeCms } from "../lib/cms";
+import { ensureSynced, makeCms } from "../lib/cms";
 import type { Route } from "./+types/post";
 
 type SerializedError = {
@@ -30,6 +30,7 @@ function serializeError(err: unknown, depth = 0): SerializedError {
 export async function loader({ params, context }: Route.LoaderArgs) {
   try {
     const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
+    await ensureSynced(cms);
     const post = await cms.posts.find(params.slug ?? "");
     if (!post) throw data("Not Found", { status: 404 });
     return { post };
@@ -46,11 +47,8 @@ export default function Post({ loaderData }: Route.ComponentProps) {
     title?: string | null;
     publishedAt?: string | null;
   };
-  // RealtimeHubDO からの push を主経路にし、WebSocket 受信で即 revalidate する
-  // （DO 有効時はポーリングを行わない）。
-  useNotionRevalidate({
-    realtime: { collection: "posts", slug: post.slug },
-  });
+  // mount / 再フォーカス時に loader を再走させ、裏で進んだ同期結果を反映する。
+  useNotionRevalidate();
   return (
     <article>
       <h1>{meta.title ?? post.slug}</h1>

@@ -19,8 +19,10 @@ const fakeCms = {
 
 vi.mock("../lib/cms.js", () => ({
   makeCms: vi.fn().mockReturnValue(fakeCms),
+  ensureSynced: vi.fn().mockResolvedValue(undefined),
 }));
 
+const { ensureSynced } = await import("../lib/cms.js");
 const { loader: homeLoader } = await import("../routes/home.js");
 const { loader: postLoader } = await import("../routes/post.js");
 const { loader: apiCmsLoader, action: apiCmsAction } = await import(
@@ -116,9 +118,9 @@ describe("api.cms ルート", () => {
 describe("warm action()", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("sync.kick() を呼び、進捗状態を JSON で返す", async () => {
+  it("ensureSynced() で同期を進め、進捗状態を JSON で返す", async () => {
     const result = await warmAction({ context: fakeContext } as never);
-    expect(fakeCms.sync.kick).toHaveBeenCalledTimes(1);
+    expect(ensureSynced).toHaveBeenCalledWith(fakeCms);
     const json = (await (result as Response).json()) as {
       state: { cursor: string | null };
     };

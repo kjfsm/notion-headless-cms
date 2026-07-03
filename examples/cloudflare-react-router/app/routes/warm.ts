@@ -1,15 +1,13 @@
-import { makeCms } from "../lib/cms";
+import { ensureSynced, makeCms } from "../lib/cms";
 import type { Route } from "./+types/warm";
 
 /**
- * `SyncCoordinatorDO` は alarm 発火のたびに `chunkSize` 件ずつ自動で同期を進める
- * （Cloudflare Free プランのサブリクエスト上限を超えないよう、1 回の呼び出しを
- * 小さく保つ設計）。初回デプロイ直後など、alarm を待たずに今すぐ進めたい場合は
- * このエンドポイントを繰り返し叩く（`state.cursor` が `null` になるまで）。
+ * 同期カーソルは isolate ローカルな in-memory 状態なので、デプロイ直後など
+ * cold isolate に対して今すぐ全件同期を完了させたい場合にこのエンドポイントを叩く。
  */
 export async function action({ context }: Route.ActionArgs) {
   const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
-  await cms.sync.kick();
+  await ensureSynced(cms);
   const state = await cms.sync.getState();
   return Response.json({ state });
 }

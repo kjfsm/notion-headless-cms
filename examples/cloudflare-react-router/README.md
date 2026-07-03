@@ -1,9 +1,8 @@
 # cloudflare-react-router
 
-React Router v7（Framework mode）+ Cloudflare Workers + R2 + KV + Durable Objects で
-Notion をヘッドレス CMS として使う最小フルスタック例。loader で取得した正規化ブロックを
-`react-renderer` で React として描画し、`useNotionRevalidate` の WebSocket push で更新を
-静かに反映する。
+React Router v7（Framework mode）+ Cloudflare Workers + R2 + KV で Notion を
+ヘッドレス CMS として使う最小フルスタック例。loader で取得した正規化ブロックを
+`react-renderer` で React として描画し、`useNotionRevalidate` で更新を静かに反映する。
 
 関連ドキュメント: [`docs/ja/recipes/react-router.md`](../../docs/ja/recipes/react-router.md)
 
@@ -32,33 +31,34 @@ Notion 側ではインテグレーションを作成し、対象 DB に接続し
 
 | ルート | ファイル | 役割 |
 |---|---|---|
-| `/` | `app/routes/home.tsx` | `cms.posts.list()` で記事一覧。`useNotionRevalidate({ realtime: { collection: "posts" } })` で一覧チャンネルを購読 |
-| `/posts/:slug` | `app/routes/post.tsx` | `cms.posts.find(slug)` → `denormalizeBlocks`/`toPageLinkMap` → `<NotionRenderer>` で React 描画 + `useNotionRevalidate({ realtime })` |
-| `/api/cms/*` | `app/routes/api.cms.ts` | `cms.fetch(request)` に委譲。画像プロキシ（`/api/cms/images/:hash`）・WebSocket 更新通知（`/api/cms/realtime`）・Webhook（`/api/cms/webhook`）をまとめて処理 |
-| `/api/warm` | `app/routes/warm.ts` | `cms.sync.kick()` を 1 回進め、進捗状態を返す手動トリガー（action） |
+| `/` | `app/routes/home.tsx` | `cms.posts.list()` で記事一覧。`useNotionRevalidate()` で mount / 再フォーカス時に再取得 |
+| `/posts/:slug` | `app/routes/post.tsx` | `cms.posts.find(slug)` → `denormalizeBlocks`/`toPageLinkMap` → `<NotionRenderer>` で React 描画 + `useNotionRevalidate()` |
+| `/api/cms/*` | `app/routes/api.cms.ts` | `cms.fetch(request)` に委譲。画像プロキシ（`/api/cms/images/:hash`）・Webhook（`/api/cms/webhook`）をまとめて処理 |
+| `/api/warm` | `app/routes/warm.ts` | `ensureSynced()` で同期を完了させ、進捗状態を返す手動トリガー（action） |
 
 CMS の生成は `app/lib/cms.ts` の `makeCms(env, ctx)` に集約。`workers/app.ts` が
-`createRequestHandler` で `cloudflare: { env, ctx }` を各 loader に渡し、`SyncCoordinatorDO`
-（`app/lib/do.ts`）・`RealtimeHubDO`（`@notion-headless-cms/cms/cloudflare`）を re-export する。
+`createRequestHandler` で `cloudflare: { env, ctx }` を各 loader に渡す。
 
-## 同期（Durable Object で Notion アクセスを直列化）
+## 同期とキャッシュ
 
-読者用の stateless Worker は KV/R2 の読み取り（`find`/`list`）のみ行い、Notion API への
-直列アクセスは `SyncCoordinatorDO` に一元化する（`makeCms` が `syncDelegate:
-durableObjectSyncDelegate({ stub })` で転送する）。DO は alarm 発火のたびに `chunkSize` 件ずつ
-自動で同期を進める（Free プランのサブリクエスト上限を超えないための設計）。
+`makeCms` は `scheduler: createNodeSyncScheduler()`（setTimeout ベース、Durable Object
+不要）を使う。同期カーソルは Worker isolate 内の in-memory 状態のため isolate が
+入れ替わると失われるが、Notion の差分クエリは既存 version と一致すれば打ち切るため、
+再同期は「軽い再検証クエリ 1 回」で済む（`app/lib/cms.ts` の `ensureSynced()` が
+`cms.sync.kick()` を cursor が尽きるまでループし、各 loader の先頭で呼ばれる）。
 
-## 更新検知（Durable Object リアルタイム push）
+KV（`DOC_CACHE`）/R2（`IMG_BUCKET`）はマテリアライズ済みエントリの永続ストアで、
+`find`/`list` はここだけを読む（Notion API は同期時のみ叩く）。
 
-`makeCms` は `realtime: durableObjectRealtime({ namespace: env.REALTIME_HUB })` を設定しており、
-webhook 受信や同期完了の直後に `RealtimeHubDO` 経由で接続中クライアントへ version 同梱の
-WebSocket push を行う。`useNotionRevalidate({ realtime: { collection, slug } })`（`<NotionRenderer>`
-と同じ `@notion-headless-cms/react-renderer/router` から export）が `/api/cms/realtime` へ接続して
-購読し、受信で `useRevalidator()` により loader を再走させる。
+## 表示の更新
 
-`onRealtimeUpgrade`（`app/lib/cms.ts`）が `/api/cms/realtime` への WebSocket アップグレードを
-`RealtimeHubDO` の stub へ橋渡しする。DO は `wrangler.toml` の `durable_objects.bindings` と
-`migrations` で登録している（`pnpm cf-typegen` で `Env` 型を再生成）。
+`useNotionRevalidate()`（`@notion-headless-cms/react-renderer/router`）を引数なしで
+呼ぶと、mount 時と再フォーカス（visibilitychange）時に `useRevalidator()` で loader を
+再走させる。裏で `ensureSynced()` が同期を進めているため、再フォーカス時には最新の
+KV/R2 スナップショットが返る。
+
+WebSocket によるリアルタイム push（Durable Object 経由）は行わない。必要であれば
+`examples/cloudflare-hono` の `SyncCoordinatorDO`/`RealtimeHubDO` 構成を参照。
 
 ## スクリプト
 
@@ -86,12 +86,11 @@ pnpm deploy
 
 GitHub App / GitHub Actions による自動デプロイは [`examples/README.md`](../README.md) を参照。
 
-## 初回同期を今すぐ進める（Free プラン向け）
+## 初回同期を今すぐ進める
 
-`SyncCoordinatorDO` は alarm のたびに `chunkSize` 件ずつ自動で同期を進めるため、通常は
-デプロイ後しばらく待てば全記事が KV/R2 に揃う。今すぐ進めたい場合は `POST /api/warm` を
-`state.cursor` が `null` になるまで繰り返し叩く（1 リクエスト = DO 内 1 チャンク分の Notion
-アクセスに抑えているため、Workers Free のサブリクエスト上限（50 件/invocation）を超えない）。
+デプロイ直後の cold isolate は `find`/`list` の初回アクセス時に同期が始まる
+（`ensureSynced()` が loader 内で呼ばれるため）。事前に完了させたい場合は
+`POST /api/warm` を叩く。
 
 ```bash
 curl -X POST https://<your-worker>.workers.dev/api/warm

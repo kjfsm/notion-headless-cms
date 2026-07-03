@@ -4,21 +4,16 @@
 
 `examples/cloudflare-react-router` を v2 API から v3 API（`@notion-headless-cms/cms`）へ書き直した。
 
-- `wrangler.toml` に `SyncCoordinatorDO` と `RealtimeHubDO`（`durable_objects.bindings` +
-  `migrations`）を追加。Notion API への直列アクセスは `SyncCoordinatorDO` に一元化し
-  （`createCMS({ syncDelegate: durableObjectSyncDelegate(...) })`）、更新通知は
-  `RealtimeHubDO` 経由の WebSocket push（`createCMS({ realtime: durableObjectRealtime(...),
-  onRealtimeUpgrade })`）に結線した。README が以前から説明していた DO リアルタイム機能を
-  実装で追いつかせた形になる
+- Durable Object は使わず、`createNodeSyncScheduler()` + `ensureSynced()`（`cms.sync.kick()`
+  を cursor が尽きるまでループする、`examples/cloudflare-astro` と同じパターン）で同期する。
+  KV（`DOC_CACHE`）/R2（`IMG_BUCKET`）は引き続き永続ストアとして使う
 - `post.notionBlocks()` + `buildPageLinkMap(cms)` を `denormalizeBlocks`/`toPageLinkMap`
   （`@notion-headless-cms/react-renderer/v3`）に置換
-- `<NotionRevalidator poll>` を `useNotionRevalidate({ realtime })`
-  （`@notion-headless-cms/react-renderer/router`）に置換。DO 有効時はポーリングを行わず
-  push のみで revalidate する
+- `<NotionRevalidator poll>` を引数なしの `useNotionRevalidate()`
+  （`@notion-headless-cms/react-renderer/router`、mount / 再フォーカス時に直接 revalidate）
+  に置換。WebSocket によるリアルタイム push は行わない
 - `cms.handler()` を `cms.fetch(request)` に統合
 - v2 の `find(slug, { force })`（明示リロード時の強制再取得）は v3 の `find()` に相当
   オプションが無いため廃止。README の該当記述も削除した
 - Node.js からの KV プリウォームスクリプト（`scripts/warm-kv.ts`）は削除。
-  `SyncCoordinatorDO` が alarm 発火のたびに自動でチャンク同期を進めるため、
-  REST 経由の外部プリウォームは不要になった（今すぐ進めたい場合は `POST /api/warm` を
-  手動で叩く）
+  `/api/warm` を叩くと `ensureSynced()` でその場の isolate の同期を完了させる

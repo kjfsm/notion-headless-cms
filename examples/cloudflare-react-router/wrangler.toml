@@ -23,21 +23,6 @@ binding = "IMG_BUCKET"
 bucket_name = "nhc-example-cache"
 preview_bucket_name = "nhc-example-cache-preview"
 
-# v3: Notion アクセスを直列化する同期エンジン（SyncCoordinatorDO）と
-# WebSocket 更新通知ハブ（RealtimeHubDO）。読者リクエストは KV/R2 を読むだけで、
-# Notion API 呼び出しは DO に一元化する。
-[[durable_objects.bindings]]
-name = "SYNC_COORDINATOR"
-class_name = "SyncCoordinatorDO"
-
-[[durable_objects.bindings]]
-name = "REALTIME_HUB"
-class_name = "RealtimeHubDO"
-
-[[migrations]]
-tag = "v1"
-new_sqlite_classes = ["SyncCoordinatorDO", "RealtimeHubDO"]
-
 # ランタイムシークレットは初回デプロイ前に以下で設定してください:
 # wrangler secret put NOTION_TOKEN
 # KV / R2 バインディングは wrangler kv namespace create / wrangler r2 bucket create で作成する
