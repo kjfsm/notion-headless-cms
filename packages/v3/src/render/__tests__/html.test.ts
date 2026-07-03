@@ -35,6 +35,18 @@ describe("renderRichText", () => {
   it("配列でなければ空文字", () => {
     expect(renderRichText(undefined)).toBe("");
   });
+
+  it("href が javascript: スキームの場合は # にフォールバックする(XSS対策)", () => {
+    expect(renderRichText([richText("link", {}, "javascript:alert(1)")])).toBe(
+      '<a href="#">link</a>',
+    );
+  });
+
+  it("href のタブ/改行を挟んだ javascript: スキームも弾く", () => {
+    expect(
+      renderRichText([richText("link", {}, "java\nscript:alert(1)")]),
+    ).toBe('<a href="#">link</a>');
+  });
 });
 
 describe("renderBlocksToHtml", () => {
@@ -144,6 +156,22 @@ describe("renderBlocksToHtml", () => {
     const html = renderBlocksToHtml(blocks);
     expect(html).toContain('src="/images/abc"');
     expect(html).toContain('loading="lazy"');
+  });
+
+  it("image の alt はキャプションを一重にしかエスケープしない(二重エスケープ回避)", () => {
+    const blocks: NormalizedBlock[] = [
+      {
+        id: "i2",
+        type: "image",
+        data: {
+          type: "external",
+          external: { url: "/images/abc" },
+          caption: [richText('Foo & <bar> "baz"')],
+        },
+      },
+    ];
+    const html = renderBlocksToHtml(blocks);
+    expect(html).toContain('alt="Foo &amp; &lt;bar&gt; &quot;baz&quot;"');
   });
 
   it("children を再帰的に展開する(toggle)", () => {

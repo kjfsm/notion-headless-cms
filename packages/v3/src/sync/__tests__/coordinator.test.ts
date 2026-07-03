@@ -124,6 +124,73 @@ describe("SyncCoordinatorCore", () => {
     expect(state.lastReconcileAt).not.toBeNull();
   });
 
+  it("listChanged が失敗しても次チャンクへ再スケジュールされる(fail-soft)", async () => {
+    let attempt = 0;
+    const synced: string[] = [];
+    const deps: SyncCoordinatorDeps = {
+      listChanged: async () => {
+        attempt++;
+        if (attempt === 1) throw new Error("notion query failed");
+        return { changes: [change("a")], nextCursor: null };
+      },
+      listAllSlugs: async () => [],
+      listIndexedSlugs: async () => [],
+      syncEntry: async (c) => {
+        synced.push(c.slug);
+      },
+      removeEntry: async () => {},
+      chunkDelayMs: 100,
+    };
+    const scheduler = createNodeSyncScheduler();
+    const coordinator = new SyncCoordinatorCore(scheduler, deps);
+
+    await coordinator.kick();
+    expect(synced).toEqual([]);
+    const state = await coordinator.getState();
+    expect(state.failures).toHaveLength(1);
+    expect(state.failures[0]?.slug).toBe("(listChanged)");
+
+    await vi.advanceTimersByTimeAsync(100);
+    expect(synced).toEqual(["a"]);
+  });
+
+  it("runChunk 実行中に再度呼ばれても取りこぼさず直列に処理する(再入防止ガード)", async () => {
+    let resolveFirst:
+      | ((v: { changes: EntryChange[]; nextCursor: string | null }) => void)
+      | undefined;
+    const firstGate = new Promise<{
+      changes: EntryChange[];
+      nextCursor: string | null;
+    }>((resolve) => {
+      resolveFirst = resolve;
+    });
+    let callCount = 0;
+    const synced: string[] = [];
+    const deps: SyncCoordinatorDeps = {
+      listChanged: async () => {
+        callCount++;
+        if (callCount === 1) return firstGate;
+        return { changes: [change("b")], nextCursor: null };
+      },
+      listAllSlugs: async () => [],
+      listIndexedSlugs: async () => [],
+      syncEntry: async (c) => {
+        synced.push(c.slug);
+      },
+      removeEntry: async () => {},
+    };
+    const scheduler = createNodeSyncScheduler();
+    const coordinator = new SyncCoordinatorCore(scheduler, deps);
+
+    const p1 = coordinator.kick();
+    const p2 = coordinator.kick(); // 1回目が listChanged 待ちの間に呼ばれる
+    resolveFirst?.({ changes: [change("a")], nextCursor: null });
+    await Promise.all([p1, p2]);
+
+    expect(synced).toEqual(["a", "b"]); // 同時実行にならず両方処理される
+    expect(callCount).toBe(2);
+  });
+
   it("reconcile は削除が無ければ何もしない", async () => {
     const deps: SyncCoordinatorDeps = {
       listChanged: async () => ({ changes: [], nextCursor: null }),

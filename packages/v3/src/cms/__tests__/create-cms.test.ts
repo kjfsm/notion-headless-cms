@@ -199,6 +199,26 @@ describe("createCMS", () => {
     );
   });
 
+  it('コレクション名に ":" を含む場合は CMSError(schema/reserved_collection_name) を投げる', () => {
+    const badSchema = defineSchema({
+      "a:b": defineCollection({
+        dataSourceId: "ds",
+        slug: "slug",
+        properties: { slug: prop.richText() },
+      }),
+    });
+    expect(() =>
+      createCMS({
+        schema: badSchema,
+        notion: { client: makeFakeClient({}) },
+        stores: makeStores(),
+        scheduler: createNodeSyncScheduler(),
+      }),
+    ).toThrowError(
+      expect.objectContaining({ code: "schema/reserved_collection_name" }),
+    );
+  });
+
   it("notion.client も token も無ければ CMSError(schema/notion_config_missing) を投げる", () => {
     expect(() =>
       createCMS({

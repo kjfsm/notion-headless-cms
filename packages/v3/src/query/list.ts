@@ -35,7 +35,9 @@ export async function listEntries(
     (e) => e.meta as Record<string, JsonValue>,
   );
 
-  const offset = params.cursor ? Number.parseInt(params.cursor, 10) || 0 : 0;
+  const offset = params.cursor
+    ? Math.max(0, Number.parseInt(params.cursor, 10) || 0)
+    : 0;
   const limit = params.limit ?? DEFAULT_LIMIT;
   const page = sorted.slice(offset, offset + limit);
   const hasMore = offset + limit < sorted.length;

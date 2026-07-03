@@ -2,8 +2,10 @@ import type { SyncScheduler } from "../sync-scheduler.js";
 import type { JsonValue } from "../types/json-value.js";
 
 /**
- * Node ランタイム向け `SyncScheduler`(in-process mutex + `setTimeout`)。
+ * Node ランタイム向け `SyncScheduler`(`setTimeout` ベース)。
  * Cloudflare 実装(DO Alarm)と同一契約を満たす最小実装(優先度低・契約テストを通す目的)。
+ * 同時実行防止は `SyncCoordinatorCore` 側の再入防止ガードが担うため、ここでは
+ * 「直前の予約を置き換える」以上のことはしない(mutex は持たない)。
  */
 export function createNodeSyncScheduler(): SyncScheduler {
   let timer: ReturnType<typeof setTimeout> | undefined;

@@ -67,4 +67,25 @@ describe("withRetry", () => {
     );
     expect(onRetry).toHaveBeenCalledWith(1, 503, expect.any(Number));
   });
+
+  it("1回目のリトライ遅延は baseDelayMs 前後(v2 core/retry.ts と同じ倍率)", async () => {
+    const onRetry = vi.fn();
+    let attempts = 0;
+    await withRetry(
+      async () => {
+        attempts++;
+        if (attempts < 2) throw { status: 503 };
+        return "ok";
+      },
+      {
+        retryOn: [503],
+        maxRetries: 3,
+        baseDelayMs: 1000,
+        jitter: false,
+        onRetry,
+      },
+      async () => {},
+    );
+    expect(onRetry).toHaveBeenCalledWith(1, 503, 1000);
+  });
 });

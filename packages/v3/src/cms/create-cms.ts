@@ -176,6 +176,17 @@ export function createCMS<const S extends SchemaDef>(
       });
     }
   }
+  for (const key of collectionKeys) {
+    // multi-source.ts の namespacedSlug が ":" 区切りで collection/slug を合成するため、
+    // collection キーに ":" を含むと異なるコレクション同士でキーが衝突しうる。
+    if (key.includes(":")) {
+      throw new CMSError({
+        code: "schema/reserved_collection_name",
+        message: `コレクション名 "${key}" に ":" を含めることはできません`,
+        context: { operation: "createCMS", collection: key },
+      });
+    }
+  }
 
   const client = resolveClient(opts.notion);
   const entryStore = createEntryStore(opts.stores.blobs);

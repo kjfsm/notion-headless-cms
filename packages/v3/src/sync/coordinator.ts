@@ -67,13 +67,19 @@ function toJsonState(state: SyncState): Record<string, JsonValue> {
  * - webhook debounce: `SyncScheduler.schedule` が「既存の予約があれば置き換える」
  *   契約を持つため、同一ページの連続イベントは自然に 1 回の同期に収束する
  * - fail-soft: 1 entry の同期失敗は他の entry の処理を止めない。失敗は
- *   `SyncState.failures` に記録し、直前の正常 snapshot は上書きされない
+ *   `SyncState.failures` に記録し、直前の正常 snapshot は上書きされない。
+ *   `listChanged` 自体の失敗も同様に記録し、次チャンクへの再スケジュールを続ける
+ * - `runChunk` は再入防止ガード付き。実行中に webhook 等から再度呼ばれた場合は
+ *   完了後にもう一度実行することで取りこぼしを防ぐ(同時実行による index-store への
+ *   非アトミックな read-modify-write の競合を避ける)
  */
 export class SyncCoordinatorCore {
   private readonly chunkSize: number;
   private readonly chunkDelayMs: number;
   private readonly debounceMs: number;
   private readonly now: () => string;
+  private running = false;
+  private rerunRequested = false;
 
   constructor(
     private readonly scheduler: SyncScheduler,
@@ -121,11 +127,48 @@ export class SyncCoordinatorCore {
   }
 
   private async runChunk(): Promise<void> {
+    if (this.running) {
+      this.rerunRequested = true;
+      return;
+    }
+    this.running = true;
+    try {
+      do {
+        this.rerunRequested = false;
+        await this.runChunkOnce();
+      } while (this.rerunRequested);
+    } finally {
+      this.running = false;
+    }
+  }
+
+  private async runChunkOnce(): Promise<void> {
     const state = await this.getState();
-    const { changes, nextCursor } = await this.deps.listChanged(
-      state.cursor,
-      this.chunkSize,
-    );
+
+    let changes: readonly EntryChange[];
+    let nextCursor: string | null;
+    try {
+      ({ changes, nextCursor } = await this.deps.listChanged(
+        state.cursor,
+        this.chunkSize,
+      ));
+    } catch (err) {
+      await this.setState({
+        ...state,
+        failures: [
+          ...state.failures,
+          {
+            slug: "(listChanged)",
+            message: err instanceof Error ? err.message : String(err),
+            at: this.now(),
+          },
+        ],
+      });
+      // Notion クエリ自体の失敗は fail-soft: 諦めずに次チャンクを再スケジュールする。
+      await this.scheduler.schedule(this.chunkDelayMs, () => this.runChunk());
+      return;
+    }
+
     const failures = [...state.failures];
 
     for (const change of changes) {

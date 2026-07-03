@@ -50,10 +50,10 @@ export async function withRetry<T>(
       ) {
         throw err;
       }
-      attempt++;
       const base = config.baseDelayMs * 2 ** attempt;
       const delayMs =
         config.jitter === false ? base : base * (0.5 + Math.random() * 0.5);
+      attempt++;
       config.onRetry?.(attempt, status, delayMs);
       await sleep(delayMs);
     }

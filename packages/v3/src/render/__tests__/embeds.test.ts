@@ -67,4 +67,11 @@ describe("renderEmbedIframe", () => {
     ]);
     expect(html).toContain("sandbox=");
   });
+
+  it("iframe の sandbox は allow-same-origin を含まない(allow-scripts との併用は sandbox 無効化のアンチパターン)", () => {
+    const html = renderEmbedIframe("https://player.vimeo.com/video/1", [
+      "vimeo.com",
+    ]);
+    expect(html).not.toContain("allow-same-origin");
+  });
 });

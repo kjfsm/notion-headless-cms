@@ -14,7 +14,12 @@ export type BuiltInCMSErrorCode =
   | "handler/ogp_url_forbidden"
   | "handler/ogp_fetch_failed"
   | "sync/notion_query_failed"
-  | "sync/slug_missing";
+  | "sync/slug_missing"
+  | "cli/config_invalid"
+  | "cli/notion_api_failed"
+  | "cli/schema_invalid"
+  | "cli/env_file_not_found"
+  | "cli/init_failed";
 
 export type CMSErrorCode = BuiltInCMSErrorCode | (string & {});
 

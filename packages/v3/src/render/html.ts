@@ -2,7 +2,7 @@ import { isJsonRecord } from "../transforms/walk.js";
 import type { NormalizedBlock, ResolvedLink } from "../types/entry-snapshot.js";
 import type { JsonValue } from "../types/json-value.js";
 import { renderEmbedIframe, renderOgpShell } from "./embeds.js";
-import { escapeHtml } from "./escape.js";
+import { escapeHtml, sanitizeHref } from "./escape.js";
 
 /** `renderBlocksToHtml` / `renderBlockToHtml` に渡すオプション。省略時は既存挙動のまま。 */
 export interface RenderHtmlOptions {
@@ -35,7 +35,7 @@ function renderRichTextItem(item: Record<string, JsonValue>): string {
   if (annotations?.strikethrough) html = `<s>${html}</s>`;
   if (annotations?.underline) html = `<u>${html}</u>`;
   const href = typeof item.href === "string" ? item.href : null;
-  if (href) html = `<a href="${escapeHtml(href)}">${html}</a>`;
+  if (href) html = `<a href="${escapeHtml(sanitizeHref(href))}">${html}</a>`;
   return html;
 }
 
@@ -128,7 +128,7 @@ function renderLinkToPage(
   const icon = isDatabase ? "🗄️" : "📋";
   return (
     `<div class="nhc-link-to-page-block">` +
-    `<a class="nhc-link-to-page" href="${escapeHtml(href)}">` +
+    `<a class="nhc-link-to-page" href="${escapeHtml(sanitizeHref(href))}">` +
     `<span class="nhc-link-to-page__icon" aria-hidden="true">${icon}</span>` +
     `<span class="nhc-link-to-page__title">${escapeHtml(title)}</span>` +
     `</a>` +
@@ -164,13 +164,13 @@ function renderMediaBlock(
     : "";
 
   if (kind === "audio") {
-    return `<div class="nhc-audio-block"><audio class="nhc-audio" src="${escapeHtml(url)}" controls></audio>${caption}</div>`;
+    return `<div class="nhc-audio-block"><audio class="nhc-audio" src="${escapeHtml(sanitizeHref(url))}" controls></audio>${caption}</div>`;
   }
   if (kind === "file") {
     const name = typeof data.name === "string" && data.name ? data.name : url;
     return (
       `<div class="nhc-file-block">` +
-      `<a class="nhc-file" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">` +
+      `<a class="nhc-file" href="${escapeHtml(sanitizeHref(url))}" target="_blank" rel="noopener noreferrer">` +
       `<span class="nhc-file__icon" aria-hidden="true">📎</span>` +
       `<span class="nhc-file__name">${escapeHtml(name)}</span>` +
       `</a>${caption}</div>`
@@ -183,7 +183,7 @@ function renderMediaBlock(
   }
   // video
   if (data.type === "external" && /\.(mp4|webm|ogg|mov)(\?.*)?$/i.test(url)) {
-    return `<div class="nhc-video"><video class="nhc-video__player" src="${escapeHtml(url)}" controls></video>${caption}</div>`;
+    return `<div class="nhc-video"><video class="nhc-video__player" src="${escapeHtml(sanitizeHref(url))}" controls></video>${caption}</div>`;
   }
   if (data.type === "external") {
     const iframe =
@@ -239,7 +239,7 @@ export function renderBlockToHtml(
       const url = extractFileUrl(data);
       if (!url) return "";
       const caption = renderRichText(data.caption);
-      return `<figure><img src="${escapeHtml(url)}" alt="${escapeHtml(caption.replace(/<[^>]*>/g, ""))}" loading="lazy" /></figure>`;
+      return `<figure><img src="${escapeHtml(sanitizeHref(url))}" alt="${caption.replace(/<[^>]*>/g, "")}" loading="lazy" /></figure>`;
     }
     case "table":
       return renderTable(data, childrenHtml);

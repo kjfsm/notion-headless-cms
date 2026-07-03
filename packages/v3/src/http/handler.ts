@@ -88,7 +88,10 @@ export function createFetchHandler(
       return new Response(bytes as BodyInit, { headers });
     }
 
-    if (request.method === "GET" && rel.startsWith(`${realtimePath}`)) {
+    if (
+      request.method === "GET" &&
+      (rel === realtimePath || rel.startsWith(`${realtimePath}/`))
+    ) {
       if (adapter.onRealtimeUpgrade) return adapter.onRealtimeUpgrade(request);
       return new Response("Not Found", { status: 404 });
     }
