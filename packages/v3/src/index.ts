@@ -14,6 +14,7 @@ export type {
   ImageVariantRequest,
   ImageVariantResult,
 } from "./image-pipeline.js";
+export * from "./pipeline/index.js";
 export type { RealtimeAdapter, RealtimePayload } from "./realtime.js";
 export type { BlobHead, BlobPutOptions, BlobStore, DocStore } from "./store.js";
 export type { SyncScheduler } from "./sync-scheduler.js";
