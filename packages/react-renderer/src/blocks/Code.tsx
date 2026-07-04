@@ -120,7 +120,10 @@ export function Code({
   const [clientHtml, setClientHtml] = useState<string | null>(null);
 
   useEffect(() => {
-    if (cachedHtml) return;
+    // import.meta.env.SSR は Vite が静的に置換する定数のため、この early return により
+    // 後続の highlightClientSide()（shiki の動的 import を含む）が SSR/Worker バンドルの
+    // 到達可能グラフから外れ、tree-shaking で除外される。
+    if (import.meta.env.SSR || cachedHtml) return;
     let cancelled = false;
     highlightClientSide(source, language).then((html) => {
       if (!cancelled && html) setClientHtml(html);
