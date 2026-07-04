@@ -9,11 +9,11 @@
 - Updated dependencies [88bf886]
 - Updated dependencies [f607b31]
 - Updated dependencies
-  - @notion-headless-cms/react-renderer@0.1.22
-  - @notion-headless-cms/client@1.0.0
-  - @notion-headless-cms/core@1.0.0
-  - @notion-headless-cms/notion-orm@1.0.0
-  - @notion-headless-cms/notion-source@1.0.0
+  - @notion-headless-cms/react-renderer@3.0.0
+  - @notion-headless-cms/client@3.0.0
+  - @notion-headless-cms/core@3.0.0
+  - @notion-headless-cms/notion-orm@3.0.0
+  - @notion-headless-cms/notion-source@3.0.0
 
 ## 0.0.23
 
