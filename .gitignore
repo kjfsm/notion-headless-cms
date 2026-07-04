@@ -21,3 +21,6 @@ test-results/
 
 # .claude/ 編集作業用フォルダ (CLAUDE.md 参照)
 .claude-next/
+
+# examples/* は changeset の ignore 対象（非公開）のためバージョン管理しない
+examples/*/CHANGELOG.md
