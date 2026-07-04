@@ -45,15 +45,32 @@ export type {
 export type { AssertJsonValue, JsonValue } from "./types/json-value.js";
 export type { LogContext, Logger, LogLevel } from "./types/logger.js";
 export type {
+  CheckboxPropDef,
+  CreatedTimePropDef,
+  DatePropDef,
+  FilesPropDef,
   FileValue,
+  FormulaPropDef,
   FormulaResultType,
   InferPropValue,
+  LastEditedByPropDef,
+  MultiSelectPropDef,
+  NumberPropDef,
+  PeoplePropDef,
   PersonValue,
   PropDef,
   PropertyMap,
+  RelationPropDef,
+  RichTextPropDef,
+  RollupPropDef,
   RollupResultType,
+  SelectPropDef,
+  StatusPropDef,
+  TitlePropDef,
+  UniqueIdPropDef,
   UniqueIdValue,
   UnsupportedValue,
+  UrlPropDef,
 } from "./types/property.js";
 export { prop } from "./types/property.js";
 export type {
