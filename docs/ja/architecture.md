@@ -35,9 +35,9 @@ Notion DB
 - `markdown-html`（Markdown→HTML レンダラ）を差し替え可能にしたかった（remark → marked / markdown-it）
 - `react-renderer` は `renderer` (HTML) とは並列の出力経路。Markdown 中継せず Notion ブロックを直接 React に変換するため、rich_text annotations や mention 等の情報を失わずに描画できる。React アプリ向けに分離し、SSR-only / 非 React フレームワーク (Astro / Hono / Express) は `notion-embed` の HTML 出力を継続利用
 - アダプタが「ランタイム固有の面倒」を引き受け、core はランタイム中立を保つ
-- v0.3.0 で `adapter-node` / `adapter-cloudflare` を廃止して preset 方式に変えた理由は、ユーザーが `createClient` 一本で書けるようにするため（フレームワーク連携 adapter と役割を分離）
-- v2.0 で空の `CMSSources` インターフェースと `notion-source` パッケージを導入した理由は、生成物に Notion 固有のラッパー実装を埋め込まずに済ませるため。`declare module` でアダプターパッケージが `sources.<key>` を宣言マージできるので、Fastify プラグインのように `import` するだけで型が拡張される。生成物はスキーマだけを持ち、ランタイム設定は `createCMS` / `createClient` 側で組み立てる
-- v2 でメタパッケージ（node / cloudflare / next）を廃止し `@notion-headless-cms/client` の `createCMS` + サブパスに集約した理由は、ランタイム選択・取得戦略・renderer の組み合わせを 1 か所に閉じ、二重定義と不整合フットガンを無くすため（RFC: `rfc/v2-usability-redesign.md`）。`createClient` / `notionSource` / preset は client が re-export する escape hatch として残す
+- ランタイム差分（Node / Cloudflare）を `nodePreset` / `cloudflarePreset` という preset に閉じ込めているのは、ユーザーが `createClient` 一本で書けるようにするため（フレームワーク連携グルーとは役割を分離する）
+- 空の `CMSSources` インターフェースと `notion-source` パッケージを分離しているのは、生成物に Notion 固有のラッパー実装を埋め込まずに済ませるため。`declare module` でアダプターパッケージが `sources.<key>` を宣言マージできるので、Fastify プラグインのように `import` するだけで型が拡張される。生成物はスキーマだけを持ち、ランタイム設定は `createCMS` / `createClient` 側で組み立てる
+- ランタイム選択・取得戦略・renderer の組み合わせを `@notion-headless-cms/client` の `createCMS` + サブパスの 1 か所に集約しているのは、二重定義と不整合フットガンを無くすため（RFC: `rfc/v2-usability-redesign.md`）。`createClient` / `notionSource` / preset は client が re-export する escape hatch として残す
 
 ## SWR（Stale-While-Revalidate）
 
@@ -132,6 +132,45 @@ Notion 画像 URL は**期限付き**（署名 URL）。1 時間で失効する�
 - 原因の層（source / cache / renderer / core）が即わかる
 - サードパーティ拡張でも `cache-redis/connection_failed` のように被らない
 - エラーコードの string enum は強すぎるため `string & {}` でリテラル補完だけ残す
+
+## packages/cms（v3）
+
+「何ができるか」は `.claude/rules/cms.md` に事実として書く。ここでは v2 とは独立したこの
+アーキテクチャが**なぜ**こう設計されているかを記録する。
+
+### なぜ読者リクエスト処理中に Notion API を一切呼ばないのか
+
+Cloudflare Workers（特に無料プラン）は 1 リクエストあたりの subrequest 数・CPU 時間に厳しい
+上限がある。v2 の SWR 方式のようにアクセス時に Notion と突合する設計では、この予算がリクエスト
+ごとの Notion API 呼び出し有無に左右され、予測が難しい。v3 は同期を完全に読者リクエストの外へ
+追い出し、`find()`/`list()` を KV/R2 の参照だけに限定することで、読者 Worker のリクエスト処理に
+「固定でハードな」subrequest/CPU 予算を持たせられるようにしている。
+
+### なぜ同期を Durable Object（`syncDelegate`）に委譲できるようにしたのか
+
+読者用 Worker は isolate ごとに複数走る。各 isolate が独立に Notion 同期を試みると、Notion の
+レート制限（3 req/sec）を isolate 数だけ奪い合うレースになり、429 が増えるだけで得るものがない。
+`syncDelegate`（`durableObjectSyncDelegate`）を使うと、Notion への直列アクセスを単一の Durable
+Object インスタンスに一元化でき、レート制限をアプリ全体で 1 箇所のリミッタ（`rate-limiter.ts`）
+だけで守れる。読者側 Worker は同期そのものには関与せず、KV/R2 の読み取りに専念できる。
+
+### なぜ画像・内部リンク・プロパティの変換を読み取り時ではなく同期時に行うのか
+
+Notion 画像 URL の解決・内部リンクの href 生成・プロパティの正規化はどれも「重い」か「外部
+呼び出しを伴う」処理になり得る。これらを読み取り時に行うと、v3 の北極星（読み取り経路を
+外部呼び出しゼロに保つ）が崩れる。そこで `pipeline/`（`images.ts`/`links.ts`/`properties.ts`/
+`resolve-images.ts`）がすべて同期時に実行され、`find()`/`list()` は変換済みのプレーンな
+`EntrySnapshot`/`IndexEntry`（JSON）を返すだけになる。
+
+### なぜ webhook 駆動の同期に加えて realtime push（WebSocket hub）があるのか
+
+Notion の webhook 通知は配送保証が無く、遅延・欠落があり得る。webhook だけに頼ると、
+編集内容が反映されるまでの時間に不確実性が残る。`realtime.ts`（`publishVersionUpdate`）は
+同期完了時に version 同梱でクライアントへ即時 push することで、KV への伝播を待たずに
+「新しい version がある」ことを知らせる。同時に、push 自体も取りこぼされ得る（購読していない
+タイミングでの更新など）ため、マウント時・タブ復帰時の revalidate という別経路も併用する。
+webhook 駆動同期・realtime push・mount/visibility revalidate の 3 つは互いの弱点を補い合う、
+独立した鮮度保証のレイヤーとして設計されている。
 
 ## 今後の拡張ポイント
 

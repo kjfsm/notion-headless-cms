@@ -18,17 +18,43 @@ Notion DB
        └─ core（CMS エンジン・キャッシュ・SWR・フック・nodePreset）
             └─ cache（memory + サブパス /cloudflare（R2/KV + cloudflarePreset）/next（ISR））
 
-利用側の単一エントリ（v2〜・これ 1 つ + サブパスで揃う）:
+利用側の単一エントリ（これ 1 つ + サブパスで揃う）:
   client（createCMS）/ client/cloudflare / client/next / client/react
 ```
 
 すべて `@notion-headless-cms/` スコープ。`cli` は別途 introspect・型生成ツール。
-v2 で旧メタパッケージ（node / cloudflare / next）は廃止し `client` に集約した。
+
+### v3（packages/cms）— もう一つの独立したパッケージファミリー
+
+上記の `client`/`core`/`cache`/`notion-source` 系（v2）とは**別に**、`@notion-headless-cms/cms`
+（v3）が Notion アクセス・同期・ストレージ・HTTP 配信を 1 パッケージに束ねた独立系として存在する。
+v2 を置き換えるものではなく、要件に応じてどちらを使うか選ぶ 2 つの現行アーキテクチャ。
+v2/v3 間に依存関係は無い（`packages/cms/package.json` は `core`/`cache`/`client`/`notion-source`
+のいずれにも依存しない）。実運用での消費例: `euphoric-band-site`（Cloudflare Workers + Durable
+Objects で完全マテリアライズド配信）。
+
+- **`createCMS`（v3）が作るもの**: KV/R2 上に構築されるマテリアライズドなコンテンツレプリカ。
+  読み取り（`find`/`list`）は KV/R2 の参照だけで完結し、**リクエスト処理中に Notion API を一切呼ばない**。
+  Notion との同期はリクエスト経路から切り離され、`notion`（トークン/クライアント）+ `scheduler` を
+  渡してこのインスタンス自身に同期させるか、`syncDelegate` で外部（Durable Object 等）に丸ごと委譲する
+- **サブパスエクスポート**:
+  - `.`（本体）— `createCMS` / `defineCollection` / `defineSchema` / `prop` などランタイム非依存の中核
+  - `./html` — React を使わない利用者向けの HTML レンダラ（`renderBlocksToHtml` 等）
+  - `./cloudflare` — Cloudflare 固有実装（KV/R2 ストア、Durable Object 由来の sync delegate・DO クラスファクトリ、WebSocket realtime hub）。詳細: `.claude/rules/cloudflare.md`
+  - `./node` — Node 専用ストア（`node:fs` に依存するため本体から分離）
+  - `./testing` — vitest 前提のストア契約テストユーティリティ（本体に vitest をバンドルしないため分離）
+- **核心設計アイデア**:
+  - `defineCollection`/`defineSchema` による TypeScript ファーストのスキーマ定義（codegen ではなく直接 TS で書き、育てる運用）
+  - 公開ポリシーは `published`/`accessible`（`statusProperty` の値集合）で表現する。`published` は一覧（`list`）に載せるかどうか、`accessible` は個別取得（`find`）を許すかどうかで、両者は独立に指定できる（`accessible` 省略時は `published` にフォールバック）
+  - 画像・内部リンク・プロパティの変換は**同期時**に行い、読み取り時は素の JSON を返すだけにする（読み取り経路を外部呼び出しゼロに保つため）
+
+詳細な API 面・モジュール構成は `.claude/rules/cms.md`、設計の「なぜ」は `docs/ja/architecture.md`
+の「packages/cms（v3）」節を参照。
 
 ### 核心設計原則
 
 - **core を Notion 固有知識から隔離**: `DataSourceAdapter` インターフェースのみ定義し、実装は `notion-orm` 側に置く。将来の Contentful 等への差し替えを可能にするため
-- **単一エントリ `createCMS`（v2〜）**: `@notion-headless-cms/client` の `createCMS({ schema, token, content, collections, runtime })` で `createClient` + `notionSource` + preset を 1 呼び出しに集約。`content: "html" | "react"` が取得戦略 + renderer を内部結線する。`createClient` / `notionSource` / `nodePreset` は client が re-export する escape hatch。廃止されたアダプタ（`adapter-node` / `adapter-cloudflare`）やメタパッケージ（node / cloudflare / next）は参照しない
+- **単一エントリ `createCMS`**: `@notion-headless-cms/client` の `createCMS({ schema, token, content, collections, runtime })` で `createClient` + `notionSource` + preset を 1 呼び出しに集約。`content: "html" | "react"` が取得戦略 + renderer を内部結線する。`createClient` / `notionSource` / `nodePreset` は client が re-export する escape hatch
 - **拡張可能な sources（module augmentation）**: core は空の `CMSSources` インターフェースを公開し、`@notion-headless-cms/notion-source` などのアダプターパッケージが `declare module "@notion-headless-cms/core" { interface CMSSources { notion?: CMSAdapter } }` で宣言マージしてキーを追加する（Fastify プラグインと同じパターン）。CLI は DB 構造（`schema`）のみを生成し、token / 公開ポリシー等の振る舞いは `createCMS` 側で組み立てる
 - **構造型による抽象化**: `R2BucketLike` など、型だけ定義してランタイムパッケージへの直接依存を排除（テスト容易性向上）
 - **`internal/` は非公開**: `packages/*/src/internal/**` を他パッケージから import 禁止。公開したければ `src/index.ts` で re-export する（詳細: `.claude/rules/package-boundaries.md`）

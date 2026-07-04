@@ -8,7 +8,7 @@
 
 | ツール | バージョン |
 |---|---|
-| Node.js | `>=22` |
+| Node.js | `>=24` |
 | pnpm | `10.x`（`package.json` の `packageManager` に固定） |
 
 ### 初回セットアップ
@@ -37,7 +37,7 @@ pnpm knip         # 未使用コード・依存の検出
 
 ```bash
 pnpm --filter @notion-headless-cms/core test
-pnpm --filter @notion-headless-cms/renderer build
+pnpm --filter @notion-headless-cms/core build
 ```
 
 ## PR を送る前に
@@ -61,7 +61,7 @@ bump 種別は原則 **patch**。API の追加は `minor`、破壊的変更は `
 
 ## パッケージ境界ルール
 
-- **`@notion-headless-cms/core` はゼロ依存**: `@notionhq/client` / `unified` / `zod` / `@notion-headless-cms/renderer` を静的 import しない
+- **`@notion-headless-cms/core` はゼロ依存**: `@notionhq/client` / `unified` / `zod` / `@notion-headless-cms/markdown-html` を静的 import しない
 - **`internal/` は非公開**: `packages/*/src/internal/**` を他パッケージから import しない
 - 詳細: `.claude/rules/package-boundaries.md`
 
@@ -69,16 +69,24 @@ bump 種別は原則 **patch**。API の追加は `minor`、破壊的変更は `
 
 ```
 packages/
-  core/        — CMS コアエンジン（SWR・キャッシュ・フック）
-  renderer/    — Markdown → HTML 変換
-  notion-orm/  — Notion API レイヤー（DataSource 実装）
-  cli/         — nhc コマンド（スキーマ自動生成）
-  adapter-next/ — Next.js App Router グルー
-  cache-r2/    — Cloudflare R2 + KV キャッシュアダプタ
-  cache-kv/    — Cloudflare KV キャッシュアダプタ
-  cache-next/  — Next.js ISR キャッシュアダプタ
-examples/      — 各ランタイム向けサンプル
-docs/          — ドキュメント
+  block-html/     — Notion ブロック（bookmark / embed / mention / toggle / callout / table 等）を HTML にレンダリング
+  cache/          — キャッシュアダプタ（memory + サブパス /cloudflare（KV/R2）/next（ISR））
+  cli/            — nhc コマンド（Notion DB からスキーマ自動生成）
+  client/         — v2 単一エントリ（createCMS。core + notion-source + preset を集約）
+  cms/            — v3（マテリアライズドコンテンツレプリカ + 非同期同期。読者リクエスト中に Notion API を呼ばない）
+  core/           — v2 CMS コアエンジン（SWR・キャッシュ抽象・フック）
+  fetch-blocks/   — BlockObjectResponse ツリー取得（react-renderer で描画）
+  fetch-markdown/ — Notion Markdown Export API で本文を 1 リクエスト取得
+  markdown-html/  — Markdown → HTML 変換（remark/rehype ベース）
+  notion-katex/   — fetch 時に数式ブロックを KaTeX で pre-render する拡張
+  notion-orm/     — Notion API レイヤー（DataSource 実装。CLI 生成物のみが利用）
+  notion-shiki/   — fetch 時にコードブロックを shiki で pre-render する拡張
+  notion-source/  — Notion CMSAdapter 実装（core の CMSSources に宣言マージ）
+  react-renderer/ — BlockObjectResponse → React コンポーネント
+  testing/        — フェイク DataSource・フェイクキャッシュ等のテストユーティリティ
+  validate/       — createClient / notionSource / CLI config の任意 zod バリデーション
+examples/         — 各ランタイム向けサンプル
+docs/             — ドキュメント
 ```
 
 詳細は [docs/ja/development.md](docs/ja/development.md) を参照してください。
