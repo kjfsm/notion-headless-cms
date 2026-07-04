@@ -1,16 +1,30 @@
-import type { CollectionIndex, IndexEntry } from "../types/collection-index.js";
+import type { RuntimeSortInput } from "../query/where.js";
+import { evaluateWhere, sortByMeta } from "../query/where.js";
+import type { IndexEntry } from "../types/collection-index.js";
+import type { JsonValue } from "../types/json-value.js";
+import type { ListResult } from "../types/query.js";
+import { deepEqualJson } from "./deep-equal-json.js";
 import type { DocStore } from "./types.js";
 
-/** 1 シャードあたりの最大エントリ数。KV 25MB 制限に対して十分小さく保つ。 */
-const DEFAULT_SHARD_SIZE = 500;
+const DEFAULT_LIMIT = 20;
 
-function shardKey(collection: string, page: number): string {
-  return `index:${collection}:${page}`;
+export interface ListRuntimeParams {
+  readonly where?: Record<string, Record<string, JsonValue>>;
+  readonly sort?: readonly RuntimeSortInput[];
+  readonly cursor?: string;
+  readonly limit?: number;
 }
 
 export interface IndexStore {
-  getShard(collection: string, page: number): Promise<CollectionIndex | null>;
-  listShards(collection: string): Promise<CollectionIndex[]>;
+  findEntry(collection: string, slug: string): Promise<IndexEntry | null>;
+  listEntries(
+    collection: string,
+    params: ListRuntimeParams,
+  ): Promise<ListResult<IndexEntry>>;
+  /** listed 問わず全件（buildPageIndex の内部リンク解決用）。 */
+  listAllEntries(collection: string): Promise<readonly IndexEntry[]>;
+  /** listed 問わず全 slug（reconcile の突合用）。 */
+  listSlugs(collection: string): Promise<readonly string[]>;
   /** 該当 slug の entry を追加/更新する。差分が無ければ書き込みをスキップする。 */
   upsertEntry(
     collection: string,
@@ -19,86 +33,132 @@ export interface IndexStore {
   removeEntry(collection: string, slug: string): Promise<{ wrote: boolean }>;
 }
 
+function pointKey(collection: string, slug: string): string {
+  return `entry-index:${collection}:${slug}`;
+}
+
+function manifestKey(collection: string): string {
+  return `list-index:${collection}`;
+}
+
 /**
- * KV(想定)上のコレクション index 読み書き。`index:{collection}:{page}` にシャーディングする。
- * `upsertEntry` は version/listed に差分が無ければ書き込みをスキップし、
- * 「entry 更新 1 件 = index 書き込み高々 1 回」という KV 書き込み予算(1,000/日)の
- * 制約を満たす。
+ * notion-driver.ts の `syncEntry` は meta に `lastEditedTime`(= version と同じ値)を
+ * 必ず含める。これを含めたまま比較すると、version が変わるたび(= 内容編集のたび)に
+ * 必ず meta も不一致になり、マニフェスト書き込みスキップが機能しなくなる。version は
+ * 別途比較済みなので、ここでは lastEditedTime を除いた meta 同士を比較する。
  */
-export function createIndexStore(
-  docs: DocStore,
-  shardSize = DEFAULT_SHARD_SIZE,
-): IndexStore {
-  async function getShard(
+function metaForManifestComparison(meta: JsonValue): JsonValue {
+  if (
+    meta !== null &&
+    typeof meta === "object" &&
+    !Array.isArray(meta) &&
+    "lastEditedTime" in meta
+  ) {
+    const { lastEditedTime: _lastEditedTime, ...rest } = meta as Record<
+      string,
+      JsonValue
+    >;
+    return rest;
+  }
+  return meta;
+}
+
+/**
+ * KV(想定)上のコレクション index 読み書き。2 種類のキーに分離する:
+ *
+ * - 点読みキー(`entry-index:{collection}:{slug}`): `find()` 用。version が変わる
+ *   たび(= Notion 側で何か変更があるたび)に必ず書く。`versionedCache` が version を
+ *   キャッシュキーに使うため、これが古いと find() が古いコンテンツを返し続ける。
+ * - 一覧マニフェストキー(`list-index:{collection}`): `list()`/`listAllEntries()`/
+ *   `listSlugs()` 用。コレクション全件を 1 キーに JSON 配列で持つ。`listed`/`meta` が
+ *   実際に変わった時だけ書く(本文ブロックだけの編集は version は進むが meta/listed は
+ *   変わらないことがほとんどのため、ここをスキップして KV 書き込み予算を節約する)。
+ *
+ * 同一コレクションへの並行書き込みは `SyncCoordinatorCore.runChunk()` が変更を
+ * 1 件ずつ順次処理するため発生しない(マニフェストの read-modify-write レースは無い)。
+ */
+export function createIndexStore(docs: DocStore): IndexStore {
+  async function readManifest(collection: string): Promise<IndexEntry[]> {
+    const raw = await docs.get(manifestKey(collection));
+    return raw ? (JSON.parse(raw) as IndexEntry[]) : [];
+  }
+
+  async function findEntry(
     collection: string,
-    page: number,
-  ): Promise<CollectionIndex | null> {
-    const raw = await docs.get(shardKey(collection, page));
-    return raw ? (JSON.parse(raw) as CollectionIndex) : null;
-  }
-
-  async function listShards(collection: string): Promise<CollectionIndex[]> {
-    const keys = await docs.list(`index:${collection}:`);
-    const shards = await Promise.all(
-      keys.map(async (key) => {
-        const raw = await docs.get(key);
-        return raw ? (JSON.parse(raw) as CollectionIndex) : null;
-      }),
-    );
-    return shards
-      .filter((s): s is CollectionIndex => s !== null)
-      .sort((a, b) => a.page - b.page);
-  }
-
-  async function putShard(index: CollectionIndex): Promise<void> {
-    await docs.put(
-      shardKey(index.collection, index.page),
-      JSON.stringify(index),
-    );
+    slug: string,
+  ): Promise<IndexEntry | null> {
+    const raw = await docs.get(pointKey(collection, slug));
+    return raw ? (JSON.parse(raw) as IndexEntry) : null;
   }
 
   return {
-    getShard,
-    listShards,
+    findEntry,
+    async listEntries(collection, params) {
+      const listed = (await readManifest(collection)).filter((e) => e.listed);
+      const filtered = listed.filter((e) =>
+        evaluateWhere(e.meta as Record<string, JsonValue>, params.where),
+      );
+      const sorted = sortByMeta(
+        filtered,
+        params.sort,
+        (e) => e.meta as Record<string, JsonValue>,
+      );
+
+      const offset = params.cursor
+        ? Math.max(0, Number.parseInt(params.cursor, 10) || 0)
+        : 0;
+      const limit = Math.max(0, params.limit ?? DEFAULT_LIMIT);
+      const page = sorted.slice(offset, offset + limit);
+      const hasMore = offset + limit < sorted.length;
+
+      return {
+        items: page,
+        nextCursor: hasMore ? String(offset + limit) : null,
+        hasMore,
+      };
+    },
+    async listAllEntries(collection) {
+      return readManifest(collection);
+    },
+    async listSlugs(collection) {
+      return (await readManifest(collection)).map((e) => e.slug);
+    },
     async upsertEntry(collection, entry) {
-      const shards = await listShards(collection);
-      for (const shard of shards) {
-        const idx = shard.entries.findIndex((e) => e.slug === entry.slug);
-        if (idx === -1) continue;
-        const existing = shard.entries[idx];
-        if (
-          existing &&
-          existing.version === entry.version &&
-          existing.listed === entry.listed
-        ) {
-          return { wrote: false };
-        }
-        const nextEntries = [...shard.entries];
-        nextEntries[idx] = entry;
-        await putShard({ ...shard, entries: nextEntries });
-        return { wrote: true };
+      const existing = await findEntry(collection, entry.slug);
+      if (existing && existing.version === entry.version) {
+        return { wrote: false }; // Notion 側で何も変わっていない
       }
-      const target = shards.find((s) => s.entries.length < shardSize);
-      if (target) {
-        await putShard({ ...target, entries: [...target.entries, entry] });
-      } else {
-        const nextPage =
-          shards.length > 0 ? Math.max(...shards.map((s) => s.page)) + 1 : 0;
-        await putShard({ collection, page: nextPage, entries: [entry] });
+
+      await docs.put(pointKey(collection, entry.slug), JSON.stringify(entry));
+
+      const manifestChanged =
+        !existing ||
+        existing.listed !== entry.listed ||
+        !deepEqualJson(
+          metaForManifestComparison(existing.meta),
+          metaForManifestComparison(entry.meta),
+        );
+      if (manifestChanged) {
+        const manifest = await readManifest(collection);
+        const idx = manifest.findIndex((e) => e.slug === entry.slug);
+        const next =
+          idx === -1
+            ? [...manifest, entry]
+            : manifest.map((e, i) => (i === idx ? entry : e));
+        await docs.put(manifestKey(collection), JSON.stringify(next));
       }
       return { wrote: true };
     },
     async removeEntry(collection, slug) {
-      const shards = await listShards(collection);
-      for (const shard of shards) {
-        if (!shard.entries.some((e) => e.slug === slug)) continue;
-        await putShard({
-          ...shard,
-          entries: shard.entries.filter((e) => e.slug !== slug),
-        });
-        return { wrote: true };
-      }
-      return { wrote: false };
+      const existing = await findEntry(collection, slug);
+      if (!existing) return { wrote: false };
+      await docs.delete(pointKey(collection, slug));
+      const manifest = await readManifest(collection);
+      await docs.put(
+        manifestKey(collection),
+        JSON.stringify(manifest.filter((e) => e.slug !== slug)),
+      );
+      return { wrote: true };
     },
   };
 }

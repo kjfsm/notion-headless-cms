@@ -5,8 +5,6 @@
 export interface DocStore {
   get(key: string): Promise<string | null>;
   put(key: string, value: string): Promise<void>;
-  /** 前方一致でキー一覧を取得する（シャード列挙に使う）。 */
-  list(prefix: string): Promise<readonly string[]>;
   delete(key: string): Promise<void>;
 }
 

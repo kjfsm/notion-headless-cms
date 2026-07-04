@@ -271,18 +271,16 @@ export function createCollectionDriver(
       });
       const pages = res.results.filter(isFullPage);
 
-      const shards = await deps.indexStore.listShards(collection);
-      const indexedBySlug = new Map(
-        shards.flatMap((s) => s.entries).map((e) => [e.slug, e]),
-      );
-
+      // チャンクサイズ(既定 2 件程度)ぶんの点読みで済ませる。マニフェストは
+      // 内容編集のみの更新では version を更新しない(index-store.ts 参照)ため、
+      // ここで一覧側の version と比較すると内容編集の同期漏れになる。
       const nextChunkCache = new Map<string, PageObjectResponse>();
       const changes: EntryChange[] = [];
       let stoppedEarly = false;
       for (const page of pages) {
         const slug = slugOf(def, page) ?? page.id;
         nextChunkCache.set(slug, page);
-        const existing = indexedBySlug.get(slug);
+        const existing = await deps.indexStore.findEntry(collection, slug);
         if (existing && existing.version === page.last_edited_time) {
           stoppedEarly = true;
           break;
@@ -316,8 +314,7 @@ export function createCollectionDriver(
     },
 
     async listIndexedSlugs() {
-      const shards = await deps.indexStore.listShards(collection);
-      return shards.flatMap((s) => s.entries.map((e) => e.slug));
+      return deps.indexStore.listSlugs(collection);
     },
 
     async syncEntry(change) {

@@ -34,15 +34,6 @@ export function runDocStoreContract(opts: DocStoreContractOptions) {
     await store.delete("k1");
     expect(await store.get("k1")).toBeNull();
   });
-
-  it("list(prefix) が前方一致するキーだけを返す", async () => {
-    const store = await opts.factory();
-    await store.put("index:posts:0", "a");
-    await store.put("index:posts:1", "b");
-    await store.put("index:pages:0", "c");
-    const keys = await store.list("index:posts:");
-    expect([...keys].sort()).toEqual(["index:posts:0", "index:posts:1"]);
-  });
 }
 
 export interface BlobStoreContractOptions {

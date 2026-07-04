@@ -35,7 +35,7 @@ export type {
   SchemaDef,
 } from "./types/collection.js";
 export { defineCollection, defineSchema } from "./types/collection.js";
-export type { CollectionIndex, IndexEntry } from "./types/collection-index.js";
+export type { IndexEntry } from "./types/collection-index.js";
 export type {
   EntrySnapshot,
   ImageMapEntry,
