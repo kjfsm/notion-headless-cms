@@ -1,5 +1,11 @@
 # @notion-headless-cms/fetch-blocks
 
+## 3.0.1
+
+### Patch Changes
+
+- @notion-headless-cms/react-renderer@3.0.1
+
 ## 3.0.0
 
 ### Major Changes
@@ -182,12 +188,14 @@
 - 359bc6f: fetch 戦略両対応の `ContentExtension` インターフェースを導入し、enrichers を廃止。
 
   ## 破壊的変更
+
   - `blocksFetcher` / `notionSource` / `createCms` の `enrichers` オプションを削除。
     拡張はすべて Renderer 側の `extensions` prop へ移動。
   - `notionKatex()` / `notionShiki()` の戻り値が `BlockEnricher`（関数）から
     `ContentExtension`（オブジェクト）に変更。
 
   ## 新機能
+
   - `notion-orm`: `ContentExtension` インターフェースをエクスポート。
     `getMarkdownPlugins()` で unified プラグインを、`getBlockComponents()` で
     React コンポーネント上書きを提供する統一 API。
