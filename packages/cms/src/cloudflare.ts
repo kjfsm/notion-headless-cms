@@ -26,6 +26,7 @@ export {
 export type {
   DurableObjectSyncDelegateOptions,
   SyncCoordinatorCMS,
+  SyncCoordinatorDOInstance,
   SyncCoordinatorDOOptions,
 } from "./sync/sync-coordinator-do.js";
 export {
