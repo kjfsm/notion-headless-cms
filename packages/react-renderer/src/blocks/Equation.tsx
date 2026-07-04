@@ -22,7 +22,10 @@ export function Equation({
   const [html, setHtml] = useState<string | null>(cachedHtml ?? null);
 
   useEffect(() => {
-    if (cachedHtml) return;
+    // import.meta.env.SSR は Vite が静的に置換する定数のため、この early return により
+    // 後続の katex の動的 import が SSR/Worker バンドルの到達可能グラフから外れ、
+    // tree-shaking で除外される。
+    if (import.meta.env.SSR || cachedHtml) return;
     let cancelled = false;
     (async () => {
       try {
