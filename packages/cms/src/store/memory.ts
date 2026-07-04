@@ -10,9 +10,6 @@ export function memoryDocStore(): DocStore {
     async put(key, value) {
       map.set(key, value);
     },
-    async list(prefix) {
-      return [...map.keys()].filter((k) => k.startsWith(prefix));
-    },
     async delete(key) {
       map.delete(key);
     },

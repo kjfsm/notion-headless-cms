@@ -1,7 +1,6 @@
 import type { EntryStore } from "../store/entry-store.js";
 import type { IndexStore } from "../store/index-store.js";
 import type { VersionedCacheLayer } from "../store/versioned-cache.js";
-import type { IndexEntry } from "../types/collection-index.js";
 import type { EntrySnapshot } from "../types/entry-snapshot.js";
 import type { JsonValue } from "../types/json-value.js";
 
@@ -18,19 +17,6 @@ export interface FindDeps {
   readonly coldStartFetch?: ColdStartFetch;
 }
 
-async function findInIndex(
-  indexStore: IndexStore,
-  collection: string,
-  slug: string,
-): Promise<IndexEntry | null> {
-  const shards = await indexStore.listShards(collection);
-  for (const shard of shards) {
-    const entry = shard.entries.find((e) => e.slug === slug);
-    if (entry) return entry;
-  }
-  return null;
-}
-
 /**
  * `find(slug)`: KV index で version/存在確認 → R2 から EntrySnapshot を読んで返す。
  * 戻り値は完全にプレーンな JSON(loader からそのまま `return { post }` できる)。
@@ -41,7 +27,7 @@ export async function findEntry<Meta extends JsonValue = JsonValue>(
   collection: string,
   slug: string,
 ): Promise<EntrySnapshot<Meta> | null> {
-  const indexed = await findInIndex(deps.indexStore, collection, slug);
+  const indexed = await deps.indexStore.findEntry(collection, slug);
   if (!indexed) {
     return deps.coldStartFetch
       ? ((await deps.coldStartFetch(

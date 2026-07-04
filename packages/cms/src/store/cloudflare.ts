@@ -10,17 +10,6 @@ export function kvDocStore(namespace: KVNamespaceLike): DocStore {
     async put(key, value) {
       await namespace.put(key, value);
     },
-    async list(prefix) {
-      const names: string[] = [];
-      let cursor: string | undefined;
-      for (;;) {
-        const page = await namespace.list({ prefix, cursor });
-        names.push(...page.keys.map((k) => k.name));
-        if (page.list_complete || !page.cursor) break;
-        cursor = page.cursor;
-      }
-      return names;
-    },
     async delete(key) {
       await namespace.delete(key);
     },

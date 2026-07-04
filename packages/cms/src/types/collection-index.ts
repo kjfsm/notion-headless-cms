@@ -1,10 +1,8 @@
 import type { JsonValue } from "./json-value.js";
 
 /**
- * KV の 1 コレクション分の index。list() 評価用のメタのみを持つ
+ * KV の 1 コレクション分の index エントリ。list() 評価用のメタのみを持つ
  * （本文は含めない — 本文は R2 の `EntrySnapshot` 側）。
- * KV 25MB 制限とサイズ予算を考慮し、1 コレクションを複数ページに
- * シャーディングする前提（`index:{collection}:{page}` キー）。
  */
 export interface IndexEntry {
   readonly slug: string;
@@ -19,10 +17,4 @@ export interface IndexEntry {
    * この不変条件（index に full meta が入る）を崩す場合は当該型も射影に合わせて変えること。
    */
   readonly meta: JsonValue;
-}
-
-export interface CollectionIndex {
-  readonly collection: string;
-  readonly page: number;
-  readonly entries: readonly IndexEntry[];
 }

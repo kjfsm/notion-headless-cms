@@ -13,7 +13,7 @@ function findTitleKey(
 }
 
 /**
- * スキーマ全体の index シャードから、内部リンク解決用の `PageIndex`
+ * スキーマ全体の index マニフェストから、内部リンク解決用の `PageIndex`
  * （正規化 pageId → collection/slug/title）を読み取り専用で組み立てる（KV 書き込みゼロ）。
  * `IndexEntry.meta` には各コレクションのドライバが `id`（正規化 pageId）を必ず含める
  * （`notion-driver.ts` の `meta` 構成）ため、ここでは meta を読むだけで済む。
@@ -28,18 +28,16 @@ export async function buildPageIndex(
     // 内部リンク解決対象から除外する。
     if (!def.slug) continue;
     const titleKey = findTitleKey(def.properties);
-    const shards = await indexStore.listShards(collection);
-    for (const shard of shards) {
-      for (const entry of shard.entries) {
-        const meta = entry.meta as Record<string, JsonValue> | null;
-        const id = meta && typeof meta.id === "string" ? meta.id : null;
-        if (!id) continue;
-        const title =
-          titleKey && meta && typeof meta[titleKey] === "string"
-            ? (meta[titleKey] as string)
-            : null;
-        result[normalizePageId(id)] = { collection, slug: entry.slug, title };
-      }
+    const entries = await indexStore.listAllEntries(collection);
+    for (const entry of entries) {
+      const meta = entry.meta as Record<string, JsonValue> | null;
+      const id = meta && typeof meta.id === "string" ? meta.id : null;
+      if (!id) continue;
+      const title =
+        titleKey && meta && typeof meta[titleKey] === "string"
+          ? (meta[titleKey] as string)
+          : null;
+      result[normalizePageId(id)] = { collection, slug: entry.slug, title };
     }
   }
   return result;

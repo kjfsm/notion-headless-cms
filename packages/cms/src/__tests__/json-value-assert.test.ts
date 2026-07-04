@@ -1,5 +1,5 @@
 import { describe, expectTypeOf, it } from "vitest";
-import type { CollectionIndex } from "../types/collection-index.js";
+import type { IndexEntry } from "../types/collection-index.js";
 import type { EntrySnapshot } from "../types/entry-snapshot.js";
 import type {
   AssertJsonValue,
@@ -15,11 +15,9 @@ interface NotSerializable {
 }
 
 describe("JsonValue 互換性の型テスト", () => {
-  it("EntrySnapshot / CollectionIndex / ListResult は JsonValue 互換(AssertJsonValue で元の型のまま通る)", () => {
+  it("EntrySnapshot / IndexEntry / ListResult は JsonValue 互換(AssertJsonValue で元の型のまま通る)", () => {
     expectTypeOf<AssertJsonValue<Snapshot>>().toEqualTypeOf<Snapshot>();
-    expectTypeOf<
-      AssertJsonValue<CollectionIndex>
-    >().toEqualTypeOf<CollectionIndex>();
+    expectTypeOf<AssertJsonValue<IndexEntry>>().toEqualTypeOf<IndexEntry>();
     type ListOfMeta = ListResult<{ slug: string; title: string }>;
     expectTypeOf<AssertJsonValue<ListOfMeta>>().toEqualTypeOf<ListOfMeta>();
   });

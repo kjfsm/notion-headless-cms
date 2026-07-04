@@ -472,19 +472,15 @@ describe("createCMS", () => {
     // find/list が読めることを確認するため、事前にストアへ直接書き込んでおく
     // (syncDelegate 使用時はローカルの SyncCoordinatorCore を持たないため kick() 経由の同期はできない)。
     await stores.docs.put(
-      "index:posts:0",
-      JSON.stringify({
-        collection: "posts",
-        page: 0,
-        entries: [
-          {
-            slug: "hello",
-            version: "v1",
-            listed: true,
-            meta: { title: "Hello" },
-          },
-        ],
-      }),
+      "list-index:posts",
+      JSON.stringify([
+        {
+          slug: "hello",
+          version: "v1",
+          listed: true,
+          meta: { title: "Hello" },
+        },
+      ]),
     );
 
     const delegate = {

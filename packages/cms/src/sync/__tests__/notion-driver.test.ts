@@ -197,10 +197,7 @@ describe("createCollectionDriver", () => {
     });
     expect(snapshot?.blocks[0]?.type).toBe("paragraph");
 
-    const shards = await indexStore.listShards("posts");
-    const entry = shards
-      .flatMap((s) => s.entries)
-      .find((e) => e.slug === "hello");
+    const entry = await indexStore.findEntry("posts", "hello");
     expect(entry?.listed).toBe(true);
     expect(entry?.meta).toMatchObject({
       id: expect.any(String),
@@ -381,8 +378,7 @@ describe("createCollectionDriver", () => {
     await driver.syncEntry({ slug: "old", lastEditedTime: "v2" });
 
     expect(await entryStore.get("posts", "old")).toBeNull();
-    const shards = await indexStore.listShards("posts");
-    expect(shards.flatMap((s) => s.entries)).toHaveLength(0);
+    expect(await indexStore.listAllEntries("posts")).toHaveLength(0);
   });
 
   it("slug が空なら CMSError(sync/slug_missing) を投げる", async () => {
@@ -459,10 +455,7 @@ describe("createCollectionDriver", () => {
       key: "サブタイトル",
       text: "最高のバンド",
     });
-    const shards = await indexStore.listShards("siteTexts");
-    const entry = shards
-      .flatMap((s) => s.entries)
-      .find((e) => e.slug === "page-abc");
+    const entry = await indexStore.findEntry("siteTexts", "page-abc");
     // status 未設定なので既定で list 対象(listed: true)。
     expect(entry?.listed).toBe(true);
   });
@@ -606,9 +599,7 @@ describe("createCollectionDriver", () => {
     });
     await driver.removeEntry("x");
     expect(await entryStore.get("posts", "x")).toBeNull();
-    expect(
-      (await indexStore.listShards("posts")).flatMap((s) => s.entries),
-    ).toHaveLength(0);
+    expect(await indexStore.listAllEntries("posts")).toHaveLength(0);
   });
 
   it("dataSources.query が失敗すると CMSError(sync/notion_query_failed) に包む", async () => {

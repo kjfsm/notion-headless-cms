@@ -1,10 +1,9 @@
-import { mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { BlobHead, BlobPutOptions, BlobStore, DocStore } from "./types.js";
 
 function keyToPath(root: string, key: string): string {
-  // encodeURIComponent は `:` `/` を可逆的に区別してエスケープするため、
-  // list() 側の decodeURIComponent で元の key に一意に復元できる。
+  // encodeURIComponent は `:` `/` を可逆的に区別してエスケープする。
   return join(root, `${encodeURIComponent(key)}.dat`);
 }
 
@@ -22,16 +21,6 @@ export function fileDocStore(root: string): DocStore {
       const path = keyToPath(root, key);
       await mkdir(dirname(path), { recursive: true });
       await writeFile(path, value, "utf-8");
-    },
-    async list(prefix) {
-      try {
-        const files = await readdir(root);
-        return files
-          .map((f) => decodeURIComponent(f.replace(/\.dat$/, "")))
-          .filter((k) => k.startsWith(prefix));
-      } catch {
-        return [];
-      }
     },
     async delete(key) {
       try {
