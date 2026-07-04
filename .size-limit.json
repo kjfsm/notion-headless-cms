@@ -27,7 +27,8 @@
   {
     "name": "cms",
     "path": "packages/cms/dist/index.mjs",
-    "limit": "100 kB"
+    "limit": "100 kB",
+    "ignore": ["shiki", "shiki/engine/javascript", "katex"]
   },
   {
     "name": "cms/html",
