@@ -1,5 +1,20 @@
 # @notion-headless-cms/react-renderer
 
+## 3.0.3
+
+### Patch Changes
+
+- 43d55b2: `PageLinkMap`・`ResolvedPageLink` 型を公開 API として export した。
+
+  - 両型は元々 `types.ts` で `export interface`/`export type` 済みだったが、トップレベルの
+    export リストに含まれていなかった
+  - `toPageLinkMap()`（`react-renderer/v3`）の戻り値型が `PageLinkMap` のため、この値を
+    自前のローダー関数の戻り値として扱うと、未 export のせいで `tsc -b`（`composite: true`）
+    の宣言ファイル出力で「名前を付けられない型」エラーになっていた
+
+- Updated dependencies [43d55b2]
+  - @notion-headless-cms/cms@3.0.3
+
 ## 3.0.2
 
 ### Patch Changes
