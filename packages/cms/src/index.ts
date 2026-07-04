@@ -43,6 +43,7 @@ export type {
   ResolvedLink,
 } from "./types/entry-snapshot.js";
 export type { AssertJsonValue, JsonValue } from "./types/json-value.js";
+export type { LogContext, Logger, LogLevel } from "./types/logger.js";
 export type {
   FileValue,
   FormulaResultType,

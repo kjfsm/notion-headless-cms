@@ -54,7 +54,22 @@ describe("home loader()", () => {
 
   it("cms.posts.list() のページリストを返す", async () => {
     fakeCms.posts.list.mockResolvedValue({
-      items: [{ slug: "hello", version: "v1", listed: true, meta: {} }],
+      items: [
+        {
+          slug: "hello",
+          version: "v1",
+          listed: true,
+          meta: {
+            id: "id-1",
+            slug: "hello",
+            lastEditedTime: "v1",
+            title: "Hello",
+            status: "公開済み",
+            publishedAt: null,
+            author: null,
+          },
+        },
+      ],
       nextCursor: null,
       hasMore: false,
     });

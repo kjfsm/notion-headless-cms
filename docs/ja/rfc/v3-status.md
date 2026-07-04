@@ -154,6 +154,37 @@ Notion プロパティ名として `raw[key]` で引く実装で、キーと実�
   解決順で drift を照合する。fieldMappings 未指定でも `nhc pull` の自動フォールバック識別子は
   常に `notion` 別名付きで出力されるため機能的には正しく動く（読みやすさのための任意設定になった）
 
+## v2 から失われていた機能の復旧（slug 任意化・typed list()・logger）
+
+v2（`packages/core`/`client`）にあり v3 で失われていた 3 機能を、v2 の形を移植するのではなく
+v3 として自然な形で追加した。
+
+### slug 不要コレクション（`defineCollection` の `slug` 任意化）
+
+- v2 の `kind: "data"` に相当する「URL を持たない設定値コレクション」を、**種別（kind）を増やさず**に
+  `defineCollection` の `slug` を省略するだけで定義できるようにした。slug 未設定コレクションはエントリを
+  Notion の page id でアドレスする（`find(pageId)` / `list()`）。どのプロパティも slug に流用しないため、
+  タイトル等への暗黙の一意性要求が生じない
+- 内部の sync → store → index → find → list は slug 有無で分岐しない単一経路のまま。ドライバは既に
+  `slugOf(def, page) ?? page.id` でキーを決めており、`syncEntry` の `sync/slug_missing` throw を
+  「slug プロパティを設定しているのに値が空」= 設定ミス時のみに限定した。slug 未設定コレクションは
+  内部リンク解決用 `PageIndex` からは除外する（URL ルーティングしないため）
+
+### 型付き `list()`（`meta` を `InferEntry<C>` に絞り込み）
+
+- `list()` の戻り値を `ListResult<IndexEntry>`（`meta: JsonValue`）から
+  `ListResult<CollectionIndexEntry<C>>`（`meta: InferEntry<C>`）に変更し、`find()` と型の一貫性を揃えた。
+  ドライバが index にも本体と同一の full meta を書き込む現状の実装（下記ギャップ9）に基づく型付けのため
+  ランタイムは無改修。`CollectionIndexEntry` / `CollectionEntrySnapshot` を型エクスポートに追加
+
+### `logger` / `logLevel`
+
+- `createCMS({ logger, logLevel })` を追加。`logger` は `debug`/`info`/`warn`/`error` を持つオブジェクトで、
+  `logLevel` 未満のレベルは内部で抑制する（未指定なら no-op）。`Logger`/`LogLevel`/`LogContext` をエクスポート
+- 計装点: Notion クエリ失敗（error）・entry の同期成功（debug）／失敗（warn）・API リトライ待機
+  （debug、`attempt`/`backoffMs`）・webhook 受信（info）／署名不正（warn）・画像 404（warn）。
+  読者リクエストの `find`/`list` は KV/R2 読み取りのみで Notion を叩かない設計のためログを出さない
+
 ## 既知のギャップ（この環境で完了できなかった項目）
 
 以下は #447 の完了条件に含まれるが、この作業環境の制約により実施できていない。実際にリリースする前に
@@ -198,8 +229,9 @@ Notion プロパティ名として `raw[key]` で引く実装で、キーと実�
 9. **`IndexEntry.meta` は「縮小版」ではなく全プロパティを格納する簡略化** — RFC の設計時点では
    「where/sort に必要な最小限のメタのみ」を想定していたが、事前にどのプロパティが使われるか
    判別できないため `notion-driver.ts` は `EntrySnapshot.meta` と同じ内容をそのまま
-   `IndexEntry.meta` にも格納している。KV のサイズ予算が問題になった場合は projection の
-   導入を検討すること
+   `IndexEntry.meta` にも格納している。この全プロパティ格納を前提に `list()` は `meta` を
+   `InferEntry<C>` として型付けする（`CollectionIndexEntry<C>`）。KV のサイズ予算が問題になり
+   projection を導入する場合は、この型も射影後の形に合わせて変えること
 
 ## 次にやること
 

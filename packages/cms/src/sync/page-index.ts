@@ -24,6 +24,9 @@ export async function buildPageIndex(
 ): Promise<PageIndex> {
   const result: Record<string, PageIndexEntry> = {};
   for (const [collection, def] of Object.entries(schema.collections)) {
+    // slug 未設定コレクション(page id アドレス)は URL ルーティングしないため、
+    // 内部リンク解決対象から除外する。
+    if (!def.slug) continue;
     const titleKey = findTitleKey(def.properties);
     const shards = await indexStore.listShards(collection);
     for (const shard of shards) {

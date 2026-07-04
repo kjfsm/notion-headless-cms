@@ -20,12 +20,12 @@ import type { BlobStore } from "../store/types.js";
 import type { CollectionDef } from "../types/collection.js";
 import type { ImageMapEntry } from "../types/entry-snapshot.js";
 import type { JsonValue } from "../types/json-value.js";
+import type { Logger } from "../types/logger.js";
 import type { EntryChange } from "./coordinator.js";
 import type { BlockChildrenListResult } from "./fetch-block-tree.js";
 import { fetchBlockTree } from "./fetch-block-tree.js";
 import type { RateLimiter } from "./rate-limiter.js";
-import type { RetryConfig } from "./retry.js";
-import { withRetry } from "./retry.js";
+import { DEFAULT_RETRY_CONFIG, type RetryConfig, withRetry } from "./retry.js";
 
 /** `client.dataSources.query` が返す最小形状(構造型、モック可能)。 */
 export interface DataSourceQueryResult {
@@ -87,6 +87,7 @@ export interface CollectionDriverDeps {
   readonly fetchImpl?: typeof fetch;
   /** 同期完了時に version 同梱で push する(#437 ADR-5)。省略時は push しない。 */
   readonly realtime?: RealtimeAdapter;
+  readonly logger?: Logger;
 }
 
 export interface CollectionDriver {
@@ -158,9 +159,26 @@ function isListed(def: CollectionDef<any>, status: string | null): boolean {
 export function createCollectionDriver(
   deps: CollectionDriverDeps,
 ): CollectionDriver {
-  const { collection, def, client, rateLimiter, retry } = deps;
+  const { collection, def, client, rateLimiter, retry, logger } = deps;
   const imagesPath = deps.imagesPath ?? "/images";
   const fetchImpl = deps.fetchImpl ?? fetch;
+  // logger 指定時はリトライ待機を debug ログに流す（利用者の onRetry も温存する）。
+  const baseRetry = retry ?? DEFAULT_RETRY_CONFIG;
+  const effectiveRetry: RetryConfig | undefined = logger
+    ? {
+        ...baseRetry,
+        onRetry: (attempt, status, delayMs) => {
+          baseRetry.onRetry?.(attempt, status, delayMs);
+          logger.debug?.("notion API をリトライします", {
+            operation: "retry",
+            collection,
+            attempt,
+            status,
+            backoffMs: delayMs,
+          });
+        },
+      }
+    : retry;
   // listChanged で取得した PageObjectResponse を同一チャンク内だけ再利用するキャッシュ。
   // coordinator は同一 runChunk() 内で listChanged 直後に syncEntry を呼ぶため、
   // 追加の Notion 呼び出し無しで page を渡せる(#437 の設計判断)。
@@ -183,9 +201,14 @@ export function createCollectionDriver(
               ...args,
             }),
           ),
-        retry,
+        effectiveRetry,
       );
     } catch (err) {
+      logger?.error?.("data source query に失敗しました", {
+        operation: "listChanged",
+        collection,
+        error: err instanceof Error ? err.message : String(err),
+      });
       throw new CMSError({
         code: "sync/notion_query_failed",
         message: `data source query に失敗しました(collection: ${collection})`,
@@ -204,7 +227,7 @@ export function createCollectionDriver(
           rateLimiter.schedule(() =>
             client.pages.retrieve({ page_id: pageId }),
           ),
-        retry,
+        effectiveRetry,
       );
       return isFullPage(page) ? page : null;
     } catch {
@@ -317,18 +340,20 @@ export function createCollectionDriver(
         await deps.indexStore.removeEntry(collection, slugForRemoval);
         return;
       }
-      if (!rawSlug) {
+      // slug プロパティを設定しているのに値が空 = 設定ミス（壊れた URL を生む）なので弾く。
+      // slug 未設定のコレクション（設定値一覧等）は page id をキーにするため throw しない。
+      if (def.slug && !rawSlug) {
         throw new CMSError({
           code: "sync/slug_missing",
           message: `collection "${collection}" のページに slug がありません(page: ${page.id})`,
           context: { operation: "syncEntry", collection, slug: page.id },
         });
       }
-      const slug = rawSlug;
+      const slug = rawSlug ?? page.id;
 
       const fetchedBlocks = await fetchBlockTree(client, page.id, {
         rateLimiter,
-        retry,
+        retry: effectiveRetry,
       });
       const normalized = normalizeBlockTree(fetchedBlocks);
       const imageRefs = await extractImageRefs(normalized);
@@ -380,6 +405,13 @@ export function createCollectionDriver(
           page.last_edited_time,
         );
       }
+
+      logger?.debug?.("entry を materialize しました", {
+        operation: "syncEntry",
+        collection,
+        slug,
+        pageId: page.id,
+      });
     },
 
     async removeEntry(slug) {

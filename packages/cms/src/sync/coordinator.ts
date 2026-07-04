@@ -1,5 +1,6 @@
 import type { SyncScheduler } from "../sync-scheduler.js";
 import type { JsonValue } from "../types/json-value.js";
+import type { Logger } from "../types/logger.js";
 
 export interface EntryChange {
   readonly slug: string;
@@ -51,6 +52,7 @@ export interface SyncCoordinatorDeps {
   /** webhook debounce 時間(ms)。既定 3000ms。 */
   debounceMs?: number;
   now?: () => string;
+  logger?: Logger;
 }
 
 function toJsonState(state: SyncState): Record<string, JsonValue> {
@@ -153,15 +155,16 @@ export class SyncCoordinatorCore {
         this.chunkSize,
       ));
     } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      this.deps.logger?.error?.("同期の listChanged に失敗しました", {
+        operation: "listChanged",
+        error: message,
+      });
       await this.setState({
         ...state,
         failures: [
           ...state.failures,
-          {
-            slug: "(listChanged)",
-            message: err instanceof Error ? err.message : String(err),
-            at: this.now(),
-          },
+          { slug: "(listChanged)", message, at: this.now() },
         ],
       });
       // Notion クエリ自体の失敗は fail-soft: 諦めずに次チャンクを再スケジュールする。
@@ -175,11 +178,13 @@ export class SyncCoordinatorCore {
       try {
         await this.deps.syncEntry(change);
       } catch (err) {
-        failures.push({
+        const message = err instanceof Error ? err.message : String(err);
+        this.deps.logger?.warn?.("entry の同期に失敗しました", {
+          operation: "syncEntry",
           slug: change.slug,
-          message: err instanceof Error ? err.message : String(err),
-          at: this.now(),
+          error: message,
         });
+        failures.push({ slug: change.slug, message, at: this.now() });
       }
     }
 

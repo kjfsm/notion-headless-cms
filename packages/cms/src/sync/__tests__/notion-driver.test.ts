@@ -406,6 +406,67 @@ describe("createCollectionDriver", () => {
     ).rejects.toMatchObject({ code: "sync/slug_missing" });
   });
 
+  it("slug 未設定コレクションは page id をキーに materialize する", async () => {
+    const dataDef = defineCollection({
+      dataSourceId: "ds-texts",
+      properties: {
+        key: prop.title("名前"),
+        text: prop.richText("テキスト"),
+      },
+    });
+    const notionPage = {
+      object: "page",
+      id: "page-abc",
+      url: "https://notion.so/page-abc",
+      last_edited_time: "2026-01-01T00:00:00.000Z",
+      properties: {
+        名前: { type: "title", title: richText("サブタイトル") },
+        テキスト: { type: "rich_text", rich_text: richText("最高のバンド") },
+      },
+    };
+    const client = makeClient({
+      dataSources: {
+        query: vi.fn().mockResolvedValue({
+          results: [notionPage],
+          next_cursor: null,
+          has_more: false,
+        }),
+      },
+    });
+    const { entryStore, indexStore, blobs, rateLimiter } = makeDeps();
+    const driver = createCollectionDriver({
+      collection: "siteTexts",
+      def: dataDef,
+      client,
+      rateLimiter,
+      entryStore,
+      indexStore,
+      blobs,
+    });
+
+    const { changes } = await driver.listChanged(null, 10);
+    // slug プロパティが無いため page id をキーにする。
+    expect(changes).toEqual([
+      { slug: "page-abc", lastEditedTime: "2026-01-01T00:00:00.000Z" },
+    ]);
+    const [change] = changes;
+    if (!change) throw new Error("change が空です");
+    await driver.syncEntry(change);
+
+    const snapshot = await entryStore.get("siteTexts", "page-abc");
+    expect(snapshot?.slug).toBe("page-abc");
+    expect(snapshot?.meta).toMatchObject({
+      key: "サブタイトル",
+      text: "最高のバンド",
+    });
+    const shards = await indexStore.listShards("siteTexts");
+    const entry = shards
+      .flatMap((s) => s.entries)
+      .find((e) => e.slug === "page-abc");
+    // status 未設定なので既定で list 対象(listed: true)。
+    expect(entry?.listed).toBe(true);
+  });
+
   it("画像は blobs.head が既存なら外部 fetch をスキップする(重複回避)", async () => {
     const notionPage = page({ id: "p1", slug: "with-image" });
     const client = makeClient({

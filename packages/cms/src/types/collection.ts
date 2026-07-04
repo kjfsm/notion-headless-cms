@@ -16,8 +16,12 @@ export interface CollectionConfig<
 > {
   /** Notion の data_source_id（multi-source database に対応するための固定単位）。 */
   readonly dataSourceId: string;
-  /** URL slug として使うプロパティキー。 */
-  readonly slug: keyof P;
+  /**
+   * URL slug として使うプロパティキー。
+   * slug 列を持たない設定値コレクション（選択肢リスト等）では省略でき、
+   * その場合エントリは Notion の page id でアドレスされる（どのプロパティにも一意性を要求しない）。
+   */
+  readonly slug?: keyof P;
   readonly properties: P;
   /** list 対象を判定する status プロパティと、公開扱いにする値。省略時は常に公開。 */
   readonly statusProperty?: StatusKey;
@@ -28,7 +32,8 @@ export interface CollectionConfig<
 
 export interface CollectionDef<P extends PropertyMap = PropertyMap> {
   readonly dataSourceId: string;
-  readonly slug: keyof P;
+  /** 省略時はエントリを page id でアドレスする（`CollectionConfig.slug` 参照）。 */
+  readonly slug?: keyof P;
   readonly properties: P;
   readonly statusProperty?: keyof P;
   readonly published?: readonly string[];

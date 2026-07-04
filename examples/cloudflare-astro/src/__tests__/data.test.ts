@@ -35,7 +35,22 @@ describe("getPosts()", () => {
   it("同期後に cms.posts.list() の結果をそのまま返す", async () => {
     const cms = makeFakeCms();
     cms.posts.list.mockResolvedValue({
-      items: [{ slug: "hello", version: "v1", listed: true, meta: {} }],
+      items: [
+        {
+          slug: "hello",
+          version: "v1",
+          listed: true,
+          meta: {
+            id: "id-1",
+            slug: "hello",
+            lastEditedTime: "v1",
+            title: "Hello",
+            status: "公開済み",
+            publishedAt: null,
+            author: null,
+          },
+        },
+      ],
       nextCursor: null,
       hasMore: false,
     });
