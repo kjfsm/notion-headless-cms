@@ -5,20 +5,10 @@ declare global {
   namespace Cloudflare {
     interface Env {
       NOTION_TOKEN: string;
-      NOTION_DATA_SOURCE_ID: string;
     }
   }
   interface Env {
     NOTION_TOKEN: string;
-  }
-}
-
-declare module "react-router" {
-  interface AppLoadContext {
-    cloudflare: {
-      env: Env;
-      ctx: ExecutionContext;
-    };
   }
 }
 

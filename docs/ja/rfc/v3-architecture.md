@@ -9,12 +9,12 @@ order: 1
 
 親issue: [#437](https://github.com/kjfsm/notion-headless-cms/issues/437)（v3 ゼロベース再設計エピック）。
 本 RFC は [#438](https://github.com/kjfsm/notion-headless-cms/issues/438)（S1）で確定した型・内部境界を記録する。
-実体（I/O・ランタイム配線）は S2 以降で実装する。作業場所は `packages/v3`（S10 でパッケージ統合するまでのステージング）。
+実体（I/O・ランタイム配線）は S2 以降で実装する。実装場所は `packages/cms`（公開パッケージ `@notion-headless-cms/cms`。S10 時点では `packages/v3` という private なステージングパッケージだったが、パッケージ統合イテレーションで昇格・改名した）。
 
 ## 利用者コード例
 
 ```ts
-import { defineSchema, defineCollection, prop } from "@notion-headless-cms/v3";
+import { defineSchema, defineCollection, prop } from "@notion-headless-cms/cms";
 
 const posts = defineCollection({
   dataSourceId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
@@ -55,7 +55,7 @@ return { post }; // JSON.stringify 可能なプレーンデータのみ。関数
   `images`（hash → width/height/contentType）+ `links`（解決済み内部リンク）+ `version`（`last_edited_time`）
 - `CollectionIndex`: KV に保存する軽量な一覧メタ。`IndexEntry` は `slug` / `version` / `listed` / 縮小版 `meta` のみ
 - 両者とも `AssertJsonValue<T>` で JSON シリアライズ可能性を型テストとして固定する
-  （`packages/v3/src/__tests__/json-value-assert.test.ts`）。関数・クラスインスタンスを含む型を
+  （`packages/cms/src/__tests__/json-value-assert.test.ts`）。関数・クラスインスタンスを含む型を
   `AssertJsonValue` に渡すとコンパイルエラーになる
 
 ## クエリ API の型
@@ -66,7 +66,7 @@ return { post }; // JSON.stringify 可能なプレーンデータのみ。関数
 - `formula` / `rollup` / `relation` / `people` / `files` / `uniqueId` は S1 時点では演算子を持たない
   （`WhereInput` のキーから型レベルで除外される）。将来の拡張余地として残す
 - 型に合わない演算子（例: `number` プロパティに `has`）はコンパイルエラーになる
-  （`packages/v3/src/__tests__/query-operators.test.ts` で `@ts-expect-error` により固定）
+  （`packages/cms/src/__tests__/query-operators.test.ts` で `@ts-expect-error` により固定）
 
 ## 内部境界インターフェース
 
@@ -86,25 +86,29 @@ return { post }; // JSON.stringify 可能なプレーンデータのみ。関数
 `schema/` `query/` `store/` `sync/` `pipeline/` `handler/` `preview/` `render/` `cli/`。各サブissueの実装が進むごとに
 コードを追加する（S1 時点は `schema/status_property_required` 等の最小セットのみ）。
 
-## 公開面の設計（S10 で実施）
+## 公開面の設計（パッケージ統合イテレーションで実施済み）
 
-最終的に `@notion-headless-cms/v3` を正式な公開パッケージ名（サブパス構成含む）にリネームし、
-`.` / `./react` / `./html` / `./cloudflare` / `./testing` のサブパス + 別パッケージの CLI に収束させる
-（fixed versioning）。S1〜S9 の開発中は `packages/v3` に型・純関数・ストレージ・DO・ハンドラを積み上げ、
-レンダリング（S8）は既存 `packages/react-renderer`、CLI（S9）は既存 `packages/cli` に機能追加する形で進める。
+`@notion-headless-cms/cms` を正式な公開パッケージ名とし、`.` / `./html` / `./cloudflare` / `./node` /
+`./testing` のサブパスに収束させた。**`./react` は追加しない** — React 向けアダプタ（`denormalizeBlocks`/
+`toPageLinkMap`）は独立パッケージ `packages/react-renderer` の `./v3` サブパスとして実装済みで、
+依存の向きは `react-renderer → cms`（`workspace:*`）。`cms` パッケージ側に `./react` を追加すると
+`react-renderer → cms → react-renderer` の循環依存になるため、当初の想定から意図的に外した。
+レンダリング（S8）は既存 `packages/react-renderer`、CLI（S9）は既存 `packages/cli` に機能追加する形で進めた。
+fixed versioning は採用していない（他パッケージも独立バージョニングで運用されており、fixed group に
+入れる相手が実質存在しないため）。
 
 ## 実装状況（S1〜S9 完了時点）
 
 | サブissue | 内容 | 実装場所 |
 |---|---|---|
-| [#438](https://github.com/kjfsm/notion-headless-cms/issues/438) S1 | 型とインターフェース確定 | `packages/v3/src/types/`, `errors.ts`, `store.ts` 系 |
-| [#439](https://github.com/kjfsm/notion-headless-cms/issues/439) S2 | コンテンツパイプライン純関数化 | `packages/v3/src/pipeline/` |
-| [#440](https://github.com/kjfsm/notion-headless-cms/issues/440) S3 | ストレージ層 | `packages/v3/src/store/` |
-| [#441](https://github.com/kjfsm/notion-headless-cms/issues/441) S4 | SyncCoordinator DO | `packages/v3/src/sync/` |
-| [#442](https://github.com/kjfsm/notion-headless-cms/issues/442) S5 | 読者向けクエリ API | `packages/v3/src/query/` |
-| [#443](https://github.com/kjfsm/notion-headless-cms/issues/443) S6 | HTTP ハンドラ統合 | `packages/v3/src/http/` |
-| [#444](https://github.com/kjfsm/notion-headless-cms/issues/444) S7 | プレビューと編集者即時性 | `packages/v3/src/preview/` |
-| [#445](https://github.com/kjfsm/notion-headless-cms/issues/445) S8 | レンダリング統合 | `packages/v3/src/render/`, `packages/react-renderer/src/v3.ts` |
+| [#438](https://github.com/kjfsm/notion-headless-cms/issues/438) S1 | 型とインターフェース確定 | `packages/cms/src/types/`, `errors.ts`, `store.ts` 系 |
+| [#439](https://github.com/kjfsm/notion-headless-cms/issues/439) S2 | コンテンツパイプライン純関数化 | `packages/cms/src/pipeline/` |
+| [#440](https://github.com/kjfsm/notion-headless-cms/issues/440) S3 | ストレージ層 | `packages/cms/src/store/` |
+| [#441](https://github.com/kjfsm/notion-headless-cms/issues/441) S4 | SyncCoordinator DO | `packages/cms/src/sync/` |
+| [#442](https://github.com/kjfsm/notion-headless-cms/issues/442) S5 | 読者向けクエリ API | `packages/cms/src/query/` |
+| [#443](https://github.com/kjfsm/notion-headless-cms/issues/443) S6 | HTTP ハンドラ統合 | `packages/cms/src/http/` |
+| [#444](https://github.com/kjfsm/notion-headless-cms/issues/444) S7 | プレビューと編集者即時性 | `packages/cms/src/preview/` |
+| [#445](https://github.com/kjfsm/notion-headless-cms/issues/445) S8 | レンダリング統合 | `packages/cms/src/render/`, `packages/react-renderer/src/v3.ts` |
 | [#446](https://github.com/kjfsm/notion-headless-cms/issues/446) S9 | CLI 刷新 | `packages/cli/src/v3/` |
 | [#447](https://github.com/kjfsm/notion-headless-cms/issues/447) S10 | E2E・移行検証・ドキュメント・リリース準備 | 本ドキュメント + `docs/ja/rfc/v3-status.md` |
 
@@ -119,7 +123,7 @@ S1〜S10 の基盤が用意した契約（`TransformStage`・`render/html.ts`・
 
 ### createCMS ファクトリ
 
-`packages/v3/src/cms/create-cms.ts` の `createCMS()` が利用者向けの唯一のエントリになる。
+`packages/cms/src/cms/create-cms.ts` の `createCMS()` が利用者向けの唯一のエントリになる。
 
 ```ts
 const cms = createCMS({
@@ -147,7 +151,7 @@ schema の全コレクション分の `CollectionDriver`（後述）を生成し
 
 ### マルチソース同期（Notion ドライバ + 合成レイヤ）
 
-- `packages/v3/src/sync/notion-driver.ts` の `createCollectionDriver()` が 1 コレクション分の
+- `packages/cms/src/sync/notion-driver.ts` の `createCollectionDriver()` が 1 コレクション分の
   `SyncCoordinatorDeps` 実装（`listChanged`/`listAllSlugs`/`listIndexedSlugs`/`syncEntry`/
   `removeEntry`）を提供する。`listChanged` は `dataSources.query` を `last_edited_time` **降順**で
   クエリし、ページの `last_edited_time` が KV index の `version` と一致した時点で打ち切る
@@ -155,7 +159,7 @@ schema の全コレクション分の `CollectionDriver`（後述）を生成し
 - `listChanged` で取得した `PageObjectResponse` は同一チャンク内だけ有効な in-memory キャッシュに
   保持し、直後の `syncEntry` が追加の Notion 呼び出し無しで使う（coordinator は同一 `runChunk()`
   内で `listChanged` 直後に `syncEntry` を呼ぶため安全）
-- `packages/v3/src/sync/multi-source.ts` の `createMultiSourceDeps()` が複数 `CollectionDriver` を
+- `packages/cms/src/sync/multi-source.ts` の `createMultiSourceDeps()` が複数 `CollectionDriver` を
   単一の `SyncCoordinatorDeps` へ合成する。**`sync/coordinator.ts` は無改修**:
   - slug は `"{collection}:{slug}"` で名前空間化する
   - カーソルは `{ c: 現在のコレクション, nc: Notion カーソル }` を JSON 化して多重化する。
@@ -164,7 +168,7 @@ schema の全コレクション分の `CollectionDriver`（後述）を生成し
   - 設計判断: DO は Alarm を 1 つしか持てず `SyncScheduler.schedule` は「既存予約を置き換える」
     契約のため、コレクションごとに独立したコーディネータを立てると予約を潰し合う。単一
     コーディネータ + 合成 deps ならレートリミッタ（3req/s）も全コレクションで厳密に共有できる
-- `packages/v3/src/sync/page-index.ts` の `buildPageIndex()` がスキーマ全体の index シャードから
+- `packages/cms/src/sync/page-index.ts` の `buildPageIndex()` がスキーマ全体の index シャードから
   内部リンク解決用の `PageIndex` を読み取り専用で構築する（`kind === "title"` のプロパティを
   各コレクションのスキーマから検出して `title` を埋める）
 
@@ -174,15 +178,15 @@ schema の全コレクション分の `CollectionDriver`（後述）を生成し
 消費しない）。`packages/react-renderer` の `Code.tsx`/`Equation.tsx`/`InlineEquation.tsx` が
 水和後に shiki/katex を動的 import する。
 
-オプトインで同期時の事前レンダーを使いたい場合は `packages/v3/src/transforms/{shiki,katex}.ts`
+オプトインで同期時の事前レンダーを使いたい場合は `packages/cms/src/transforms/{shiki,katex}.ts`
 の `createShikiTransform()`/`createKatexTransform()` を `createCMS({ transforms })` に渡す。
 `NormalizedBlock.data.__cachedHtml`（block/inline 双方）に焼き込み、react-renderer 側のコンポーネントは
 `__cachedHtml` があれば最優先で使う 3 段フォールバック構成になっている:
 `__cachedHtml` → クライアント動的 import → 素の `<pre>`/テキスト。
 
-shiki/katex は `packages/v3` の optional peerDependency + 動的 import（未インストール・失敗時は
-blocks を素通し）。既存の公開パッケージ `notion-shiki`/`notion-katex` は private な `packages/v3`
-に依存できないため、実装は `packages/v3` 内に自己完結させた。
+shiki/katex は `packages/cms` の optional peerDependency + 動的 import（未インストール・失敗時は
+blocks を素通し）。既存の公開パッケージ `notion-shiki`/`notion-katex` は private な `packages/cms`
+に依存できないため、実装は `packages/cms` 内に自己完結させた。
 
 ### 高度な HTML レンダラ（`render/html.ts` / `render/embeds.ts`）
 
@@ -192,7 +196,7 @@ link_preview/video/audio/file/pdf/breadcrumb/table_of_contents）を追加した
 OGP リンクカード（bookmark/embed/link_preview）は **同期時に fetch しない**。
 `render/embeds.ts` の `renderOgpShell()` は `data-nhc-ogp-url` 属性つきのシェル（ホスト名 + URL の
 シンプルなリンクカード）のみを返す。実際の OGP メタデータ取得はページアクセス時に
-`packages/v3/src/http/ogp.ts` の `createOgpHandler()`（`GET {routes}/ogp?url=...`）が行う:
+`packages/cms/src/http/ogp.ts` の `createOgpHandler()`（`GET {routes}/ogp?url=...`）が行う:
 
 - SSRF ガード: http/https + 標準ポートのみ、localhost・プライベート/リンクローカル IP 帯を拒否。
   redirect は最大 3 hop まで各 hop で再検証しながら追跡する

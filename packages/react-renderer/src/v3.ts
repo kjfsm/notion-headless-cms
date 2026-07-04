@@ -1,4 +1,4 @@
-import type { NormalizedBlock, ResolvedLink } from "@notion-headless-cms/v3";
+import type { NormalizedBlock, ResolvedLink } from "@notion-headless-cms/cms";
 import type { NotionBlock, PageLinkMap } from "./types.js";
 
 /**

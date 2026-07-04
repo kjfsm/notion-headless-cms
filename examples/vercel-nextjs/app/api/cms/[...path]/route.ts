@@ -1,14 +1,12 @@
-// catch-all route。`/api/cms/images/:hash` と `/api/cms/revalidate` の両方を
-// `createNextHandler(cms)` が引き受ける。
-//
-// ※ 画像プロキシをカスタマイズしたい場合は `images/[hash]/route.ts` を参照。
-// Next.js の優先順位により、具体パスのほうがこの catch-all より優先される。
-import { createNextHandler } from "@notion-headless-cms/client/next";
-import { cms } from "@/app/lib/cms";
+// catch-all route。images/ogp/preview を cms.fetch() 1本に委譲する。
+// webhook は revalidateTag/revalidatePath も呼びたいため、より具体的な
+// app/api/cms/webhook/route.ts が Next.js のルーティング優先順位でこちらより優先される。
+import { getCms } from "@/app/lib/cms";
 
-const handler = createNextHandler(cms, {
-  webhookSecret: process.env.REVALIDATE_SECRET ?? "",
-});
+export async function GET(request: Request) {
+  return getCms().fetch(request);
+}
 
-export const GET = handler;
-export const POST = handler;
+export async function POST(request: Request) {
+  return getCms().fetch(request);
+}

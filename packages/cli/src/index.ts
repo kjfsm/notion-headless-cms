@@ -48,6 +48,13 @@ export interface CollectionGenConfig {
 export interface V3CollectionSourceConfig {
   readonly databaseId?: string;
   readonly dbName?: string;
+  /**
+   * Notion プロパティ名 → TypeScript フィールド名の明示マッピング。
+   * `nhc pull`/`nhc check` はここに無いプロパティを ASCII 識別子へ自動変換するが、
+   * 日本語などの非 ASCII 名はここで明示した方が読みやすい識別子になる。
+   * @example { "名前": "title", "URL": "slug" }
+   */
+  readonly fieldMappings?: Record<string, string>;
 }
 
 /**
@@ -82,7 +89,13 @@ export interface V3Config {
  *   // v3(#437) を使う場合はこちらも定義する
  *   v3: {
  *     schemaModule: "src/schema.ts",
- *     collections: { posts: { dbName: "ブログ記事DB" } },
+ *     collections: {
+ *       posts: {
+ *         dbName: "ブログ記事DB",
+ *         // 日本語などのプロパティ名は明示マッピングしておくと nhc pull の出力が読みやすくなる
+ *         fieldMappings: { 名前: "title", URL: "slug", ステータス: "status" },
+ *       },
+ *     },
  *   },
  * });
  */

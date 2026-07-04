@@ -100,6 +100,7 @@ export async function runPull(opts: PullOptions): Promise<void> {
     const code = generateCollectionScaffold(dataSource, {
       collectionName: name,
       dataSourceId,
+      fieldMappings: source.fieldMappings,
     });
 
     const outputPath = path.join(scaffoldDir, `${name}.ts`);

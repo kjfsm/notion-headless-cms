@@ -75,6 +75,36 @@ describe("runPull", () => {
     expect(output).toContain('dataSourceId: "ds-posts"');
   });
 
+  it("fieldMappings を指定すると生成コードに明示した識別子と notion 別名が反映される", async () => {
+    loadConfigMock.mockResolvedValue({
+      output: "x",
+      collections: {},
+      v3: {
+        collections: {
+          posts: {
+            databaseId: "ds-posts",
+            fieldMappings: { 名前: "title", URL: "slug" },
+          },
+        },
+      },
+    } as CMSConfig);
+    retrieveDataSourceMock.mockResolvedValue(
+      makeDataSource({
+        名前: { type: "title" },
+        URL: { type: "rich_text" },
+      }),
+    );
+
+    await runPull({ token: "tok", silent: true });
+
+    const output = await fs.readFile(
+      path.join(tmpDir, "src/collections/posts.ts"),
+      "utf-8",
+    );
+    expect(output).toContain('title: prop.title("名前"),');
+    expect(output).toContain('slug: prop.richText("URL"),');
+  });
+
   it("dbName 指定は resolveId で dataSourceId に解決する", async () => {
     loadConfigMock.mockResolvedValue({
       output: "x",

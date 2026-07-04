@@ -321,7 +321,7 @@ export default {
 
 ## `nhc pull` / `nhc check`（v3, #437）
 
-v3（`@notion-headless-cms/v3` の `defineCollection`/`defineSchema`）は codegen ではなく
+v3（`@notion-headless-cms/cms` の `defineCollection`/`defineSchema`）は codegen ではなく
 TS ファーストでスキーマを書く。`nhc pull`/`nhc check` は `nhc.config.ts` の `v3` セクションを
 読み、Notion DB の introspect 結果と TS スキーマを橋渡しする補助コマンド。
 
@@ -335,7 +335,12 @@ export default defineConfig({
     schemaModule: "src/schema.ts", // nhc check が読む、ユーザーが書いた TS スキーマ
     scaffoldDir: "src/collections", // nhc pull の出力先。既定 "src/collections"
     collections: {
-      posts: { dbName: "ブログ記事DB" }, // または { databaseId: "..." }
+      posts: {
+        dbName: "ブログ記事DB", // または { databaseId: "..." }
+        // 日本語などのプロパティ名は明示マッピングしておく（先に書いてから pull する運用）。
+        // 未指定のプロパティは種別ベースの識別子（unnamedTitle 等）に自動フォールバックする。
+        fieldMappings: { 名前: "title", URL: "slug", ステータス: "status" },
+      },
     },
   },
 });
@@ -343,10 +348,14 @@ export default defineConfig({
 
 - `nhc pull` — `v3.collections` の各 DB を introspect し、`defineCollection` の雛形 TS コードを
   `v3.scaffoldDir` に出力する。**既存ファイルは上書きしない**（生成物の所有権はユーザーに移る。
-  v2 の「生成物コミット + 手編集禁止」運用とは異なる）
+  v2 の「生成物コミット + 手編集禁止」運用とは異なる）。スキーマのプロパティキーは実際の
+  Notion プロパティ名と一致している必要があるため（`raw[key]` で直接引く実装）、キーが実名と
+  異なる場合（`fieldMappings` 指定時・非 ASCII 名のフォールバック時・英語名でも大文字小文字が
+  異なる時など）は `prop.title("実名")` のように末尾引数へ実名を渡した状態で生成される
 - `nhc check` — `v3.schemaModule` からユーザーの TS スキーマを読み込み、実 Notion DB との
   drift（プロパティ追加・削除・型変更・options 変更）を検証する。drift があれば非ゼロ終了する
-  （CI 向け）。`--json` で機械可読な出力も可能
+  （CI 向け）。`--json` で機械可読な出力も可能。`fieldMappings` は `nhc pull` と同じ解決順で
+  照合キーの決定に使われる
 
 ```bash
 npx nhc pull

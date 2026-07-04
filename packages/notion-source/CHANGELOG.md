@@ -1,5 +1,22 @@
 # @notion-headless-cms/notion-source
 
+## 3.0.0
+
+### Major Changes
+
+- v3 ゼロベース再設計（epic #437）を機に、モノレポ全パッケージのバージョン番号を
+  `3.0.0` に統一する。この changeset 単体では各パッケージのコードに変更は無い
+  （他の changeset で実際の変更が入るパッケージ以外は純粋なバージョン整列）。
+  今回のみの一括整列であり、以降は各パッケージ独立のバージョニングに戻す
+  （`.changeset/config.json` の `fixed`/`linked` は変更しない）。
+
+### Patch Changes
+
+- Updated dependencies
+  - @notion-headless-cms/core@1.0.0
+  - @notion-headless-cms/markdown-html@2.0.0
+  - @notion-headless-cms/notion-orm@1.0.0
+
 ## 0.2.15
 
 ### Patch Changes
@@ -159,7 +176,6 @@
 - e2c8bee: M4: deprecated 削除と publishOptions のフォールバック規則明文化 (Issue #333)
 
   ## Breaking
-
   - `notionSource({ blocks, ogp })` を削除した (v0.3.25 で `@deprecated` 化されていた)
   - カスタムブロックハンドラと OGP 取得は `fetch: blocksFetcher({ blocks, ogp })` に統一
   - `createCms()` (node / next / cloudflare) からも `blocks` / `ogp` を削除し、`fetch` に集約
@@ -184,7 +200,6 @@
   `@notion-headless-cms/fetch-blocks` を依存に追加すること。
 
   ## docs
-
   - `packages/notion-source/README.md` に `publishedStatuses` / `accessibleStatuses` のフォールバック規則を追記
     - `accessibleStatuses` 未指定時は閲覧チェックが行われない
     - `publishedStatuses` 未指定時は `list()` が全件返す
@@ -206,14 +221,12 @@
 - 359bc6f: fetch 戦略両対応の `ContentExtension` インターフェースを導入し、enrichers を廃止。
 
   ## 破壊的変更
-
   - `blocksFetcher` / `notionSource` / `createCms` の `enrichers` オプションを削除。
     拡張はすべて Renderer 側の `extensions` prop へ移動。
   - `notionKatex()` / `notionShiki()` の戻り値が `BlockEnricher`（関数）から
     `ContentExtension`（オブジェクト）に変更。
 
   ## 新機能
-
   - `notion-orm`: `ContentExtension` インターフェースをエクスポート。
     `getMarkdownPlugins()` で unified プラグインを、`getBlockComponents()` で
     React コンポーネント上書きを提供する統一 API。
@@ -294,37 +307,31 @@
   ## 破壊的変更
 
   ### @notion-headless-cms/core
-
   - `createClient` のサンプルコードを `sources` + `nodePreset()` 形式に刷新
   - `ContentConfig.imageProxyBase` を削除（`CreateClientOptions.imageProxyBase` を使うこと）
   - 公開 export から `CollectionDef` / `CollectionsConfig` / `InferCollectionItem` / `CollectionClientImpl` / `collectionKey` / `CMSAdapter` / `MergeSourceCollections` を削除（`@notion-headless-cms/core/source-author` サブパスから import すること）
   - `CMSError` に `nextSteps?: readonly string[]` / `docsUrl?: string` / `format()` を追加
 
   ### @notion-headless-cms/cache
-
   - `cloudflarePreset` の `ctx` が必須になった（省略すると SWR 背景更新が Works ランタイムに打ち切られる）
   - テスト用途には `cloudflarePreset.forTest({ env })` を提供
 
   ### @notion-headless-cms/notion-source
-
   - `CMSAdapter` / `CollectionDef` の import 元を `@notion-headless-cms/core/source-author` に変更
 
   ## 新機能
 
   ### @notion-headless-cms/core
-
   - `nodePreset(opts?)` を追加。`...nodePreset()` を `createClient` にスプレッドするだけで Node.js の標準構成（memoryCache + SWR 5 分）が有効になる
   - `@notion-headless-cms/core/source-author` サブパスを追加。データソースアダプター実装者向けの型を分離
   - `@notion-headless-cms/core/preset/node` サブパスを追加
 
   ## パッケージ rename (旧パッケージは廃止)
-
   - `@notion-headless-cms/notion-embed` → `@notion-headless-cms/block-html`
   - `@notion-headless-cms/renderer` → `@notion-headless-cms/markdown-html`
   - `@notion-headless-cms/adapter-next` → `@notion-headless-cms/next` に統合
 
   ## 新規メタパッケージ
-
   - `@notion-headless-cms/node`: Node.js 向け (core + notion-source + markdown-html + nodePreset)
   - `@notion-headless-cms/cloudflare`: Cloudflare Workers 向け (core + notion-source + cache/cloudflare + block-html)
   - `@notion-headless-cms/next`: Next.js 向け (core + notion-source + markdown-html + createNextHandler)

@@ -1,5 +1,20 @@
 # @notion-headless-cms/testing
 
+## 3.0.0
+
+### Major Changes
+
+- v3 ゼロベース再設計（epic #437）を機に、モノレポ全パッケージのバージョン番号を
+  `3.0.0` に統一する。この changeset 単体では各パッケージのコードに変更は無い
+  （他の changeset で実際の変更が入るパッケージ以外は純粋なバージョン整列）。
+  今回のみの一括整列であり、以降は各パッケージ独立のバージョニングに戻す
+  （`.changeset/config.json` の `fixed`/`linked` は変更しない）。
+
+### Patch Changes
+
+- Updated dependencies
+  - @notion-headless-cms/core@1.0.0
+
 ## 0.3.14
 
 ### Patch Changes

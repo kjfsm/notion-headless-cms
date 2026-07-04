@@ -13,6 +13,6 @@
       "~/*": ["./app/*"]
     }
   },
-  "include": ["**/*.ts", "**/*.tsx", ".react-router/types/**/*.d.ts"],
+  "include": ["**/*.ts", "**/*.tsx", ".react-router/types/**/*"],
   "exclude": ["node_modules"]
 }

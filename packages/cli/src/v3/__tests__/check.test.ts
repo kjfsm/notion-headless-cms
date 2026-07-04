@@ -1,5 +1,5 @@
-import type { PropertyMap } from "@notion-headless-cms/v3";
-import { prop } from "@notion-headless-cms/v3";
+import type { PropertyMap } from "@notion-headless-cms/cms";
+import { prop } from "@notion-headless-cms/cms";
 import { describe, expect, it } from "vitest";
 import type { DataSourceObjectResponse } from "../../notion-client.js";
 import { diffSchema } from "../check.js";
@@ -98,6 +98,34 @@ describe("diffSchema", () => {
     });
     const properties: PropertyMap = {
       tags: prop.multiSelect(["a", "b"] as const),
+    };
+    expect(diffSchema(dataSource, properties).hasDrift).toBe(false);
+  });
+
+  it("fieldMappings で明示した識別子で照合する(自動フォールバックより優先)", () => {
+    const dataSource = makeDataSource({
+      名前: makeProp("title"),
+    });
+    const properties: PropertyMap = { title: prop.title("名前") };
+    const result = diffSchema(dataSource, properties, { 名前: "title" });
+    expect(result.hasDrift).toBe(false);
+  });
+
+  it("日本語のみのプロパティ名は nhc pull と同じフォールバック識別子で照合する(衝突回避後の識別子と一致)", () => {
+    const dataSource = makeDataSource({
+      タイトル: makeProp("title"),
+      ステータス: makeProp("status", {
+        status: { options: [{ name: "draft" }, { name: "published" }] },
+      }),
+      公開状態: makeProp("status", {
+        status: { options: [{ name: "yes" }, { name: "no" }] },
+      }),
+    });
+    // nhc pull が生成する識別子(unnamedTitle/unnamedStatus/unnamedStatus2)と同じキーで定義した場合、drift なし
+    const properties: PropertyMap = {
+      unnamedTitle: prop.title(),
+      unnamedStatus: prop.status(["draft", "published"] as const),
+      unnamedStatus2: prop.status(["yes", "no"] as const),
     };
     expect(diffSchema(dataSource, properties).hasDrift).toBe(false);
   });

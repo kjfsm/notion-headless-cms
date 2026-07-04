@@ -22,7 +22,7 @@ function makeDataSource(
 }
 
 describe("generateCollectionScaffold", () => {
-  it("title/richText/status/multiSelect を prop.* 呼び出しに変換する", () => {
+  it("title/richText/status/multiSelect を prop.* 呼び出しに変換する(識別子と実名が違う場合は別名を渡す)", () => {
     const dataSource = makeDataSource({
       Title: makeProp("title"),
       Slug: makeProp("rich_text"),
@@ -38,17 +38,44 @@ describe("generateCollectionScaffold", () => {
       dataSourceId: "ds1",
     });
     expect(code).toContain(
-      'import { defineCollection, prop } from "@notion-headless-cms/v3";',
+      'import { defineCollection, prop } from "@notion-headless-cms/cms";',
     );
-    expect(code).toContain("title: prop.title(),");
-    expect(code).toContain("slug: prop.richText(),");
+    // 自動導出した識別子(先頭小文字化)は実プロパティ名と大文字小文字が異なるため、
+    // raw[key] の完全一致lookupに合わせて notion 別名を渡す必要がある。
+    expect(code).toContain('title: prop.title("Title"),');
+    expect(code).toContain('slug: prop.richText("Slug"),');
     expect(code).toContain(
-      'status: prop.status(["draft", "published"] as const),',
+      'status: prop.status(["draft", "published"] as const, "Status"),',
     );
     expect(code).toContain(
-      'tags: prop.multiSelect(["tech", "life"] as const),',
+      'tags: prop.multiSelect(["tech", "life"] as const, "Tags"),',
     );
     expect(code).toContain('dataSourceId: "ds1"');
+  });
+
+  it("識別子と実プロパティ名が完全一致する場合は notion 別名を省略する", () => {
+    const dataSource = makeDataSource({ title: makeProp("title") });
+    const code = generateCollectionScaffold(dataSource, {
+      collectionName: "posts",
+      dataSourceId: "ds1",
+    });
+    expect(code).toContain("title: prop.title(),");
+    expect(code).not.toContain('prop.title("title")');
+  });
+
+  it("fieldMappings で明示した識別子を優先し、notion 別名として実名を埋め込む", () => {
+    const dataSource = makeDataSource({
+      名前: makeProp("title"),
+      URL: makeProp("rich_text"),
+    });
+    const code = generateCollectionScaffold(dataSource, {
+      collectionName: "posts",
+      dataSourceId: "ds1",
+      fieldMappings: { 名前: "title", URL: "slug" },
+    });
+    expect(code).toContain('title: prop.title("名前"),');
+    expect(code).toContain('slug: prop.richText("URL"),');
+    expect(code).not.toContain("unnamedTitle");
   });
 
   it("title プロパティを slug の既定値として使う", () => {
@@ -69,9 +96,9 @@ describe("generateCollectionScaffold", () => {
       collectionName: "posts",
       dataSourceId: "ds1",
     });
-    expect(code).toContain('prop.formula("string")');
+    expect(code).toContain('prop.formula("string", "WordCount")');
     expect(code).toContain("実際の型");
-    expect(code).toContain('prop.rollup("string")');
+    expect(code).toContain('prop.rollup("string", "RelatedCount")');
   });
 
   it("全プロパティ型を網羅する(formula/rollup/relation/people/files/unique_id/created_time/last_edited_by)", () => {
@@ -87,12 +114,12 @@ describe("generateCollectionScaffold", () => {
       collectionName: "posts",
       dataSourceId: "ds1",
     });
-    expect(code).toContain("prop.relation()");
-    expect(code).toContain("prop.people()");
-    expect(code).toContain("prop.files()");
-    expect(code).toContain("prop.uniqueId()");
-    expect(code).toContain("prop.createdTime()");
-    expect(code).toContain("prop.lastEditedBy()");
+    expect(code).toContain('prop.relation(undefined, "Relation")');
+    expect(code).toContain('prop.people("People")');
+    expect(code).toContain('prop.files("Files")');
+    expect(code).toContain('prop.uniqueId("Id")');
+    expect(code).toContain('prop.createdTime("CreatedTime")');
+    expect(code).toContain('prop.lastEditedBy("LastEditedBy")');
   });
 
   it("未対応のプロパティ型はコメントアウトして通知する(黙ってスキップしない)", () => {
@@ -105,7 +132,7 @@ describe("generateCollectionScaffold", () => {
     expect(code).not.toContain("email: prop.email()");
   });
 
-  it("日本語プロパティ名は camelCase 識別子に変換する", () => {
+  it("日本語のみのプロパティ名はプロパティ種別ベースの識別子にフォールバックし、notion 別名で実名を保持する", () => {
     const dataSource = makeDataSource({
       タイトル: makeProp("title"),
       本文: makeProp("rich_text"),
@@ -114,8 +141,42 @@ describe("generateCollectionScaffold", () => {
       collectionName: "posts",
       dataSourceId: "ds1",
     });
-    // 日本語は識別子から除去されるため "unnamed" にフォールバックする(2件あるので同名衝突の可能性はテスト対象外)。
-    expect(code).toContain("prop.title()");
-    expect(code).toContain("prop.richText()");
+    expect(code).toContain('unnamedTitle: prop.title("タイトル"),');
+    expect(code).toContain('unnamedRichText: prop.richText("本文"),');
+    expect(code).toContain('/** 元のプロパティ名: "タイトル" */');
+    expect(code).toContain('/** 元のプロパティ名: "本文" */');
+  });
+
+  it("同じ種別の日本語プロパティ名が複数あっても連番で衝突を避ける", () => {
+    const dataSource = makeDataSource({
+      ステータス: makeProp("status", {
+        status: { options: [{ name: "draft" }] },
+      }),
+      公開状態: makeProp("status", {
+        status: { options: [{ name: "published" }] },
+      }),
+    });
+    const code = generateCollectionScaffold(dataSource, {
+      collectionName: "posts",
+      dataSourceId: "ds1",
+    });
+    expect(code).toContain("unnamedStatus:");
+    expect(code).toContain("unnamedStatus2:");
+    // 2つの識別子が別物であることを確認する(衝突していない)
+    expect(code.match(/unnamedStatus2:/g)).toHaveLength(1);
+    expect(code.match(/unnamedStatus:/g)).toHaveLength(1);
+  });
+
+  it("英数字の名前とプロパティ種別ベースの識別子は独立してカウントする", () => {
+    const dataSource = makeDataSource({
+      名前: makeProp("title"),
+      Title: makeProp("title"),
+    });
+    const code = generateCollectionScaffold(dataSource, {
+      collectionName: "posts",
+      dataSourceId: "ds1",
+    });
+    expect(code).toContain('unnamedTitle: prop.title("名前"),');
+    expect(code).toContain('title: prop.title("Title"),');
   });
 });

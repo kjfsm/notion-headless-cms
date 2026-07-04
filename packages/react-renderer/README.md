@@ -209,7 +209,7 @@ import { MermaidCode } from "@notion-headless-cms/react-renderer/mermaid";
 
 ## v3 との統合（`./v3` サブパス）
 
-[`@notion-headless-cms/v3`](../v3)（#437 ゼロベース再設計）の `find()` は正規化済みブロック（`NormalizedBlock[]`、完全に JSON 互換）を返す。`react-renderer/v3` サブパスの変換関数を通せば、既存のブロックコンポーネント約 30 種を無改修のまま再利用できる。
+[`@notion-headless-cms/cms`](../cms)（#437 ゼロベース再設計）の `find()` は正規化済みブロック（`NormalizedBlock[]`、完全に JSON 互換）を返す。`react-renderer/v3` サブパスの変換関数を通せば、既存のブロックコンポーネント約 30 種を無改修のまま再利用できる。
 
 ```tsx
 import { NotionRenderer } from "@notion-headless-cms/react-renderer";

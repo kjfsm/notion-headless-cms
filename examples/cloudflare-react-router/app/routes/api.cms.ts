@@ -1,15 +1,15 @@
 import { makeCms } from "../lib/cms";
+import { cloudflareContext } from "../lib/context";
 import type { Route } from "./+types/api.cms";
 
-// ライブラリ提供の HTTP ハンドラを 1 ファイルで mount する。
-// 画像プロキシ(/api/cms/images/:hash)・更新検知(POST /api/cms/check/:collection/:slug?v=)・
-// Webhook revalidate(/api/cms/revalidate/:collection) をまとめて処理する。
+// 画像プロキシ(/api/cms/images/:hash)・Webhook(/api/cms/webhook) をまとめて
+// cms.fetch() 1 つで配信する。
 export async function loader({ request, context }: Route.LoaderArgs) {
-  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
-  return cms.handler()(request);
+  const { env, ctx } = context.get(cloudflareContext);
+  return makeCms(env, ctx).fetch(request);
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
-  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
-  return cms.handler()(request);
+  const { env, ctx } = context.get(cloudflareContext);
+  return makeCms(env, ctx).fetch(request);
 }

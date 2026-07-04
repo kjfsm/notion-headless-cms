@@ -1,11 +1,10 @@
 ---
 import { env } from "cloudflare:workers";
-import { notionRevalidatorScript } from "@notion-headless-cms/core/html";
 import { type Env, makeCms } from "../lib/cms";
 import { getPosts } from "../lib/data";
 
 const cms = makeCms(env as Env, Astro.locals.cfContext);
-const items = await getPosts(cms);
+const { items } = await getPosts(cms);
 ---
 
 <html lang="ja">
@@ -17,16 +16,23 @@ const items = await getPosts(cms);
     <main>
       <h1>記事一覧</h1>
       <ul>
-        {items.map((post) => (
-          <li>
-            <a href={`/posts/${post.slug}`}>
-              <strong>{post.slug}</strong>
-              {post.publishedAt && <time>{post.publishedAt}</time>}
-            </a>
-          </li>
-        ))}
+        {items.map((post) => {
+          const meta = post.meta as { publishedAt?: string | null };
+          return (
+            <li>
+              <a href={`/posts/${post.slug}`}>
+                <strong>{post.slug}</strong>
+                {meta.publishedAt && <time>{meta.publishedAt}</time>}
+              </a>
+            </li>
+          );
+        })}
       </ul>
     </main>
-    <Fragment set:html={notionRevalidatorScript()} />
+    <script>
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") location.reload();
+      });
+    </script>
   </body>
 </html>

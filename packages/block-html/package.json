@@ -1,6 +1,6 @@
 {
   "name": "@notion-headless-cms/block-html",
-  "version": "1.0.6",
+  "version": "3.0.0",
   "description": "Notion ブロック (bookmark / embed / mention / toggle / callout / table など) を HTML にレンダリングするパッケージ",
   "keywords": [
     "notion",

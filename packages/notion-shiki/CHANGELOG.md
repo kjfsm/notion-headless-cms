@@ -1,5 +1,20 @@
 # @notion-headless-cms/notion-shiki
 
+## 3.0.0
+
+### Major Changes
+
+- v3 ゼロベース再設計（epic #437）を機に、モノレポ全パッケージのバージョン番号を
+  `3.0.0` に統一する。この changeset 単体では各パッケージのコードに変更は無い
+  （他の changeset で実際の変更が入るパッケージ以外は純粋なバージョン整列）。
+  今回のみの一括整列であり、以降は各パッケージ独立のバージョニングに戻す
+  （`.changeset/config.json` の `fixed`/`linked` は変更しない）。
+
+### Patch Changes
+
+- Updated dependencies
+  - @notion-headless-cms/notion-orm@1.0.0
+
 ## 1.0.14
 
 ### Patch Changes
@@ -125,14 +140,12 @@
 - 359bc6f: fetch 戦略両対応の `ContentExtension` インターフェースを導入し、enrichers を廃止。
 
   ## 破壊的変更
-
   - `blocksFetcher` / `notionSource` / `createCms` の `enrichers` オプションを削除。
     拡張はすべて Renderer 側の `extensions` prop へ移動。
   - `notionKatex()` / `notionShiki()` の戻り値が `BlockEnricher`（関数）から
     `ContentExtension`（オブジェクト）に変更。
 
   ## 新機能
-
   - `notion-orm`: `ContentExtension` インターフェースをエクスポート。
     `getMarkdownPlugins()` で unified プラグインを、`getBlockComponents()` で
     React コンポーネント上書きを提供する統一 API。

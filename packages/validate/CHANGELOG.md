@@ -1,5 +1,20 @@
 # @notion-headless-cms/validate
 
+## 3.0.0
+
+### Major Changes
+
+- v3 ゼロベース再設計（epic #437）を機に、モノレポ全パッケージのバージョン番号を
+  `3.0.0` に統一する。この changeset 単体では各パッケージのコードに変更は無い
+  （他の changeset で実際の変更が入るパッケージ以外は純粋なバージョン整列）。
+  今回のみの一括整列であり、以降は各パッケージ独立のバージョニングに戻す
+  （`.changeset/config.json` の `fixed`/`linked` は変更しない）。
+
+### Patch Changes
+
+- Updated dependencies
+  - @notion-headless-cms/core@1.0.0
+
 ## 0.1.16
 
 ### Patch Changes
@@ -139,7 +154,6 @@
 - e2c8bee: M4: deprecated 削除と publishOptions のフォールバック規則明文化 (Issue #333)
 
   ## Breaking
-
   - `notionSource({ blocks, ogp })` を削除した (v0.3.25 で `@deprecated` 化されていた)
   - カスタムブロックハンドラと OGP 取得は `fetch: blocksFetcher({ blocks, ogp })` に統一
   - `createCms()` (node / next / cloudflare) からも `blocks` / `ogp` を削除し、`fetch` に集約
@@ -164,7 +178,6 @@
   `@notion-headless-cms/fetch-blocks` を依存に追加すること。
 
   ## docs
-
   - `packages/notion-source/README.md` に `publishedStatuses` / `accessibleStatuses` のフォールバック規則を追記
     - `accessibleStatuses` 未指定時は閲覧チェックが行われない
     - `publishedStatuses` 未指定時は `list()` が全件返す

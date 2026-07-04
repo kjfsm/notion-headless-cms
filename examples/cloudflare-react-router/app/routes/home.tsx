@@ -1,29 +1,36 @@
-import { NotionRevalidator } from "@notion-headless-cms/client/react";
+import { useNotionRevalidate } from "@notion-headless-cms/react-renderer/router";
 import { Link } from "react-router";
-import { makeCms } from "../lib/cms";
+import { ensureSynced, makeCms } from "../lib/cms";
+import { cloudflareContext } from "../lib/context";
 import type { Route } from "./+types/home";
 
 export async function loader({ context }: Route.LoaderArgs) {
-  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
-  const items = await cms.posts.list();
+  const { env, ctx } = context.get(cloudflareContext);
+  const cms = makeCms(env, ctx);
+  await ensureSynced(cms);
+  const { items } = await cms.posts.list();
   return { items };
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
   const { items } = loaderData;
+  // mount / 再フォーカス時に loader を再走させ、裏で進んだ同期結果を反映する。
+  useNotionRevalidate();
   return (
     <main>
-      <NotionRevalidator />
       <h1>記事一覧</h1>
       <ul>
-        {items.map((post) => (
-          <li key={post.slug}>
-            <Link to={`/posts/${post.slug}`}>
-              <strong>{post.slug}</strong>
-              {post.publishedAt && <time>{post.publishedAt}</time>}
-            </Link>
-          </li>
-        ))}
+        {items.map((post) => {
+          const meta = post.meta as { publishedAt?: string | null };
+          return (
+            <li key={post.slug}>
+              <Link to={`/posts/${post.slug}`}>
+                <strong>{post.slug}</strong>
+                {meta.publishedAt && <time>{meta.publishedAt}</time>}
+              </Link>
+            </li>
+          );
+        })}
       </ul>
     </main>
   );

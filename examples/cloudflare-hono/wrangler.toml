@@ -22,6 +22,16 @@ binding = "IMG_BUCKET"
 bucket_name = "nhc-example-cache"
 preview_bucket_name = "nhc-example-cache-preview"
 
+# v3: Notion アクセスを直列化する同期エンジン（SyncCoordinatorDO）。
+# 読者リクエストは KV/R2 を読むだけで、Notion API 呼び出しは DO に一元化する。
+[[durable_objects.bindings]]
+name = "SYNC_COORDINATOR"
+class_name = "SyncCoordinatorDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SyncCoordinatorDO"]
+
 # シークレットは wrangler secret put で設定する
 # wrangler secret put NOTION_TOKEN
 # KV / R2 バインディングは wrangler kv namespace create / wrangler r2 bucket create で作成する

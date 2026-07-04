@@ -6,9 +6,14 @@
 
 - Updated dependencies [2a37266]
 - Updated dependencies [d030538]
+- Updated dependencies [88bf886]
 - Updated dependencies [f607b31]
-  - @notion-headless-cms/react-renderer@0.1.22
-  - @notion-headless-cms/client@0.3.18
+- Updated dependencies
+  - @notion-headless-cms/react-renderer@3.0.0
+  - @notion-headless-cms/client@3.0.0
+  - @notion-headless-cms/core@3.0.0
+  - @notion-headless-cms/notion-orm@3.0.0
+  - @notion-headless-cms/notion-source@3.0.0
 
 ## 0.0.23
 

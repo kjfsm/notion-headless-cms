@@ -1,5 +1,21 @@
 # @notion-headless-cms/source-notion
 
+## 3.0.0
+
+### Major Changes
+
+- v3 ゼロベース再設計（epic #437）を機に、モノレポ全パッケージのバージョン番号を
+  `3.0.0` に統一する。この changeset 単体では各パッケージのコードに変更は無い
+  （他の changeset で実際の変更が入るパッケージ以外は純粋なバージョン整列）。
+  今回のみの一括整列であり、以降は各パッケージ独立のバージョニングに戻す
+  （`.changeset/config.json` の `fixed`/`linked` は変更しない）。
+
+### Patch Changes
+
+- Updated dependencies
+  - @notion-headless-cms/core@1.0.0
+  - @notion-headless-cms/markdown-html@2.0.0
+
 ## 0.2.13
 
 ### Patch Changes
@@ -165,14 +181,12 @@
 - 359bc6f: fetch 戦略両対応の `ContentExtension` インターフェースを導入し、enrichers を廃止。
 
   ## 破壊的変更
-
   - `blocksFetcher` / `notionSource` / `createCms` の `enrichers` オプションを削除。
     拡張はすべて Renderer 側の `extensions` prop へ移動。
   - `notionKatex()` / `notionShiki()` の戻り値が `BlockEnricher`（関数）から
     `ContentExtension`（オブジェクト）に変更。
 
   ## 新機能
-
   - `notion-orm`: `ContentExtension` インターフェースをエクスポート。
     `getMarkdownPlugins()` で unified プラグインを、`getBlockComponents()` で
     React コンポーネント上書きを提供する統一 API。
@@ -486,7 +500,6 @@
   API・パッケージ構成・CLI 生成物を全面的に作り直した。詳細は `docs/migration/v1.md` を参照。
 
   ## ハイライト
-
   - **`createCMS` の API を簡素化**:
     - 12 メソッド → 4 メソッド: `get` / `list` / `params` / `cache.{invalidate,warm,adjacent}`
     - `getItem` → `get`、`getList` → `list`、`getStaticParams` → `params`
@@ -516,7 +529,6 @@
     - core は `CacheAdapter / DocumentCacheOps / ImageCacheOps` を公開、`DocumentCacheAdapter / ImageCacheAdapter` は削除
 
   ## 削除されたパッケージ
-
   - `@notion-headless-cms/cache-r2` → `@notion-headless-cms/cache/cloudflare` の `r2Cache`
   - `@notion-headless-cms/cache-kv` → `@notion-headless-cms/cache/cloudflare` の `kvCache`
   - `@notion-headless-cms/cache-next` → `@notion-headless-cms/cache/next` の `nextCache`
@@ -608,18 +620,15 @@
   ## Breaking Changes
 
   ### `@notion-headless-cms/core`
-
   - `memoryCache()` を削除。`memoryDocumentCache()` を使ってください
   - `DataSource.findBySlug` をインターフェースから削除。`findByProp` + `collections[].slug` を使ってください
   - `CachedItemWithBlocks` 型を削除。`CachedItem`（`blocks?` / `markdown?` フィールドを追加済み）を使ってください
 
   ### `@notion-headless-cms/notion-orm`
-
   - `notionAdapter` を削除。`createNotionCollection` を使ってください
   - `NotionAdapterOptions` 型を削除。`NotionCollectionOptions` を使ってください
 
   ### `@notion-headless-cms/cache-r2`
-
   - `CloudflarePresetEnv.CACHE_KV` / `CACHE_BUCKET` を削除。`DOC_CACHE` / `IMG_BUCKET` を使ってください
 
 - Updated dependencies [7b06514]
@@ -647,14 +656,12 @@
 - c955826: feat: createCMS コレクション検証・公開条件指定、generate 全プロパティ出力
 
   ### @notion-headless-cms/cli（破壊的変更）
-
   - `nhc generate` の生成スキーマ形式を刷新。Zod / `defineSchema` / `cmsDataSources` を廃止し、`{name}SourceId` と `{name}Properties` のみを生成するシンプルな形式に変更
   - `nhc.config.ts` の `DataSourceConfig.fields` を削除し `columnMappings` に変更（非 ASCII 列名のマッピング専用）
   - 非 ASCII プロパティ名は `property_1`, `property_2`... に自動変換し warn を出力
   - `columnMappings` で明示マッピング可能、存在しないプロパティを指定した場合はエラー
 
   ### @notion-headless-cms/core（後方互換）
-
   - `createCMS` に `collections` オプションを追加（`CollectionSemantics` 型）
   - `collections[name].slug` が未指定の場合に `CMSError(core/config_invalid)` をスロー
   - `collections[name].publishedStatuses` / `accessibleStatuses` を DataSource 側の設定より優先して適用
@@ -662,7 +669,6 @@
   - `DataSource.findBySlug` を optional に変更、`findByProp?` と `readonly properties?: PropertyMap` を追加
 
   ### @notion-headless-cms/notion-orm（後方互換）
-
   - `createNotionCollection` に `properties` オプションを追加（PropertyMap ベースのマッピング）
   - `findByProp(notionPropName, value)` メソッドを実装（Core が slug ルックアップに利用）
   - 内部に `queryPageByProp` を追加（Notion API のプロパティフィルタクエリ）
@@ -739,7 +745,6 @@
   `core` を CMS 機能（キャッシュ・画像プロキシ・Web ハンドラ）に専念させ、Notion 固有処理を `@notion-headless-cms/notion-orm`（新規 private パッケージ）に分離した。ユーザーは `notion-orm` を直接 import しない。将来的に `notion-orm` はリポジトリ分離可能な設計。
 
   ## 主な変更
-
   - `@notion-headless-cms/source-notion` → `@notion-headless-cms/notion-orm` に改名（private: true）。`notionAdapter` は `createNotionCollection` に改名（旧名はエイリアスとして残す）。
   - `createCMS({ source })` を `createCMS({ dataSources: { posts, authors } })` に変更。各データソースは CLI 生成の `nhcDataSources` として渡す。
   - CMS クライアントはコレクション別 API に刷新:
@@ -770,7 +775,6 @@
 - 20b0cfc: ライブラリとしての完成度を高める API 改善
 
   ## Breaking Changes
-
   - `cms.cache.read.list()` → `cms.cache.getList()`
   - `cms.cache.read.get(slug)` → `cms.cache.get(slug)`
   - `cms.cache.manage.prefetchAll/revalidate/sync/checkList/checkItem` → `cms.cache.*` に統合
@@ -779,18 +783,15 @@
   - `RetryConfig.maxConcurrent` を削除（`RateLimiterConfig.maxConcurrent` は継続サポート）
 
   ## 新機能
-
   - `cms.findMany(slugs[])` を追加 — 複数スラッグのバッチ取得
   - `QueryBuilder.first()` を追加 — `.paginate({ page: 1, perPage: 1 }).executeOne()` の短縮形
   - `CacheAccessor` 型を公開 — `cms.cache` の型付けが可能に
   - `@notion-headless-cms/core/cache/noop` サブパスエクスポートを追加
 
   ## バグ修正
-
   - `QueryBuilder.adjacent()` が `.sortBy()` のソート状態を無視していた問題を修正
 
   ## 改善
-
   - `withRetry` にジッターオプション（デフォルト有効）を追加 — Thundering Herd 対策
   - `cache/image_fetch_failed` エラーコードを追加（HTTP エラーを `cache/io_failed` から分離）
   - `RateLimiterConfig.maxConcurrent` が `cache.prefetchAll()` のデフォルト同時実行数に反映されるように
@@ -859,7 +860,6 @@
 - 52f002f: 宣言的スキーマ定義（`col` / `defineSchema`）を追加し、Notion DB カラムの型を自動推論できるようにした。
 
   ## source-notion
-
   - `col` ヘルパーを追加: `title` / `richText` / `date` / `number` / `checkbox` / `url` / `multiSelect` / `select` の各カラム定義を作成できる
   - `defineSchema()` 関数を追加: カラム定義マップから `NotionSchema<T>` を生成し、`notionAdapter` に渡すだけで TypeScript 型が自動推論される
   - `default` オプション対応: 固定値または動的関数（`(page) => T`）を指定でき、Notion プロパティ未設定時のフォールバックとして使われる
@@ -868,7 +868,6 @@
   - `publishedStatuses` / `accessibleStatuses` が `schema` の `select` 定義から自動抽出される
 
   ## core
-
   - `DataSourceAdapter` インターフェースに `publishedStatuses?` / `accessibleStatuses?` を追加
   - `CMS` コンストラクタで `source` が保持するフィルタ設定を `schema` 未指定時のフォールバックとして参照するようになった
 
@@ -877,7 +876,6 @@
   ## 主な変更点
 
   ### core（破壊的変更）
-
   - `CMSConfig` / `CMSEnv` / `StorageAdapter` を削除し、`CreateCMSOptions` / `DataSourceAdapter` / `DocumentCacheAdapter` / `ImageCacheAdapter` に置換
   - メソッド名を改名: `getItems→list`, `getItemBySlug→findBySlug`, `renderItem→render`, `renderItemBySlug→renderBySlug`, `getItemsCachedFirst→getList`, `getItemCachedFirst→getItem`
   - `waitUntil` をメソッド引数から `createCMS()` オプションに移動
@@ -886,16 +884,13 @@
   - `types.ts` を `types/` ディレクトリに分割
 
   ### cache-r2（破壊的変更）
-
   - `CloudflareR2StorageAdapter` / `createCloudflareR2StorageAdapter` を削除
   - `r2Cache({ bucket, prefix? })` を追加（`DocumentCacheAdapter & ImageCacheAdapter` を実装）
 
   ### adapter-cloudflare（破壊的変更）
-
   - `createCloudflareCMS(env, config?)` → `createCloudflareCMS({ env, schema, content, cache })` に変更
 
   ### 新規パッケージ
-
   - `@notion-headless-cms/source-notion`: `notionAdapter()` を提供。core から Notion 依存を分離
   - `@notion-headless-cms/cache-next`: Next.js `unstable_cache` / `revalidateTag` ベースのキャッシュ
   - `@notion-headless-cms/adapter-next`: `createImageRouteHandler` / `createRevalidateRouteHandler` を提供

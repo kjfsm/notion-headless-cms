@@ -1,12 +1,11 @@
 ---
 import { env } from "cloudflare:workers";
-import { notionRevalidatorScript } from "@notion-headless-cms/core/html";
 import { type Env, makeCms } from "../../lib/cms";
 import { getPost } from "../../lib/data";
 
 // Astro の Cloudflare アダプタは Locals.cfContext に ExecutionContext を載せる
-// (`@astrojs/cloudflare` の Runtime 型参照)。これを cms に渡さないと SWR の
-// bg 更新が打ち切られて KV の古いキャッシュが残る。
+// (`@astrojs/cloudflare` の Runtime 型参照)。これを cms に渡さないと sync の
+// バックグラウンド処理が打ち切られてしまう。
 const cms = makeCms(env as Env, Astro.locals.cfContext);
 const { slug } = Astro.params;
 if (!slug) return Astro.redirect("/404");
@@ -15,6 +14,7 @@ const result = await getPost(cms, slug);
 if (!result) return Astro.redirect("/404");
 
 const { post, html } = result;
+const meta = post.meta as { publishedAt?: string | null };
 ---
 
 <html lang="ja">
@@ -25,11 +25,15 @@ const { post, html } = result;
   <body>
     <article>
       <h1>{post.slug}</h1>
-      {post.publishedAt && <time>{post.publishedAt}</time>}
+      {meta.publishedAt && <time>{meta.publishedAt}</time>}
       <div set:html={html} />
     </article>
-    {/* タブ可視化のたびに reload。サーバ側 SWR で KV が更新済みなら
-        次の応答で新内容が返る（クエリ無し・別 API fetch 無し）。 */}
-    <Fragment set:html={notionRevalidatorScript()} />
+    {/* タブ可視化のたびに reload。サーバ側で同期済みの最新スナップショットが
+        あれば次の応答で新内容が返る（クエリ無し・別 API fetch 無し）。 */}
+    <script>
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible") location.reload();
+      });
+    </script>
   </body>
 </html>

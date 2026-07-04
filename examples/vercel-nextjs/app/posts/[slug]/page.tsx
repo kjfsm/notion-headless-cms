@@ -1,13 +1,19 @@
-import { Renderer } from "@notion-headless-cms/fetch-markdown/react";
+import { NotionRenderer } from "@notion-headless-cms/react-renderer";
 import { NotionRevalidator } from "@notion-headless-cms/react-renderer/next";
+import {
+  denormalizeBlocks,
+  toPageLinkMap,
+} from "@notion-headless-cms/react-renderer/v3";
 import { notFound } from "next/navigation";
-import { cms } from "@/app/lib/cms";
+import { ensureSynced } from "@/app/lib/cms";
 
 export const revalidate = 300;
 
 export async function generateStaticParams() {
   try {
-    return (await cms.posts.params()).map((slug) => ({ slug }));
+    const cms = await ensureSynced();
+    const { items } = await cms.posts.list();
+    return items.map((item) => ({ slug: item.slug }));
   } catch {
     return [];
   }
@@ -19,23 +25,24 @@ export default async function PostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
+  const cms = await ensureSynced();
   const post = await cms.posts.find(slug);
   if (!post) notFound();
-
-  // markdownFetcher 戦略で取得した Notion enhanced markdown。
-  // <Renderer> は同期 (processSync) で React 木に変換するため RSC でもそのまま動く。
-  const markdown = await post.markdown();
 
   return (
     <article className="max-w-2xl mx-auto px-4 py-12">
       <NotionRevalidator />
       <h1 className="text-3xl font-bold mb-4">{post.slug}</h1>
-      {post.publishedAt && (
+      {post.meta.publishedAt && (
         <time className="block text-sm text-gray-500 mb-8">
-          {post.publishedAt}
+          {post.meta.publishedAt}
         </time>
       )}
-      <Renderer content={{ markdown }} />
+      <NotionRenderer
+        blocks={denormalizeBlocks(post.blocks)}
+        pageLinks={toPageLinkMap(post.links)}
+        ogpEndpoint="/api/cms/ogp"
+      />
     </article>
   );
 }

@@ -1,5 +1,6 @@
-import type { PropertyMap } from "@notion-headless-cms/v3";
+import type { PropertyMap } from "@notion-headless-cms/cms";
 import type { DataSourceObjectResponse } from "../notion-client.js";
+import { assignIdentifiers } from "./identifier.js";
 
 const NOTION_TYPE_FOR_KIND: Record<string, string> = {
   title: "title",
@@ -20,16 +21,6 @@ const NOTION_TYPE_FOR_KIND: Record<string, string> = {
   createdTime: "created_time",
   lastEditedBy: "last_edited_by",
 };
-
-function toTsIdentifier(name: string): string {
-  const normalized = name
-    .replace(/[\s-]+(.)/g, (_, c: string) => c.toUpperCase())
-    .replace(/[^a-zA-Z0-9_]/g, "");
-  if (!normalized) return "unnamed";
-  const withLowerFirst =
-    normalized.charAt(0).toLowerCase() + normalized.slice(1);
-  return /^[0-9]/.test(withLowerFirst) ? `_${withLowerFirst}` : withLowerFirst;
-}
 
 export type DriftKind =
   | "added"
@@ -55,16 +46,21 @@ function optionNames(options: readonly { name: string }[]): string[] {
 /**
  * TS スキーマ定義(`properties`)と実 Notion DB の drift を検証する(`nhc check`)。
  * プロパティ追加・削除・型変更・status/select/multiSelect の options 変更を検出する。
+ * `fieldMappings` はスキーマ側で使っている明示的な別名。指定が無いプロパティは
+ * `assignIdentifiers()` の自動変換にフォールバックする(`nhc pull` と同じ解決順)。
  */
 export function diffSchema(
   dataSource: DataSourceObjectResponse,
   properties: PropertyMap,
+  fieldMappings: Record<string, string> = {},
 ): SchemaDrift {
   const changes: PropertyDrift[] = [];
   const seenKeys = new Set<string>();
+  const identifiers = assignIdentifiers(dataSource.properties);
 
   for (const [name, notionProp] of Object.entries(dataSource.properties)) {
-    const key = toTsIdentifier(name);
+    const key =
+      fieldMappings[name] ?? identifiers.get(name)?.identifier ?? name;
     const expected = properties[key];
     if (!expected) {
       changes.push({

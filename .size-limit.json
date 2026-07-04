@@ -23,5 +23,21 @@
     "name": "validate",
     "path": "packages/validate/dist/index.mjs",
     "limit": "65 kB"
+  },
+  {
+    "name": "cms",
+    "path": "packages/cms/dist/index.mjs",
+    "limit": "100 kB",
+    "ignore": ["shiki", "shiki/engine/javascript", "katex"]
+  },
+  {
+    "name": "cms/html",
+    "path": "packages/cms/dist/html.mjs",
+    "limit": "20 kB"
+  },
+  {
+    "name": "cms/cloudflare",
+    "path": "packages/cms/dist/cloudflare.mjs",
+    "limit": "15 kB"
   }
 ]

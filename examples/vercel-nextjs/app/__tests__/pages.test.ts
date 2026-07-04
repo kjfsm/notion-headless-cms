@@ -6,58 +6,83 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-vi.mock("../lib/cms", () => ({
-  cms: {
-    posts: {
-      list: vi.fn(),
-      find: vi.fn(),
-      params: vi.fn(),
-    },
+const fakeCms = {
+  posts: {
+    list: vi.fn(),
+    find: vi.fn(),
   },
+};
+
+vi.mock("../lib/cms", () => ({
+  getCms: vi.fn().mockReturnValue(fakeCms),
+  ensureSynced: vi.fn().mockResolvedValue(fakeCms),
 }));
 
-// PostPage は Notion クライアントとブロック木フェッチを直接呼ぶため、ネットワークを切る。
-vi.mock("@notionhq/client", () => ({
-  Client: class FakeClient {},
-}));
-vi.mock("@notion-headless-cms/notion-orm", () => ({
-  fetchBlockTree: vi
-    .fn()
-    .mockResolvedValue([{ object: "block", id: "b1", type: "paragraph" }]),
-}));
-
-const { cms } = await import("../lib/cms");
 const HomePage = (await import("../page")).default;
 const PostPage = (await import("../posts/[slug]/page")).default;
+const { generateStaticParams } = await import("../posts/[slug]/page");
+
+const PARAGRAPH_BLOCK = {
+  id: "b1",
+  type: "paragraph",
+  data: {
+    rich_text: [
+      { type: "text", plain_text: "内容", annotations: {}, href: null },
+    ],
+  },
+};
 
 describe("HomePage", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("cms.posts.list() を呼び出してページリストを取得する", async () => {
-    vi.mocked(cms.posts.list).mockResolvedValue([
-      { slug: "hello", title: "Hello World" } as never,
-    ]);
+    fakeCms.posts.list.mockResolvedValue({
+      items: [{ slug: "hello", version: "v1", listed: true, meta: {} }],
+      nextCursor: null,
+      hasMore: false,
+    });
     await HomePage();
-    expect(cms.posts.list).toHaveBeenCalled();
+    expect(fakeCms.posts.list).toHaveBeenCalled();
+  });
+});
+
+describe("generateStaticParams", () => {
+  beforeEach(() => vi.clearAllMocks());
+
+  it("list() の slug から静的パラメータを組み立てる", async () => {
+    fakeCms.posts.list.mockResolvedValue({
+      items: [{ slug: "hello", version: "v1", listed: true, meta: {} }],
+      nextCursor: null,
+      hasMore: false,
+    });
+    expect(await generateStaticParams()).toEqual([{ slug: "hello" }]);
   });
 });
 
 describe("PostPage", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("ページ詳細を取得し、ブロック木で React 描画する", async () => {
-    vi.mocked(cms.posts.find).mockResolvedValue({
-      id: "id-1",
+  it("ページ詳細を取得し、正規化ブロックを React 描画する", async () => {
+    fakeCms.posts.find.mockResolvedValue({
+      collection: "posts",
       slug: "hello",
-      publishedAt: "2024-01-01",
-      markdown: async () => "# Hello",
+      version: "v1",
+      meta: {
+        id: "id-1",
+        slug: "hello",
+        lastEditedTime: "v1",
+        publishedAt: "2024-01-01",
+      },
+      blocks: [PARAGRAPH_BLOCK],
+      images: {},
+      links: {},
     } as never);
     await PostPage({ params: Promise.resolve({ slug: "hello" }) });
-    expect(cms.posts.find).toHaveBeenCalledWith("hello");
+    expect(fakeCms.posts.find).toHaveBeenCalledWith("hello");
   });
 
   it("存在しないスラグは notFound() を呼ぶ", async () => {
-    vi.mocked(cms.posts.find).mockResolvedValue(null);
+    fakeCms.posts.find.mockResolvedValue(null);
     const { notFound } = await import("next/navigation");
     await expect(
       PostPage({ params: Promise.resolve({ slug: "not-found" }) }),

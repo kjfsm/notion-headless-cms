@@ -1,5 +1,10 @@
-import { createCMS } from "@notion-headless-cms/client";
-import { schema } from "../generated/nhc.js";
+import {
+  createCMS,
+  createNodeSyncScheduler,
+  memoryBlobStore,
+  memoryDocStore,
+} from "@notion-headless-cms/cms";
+import { schema } from "../schema.js";
 
 const token = process.env.NOTION_TOKEN;
 if (!token) {
@@ -7,15 +12,22 @@ if (!token) {
 }
 
 export const cms = createCMS({
-  notion: {
-    schema,
-    token,
-    collections: {
-      posts: {
-        published: ["公開済み"],
-        accessible: ["下書き", "編集中", "公開済み"],
-      },
-    },
-  },
-  render: { content: "html" },
+  schema,
+  notion: { token },
+  stores: { docs: memoryDocStore(), blobs: memoryBlobStore() },
+  scheduler: createNodeSyncScheduler(),
+  routes: "/api/cms",
 });
+
+/**
+ * kick() は 1 チャンク（既定 2 件）だけ処理する設計（Workers の chunked sync 用）。
+ * サーバ起動時に全件を確実に反映するため、cursor が尽きるまで手動で回す
+ * （起動後は webhook 経由の差分同期に任せる）。
+ */
+export async function syncAll(): Promise<void> {
+  let state = await cms.sync.getState();
+  do {
+    await cms.sync.kick();
+    state = await cms.sync.getState();
+  } while (state.cursor !== null);
+}

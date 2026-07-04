@@ -1,16 +1,29 @@
-import { createCMS } from "@notion-headless-cms/client";
-import { schema } from "./generated/nhc.js";
+import {
+  createCMS,
+  createNodeSyncScheduler,
+  memoryBlobStore,
+  memoryDocStore,
+} from "@notion-headless-cms/cms";
+import { schema } from "./schema.js";
 
 const cms = createCMS({
-  notion: {
-    schema,
-    token: process.env.NOTION_TOKEN ?? "",
-    collections: { posts: { published: ["公開済み"] } },
-  },
+  schema,
+  notion: { token: process.env.NOTION_TOKEN ?? "" },
+  stores: { docs: memoryDocStore(), blobs: memoryBlobStore() },
+  scheduler: createNodeSyncScheduler(),
 });
 
-const posts = await cms.posts.list();
+// kick() は 1 チャンク（既定 2 件）だけ処理する設計（Workers の chunked sync 用）。
+// 一括スクリプトとして全件を確実に読者に反映するため、cursor が尽きるまで手動で回す。
+let state = await cms.sync.getState();
+do {
+  await cms.sync.kick();
+  state = await cms.sync.getState();
+} while (state.cursor !== null);
+
+const { items: posts } = await cms.posts.list();
 console.log(`${posts.length} 件の記事を取得しました`);
 for (const post of posts) {
-  console.log(`- ${post.slug}\t${post.title ?? "(no title)"}`);
+  const meta = post.meta as { title?: string };
+  console.log(`- ${post.slug}\t${meta.title ?? "(no title)"}`);
 }
