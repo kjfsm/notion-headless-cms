@@ -1,6 +1,6 @@
 {
   "name": "@notion-headless-cms/fetch-blocks",
-  "version": "0.0.22",
+  "version": "3.0.0",
   "description": "Notion ブロック children API を再帰的に取得する fetch 戦略。BlockObjectResponse ツリーを返し、react-renderer で描画する。",
   "keywords": [
     "notion",

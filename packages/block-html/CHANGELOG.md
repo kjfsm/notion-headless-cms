@@ -1,5 +1,20 @@
 # @notion-headless-cms/embeds
 
+## 3.0.0
+
+### Major Changes
+
+- v3 ゼロベース再設計（epic #437）を機に、モノレポ全パッケージのバージョン番号を
+  `3.0.0` に統一する。この changeset 単体では各パッケージのコードに変更は無い
+  （他の changeset で実際の変更が入るパッケージ以外は純粋なバージョン整列）。
+  今回のみの一括整列であり、以降は各パッケージ独立のバージョニングに戻す
+  （`.changeset/config.json` の `fixed`/`linked` は変更しない）。
+
+### Patch Changes
+
+- Updated dependencies
+  - @notion-headless-cms/markdown-html@2.0.0
+
 ## 1.0.6
 
 ### Patch Changes
@@ -51,37 +66,31 @@
   ## 破壊的変更
 
   ### @notion-headless-cms/core
-
   - `createClient` のサンプルコードを `sources` + `nodePreset()` 形式に刷新
   - `ContentConfig.imageProxyBase` を削除（`CreateClientOptions.imageProxyBase` を使うこと）
   - 公開 export から `CollectionDef` / `CollectionsConfig` / `InferCollectionItem` / `CollectionClientImpl` / `collectionKey` / `CMSAdapter` / `MergeSourceCollections` を削除（`@notion-headless-cms/core/source-author` サブパスから import すること）
   - `CMSError` に `nextSteps?: readonly string[]` / `docsUrl?: string` / `format()` を追加
 
   ### @notion-headless-cms/cache
-
   - `cloudflarePreset` の `ctx` が必須になった（省略すると SWR 背景更新が Works ランタイムに打ち切られる）
   - テスト用途には `cloudflarePreset.forTest({ env })` を提供
 
   ### @notion-headless-cms/notion-source
-
   - `CMSAdapter` / `CollectionDef` の import 元を `@notion-headless-cms/core/source-author` に変更
 
   ## 新機能
 
   ### @notion-headless-cms/core
-
   - `nodePreset(opts?)` を追加。`...nodePreset()` を `createClient` にスプレッドするだけで Node.js の標準構成（memoryCache + SWR 5 分）が有効になる
   - `@notion-headless-cms/core/source-author` サブパスを追加。データソースアダプター実装者向けの型を分離
   - `@notion-headless-cms/core/preset/node` サブパスを追加
 
   ## パッケージ rename (旧パッケージは廃止)
-
   - `@notion-headless-cms/notion-embed` → `@notion-headless-cms/block-html`
   - `@notion-headless-cms/renderer` → `@notion-headless-cms/markdown-html`
   - `@notion-headless-cms/adapter-next` → `@notion-headless-cms/next` に統合
 
   ## 新規メタパッケージ
-
   - `@notion-headless-cms/node`: Node.js 向け (core + notion-source + markdown-html + nodePreset)
   - `@notion-headless-cms/cloudflare`: Cloudflare Workers 向け (core + notion-source + cache/cloudflare + block-html)
   - `@notion-headless-cms/next`: Next.js 向け (core + notion-source + markdown-html + createNextHandler)
@@ -277,7 +286,6 @@
   API・パッケージ構成・CLI 生成物を全面的に作り直した。詳細は `docs/migration/v1.md` を参照。
 
   ## ハイライト
-
   - **`createCMS` の API を簡素化**:
     - 12 メソッド → 4 メソッド: `get` / `list` / `params` / `cache.{invalidate,warm,adjacent}`
     - `getItem` → `get`、`getList` → `list`、`getStaticParams` → `params`
@@ -307,7 +315,6 @@
     - core は `CacheAdapter / DocumentCacheOps / ImageCacheOps` を公開、`DocumentCacheAdapter / ImageCacheAdapter` は削除
 
   ## 削除されたパッケージ
-
   - `@notion-headless-cms/cache-r2` → `@notion-headless-cms/cache/cloudflare` の `r2Cache`
   - `@notion-headless-cms/cache-kv` → `@notion-headless-cms/cache/cloudflare` の `kvCache`
   - `@notion-headless-cms/cache-next` → `@notion-headless-cms/cache/next` の `nextCache`

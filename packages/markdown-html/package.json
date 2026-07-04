@@ -1,6 +1,6 @@
 {
   "name": "@notion-headless-cms/markdown-html",
-  "version": "1.0.3",
+  "version": "3.0.0",
   "description": "Markdown を HTML に変換する remark/rehype ベースのレンダラ",
   "keywords": [
     "notion",

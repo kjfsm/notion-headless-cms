@@ -1,5 +1,29 @@
 # @notion-headless-cms/client
 
+## 3.0.0
+
+### Major Changes
+
+- v3 ゼロベース再設計（epic #437）を機に、モノレポ全パッケージのバージョン番号を
+  `3.0.0` に統一する。この changeset 単体では各パッケージのコードに変更は無い
+  （他の changeset で実際の変更が入るパッケージ以外は純粋なバージョン整列）。
+  今回のみの一括整列であり、以降は各パッケージ独立のバージョニングに戻す
+  （`.changeset/config.json` の `fixed`/`linked` は変更しない）。
+
+### Patch Changes
+
+- Updated dependencies [2a37266]
+- Updated dependencies [d030538]
+- Updated dependencies [88bf886]
+- Updated dependencies [f607b31]
+- Updated dependencies
+  - @notion-headless-cms/react-renderer@0.1.22
+  - @notion-headless-cms/cache@1.0.0
+  - @notion-headless-cms/core@1.0.0
+  - @notion-headless-cms/fetch-blocks@1.0.0
+  - @notion-headless-cms/fetch-markdown@1.0.0
+  - @notion-headless-cms/notion-source@1.0.0
+
 ## 0.3.17
 
 ### Patch Changes

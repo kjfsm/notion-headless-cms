@@ -1,5 +1,68 @@
 # @notion-headless-cms/cli
 
+## 3.0.0
+
+### Patch Changes
+
+- 2a37266: v3 ゼロベース再設計（#437）の基盤を `packages/v3`（非公開ステージングパッケージ）に追加し、既存パッケージに橋渡しを追加した。
+
+  - `react-renderer`: `./v3` サブパスを追加。`denormalizeBlocks` が v3 の正規化 block（`NormalizedBlock`）を既存の `BlockObjectResponse` 形状へ復元するため、既存のブロックコンポーネント約30種を無改修のまま再利用できる。`toPageLinkMap` で `EntrySnapshot.links` を既存の `pageLinks` プロップ形式に変換する。`Image` コンポーネントは任意の `_dimensions`（v3 パイプラインが焼き込む width/height）があれば付与する CLS 対応を追加（無ければ従来どおり）
+  - `cli`: `packages/cli/src/v3/` に pull（スキーマ雛形生成）・check（drift 検証）・doctor（診断）・sync（手動 kick）・init（wrangler 設定雛形）のロジックを追加。既存の `generate`/`init` コマンドとは独立
+
+  `packages/v3` 自体は非公開（`private: true`）のステージングパッケージで、公開パッケージへの統合は別途行う。
+
+- d030538: v3（#437）に不足していた数式・シンタックスハイライト・高度なHTML・マルチソースの実装を `packages/v3`（非公開ステージングパッケージ）に追加し、既存パッケージに橋渡しを追加した。
+
+  - `react-renderer`: `Code.tsx` にクライアント遅延 shiki ハイライトを追加（`__cachedHtml` が無い場合、水和後に動的 import してハイライトする。既定はページアクセス時のレンダリングで Worker の CPU 予算を消費しない）。`InlineEquation`/`RichText` が同期時に事前組版された数式 `__cachedHtml` を受け取れるようにした。`Bookmark`/`LinkPreview` に `useOgp` フックを追加し、`block.ogp` が無い場合に `NotionRenderer` の `ogpEndpoint` 経由でページアクセス時に OGP メタデータを取得できるようにした
+  - `cli`: `nhc.config.ts` に `v3` セクションを追加し、`nhc pull`（Notion DB introspect → `defineCollection` 雛形生成、既存ファイルは上書きしない）と `nhc check`（TS スキーマと実 DB の drift 検証、CI 向け）を新設した
+
+  `packages/v3` 側の主な追加（非公開のため changeset 対象外）:
+  - `transforms/{shiki,katex}.ts`: 同期時の事前レンダー用 TransformStage（オプトイン）
+  - `render/{html,embeds}.ts` 拡張: table/column/synced/child/bookmark/embed/link_preview/video/audio/file/pdf 等の HTML 出力、OGP はシェルのみ返しページアクセス時に取得する設計
+  - `http/ogp.ts`: OGP エンドポイント（SSRF ガード・redirect 追跡・edge cache 対応）
+  - `sync/{notion-driver,multi-source,page-index}.ts`: 複数コレクション（複数 data_source_id）を単一の同期エンジンで束ねるマルチソース実装
+  - `cms/create-cms.ts`: schema からドライバ・同期・HTTP ハンドラを一括結線する `createCMS()` ファクトリ
+
+- 88bf886: `packages/v3`（非公開ステージングパッケージ）を正式な公開パッケージ `@notion-headless-cms/cms` へ昇格した（パッケージ統合、#437 S10 の積み残し）。
+
+  - `@notion-headless-cms/cms`: `packages/v3` から改名・公開。exports を `.` / `./html`（HTML 文字列レンダラ）/ `./cloudflare`（`kvDocStore`/`r2BlobStore`）/ `./node`（`fileDocStore`/`fileBlobStore`）/ `./testing`（契約テストユーティリティ）に再編し、`publint`/`attw`/`release:local` を追加した。初回公開のためこの changeset ではバージョンを管理しない（`package.json` の `0.1.0` がそのまま初版になる）
+  - `react-renderer`/`cli`: `@notion-headless-cms/v3` への依存を `@notion-headless-cms/cms` に更新（パッケージ名変更に追随するのみ、挙動に変更なし）
+
+  `packages/v3/src/render/index.ts` は `./html` サブパス新設に伴い到達不能になったため削除した。RFC（`docs/ja/rfc/v3-architecture.md`）記載の `./react` サブパスは追加しない — 該当機能は `react-renderer` の既存 `./v3` サブパスで提供済みで、`cms` 側に追加すると循環依存になるため。
+
+- c89d8c0: スキーマのプロパティキーと実際の Notion プロパティ名が食い違う場合に値が取得できなかった不具合を修正した。
+
+  - `@notion-headless-cms/cms`: `prop.*()` ビルダーが末尾引数で実際の Notion プロパティ名を受け取れるようになった（例: `prop.title("名前")`）。`mapProperties()`・`notion-driver.ts` の `slugOf()`/`statusOf()` がこの別名で `raw` プロパティを解決するよう修正
+  - `@notion-headless-cms/cli`: `nhc.config.ts` の `v3.collections[].fieldMappings` を追加。`nhc pull` が明示マッピングまたは自動フォールバック識別子に対して `notion` 別名を生成コードへ埋め込むようになり、`nhc check` も同じ解決順で drift を照合する
+
+- a4110f4: `nhc pull`/`nhc check`（v3）で日本語などの非 ASCII のみのプロパティ名が識別子生成時に
+  すべて `unnamed` へ潰れて衝突していたバグを修正した。
+
+  - プロパティ種別ベースの識別子（`unnamedTitle`/`unnamedStatus` 等）+ 連番へフォールバックし、
+    同名衝突を避けるようにした（`packages/cli/src/v3/identifier.ts` に新設）
+  - `nhc pull` が生成するコードには、フォールバックした場合のみ元のプロパティ名を
+    JSDoc コメントとして残すようにした
+  - `nhc pull`/`nhc check` で重複していた識別子変換ロジックを共通化した
+
+- f607b31: v3ゼロベース再設計（#437）のコードレビューで検出した問題を修正。
+
+  - `react-renderer`: README に `./v3` サブパス（`denormalizeBlocks`/`toPageLinkMap`）の使い方セクションを追加
+  - `cli`: README に `nhc pull`/`nhc check`（v3 スキーマ drift 検証）のセクションを追加
+
+  `packages/v3`（非公開）側の修正（video ブロックの `sanitizeHref` 適用漏れ、`multi-source.ts` の生 `Error` throw を `CMSError` 化、`listEntries` の `limit` 負数サニタイズ、REST ストアの契約テスト追加等）は非公開パッケージのため changeset 対象外。
+
+- Updated dependencies [569ce76]
+- Updated dependencies [aab824b]
+- Updated dependencies [427641c]
+- Updated dependencies [a5c23f3]
+- Updated dependencies [c89d8c0]
+- Updated dependencies [3b29159]
+- Updated dependencies [1b24228]
+- Updated dependencies
+  - @notion-headless-cms/cms@0.1.1
+  - @notion-headless-cms/core@1.0.0
+  - @notion-headless-cms/validate@1.0.0
+
 ## 2.0.16
 
 ### Patch Changes
@@ -353,39 +416,32 @@
 - 63f5f38: ライブラリ使い勝手改善
 
   ### コレクション API
-
   - `get(slug)` → `find(slug)`（nullable が直感的）
   - `slugs()` → `params()`（Next.js 慣習に合わせる）
   - `revalidate(slug, version)` → `check(slug, version)`
 
   ### グローバル操作
-
   - `$collections` → `collections`
   - `$invalidate()` → `invalidate()`
   - `$handler()` → `handler()`
   - `$getCachedImage()` → `getCachedImage()`
 
   ### 設定
-
   - `cache: adapter` → `cache: [adapter]`（常に配列で型統一）
   - `ttlMs: number` → `swr: { ttlMs: number }`（SWR 設定を名前空間に整理）
 
   ### エラーハンドリング
-
   - `CMSError` に `is(code)` / `inNamespace(ns)` インスタンスメソッドを追加
   - `matchCMSError(err, handlers)` ユーティリティを追加
 
   ### adapter-next
-
   - `createNextHandler(cms, opts?)` を新設（推奨 API）
   - `createImageRouteHandler` / `createCollectionRevalidateRouteHandler` / `createInvalidateAllRouteHandler` は `@deprecated`
 
   ### CLI
-
   - `columnMappings` → `fieldMappings`（Notion フィールドとの対応であることを明確化）
 
   ### 型の改名
-
   - `GetOptions` → `FindOptions`
   - `RevalidateResult` → `CheckResult`
   - 新設: `SWRConfig`
@@ -490,7 +546,6 @@
   API・パッケージ構成・CLI 生成物を全面的に作り直した。詳細は `docs/migration/v1.md` を参照。
 
   ## ハイライト
-
   - **`createCMS` の API を簡素化**:
     - 12 メソッド → 4 メソッド: `get` / `list` / `params` / `cache.{invalidate,warm,adjacent}`
     - `getItem` → `get`、`getList` → `list`、`getStaticParams` → `params`
@@ -520,7 +575,6 @@
     - core は `CacheAdapter / DocumentCacheOps / ImageCacheOps` を公開、`DocumentCacheAdapter / ImageCacheAdapter` は削除
 
   ## 削除されたパッケージ
-
   - `@notion-headless-cms/cache-r2` → `@notion-headless-cms/cache/cloudflare` の `r2Cache`
   - `@notion-headless-cms/cache-kv` → `@notion-headless-cms/cache/cloudflare` の `kvCache`
   - `@notion-headless-cms/cache-next` → `@notion-headless-cms/cache/next` の `nextCache`
@@ -645,14 +699,12 @@
 - c955826: feat: createCMS コレクション検証・公開条件指定、generate 全プロパティ出力
 
   ### @notion-headless-cms/cli（破壊的変更）
-
   - `nhc generate` の生成スキーマ形式を刷新。Zod / `defineSchema` / `cmsDataSources` を廃止し、`{name}SourceId` と `{name}Properties` のみを生成するシンプルな形式に変更
   - `nhc.config.ts` の `DataSourceConfig.fields` を削除し `columnMappings` に変更（非 ASCII 列名のマッピング専用）
   - 非 ASCII プロパティ名は `property_1`, `property_2`... に自動変換し warn を出力
   - `columnMappings` で明示マッピング可能、存在しないプロパティを指定した場合はエラー
 
   ### @notion-headless-cms/core（後方互換）
-
   - `createCMS` に `collections` オプションを追加（`CollectionSemantics` 型）
   - `collections[name].slug` が未指定の場合に `CMSError(core/config_invalid)` をスロー
   - `collections[name].publishedStatuses` / `accessibleStatuses` を DataSource 側の設定より優先して適用
@@ -660,7 +712,6 @@
   - `DataSource.findBySlug` を optional に変更、`findByProp?` と `readonly properties?: PropertyMap` を追加
 
   ### @notion-headless-cms/notion-orm（後方互換）
-
   - `createNotionCollection` に `properties` オプションを追加（PropertyMap ベースのマッピング）
   - `findByProp(notionPropName, value)` メソッドを実装（Core が slug ルックアップに利用）
   - 内部に `queryPageByProp` を追加（Notion API のプロパティフィルタクエリ）
@@ -700,7 +751,6 @@
 - 7791e88: リリース前リファクタリング (0.x 帯のため patch bump)。
 
   ## API 変更 (0.x につき patch で許容)
-
   - **`createCMS` 一本化**: `createNodeCMS` / `createCloudflareCMS` を廃止。
     ランタイム差分は `nodePreset()` (core) と `cloudflarePreset({ env })` (cache-r2) で吸収する。
   - **`adapter-node` / `adapter-cloudflare` パッケージ削除**。上記 preset に統合された。
@@ -717,7 +767,6 @@
     将来 ORM 増強向けの内部 I/F 整備)。
 
   ## 追加
-
   - `nodePreset()` (core): memory cache を既定有効化。`cache` / `ttlMs` / `renderer` で上書き可。
   - `cloudflarePreset({ env, ttlMs?, bindings? })` (cache-r2): env binding を自動解決。
     推奨 binding 名 `DOC_CACHE` (KV) / `IMG_BUCKET` (R2)。旧 `CACHE_KV` / `CACHE_BUCKET` もフォールバック認識。
@@ -726,7 +775,6 @@
   - Cloudflare KV バックエンドの `kvCache` (cache-kv)。
 
   ## 整理
-
   - 全パッケージの `publishConfig.exports` 重複を削除 (root `exports` のみ)。
   - `cache-r2` に `test` スクリプトを追加。
 
@@ -761,7 +809,6 @@
   `core` を CMS 機能（キャッシュ・画像プロキシ・Web ハンドラ）に専念させ、Notion 固有処理を `@notion-headless-cms/notion-orm`（新規 private パッケージ）に分離した。ユーザーは `notion-orm` を直接 import しない。将来的に `notion-orm` はリポジトリ分離可能な設計。
 
   ## 主な変更
-
   - `@notion-headless-cms/source-notion` → `@notion-headless-cms/notion-orm` に改名（private: true）。`notionAdapter` は `createNotionCollection` に改名（旧名はエイリアスとして残す）。
   - `createCMS({ source })` を `createCMS({ dataSources: { posts, authors } })` に変更。各データソースは CLI 生成の `nhcDataSources` として渡す。
   - CMS クライアントはコレクション別 API に刷新:

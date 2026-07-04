@@ -1,5 +1,51 @@
 # @notion-headless-cms/react-renderer
 
+## 3.0.0
+
+### Patch Changes
+
+- 2a37266: v3 ゼロベース再設計（#437）の基盤を `packages/v3`（非公開ステージングパッケージ）に追加し、既存パッケージに橋渡しを追加した。
+
+  - `react-renderer`: `./v3` サブパスを追加。`denormalizeBlocks` が v3 の正規化 block（`NormalizedBlock`）を既存の `BlockObjectResponse` 形状へ復元するため、既存のブロックコンポーネント約30種を無改修のまま再利用できる。`toPageLinkMap` で `EntrySnapshot.links` を既存の `pageLinks` プロップ形式に変換する。`Image` コンポーネントは任意の `_dimensions`（v3 パイプラインが焼き込む width/height）があれば付与する CLS 対応を追加（無ければ従来どおり）
+  - `cli`: `packages/cli/src/v3/` に pull（スキーマ雛形生成）・check（drift 検証）・doctor（診断）・sync（手動 kick）・init（wrangler 設定雛形）のロジックを追加。既存の `generate`/`init` コマンドとは独立
+
+  `packages/v3` 自体は非公開（`private: true`）のステージングパッケージで、公開パッケージへの統合は別途行う。
+
+- d030538: v3（#437）に不足していた数式・シンタックスハイライト・高度なHTML・マルチソースの実装を `packages/v3`（非公開ステージングパッケージ）に追加し、既存パッケージに橋渡しを追加した。
+
+  - `react-renderer`: `Code.tsx` にクライアント遅延 shiki ハイライトを追加（`__cachedHtml` が無い場合、水和後に動的 import してハイライトする。既定はページアクセス時のレンダリングで Worker の CPU 予算を消費しない）。`InlineEquation`/`RichText` が同期時に事前組版された数式 `__cachedHtml` を受け取れるようにした。`Bookmark`/`LinkPreview` に `useOgp` フックを追加し、`block.ogp` が無い場合に `NotionRenderer` の `ogpEndpoint` 経由でページアクセス時に OGP メタデータを取得できるようにした
+  - `cli`: `nhc.config.ts` に `v3` セクションを追加し、`nhc pull`（Notion DB introspect → `defineCollection` 雛形生成、既存ファイルは上書きしない）と `nhc check`（TS スキーマと実 DB の drift 検証、CI 向け）を新設した
+
+  `packages/v3` 側の主な追加（非公開のため changeset 対象外）:
+  - `transforms/{shiki,katex}.ts`: 同期時の事前レンダー用 TransformStage（オプトイン）
+  - `render/{html,embeds}.ts` 拡張: table/column/synced/child/bookmark/embed/link_preview/video/audio/file/pdf 等の HTML 出力、OGP はシェルのみ返しページアクセス時に取得する設計
+  - `http/ogp.ts`: OGP エンドポイント（SSRF ガード・redirect 追跡・edge cache 対応）
+  - `sync/{notion-driver,multi-source,page-index}.ts`: 複数コレクション（複数 data_source_id）を単一の同期エンジンで束ねるマルチソース実装
+  - `cms/create-cms.ts`: schema からドライバ・同期・HTTP ハンドラを一括結線する `createCMS()` ファクトリ
+
+- 88bf886: `packages/v3`（非公開ステージングパッケージ）を正式な公開パッケージ `@notion-headless-cms/cms` へ昇格した（パッケージ統合、#437 S10 の積み残し）。
+
+  - `@notion-headless-cms/cms`: `packages/v3` から改名・公開。exports を `.` / `./html`（HTML 文字列レンダラ）/ `./cloudflare`（`kvDocStore`/`r2BlobStore`）/ `./node`（`fileDocStore`/`fileBlobStore`）/ `./testing`（契約テストユーティリティ）に再編し、`publint`/`attw`/`release:local` を追加した。初回公開のためこの changeset ではバージョンを管理しない（`package.json` の `0.1.0` がそのまま初版になる）
+  - `react-renderer`/`cli`: `@notion-headless-cms/v3` への依存を `@notion-headless-cms/cms` に更新（パッケージ名変更に追随するのみ、挙動に変更なし）
+
+  `packages/v3/src/render/index.ts` は `./html` サブパス新設に伴い到達不能になったため削除した。RFC（`docs/ja/rfc/v3-architecture.md`）記載の `./react` サブパスは追加しない — 該当機能は `react-renderer` の既存 `./v3` サブパスで提供済みで、`cms` 側に追加すると循環依存になるため。
+
+- f607b31: v3ゼロベース再設計（#437）のコードレビューで検出した問題を修正。
+
+  - `react-renderer`: README に `./v3` サブパス（`denormalizeBlocks`/`toPageLinkMap`）の使い方セクションを追加
+  - `cli`: README に `nhc pull`/`nhc check`（v3 スキーマ drift 検証）のセクションを追加
+
+  `packages/v3`（非公開）側の修正（video ブロックの `sanitizeHref` 適用漏れ、`multi-source.ts` の生 `Error` throw を `CMSError` 化、`listEntries` の `limit` 負数サニタイズ、REST ストアの契約テスト追加等）は非公開パッケージのため changeset 対象外。
+
+- Updated dependencies [569ce76]
+- Updated dependencies [aab824b]
+- Updated dependencies [427641c]
+- Updated dependencies [a5c23f3]
+- Updated dependencies [c89d8c0]
+- Updated dependencies [3b29159]
+- Updated dependencies [1b24228]
+  - @notion-headless-cms/cms@0.1.1
+
 ## 0.1.21
 
 ### Patch Changes
@@ -101,14 +147,12 @@
 - 359bc6f: fetch 戦略両対応の `ContentExtension` インターフェースを導入し、enrichers を廃止。
 
   ## 破壊的変更
-
   - `blocksFetcher` / `notionSource` / `createCms` の `enrichers` オプションを削除。
     拡張はすべて Renderer 側の `extensions` prop へ移動。
   - `notionKatex()` / `notionShiki()` の戻り値が `BlockEnricher`（関数）から
     `ContentExtension`（オブジェクト）に変更。
 
   ## 新機能
-
   - `notion-orm`: `ContentExtension` インターフェースをエクスポート。
     `getMarkdownPlugins()` で unified プラグインを、`getBlockComponents()` で
     React コンポーネント上書きを提供する統一 API。
@@ -291,8 +335,8 @@
 
   const Equation = dynamic(() =>
     import("@notion-headless-cms/react-renderer/equation").then(
-      (m) => m.Equation
-    )
+      (m) => m.Equation,
+    ),
   );
 
   <NotionRenderer blocks={blocks} components={{ Equation }} />;
