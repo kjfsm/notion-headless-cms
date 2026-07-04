@@ -28,4 +28,6 @@ export type {
   HeadingBlockObjectResponse,
   NotionBlock,
   NotionRendererProps,
+  PageLinkMap,
+  ResolvedPageLink,
 } from "./types.js";
