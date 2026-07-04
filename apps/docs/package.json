@@ -1,7 +1,7 @@
 {
   "name": "@notion-headless-cms/docs",
   "private": true,
-  "version": "0.0.28",
+  "version": "0.0.29",
   "description": "notion-headless-cms 公式ドキュメントサイト (dogfooding: LP を nhc 自身で Notion 配信、本体 docs は md 直配信)",
   "type": "module",
   "scripts": {
