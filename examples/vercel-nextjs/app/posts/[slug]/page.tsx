@@ -41,6 +41,7 @@ export default async function PostPage({
       <NotionRenderer
         blocks={denormalizeBlocks(post.blocks)}
         pageLinks={toPageLinkMap(post.links)}
+        ogpEndpoint="/api/cms/ogp"
       />
     </article>
   );

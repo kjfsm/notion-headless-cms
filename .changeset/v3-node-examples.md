@@ -15,3 +15,6 @@
   （`src/lib/web-adapter.ts`）を追加した
 - 一括同期スクリプト向けに `cms.sync.kick()` を `cursor` が尽きるまでループする
   パターンを導入（chunked sync は元々 Workers の Alarm 継続を想定した設計のため）
+- `minimal-node`/`node-hono` の `src/schema.ts` はスキーマキー（英語）が実際の Notion
+  プロパティ名（日本語）と食い違っており記事が一切取得できていなかった。`prop.*("実プロパティ名")`
+  の別名指定（`@notion-headless-cms/cms` に新規追加）で修正した
