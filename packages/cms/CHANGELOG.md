@@ -1,5 +1,27 @@
 # @notion-headless-cms/cms
 
+## 3.0.1
+
+### Patch Changes
+
+- eac80a3: `list()` の戻り値の `meta` をスキーマ由来の型に絞り込むようにした（`find()` と一貫）。
+
+  - これまで `list()` は `ListResult<IndexEntry>` を返し `meta` が `JsonValue` だったが、`ListResult<CollectionIndexEntry<C>>` に変更し `meta` を当該コレクションの `InferEntry<C>` として型付けする
+  - ドライバが index にも本体と同一の full meta を書き込む現状の実装に基づく型付けのためランタイムは無改修（型のみの強化）
+  - `CollectionIndexEntry` / `CollectionEntrySnapshot` を型エクスポートに追加
+
+- eac80a3: `createCMS` に `logger` / `logLevel` を追加し、同期・配信経路を構造化ログで監視できるようにした。
+
+  - `logger`（`debug`/`info`/`warn`/`error` を持つオブジェクト）と `logLevel`（下限レベル）を受け取り、`logLevel` 未満のレベルは内部で抑制する（未指定なら no-op）
+  - 計装点: Notion クエリ失敗（error）・entry の同期成功（debug）／失敗（warn）・API リトライ待機（debug、`attempt`/`backoffMs` 付き）・webhook 受信（info）／署名不正（warn）・画像 404（warn）
+  - `Logger` / `LogLevel` / `LogContext` 型をエクスポート
+
+- eac80a3: `defineCollection` の `slug` を任意にした。slug 列を持たない設定値コレクション（選択肢リスト・埋め込み情報など）を、種別（`kind`）を増やさずに定義できる。
+
+  - `slug` を省略したコレクションは、エントリを Notion の page id でアドレスする（`find(pageId)` で取得、`list()` は全件を返す）。どのプロパティも slug に流用しないため、タイトル等への暗黙の一意性要求が発生しない
+  - `slug` を指定したコレクションで値が空のページは従来どおり `CMSError(sync/slug_missing)` を投げる（壊れた URL を防ぐ設定ミス検知）
+  - 内部の sync → store → index → find → list は slug 有無で分岐せず単一経路のまま。slug 未設定コレクションは内部リンク解決用 `PageIndex` からは除外する（URL ルーティングしないため）
+
 ## 3.0.0
 
 ### Patch Changes
@@ -45,9 +67,9 @@
   - codegen（`nhc generate`）を廃止し、`src/schema.ts` に `defineCollection`/`defineSchema`
     を直接書く方式に統一
   - `post.html()`/`post.markdown()`（関数を剥がす儀式）を廃止し、`cms.posts.find()` が返す
-    プレーンな `EntrySnapshot`（`post.blocks`）をそのまま使う。HTML化が必要な場合は
+    プレーンな `EntrySnapshot`（`post.blocks`）をそのまま使う。HTML 化が必要な場合は
     `renderBlocksToHtml`（`@notion-headless-cms/cms/html`）を使う
-  - webhook・画像プロキシ・OGP 等の個別配線を `cms.fetch(request)` 1本に統合
+  - webhook・画像プロキシ・OGP 等の個別配線を `cms.fetch(request)` 1 本に統合
   - `node-express` は Fetch API を話さないため、`Request`/`Response` 変換アダプタ
     （`src/lib/web-adapter.ts`）を追加した
   - 一括同期スクリプト向けに `cms.sync.kick()` を `cursor` が尽きるまでループする
@@ -80,7 +102,7 @@
 
 - 1b24228: `examples/vercel-nextjs` を v2 API から v3 API（`@notion-headless-cms/cms`）へ書き直した。
 
-  - `createNextHandler`/`createNextWebhookHandler`（2種併用）を `cms.fetch()` 1本 +
+  - `createNextHandler`/`createNextWebhookHandler`（2 種併用）を `cms.fetch()` 1 本 +
     `revalidatePath` 呼び出し専用の webhook route（Next.js の `after()` でレスポンス確定後に
     ISR キャッシュを掃く）に統合
   - `post.markdown()` + `fetch-markdown/react` の `<Renderer>` を、`denormalizeBlocks`/
@@ -90,7 +112,7 @@
   - `app/schema.ts` はスキーマキー（英語）が実際の Notion プロパティ名（日本語）と食い違って
     おり記事が一切取得できていなかった。`prop.*("実プロパティ名")` の別名指定
     （`@notion-headless-cms/cms` に新規追加）で修正した
-  - `<NotionRenderer>` に `ogpEndpoint="/api/cms/ogp"` を追加。埋め込みリンクのOGPサムネイル
+  - `<NotionRenderer>` に `ogpEndpoint="/api/cms/ogp"` を追加。埋め込みリンクの OGP サムネイル
     取得（`useOgp`）がクライアント側で発火していなかった不具合を修正した
   - `app/lib/cms.ts` の `createCMS()` 呼び出しをトップレベルの eager 実行から `getCms()` に
     よる遅延初期化へ変更。`next build` はルートハンドラ静的解析のためモジュールを import する

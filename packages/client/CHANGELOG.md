@@ -1,5 +1,12 @@
 # @notion-headless-cms/client
 
+## 3.0.1
+
+### Patch Changes
+
+- @notion-headless-cms/react-renderer@3.0.1
+- @notion-headless-cms/fetch-blocks@3.0.1
+
 ## 3.0.0
 
 ### Major Changes
