@@ -1,4 +1,5 @@
 import type { BlobStore } from "../store/types.js";
+import type { Logger } from "../types/logger.js";
 import { verifyNotionSignature } from "./webhook.js";
 
 export interface HttpHandlerOptions {
@@ -38,6 +39,7 @@ export interface HttpHandlerAdapter {
   onOgp?(request: Request): Promise<Response> | Response;
   /** レスポンス送信後もバックグラウンド処理を完走させるフック(Workers の `waitUntil` 相当)。 */
   waitUntil?(p: Promise<unknown>): void;
+  readonly logger?: Logger;
 }
 
 function imageKey(hash: string): string {
@@ -79,7 +81,13 @@ export function createFetchHandler(
       const hash = rel.slice(imagesPath.length + 1);
       if (!hash) return new Response("Bad Request", { status: 400 });
       const bytes = await adapter.images.get(imageKey(hash));
-      if (!bytes) return new Response("Not Found", { status: 404 });
+      if (!bytes) {
+        adapter.logger?.warn?.("画像が見つかりません", {
+          operation: "images",
+          status: 404,
+        });
+        return new Response("Not Found", { status: 404 });
+      }
       const head = await adapter.images.head(imageKey(hash));
       const headers = new Headers({
         "cache-control": "public, max-age=31536000, immutable",
@@ -141,6 +149,10 @@ export function createFetchHandler(
         signature,
       );
       if (!valid) {
+        adapter.logger?.warn?.("webhook 署名が不正です", {
+          operation: "webhook",
+          status: 401,
+        });
         return jsonResponse(
           { ok: false, code: "handler/signature_invalid" },
           401,
@@ -153,6 +165,11 @@ export function createFetchHandler(
       if (!pageId) {
         return jsonResponse({ ok: true, skipped: "no page entity" }, 200);
       }
+
+      adapter.logger?.info?.("webhook を受信しました", {
+        operation: "webhook",
+        pageId,
+      });
 
       const run = Promise.resolve(adapter.onWebhookEvent?.(pageId));
       if (adapter.waitUntil) {

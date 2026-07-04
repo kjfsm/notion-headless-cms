@@ -37,7 +37,22 @@ describe("HomePage", () => {
 
   it("cms.posts.list() を呼び出してページリストを取得する", async () => {
     fakeCms.posts.list.mockResolvedValue({
-      items: [{ slug: "hello", version: "v1", listed: true, meta: {} }],
+      items: [
+        {
+          slug: "hello",
+          version: "v1",
+          listed: true,
+          meta: {
+            id: "id-1",
+            slug: "hello",
+            lastEditedTime: "v1",
+            title: "Hello",
+            status: "公開済み",
+            publishedAt: null,
+            author: null,
+          },
+        },
+      ],
       nextCursor: null,
       hasMore: false,
     });
@@ -51,7 +66,22 @@ describe("generateStaticParams", () => {
 
   it("list() の slug から静的パラメータを組み立てる", async () => {
     fakeCms.posts.list.mockResolvedValue({
-      items: [{ slug: "hello", version: "v1", listed: true, meta: {} }],
+      items: [
+        {
+          slug: "hello",
+          version: "v1",
+          listed: true,
+          meta: {
+            id: "id-1",
+            slug: "hello",
+            lastEditedTime: "v1",
+            title: "Hello",
+            status: "公開済み",
+            publishedAt: null,
+            author: null,
+          },
+        },
+      ],
       nextCursor: null,
       hasMore: false,
     });

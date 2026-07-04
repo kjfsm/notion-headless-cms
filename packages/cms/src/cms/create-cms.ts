@@ -8,6 +8,7 @@ import { createFetchHandler } from "../http/handler.js";
 import type { OgpHandlerOptions } from "../http/ogp.js";
 import { createOgpHandler } from "../http/ogp.js";
 import { createScheduledHandler } from "../http/scheduled.js";
+import { createLeveledLogger } from "../logger.js";
 import type { TransformStage } from "../pipeline/transform-stage.js";
 import { findEntry } from "../query/find.js";
 import type { ListRuntimeParams } from "../query/list.js";
@@ -37,6 +38,7 @@ import type {
 import type { IndexEntry } from "../types/collection-index.js";
 import type { EntrySnapshot } from "../types/entry-snapshot.js";
 import type { JsonValue } from "../types/json-value.js";
+import type { Logger, LogLevel } from "../types/logger.js";
 import type { ListParams, ListResult } from "../types/query.js";
 
 const RESERVED_KEYS = ["sync", "fetch", "scheduled"] as const;
@@ -105,6 +107,10 @@ export interface CreateCMSOptions<S extends SchemaDef> {
   readonly onRealtimeUpgrade?: HttpHandlerAdapter["onRealtimeUpgrade"];
   readonly onPreview?: HttpHandlerAdapter["onPreview"];
   readonly waitUntil?: (p: Promise<unknown>) => void;
+  /** 同期・配信経路の構造化ログ出力先。未指定ならログを出さない。 */
+  readonly logger?: Logger;
+  /** `logger` の下限レベル。指定レベル未満を抑制する。既定は全レベル出力。 */
+  readonly logLevel?: LogLevel;
 }
 
 /**
@@ -121,9 +127,28 @@ export type CollectionEntrySnapshot<C extends CollectionDef> = Omit<
   readonly meta: InferEntry<C>;
 };
 
+/**
+ * `find()` の `CollectionEntrySnapshot<C>` と同じ扱いを `list()` にも与える型。
+ * `IndexEntry.meta`(`JsonValue`)を当該コレクションの `InferEntry<C>` に絞り込む。
+ * ドライバ(`notion-driver.ts` の `syncEntry`)が index にも full meta を書き込むため、
+ * この絞り込みは実データと一致する（`collection-index.ts` の不変条件コメント参照）。
+ */
+export type CollectionIndexEntry<C extends CollectionDef> = Omit<
+  IndexEntry,
+  "meta"
+> & {
+  readonly meta: InferEntry<C>;
+};
+
 export interface CollectionHandle<C extends CollectionDef> {
+  /**
+   * slug でエントリを取得する。`slug` プロパティを設定していないコレクションでは
+   * キーが Notion の page id になるため、`find(pageId)` で取得する。
+   */
   find(slug: string): Promise<CollectionEntrySnapshot<C> | null>;
-  list(params?: ListParams<C["properties"]>): Promise<ListResult<IndexEntry>>;
+  list(
+    params?: ListParams<C["properties"]>,
+  ): Promise<ListResult<CollectionIndexEntry<C>>>;
 }
 
 type CollectionHandles<C extends CollectionMap> = {
@@ -215,6 +240,7 @@ export function createCMS<const S extends SchemaDef>(
 
   const entryStore = createEntryStore(opts.stores.blobs);
   const indexStore = createIndexStore(opts.stores.docs);
+  const logger = createLeveledLogger(opts.logger, opts.logLevel);
   const routes = opts.routes ?? "/api/cms";
   const imagesPath = opts.imagesPath ?? "/images";
   const pageIndex = () => buildPageIndex(opts.schema, indexStore);
@@ -287,6 +313,7 @@ export function createCMS<const S extends SchemaDef>(
         imagesPath,
         pageIndex,
         realtime: opts.realtime,
+        logger,
       });
     }
 
@@ -296,6 +323,7 @@ export function createCMS<const S extends SchemaDef>(
       chunkSize: opts.sync?.chunkSize,
       chunkDelayMs: opts.sync?.chunkDelayMs,
       debounceMs: opts.sync?.debounceMs,
+      logger,
     });
 
     sync = {
@@ -347,6 +375,7 @@ export function createCMS<const S extends SchemaDef>(
     onPreview: opts.onPreview,
     onOgp: opts.ogp === false ? undefined : createOgpHandler(opts.ogp),
     waitUntil: opts.waitUntil,
+    logger,
   };
   const httpOptions: HttpHandlerOptions = { routes };
   const fetchHandler = createFetchHandler(httpAdapter, httpOptions);

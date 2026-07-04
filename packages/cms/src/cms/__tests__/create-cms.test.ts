@@ -330,6 +330,130 @@ describe("createCMS", () => {
     expectTypeOf<NewsMeta>().not.toHaveProperty("status");
   });
 
+  it("型推論: list の戻り値 meta もスキーマから推論された型になる", () => {
+    const client = makeFakeClient({});
+    const cms = createCMS({
+      schema,
+      notion: { client },
+      stores: makeStores(),
+      scheduler: createNodeSyncScheduler(),
+    });
+    type PostListMeta = Awaited<
+      ReturnType<typeof cms.posts.list>
+    >["items"][number]["meta"];
+    expectTypeOf<PostListMeta["status"]>().toEqualTypeOf<
+      "draft" | "published"
+    >();
+    expectTypeOf<PostListMeta["title"]>().toEqualTypeOf<string>();
+    expectTypeOf<PostListMeta["slug"]>().toEqualTypeOf<string>();
+  });
+
+  it("slug 未設定コレクションは page id で list/find でき、list の meta も型付く", async () => {
+    const siteTexts = defineCollection({
+      dataSourceId: "ds-texts",
+      properties: { key: prop.title("名前"), text: prop.richText("テキスト") },
+    });
+    const dataSchema = defineSchema({ siteTexts });
+    const textPage = {
+      object: "page" as const,
+      id: "page-xyz",
+      url: "https://notion.so/page-xyz",
+      last_edited_time: "2026-01-01T00:00:00.000Z",
+      properties: {
+        名前: { type: "title", title: richText("サブタイトル") },
+        テキスト: { type: "rich_text", rich_text: richText("最高のバンド") },
+      },
+    } as unknown as PageObjectResponse;
+    const client: NotionClientLike = {
+      dataSources: {
+        query: vi.fn(async ({ data_source_id }) => ({
+          results: data_source_id === "ds-texts" ? [textPage] : [],
+          next_cursor: null,
+          has_more: false,
+        })),
+      },
+      pages: { retrieve: vi.fn().mockRejectedValue(new Error("not found")) },
+      blocks: {
+        children: {
+          list: vi.fn().mockResolvedValue({
+            results: [],
+            next_cursor: null,
+            has_more: false,
+          }),
+        },
+      },
+    };
+
+    const cms = createCMS({
+      schema: dataSchema,
+      notion: { client },
+      stores: makeStores(),
+      scheduler: createNodeSyncScheduler(),
+    });
+    await cms.sync.kick();
+
+    const list = await cms.siteTexts.list();
+    expect(list.items.map((i) => i.meta.key)).toEqual(["サブタイトル"]);
+    // slug プロパティ未設定なのでキーは page id。
+    expect(list.items[0]?.slug).toBe("page-xyz");
+
+    const found = await cms.siteTexts.find("page-xyz");
+    expect(found?.meta.text).toBe("最高のバンド");
+
+    type TextListMeta = Awaited<
+      ReturnType<typeof cms.siteTexts.list>
+    >["items"][number]["meta"];
+    expectTypeOf<TextListMeta["key"]>().toEqualTypeOf<string>();
+  });
+
+  it("logger: syncEntry を debug ログに出し、logLevel でレベルを絞れる", async () => {
+    const post = () =>
+      notionPage({
+        id: "p1",
+        dataSourceId: "ds-posts",
+        slug: "hello",
+        title: "Hello",
+        status: "published",
+      });
+
+    const logger = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    const cms = createCMS({
+      schema,
+      notion: { client: makeFakeClient({ "ds-posts": [post()] }) },
+      stores: makeStores(),
+      scheduler: createNodeSyncScheduler(),
+      logger,
+    });
+    await cms.sync.kick();
+    expect(logger.debug).toHaveBeenCalledWith(
+      "entry を materialize しました",
+      expect.objectContaining({ operation: "syncEntry", slug: "hello" }),
+    );
+
+    // logLevel: "warn" は debug を抑制する。
+    const logger2 = {
+      debug: vi.fn(),
+      info: vi.fn(),
+      warn: vi.fn(),
+      error: vi.fn(),
+    };
+    const cms2 = createCMS({
+      schema,
+      notion: { client: makeFakeClient({ "ds-posts": [post()] }) },
+      stores: makeStores(),
+      scheduler: createNodeSyncScheduler(),
+      logger: logger2,
+      logLevel: "warn",
+    });
+    await cms2.sync.kick();
+    expect(logger2.debug).not.toHaveBeenCalled();
+  });
+
   it("syncDelegate 未指定で scheduler も無ければ CMSError(schema/scheduler_missing) を投げる", () => {
     const client = makeFakeClient({});
     expect(() =>
