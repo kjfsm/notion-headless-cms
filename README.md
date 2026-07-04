@@ -308,6 +308,101 @@ export async function GET(
 
 ---
 
+## 完全マテリアライズド方式で動かす (v3 / `@notion-headless-cms/cms`)
+
+上記の `client`（v2）は「アクセス時に Notion と突合する SWR キャッシュ」型。それとは別に、
+`@notion-headless-cms/cms`（v3）という**独立した**パッケージがもう一つのアーキテクチャを提供する:
+Notion との同期をリクエスト経路から完全に切り離し、KV/R2 上にコンテンツをマテリアライズしておく方式。
+
+| パッケージ | 役割 |
+|---|---|
+| `@notion-headless-cms/cms` | v3 単一パッケージ。マテリアライズドコンテンツレプリカ + 非同期同期。読者リクエスト処理中に Notion API を呼ばない |
+
+どちらを選ぶかは要件次第で、優劣ではなく設計思想の違い:
+
+- **v2 (`client`)**: オンデマンド SWR/TTL 取得。キャッシュ無し／薄いキャッシュ構成にも向く、アクセス時に鮮度を突合したい場合
+- **v3 (`cms`)**: 完全事前同期 + push 型。読者 Worker の Notion API 呼び出し・レイテンシをゼロにしたい、Durable Object で同期を一元化したい場合
+
+### スキーマ定義
+
+`defineCollection`/`defineSchema` で TypeScript ファーストにスキーマを書く（codegen ではなく直接編集して育てる運用）。
+
+```ts
+// src/schema.ts
+import { defineCollection, defineSchema, prop } from "@notion-headless-cms/cms";
+
+const posts = defineCollection({
+  dataSourceId: "d8221462-5ae9-8396-bdac-8731f4ef685a",
+  slug: "slug",
+  properties: {
+    title: prop.title(),
+    slug: prop.richText(),
+    status: prop.status(["下書き", "編集中", "公開済み"] as const),
+    publishedAt: prop.date(),
+    author: prop.select(),
+  },
+  statusProperty: "status",
+  published: ["公開済み"],       // list() に載せる値
+  accessible: ["下書き", "編集中", "公開済み"], // find() を許す値（限定公開込み）
+});
+
+export const schema = defineSchema({ posts });
+```
+
+### Cloudflare Workers（stores + syncDelegate）
+
+読者用の stateless Worker は KV/R2 の読み取りだけを行い、Notion API への直列アクセスは
+`SyncCoordinatorDO`（Durable Object）に一元化する。
+
+```ts
+// src/lib/cms.ts — 読者側 Worker
+import { createCMS } from "@notion-headless-cms/cms";
+import {
+  durableObjectSyncDelegate,
+  kvDocStore,
+  r2BlobStore,
+} from "@notion-headless-cms/cms/cloudflare";
+import { schema } from "../schema.js";
+
+export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void }) {
+  const id = env.SYNC_COORDINATOR.idFromName("global");
+  const stub = env.SYNC_COORDINATOR.get(id);
+  return createCMS({
+    schema,
+    stores: {
+      docs: kvDocStore(env.DOC_CACHE),
+      blobs: r2BlobStore(env.IMG_BUCKET),
+    },
+    syncDelegate: durableObjectSyncDelegate({ stub }),
+    waitUntil: (p) => ctx.waitUntil(p),
+  });
+}
+```
+
+```ts
+// src/lib/do.ts — Notion アクセスを直列化する Durable Object 側
+import {
+  createCMS,
+  createDurableObjectSyncScheduler,
+} from "@notion-headless-cms/cms";
+import { createSyncCoordinatorDO, kvDocStore, r2BlobStore } from "@notion-headless-cms/cms/cloudflare";
+import { schema } from "../schema.js";
+
+export const SyncCoordinatorDO = createSyncCoordinatorDO({
+  createCMS: (state, env) =>
+    createCMS({
+      schema,
+      notion: { token: env.NOTION_TOKEN },
+      stores: { docs: kvDocStore(env.DOC_CACHE), blobs: r2BlobStore(env.IMG_BUCKET) },
+      scheduler: createDurableObjectSyncScheduler(state),
+    }),
+});
+```
+
+完全に動く例 → [`examples/cloudflare-hono/`](./examples/cloudflare-hono/)（`src/schema.ts` / `src/lib/cms.ts` / `src/lib/do.ts`）。
+
+---
+
 ## パッケージ構成
 
 ### 利用側（これだけで揃う）
@@ -330,7 +425,12 @@ export async function GET(
 | `@notion-headless-cms/markdown-html` | Markdown → HTML レンダラ |
 | `@notion-headless-cms/block-html` | Notion ブロック拡張 HTML レンダラ |
 | `@notion-headless-cms/fetch-blocks` | BlockObjectResponse ツリー取得（`notionBlocks()` 用）+ React `Renderer` |
+| `@notion-headless-cms/fetch-markdown` | Notion Markdown Export API で本文を 1 リクエスト取得（Cloudflare Workers Free プランの 50 subrequest 制限対策） |
 | `@notion-headless-cms/react-renderer` | BlockObjectResponse → React コンポーネント / 再検証フック |
+| `@notion-headless-cms/notion-katex` | fetch 時に数式ブロックを KaTeX で pre-render し、Workers バンドルから katex を除外する拡張 |
+| `@notion-headless-cms/notion-shiki` | fetch 時にコードブロックを shiki で pre-render し、Workers バンドルから shiki を除外する拡張 |
+| `@notion-headless-cms/testing` | フェイク DataSource・フェイクキャッシュ・fixture クライアントのテストユーティリティ |
+| `@notion-headless-cms/validate` | createClient / notionSource / CLI config を実行時検証する任意の zod ベースバリデーション |
 
 ---
 

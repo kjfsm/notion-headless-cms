@@ -12,7 +12,7 @@ paths:
 Next.js / Astro など**フレームワーク側の作法に合わせた薄い層**として実装する。
 
 現行のグルーは `@notion-headless-cms/client` の `/next` `/react` サブパスに同梱されている（独立した `adapter-*`
-パッケージは存在しない。v0.3.0 の preset 化で役割を分離した）。
+パッケージは存在しない。ランタイム差分は preset（`nodePreset` / `cloudflarePreset`）が吸収し、グルーはフレームワーク連携の役割だけを持つ）。
 
 ## @notion-headless-cms/client/next
 

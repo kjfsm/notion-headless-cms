@@ -2,7 +2,8 @@
 description: Cloudflare Workers / R2 / KV 関連の実装慣行（cache の /cloudflare サブパス / cloudflarePreset / examples/cloudflare-*）
 paths:
   - "packages/cache/**"
-  - "packages/cloudflare/**"
+  - "packages/client/**"
+  - "packages/cms/**"
   - "examples/cloudflare-*/**"
   - "**/wrangler.toml"
   - "**/wrangler.jsonc"
@@ -36,7 +37,7 @@ paths:
 
 ## このリポジトリの Cloudflare 対応
 
-v0.3.0 以降、ランタイム別ファクトリ（旧 `adapter-cloudflare` / `createCloudflareCMS`）は廃止された。キャッシュ実装は `@notion-headless-cms/cache`（`/cloudflare` サブパス）に集約。現状:
+Cloudflare 対応はランタイム専用のファクトリではなく、各パッケージの `/cloudflare` サブパスとして提供する。キャッシュ実装は `@notion-headless-cms/cache`（`/cloudflare` サブパス）に集約。現状:
 
 ### `cloudflarePreset`（cache の /cloudflare サブパス）
 
@@ -55,6 +56,18 @@ v0.3.0 以降、ランタイム別ファクトリ（旧 `adapter-cloudflare` / `
 
 - `cloudflarePreset` を再 export（`createCMS({ runtime: cloudflarePreset({ env, ctx }) })` で使う）
 - `restKvNamespace` / `restKvCache` / `readRestKvEnv` — Node の warm スクリプトから KV REST API 経由で書き込む
+
+### @notion-headless-cms/cms/cloudflare（v3）
+
+v2 系の `cloudflarePreset` とは独立した、`@notion-headless-cms/cms`（v3）専用の Cloudflare 実装（`packages/cms/src/cloudflare.ts`）。
+
+- `kvDocStore(namespace)` / `r2BlobStore(bucket)` — KV をドキュメントインデックス、R2 をエントリ本体・画像バイナリのストアとして返す（`createCMS({ stores: { docs, blobs } })` に渡す）
+- `KVNamespaceLike` / `R2BucketLike` / `R2ObjectLike` — 構造型。`@cloudflare/workers-types` に実依存しない
+- `createSyncCoordinatorDO({ createCMS })` — Notion アクセスを直列化する同期エンジンを Durable Object として export するファクトリ。DO は `POST /kick` `/webhook` `/reconcile`・`GET /state` `/stats` の内部エンドポイントと `alarm()` を持つ
+- `durableObjectSyncDelegate({ stub })` — 読者用 stateless Worker 側の `createCMS({ syncDelegate })` に渡す、DO stub への転送実装（`createSyncCoordinatorDO` が作る DO クラスと対になる）
+- `RealtimeHubDO` / `durableObjectRealtime(...)` / `broadcastToSockets` / `parseSubscribeChannel` — WebSocket 購読者へ同期完了イベントを push する realtime hub 用 Durable Object 実装
+- `DurableObjectNamespaceLike` / `DurableObjectStubLike` / `HibernatableWebSocketLike` / `RealtimeDurableObjectStateLike` — これらも構造型
+- 実例: `examples/cloudflare-hono/src/lib/cms.ts`（読者側 Worker）と `src/lib/do.ts`（`SyncCoordinatorDO`）
 
 ### examples/cloudflare-*
 

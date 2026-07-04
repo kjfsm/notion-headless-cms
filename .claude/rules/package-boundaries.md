@@ -19,9 +19,8 @@ Notion DB
        └─ @notion-headless-cms/core（CMS 統合・キャッシュ・クエリ・フック・nodePreset）
             └─ @notion-headless-cms/cache（memory + サブパス /cloudflare（r2Cache/kvCache/cloudflarePreset）/next）
 
-利用側の単一エントリ（v2〜）: @notion-headless-cms/client（createCMS）
+利用側の単一エントリ: @notion-headless-cms/client（createCMS）
   + サブパス /cloudflare（cloudflarePreset/restKvCache）/next（createNextHandler/nextPreset）/react（Renderer/NotionRevalidator）
-  旧メタパッケージ node / cloudflare / next は廃止し client に集約した。
 ```
 
 ## 重要なルール
@@ -41,11 +40,14 @@ Notion DB
 - **Node.js**: `nodePreset` は `core` に相乗り。`memoryDocumentCache` + `memoryImageCache` を既定で有効化
 - **Cloudflare Workers**: `cloudflarePreset` は `@notion-headless-cms/cache`（`/cloudflare` サブパス）に相乗り。env binding (`DOC_CACHE` / `IMG_BUCKET`) を解決
 
-## 廃止されたパッケージ
+## v3（packages/cms）の境界
 
-- v0.3.0: `@notion-headless-cms/adapter-node` → `nodePreset()` (core)
-- v0.3.0: `@notion-headless-cms/adapter-cloudflare` → `cloudflarePreset({ env })`（cache の /cloudflare サブパス）
-- v2: メタパッケージ `@notion-headless-cms/{node,cloudflare,next}` → `@notion-headless-cms/client`（createCMS）+ サブパス
+`@notion-headless-cms/cms`（v3）は上記の v2 系（`client`/`core`/`cache`/`notion-source` など）から**独立**したパッケージ。
+
+- `packages/cms/package.json` の `dependencies` に `@notion-headless-cms/core` / `/cache` / `/client` / `/notion-source` のいずれも含まれない（peerDependencies は `@notionhq/client` / `katex` / `shiki` / `vitest` のみ）
+- Notion アクセス（`@notionhq/client` を直接使う sync ドライバ）・同期・ストレージ（KV/R2/Node fs）・HTTP 配信（webhook/OGP/realtime/preview）を 1 パッケージにまとめて提供する。v2 のようにレイヤーごとに別パッケージへ分割しない
+- v2 の `core` ゼロ依存ルール（このファイル冒頭）は v2 系のみに適用され、`cms` には及ばない
+- 詳細: `.claude/rules/cms.md`
 
 ## フレームワークグルーの定義
 

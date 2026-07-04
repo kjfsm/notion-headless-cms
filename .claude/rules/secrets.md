@@ -24,6 +24,7 @@ paths:
 |---|---|---|
 | `NOTION_TOKEN` | Notion API キー | `ntn_xxxxxxxxxxxxx` |
 | `NOTION_DATA_SOURCE_ID` | Notion データベース ID（`data_sources.id`） | UUID |
+| `NOTION_WEBHOOK_VERIFICATION_TOKEN` | Notion webhook 署名検証シークレット（`packages/cms` の `createCMS({ webhookSecret })` に渡す慣例名。利用側が任意の env 名を選べるが、実運用の consumer（`euphoric-band-site`）はこの名前を使う） | `secret_xxxx` |
 
 ## ランタイム別
 
