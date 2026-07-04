@@ -25,10 +25,15 @@ export interface IndexStore {
   listAllEntries(collection: string): Promise<readonly IndexEntry[]>;
   /** listed 問わず全 slug（reconcile の突合用）。 */
   listSlugs(collection: string): Promise<readonly string[]>;
-  /** 該当 slug の entry を追加/更新する。差分が無ければ書き込みをスキップする。 */
+  /**
+   * 該当 slug の entry を追加/更新する。差分が無ければ書き込みをスキップする。
+   * `knownExisting` に呼び出し側が直前に読んだ現行値（存在しなければ null）を渡すと
+   * 点キーの再読み込みを省略できる（省略時 = undefined は内部で読み直す）。
+   */
   upsertEntry(
     collection: string,
     entry: IndexEntry,
+    knownExisting?: IndexEntry | null,
   ): Promise<{ wrote: boolean }>;
   removeEntry(collection: string, slug: string): Promise<{ wrote: boolean }>;
 }
@@ -123,8 +128,11 @@ export function createIndexStore(docs: DocStore): IndexStore {
     async listSlugs(collection) {
       return (await readManifest(collection)).map((e) => e.slug);
     },
-    async upsertEntry(collection, entry) {
-      const existing = await findEntry(collection, entry.slug);
+    async upsertEntry(collection, entry, knownExisting) {
+      const existing =
+        knownExisting !== undefined
+          ? knownExisting
+          : await findEntry(collection, entry.slug);
       if (existing && existing.version === entry.version) {
         return { wrote: false }; // Notion 側で何も変わっていない
       }

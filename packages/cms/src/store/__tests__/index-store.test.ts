@@ -186,4 +186,58 @@ describe("createIndexStore", () => {
     expect(await store.listSlugs("posts")).toEqual(["a"]);
     expect(await store.listSlugs("fixedPages")).toEqual(["a"]);
   });
+
+  it("knownExisting を渡すと点読みキーを再読み込みしない", async () => {
+    const docs = memoryDocStore();
+    const readKeys: string[] = [];
+    const originalGet = docs.get.bind(docs);
+    docs.get = async (key) => {
+      readKeys.push(key);
+      return originalGet(key);
+    };
+    const store = createIndexStore(docs);
+    const meta = { title: "同じタイトル" };
+    await store.upsertEntry("posts", entry("a", "v1", { meta }));
+
+    readKeys.length = 0;
+    const result = await store.upsertEntry(
+      "posts",
+      entry("a", "v2", { meta }),
+      entry("a", "v1", { meta }),
+    );
+    expect(result.wrote).toBe(true);
+    // 呼び出し側が現行値を提供済みなので KV read はゼロ(マニフェスト比較も不変)。
+    expect(readKeys).toEqual([]);
+    expect((await store.findEntry("posts", "a"))?.version).toBe("v2");
+  });
+
+  it("knownExisting=null(存在しないと確認済み)は点読みキーを読まず新規追加する", async () => {
+    const docs = memoryDocStore();
+    const readKeys: string[] = [];
+    const originalGet = docs.get.bind(docs);
+    docs.get = async (key) => {
+      readKeys.push(key);
+      return originalGet(key);
+    };
+    const store = createIndexStore(docs);
+
+    const result = await store.upsertEntry("posts", entry("a", "v1"), null);
+    expect(result.wrote).toBe(true);
+    // 新規追加なのでマニフェストの read-modify-write は必要(点読みキーの read は無い)。
+    expect(readKeys).toEqual(["list-index:posts"]);
+    expect(await store.findEntry("posts", "a")).toEqual(entry("a", "v1"));
+  });
+
+  it("knownExisting でも version 一致なら書き込まない", async () => {
+    const docs = memoryDocStore();
+    const putCount = spyPutCount(docs);
+    const store = createIndexStore(docs);
+    const result = await store.upsertEntry(
+      "posts",
+      entry("a", "v1"),
+      entry("a", "v1"),
+    );
+    expect(result.wrote).toBe(false);
+    expect(putCount()).toBe(0);
+  });
 });

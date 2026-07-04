@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { isCMSError } from "../../errors.js";
 import { createEntryStore } from "../../store/entry-store.js";
 import { createIndexStore } from "../../store/index-store.js";
 import { memoryBlobStore, memoryDocStore } from "../../store/memory.js";
@@ -521,6 +522,245 @@ describe("createCollectionDriver", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
     const snapshot = await entryStore.get("posts", "with-image");
     expect(snapshot?.images[hash]).toMatchObject({ contentType: "image/png" });
+  });
+
+  it("listChanged→syncEntry の経路で index 点キーを二重読みしない(KV read 節約)", async () => {
+    const notionPage = page({ id: "p1", slug: "hello" });
+    const client = makeClient({
+      dataSources: {
+        query: vi.fn().mockResolvedValue({
+          results: [notionPage],
+          next_cursor: null,
+          has_more: false,
+        }),
+      },
+    });
+    const docs = memoryDocStore();
+    const readKeys: string[] = [];
+    const originalGet = docs.get.bind(docs);
+    docs.get = async (key) => {
+      readKeys.push(key);
+      return originalGet(key);
+    };
+    const blobs = memoryBlobStore();
+    const driver = createCollectionDriver({
+      collection: "posts",
+      def,
+      client,
+      rateLimiter: createRateLimiter({ requestsPerSecond: 1000 }),
+      entryStore: createEntryStore(blobs),
+      indexStore: createIndexStore(docs),
+      blobs,
+    });
+
+    const { changes } = await driver.listChanged(null, 10);
+    const [change] = changes;
+    if (!change) throw new Error("change が空です");
+    await driver.syncEntry(change);
+
+    expect(
+      readKeys.filter((k) => k === "entry-index:posts:hello"),
+    ).toHaveLength(1);
+  });
+
+  it("画像 put 時に寸法を customMetadata へ保存し、以降の同期は本体を再取得しない", async () => {
+    const imageBlock = {
+      object: "block",
+      id: "img1",
+      type: "image",
+      has_children: false,
+      image: {
+        type: "external",
+        external: { url: "https://example.com/a.png" },
+        caption: [],
+      },
+    };
+    const query = vi
+      .fn()
+      .mockResolvedValueOnce({
+        results: [page({ id: "p1", slug: "x", lastEditedTime: "v1" })],
+        next_cursor: null,
+        has_more: false,
+      })
+      .mockResolvedValueOnce({
+        results: [page({ id: "p1", slug: "x", lastEditedTime: "v2" })],
+        next_cursor: null,
+        has_more: false,
+      });
+    const client = makeClient({
+      dataSources: { query },
+      blocks: {
+        children: {
+          list: vi.fn().mockResolvedValue({
+            results: [imageBlock],
+            next_cursor: null,
+            has_more: false,
+          }),
+        },
+      },
+    });
+    const { entryStore, indexStore, blobs, rateLimiter } = makeDeps();
+    const imageGets: string[] = [];
+    const originalBlobGet = blobs.get.bind(blobs);
+    blobs.get = async (key) => {
+      if (key.startsWith("image/")) imageGets.push(key);
+      return originalBlobGet(key);
+    };
+    const driver = createCollectionDriver({
+      collection: "posts",
+      def,
+      client,
+      rateLimiter,
+      entryStore,
+      indexStore,
+      blobs,
+    });
+
+    fetchSpy.mockClear();
+    // 1 回目の同期: 画像を fetch して寸法印付きで put する。
+    const first = await driver.listChanged(null, 10);
+    const [firstChange] = first.changes;
+    if (!firstChange) throw new Error("change が空です");
+    await driver.syncEntry(firstChange);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+
+    const { imageCacheKeySource, sha256Hex } = await import(
+      "../../pipeline/images.js"
+    );
+    const hash = await sha256Hex(
+      imageCacheKeySource("https://example.com/a.png"),
+    );
+    const head = await blobs.head(`image/${hash}`);
+    expect(head?.customMetadata).toHaveProperty("width");
+
+    // 2 回目の同期(本文編集相当): head の customMetadata だけで寸法を復元し、
+    // 外部 fetch も R2 本体ダウンロードも発生しない。
+    const second = await driver.listChanged(null, 10);
+    const [secondChange] = second.changes;
+    if (!secondChange) throw new Error("change が空です");
+    await driver.syncEntry(secondChange);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+    expect(imageGets).toEqual([]);
+  });
+
+  it("画像 fetch の一過性エラー(503)はリトライして保存する", async () => {
+    fetchSpy
+      .mockClear()
+      .mockResolvedValueOnce(new Response("busy", { status: 503 }))
+      .mockResolvedValueOnce(
+        new Response(new Uint8Array([1, 2, 3]), {
+          headers: { "content-type": "image/png" },
+        }),
+      );
+    const notionPage = page({ id: "p1", slug: "x" });
+    const client = makeClient({
+      dataSources: {
+        query: vi.fn().mockResolvedValue({
+          results: [notionPage],
+          next_cursor: null,
+          has_more: false,
+        }),
+      },
+      blocks: {
+        children: {
+          list: vi.fn().mockResolvedValue({
+            results: [
+              {
+                object: "block",
+                id: "img1",
+                type: "image",
+                has_children: false,
+                image: {
+                  type: "external",
+                  external: { url: "https://example.com/a.png" },
+                  caption: [],
+                },
+              },
+            ],
+            next_cursor: null,
+            has_more: false,
+          }),
+        },
+      },
+    });
+    const { entryStore, indexStore, blobs, rateLimiter } = makeDeps();
+    const driver = createCollectionDriver({
+      collection: "posts",
+      def,
+      client,
+      rateLimiter,
+      entryStore,
+      indexStore,
+      blobs,
+      retry: { retryOn: [429, 502, 503], maxRetries: 2, baseDelayMs: 1 },
+    });
+
+    const { changes } = await driver.listChanged(null, 10);
+    const [change] = changes;
+    if (!change) throw new Error("change が空です");
+    await driver.syncEntry(change);
+
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    const { imageCacheKeySource, sha256Hex } = await import(
+      "../../pipeline/images.js"
+    );
+    const hash = await sha256Hex(
+      imageCacheKeySource("https://example.com/a.png"),
+    );
+    expect(await blobs.head(`image/${hash}`)).not.toBeNull();
+  });
+
+  it("画像 fetch がリトライ上限まで失敗すると CMSError(sync/image_fetch_failed) を投げる", async () => {
+    fetchSpy.mockResolvedValue(new Response("busy", { status: 503 }));
+    const notionPage = page({ id: "p1", slug: "x" });
+    const client = makeClient({
+      dataSources: {
+        query: vi.fn().mockResolvedValue({
+          results: [notionPage],
+          next_cursor: null,
+          has_more: false,
+        }),
+      },
+      blocks: {
+        children: {
+          list: vi.fn().mockResolvedValue({
+            results: [
+              {
+                object: "block",
+                id: "img1",
+                type: "image",
+                has_children: false,
+                image: {
+                  type: "external",
+                  external: { url: "https://example.com/a.png" },
+                  caption: [],
+                },
+              },
+            ],
+            next_cursor: null,
+            has_more: false,
+          }),
+        },
+      },
+    });
+    const { entryStore, indexStore, blobs, rateLimiter } = makeDeps();
+    const driver = createCollectionDriver({
+      collection: "posts",
+      def,
+      client,
+      rateLimiter,
+      entryStore,
+      indexStore,
+      blobs,
+      retry: { retryOn: [503], maxRetries: 1, baseDelayMs: 1 },
+    });
+
+    const { changes } = await driver.listChanged(null, 10);
+    const [change] = changes;
+    if (!change) throw new Error("change が空です");
+    await expect(driver.syncEntry(change)).rejects.toSatisfy(
+      (err: unknown) => isCMSError(err) && err.is("sync/image_fetch_failed"),
+    );
   });
 
   it("listAllSlugs は accessible なページの slug のみ返す", async () => {

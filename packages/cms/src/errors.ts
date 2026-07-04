@@ -16,6 +16,7 @@ export type BuiltInCMSErrorCode =
   | "handler/ogp_fetch_failed"
   | "sync/notion_query_failed"
   | "sync/slug_missing"
+  | "sync/image_fetch_failed"
   | "sync/unknown_collection"
   | "cli/config_invalid"
   | "cli/notion_api_failed"

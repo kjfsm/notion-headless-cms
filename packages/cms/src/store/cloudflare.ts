@@ -1,5 +1,11 @@
 import type { KVNamespaceLike, R2BucketLike } from "./cloudflare-types.js";
-import type { BlobHead, BlobPutOptions, BlobStore, DocStore } from "./types.js";
+import type {
+  BlobGetResult,
+  BlobHead,
+  BlobPutOptions,
+  BlobStore,
+  DocStore,
+} from "./types.js";
 
 /** KV を `DocStore` として使う(コレクション index 用)。 */
 export function kvDocStore(namespace: KVNamespaceLike): DocStore {
@@ -24,12 +30,27 @@ export function r2BlobStore(bucket: R2BucketLike): BlobStore {
       if (!obj) return null;
       return new Uint8Array(await obj.arrayBuffer());
     },
+    async getWithMetadata(key): Promise<BlobGetResult | null> {
+      const obj = await bucket.get(key);
+      if (!obj) return null;
+      return {
+        bytes: new Uint8Array(await obj.arrayBuffer()),
+        contentType: obj.httpMetadata?.contentType,
+      };
+    },
     async put(key, value, opts?: BlobPutOptions) {
       await bucket.put(
         key,
         value,
-        opts?.contentType
-          ? { httpMetadata: { contentType: opts.contentType } }
+        opts?.contentType || opts?.customMetadata
+          ? {
+              httpMetadata: opts.contentType
+                ? { contentType: opts.contentType }
+                : undefined,
+              customMetadata: opts.customMetadata
+                ? { ...opts.customMetadata }
+                : undefined,
+            }
           : undefined,
       );
     },
@@ -39,6 +60,7 @@ export function r2BlobStore(bucket: R2BucketLike): BlobStore {
         if (!meta) return null;
         return {
           contentType: meta.httpMetadata?.contentType,
+          customMetadata: meta.customMetadata,
           size: meta.size ?? 0,
         };
       }
@@ -48,6 +70,7 @@ export function r2BlobStore(bucket: R2BucketLike): BlobStore {
       const buf = await obj.arrayBuffer();
       return {
         contentType: obj.httpMetadata?.contentType,
+        customMetadata: obj.customMetadata,
         size: buf.byteLength,
       };
     },

@@ -8,6 +8,7 @@ export { kvDocStore, r2BlobStore } from "./store/cloudflare.js";
 export type {
   KVNamespaceLike,
   R2BucketLike,
+  R2HeadResultLike,
   R2ObjectLike,
 } from "./store/cloudflare-types.js";
 export type {
