@@ -6,17 +6,18 @@ vi.mock("next/navigation", () => ({
   }),
 }));
 
-vi.mock("../lib/cms", () => ({
-  cms: {
-    posts: {
-      list: vi.fn(),
-      find: vi.fn(),
-    },
+const fakeCms = {
+  posts: {
+    list: vi.fn(),
+    find: vi.fn(),
   },
-  ensureSynced: vi.fn().mockResolvedValue(undefined),
+};
+
+vi.mock("../lib/cms", () => ({
+  getCms: vi.fn().mockReturnValue(fakeCms),
+  ensureSynced: vi.fn().mockResolvedValue(fakeCms),
 }));
 
-const { cms } = await import("../lib/cms");
 const HomePage = (await import("../page")).default;
 const PostPage = (await import("../posts/[slug]/page")).default;
 const { generateStaticParams } = await import("../posts/[slug]/page");
@@ -35,13 +36,13 @@ describe("HomePage", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("cms.posts.list() を呼び出してページリストを取得する", async () => {
-    vi.mocked(cms.posts.list).mockResolvedValue({
+    fakeCms.posts.list.mockResolvedValue({
       items: [{ slug: "hello", version: "v1", listed: true, meta: {} }],
       nextCursor: null,
       hasMore: false,
     });
     await HomePage();
-    expect(cms.posts.list).toHaveBeenCalled();
+    expect(fakeCms.posts.list).toHaveBeenCalled();
   });
 });
 
@@ -49,7 +50,7 @@ describe("generateStaticParams", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("list() の slug から静的パラメータを組み立てる", async () => {
-    vi.mocked(cms.posts.list).mockResolvedValue({
+    fakeCms.posts.list.mockResolvedValue({
       items: [{ slug: "hello", version: "v1", listed: true, meta: {} }],
       nextCursor: null,
       hasMore: false,
@@ -62,7 +63,7 @@ describe("PostPage", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("ページ詳細を取得し、正規化ブロックを React 描画する", async () => {
-    vi.mocked(cms.posts.find).mockResolvedValue({
+    fakeCms.posts.find.mockResolvedValue({
       collection: "posts",
       slug: "hello",
       version: "v1",
@@ -77,11 +78,11 @@ describe("PostPage", () => {
       links: {},
     } as never);
     await PostPage({ params: Promise.resolve({ slug: "hello" }) });
-    expect(cms.posts.find).toHaveBeenCalledWith("hello");
+    expect(fakeCms.posts.find).toHaveBeenCalledWith("hello");
   });
 
   it("存在しないスラグは notFound() を呼ぶ", async () => {
-    vi.mocked(cms.posts.find).mockResolvedValue(null);
+    fakeCms.posts.find.mockResolvedValue(null);
     const { notFound } = await import("next/navigation");
     await expect(
       PostPage({ params: Promise.resolve({ slug: "not-found" }) }),

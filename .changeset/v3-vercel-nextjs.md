@@ -16,3 +16,8 @@
   （`@notion-headless-cms/cms` に新規追加）で修正した
 - `<NotionRenderer>` に `ogpEndpoint="/api/cms/ogp"` を追加。埋め込みリンクのOGPサムネイル
   取得（`useOgp`）がクライアント側で発火していなかった不具合を修正した
+- `app/lib/cms.ts` の `createCMS()` 呼び出しをトップレベルの eager 実行から `getCms()` に
+  よる遅延初期化へ変更。`next build` はルートハンドラ静的解析のためモジュールを import する
+  だけで実行はしないが、`NOTION_TOKEN` 未設定のビルド環境（CI 等）ではその import だけで
+  ビルドが失敗していた（`schema/notion_config_missing`）。トップレベルの `HomePage` も
+  `generateStaticParams` と同様に取得失敗時は空一覧へフォールバックするようにした

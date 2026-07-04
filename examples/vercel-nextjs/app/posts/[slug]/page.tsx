@@ -5,13 +5,13 @@ import {
   toPageLinkMap,
 } from "@notion-headless-cms/react-renderer/v3";
 import { notFound } from "next/navigation";
-import { cms, ensureSynced } from "@/app/lib/cms";
+import { ensureSynced } from "@/app/lib/cms";
 
 export const revalidate = 300;
 
 export async function generateStaticParams() {
   try {
-    await ensureSynced();
+    const cms = await ensureSynced();
     const { items } = await cms.posts.list();
     return items.map((item) => ({ slug: item.slug }));
   } catch {
@@ -25,7 +25,7 @@ export default async function PostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  await ensureSynced();
+  const cms = await ensureSynced();
   const post = await cms.posts.find(slug);
   if (!post) notFound();
 

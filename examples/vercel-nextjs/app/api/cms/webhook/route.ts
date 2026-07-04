@@ -5,10 +5,10 @@
 // fire-and-forget のバックグラウンド処理には after() が必須）。
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
-import { cms } from "@/app/lib/cms";
+import { getCms } from "@/app/lib/cms";
 
 export async function POST(request: Request) {
-  const response = await cms.fetch(request);
+  const response = await getCms().fetch(request);
   if (response.ok) {
     after(async () => {
       await new Promise((resolve) => setTimeout(resolve, 3500));
