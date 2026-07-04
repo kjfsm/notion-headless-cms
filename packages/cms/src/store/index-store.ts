@@ -42,6 +42,28 @@ function manifestKey(collection: string): string {
 }
 
 /**
+ * notion-driver.ts の `syncEntry` は meta に `lastEditedTime`(= version と同じ値)を
+ * 必ず含める。これを含めたまま比較すると、version が変わるたび(= 内容編集のたび)に
+ * 必ず meta も不一致になり、マニフェスト書き込みスキップが機能しなくなる。version は
+ * 別途比較済みなので、ここでは lastEditedTime を除いた meta 同士を比較する。
+ */
+function metaForManifestComparison(meta: JsonValue): JsonValue {
+  if (
+    meta !== null &&
+    typeof meta === "object" &&
+    !Array.isArray(meta) &&
+    "lastEditedTime" in meta
+  ) {
+    const { lastEditedTime: _lastEditedTime, ...rest } = meta as Record<
+      string,
+      JsonValue
+    >;
+    return rest;
+  }
+  return meta;
+}
+
+/**
  * KV(想定)上のコレクション index 読み書き。2 種類のキーに分離する:
  *
  * - 点読みキー(`entry-index:{collection}:{slug}`): `find()` 用。version が変わる
@@ -112,7 +134,10 @@ export function createIndexStore(docs: DocStore): IndexStore {
       const manifestChanged =
         !existing ||
         existing.listed !== entry.listed ||
-        !deepEqualJson(existing.meta, entry.meta);
+        !deepEqualJson(
+          metaForManifestComparison(existing.meta),
+          metaForManifestComparison(entry.meta),
+        );
       if (manifestChanged) {
         const manifest = await readManifest(collection);
         const idx = manifest.findIndex((e) => e.slug === entry.slug);

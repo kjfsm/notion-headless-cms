@@ -65,6 +65,33 @@ describe("createIndexStore", () => {
     expect(listed[0]?.version).toBe("v1");
   });
 
+  it("meta に version と同じ値の lastEditedTime を含む本番相当の形でも、他フィールドが不変ならマニフェストを書き込まない", async () => {
+    // notion-driver.ts の syncEntry は meta.lastEditedTime に version と同じ値を必ず
+    // 埋め込む。これを含めたまま比較すると version が変わるたび必ず不一致になり、
+    // マニフェスト書き込みスキップが機能しなくなる回帰を防ぐテスト。
+    const docs = memoryDocStore();
+    const store = createIndexStore(docs);
+    await store.upsertEntry(
+      "posts",
+      entry("a", "v1", {
+        meta: { title: "同じタイトル", lastEditedTime: "v1" },
+      }),
+    );
+
+    const putCount = spyPutCount(docs);
+    const result = await store.upsertEntry(
+      "posts",
+      entry("a", "v2", {
+        meta: { title: "同じタイトル", lastEditedTime: "v2" },
+      }),
+    );
+    expect(result.wrote).toBe(true);
+    expect(putCount()).toBe(1); // 点読みキーのみ、マニフェストへの書き込みは無い
+
+    const listed = await store.listAllEntries("posts");
+    expect(listed[0]?.version).toBe("v1");
+  });
+
   it("meta が変化した更新はマニフェストも書き込む", async () => {
     const docs = memoryDocStore();
     const store = createIndexStore(docs);

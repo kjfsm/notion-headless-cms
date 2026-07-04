@@ -112,7 +112,15 @@ export class SyncCoordinatorCore {
     await this.scheduler.schedule(this.debounceMs, () => this.runChunk());
   }
 
-  /** Cron Trigger 等の補助経路から呼ぶ、定期フルリコンサイル。 */
+  /**
+   * Cron Trigger 等の補助経路から呼ぶ、定期リコンサイル。
+   *
+   * Notion 側に無くなった slug を index から削除する「削除検知」のみを行い、
+   * Notion 側の新規・更新分を取り込む(materialize する)ことはしない。取り込みは
+   * `kick()`/`onWebhook()`(内部で `runChunk()` を呼ぶ経路)の役目。ストレージ
+   * フォーマット移行直後など index が空の状態でこれだけを呼んでも、コンテンツは
+   * 復元されない点に注意。
+   */
   async reconcile(): Promise<{ removed: readonly string[] }> {
     const [allSlugs, indexedSlugs] = await Promise.all([
       this.deps.listAllSlugs(),
