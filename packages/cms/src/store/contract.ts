@@ -84,3 +84,41 @@ export function runBlobStoreContract(opts: BlobStoreContractOptions) {
     expect(await store.get("k1")).toEqual(new Uint8Array([2, 2]));
   });
 }
+
+/**
+ * `customMetadata` と `getWithMetadata` に対応する `BlobStore` 実装向けの追加契約。
+ * 未対応の実装(REST 経由等)には課さないため、基本契約とは分離している。
+ */
+export function runBlobStoreMetadataContract(opts: BlobStoreContractOptions) {
+  it("put した customMetadata が head で読み戻せる", async () => {
+    const store = await opts.factory();
+    await store.put("k1", new Uint8Array([1, 2]), {
+      contentType: "image/png",
+      customMetadata: { width: "800", height: "600" },
+    });
+    const head = await store.head("k1");
+    expect(head?.customMetadata).toEqual({ width: "800", height: "600" });
+  });
+
+  it("customMetadata 無しで put したキーの head は customMetadata を返さない", async () => {
+    const store = await opts.factory();
+    await store.put("k1", new Uint8Array([1]));
+    const head = await store.head("k1");
+    expect(head?.customMetadata ?? undefined).toBeUndefined();
+  });
+
+  it("getWithMetadata は本体と contentType を 1 回で返す", async () => {
+    const store = await opts.factory();
+    await store.put("k1", new Uint8Array([1, 2, 3]), {
+      contentType: "image/png",
+    });
+    const result = await store.getWithMetadata?.("k1");
+    expect(result?.bytes).toEqual(new Uint8Array([1, 2, 3]));
+    expect(result?.contentType).toBe("image/png");
+  });
+
+  it("存在しないキーの getWithMetadata は null を返す", async () => {
+    const store = await opts.factory();
+    expect(await store.getWithMetadata?.("does-not-exist")).toBeNull();
+  });
+}

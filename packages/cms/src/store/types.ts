@@ -10,11 +10,20 @@ export interface DocStore {
 
 export interface BlobPutOptions {
   readonly contentType?: string;
+  /** 本体を読まずに head だけで参照したい付加情報（画像寸法等）。実装が対応する場合のみ永続化される。 */
+  readonly customMetadata?: Readonly<Record<string, string>>;
 }
 
 export interface BlobHead {
   readonly contentType?: string;
   readonly size: number;
+  /** put 時に渡した `customMetadata`。対応しない実装では undefined。 */
+  readonly customMetadata?: Readonly<Record<string, string>>;
+}
+
+export interface BlobGetResult {
+  readonly bytes: Uint8Array;
+  readonly contentType?: string;
 }
 
 /**
@@ -23,6 +32,11 @@ export interface BlobHead {
  */
 export interface BlobStore {
   get(key: string): Promise<Uint8Array | null>;
+  /**
+   * 本体とメタデータを 1 回の読み取りで返す（画像配信で get+head の 2 オペレーションを
+   * 1 回に抑えるための任意メソッド）。未実装の場合、呼び出し側は get+head にフォールバックする。
+   */
+  getWithMetadata?(key: string): Promise<BlobGetResult | null>;
   put(key: string, value: Uint8Array, opts?: BlobPutOptions): Promise<void>;
   /** 本体を取得せずメタデータのみ確認する（存在確認・重複 fetch 回避用）。 */
   head(key: string): Promise<BlobHead | null>;

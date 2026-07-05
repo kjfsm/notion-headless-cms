@@ -5,7 +5,11 @@ import type {
   R2BucketLike,
   R2ObjectLike,
 } from "../cloudflare-types.js";
-import { runBlobStoreContract, runDocStoreContract } from "../contract.js";
+import {
+  runBlobStoreContract,
+  runBlobStoreMetadataContract,
+  runDocStoreContract,
+} from "../contract.js";
 
 function fakeKvNamespace(): KVNamespaceLike {
   const store = new Map<string, string>();
@@ -30,7 +34,14 @@ function fakeKvNamespace(): KVNamespaceLike {
 }
 
 function fakeR2Bucket(): R2BucketLike {
-  const store = new Map<string, { bytes: Uint8Array; contentType?: string }>();
+  const store = new Map<
+    string,
+    {
+      bytes: Uint8Array;
+      contentType?: string;
+      customMetadata?: Record<string, string>;
+    }
+  >();
   return {
     async get(key): Promise<R2ObjectLike | null> {
       const entry = store.get(key);
@@ -38,6 +49,7 @@ function fakeR2Bucket(): R2BucketLike {
       return {
         arrayBuffer: async () => entry.bytes.buffer as ArrayBuffer,
         httpMetadata: { contentType: entry.contentType },
+        customMetadata: entry.customMetadata,
         size: entry.bytes.byteLength,
       };
     },
@@ -46,12 +58,17 @@ function fakeR2Bucket(): R2BucketLike {
       if (!entry) return null;
       return {
         httpMetadata: { contentType: entry.contentType },
+        customMetadata: entry.customMetadata,
         size: entry.bytes.byteLength,
       };
     },
     async put(key, value, opts) {
       const bytes = value instanceof Uint8Array ? value : new Uint8Array(value);
-      store.set(key, { bytes, contentType: opts?.httpMetadata?.contentType });
+      store.set(key, {
+        bytes,
+        contentType: opts?.httpMetadata?.contentType,
+        customMetadata: opts?.customMetadata,
+      });
     },
     async delete(key) {
       store.delete(key);
@@ -65,4 +82,5 @@ describe("DocStore contract: KV (fake)", () => {
 
 describe("BlobStore contract: R2 (fake)", () => {
   runBlobStoreContract({ factory: () => r2BlobStore(fakeR2Bucket()) });
+  runBlobStoreMetadataContract({ factory: () => r2BlobStore(fakeR2Bucket()) });
 });

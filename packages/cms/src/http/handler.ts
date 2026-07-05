@@ -80,20 +80,28 @@ export function createFetchHandler(
     if (request.method === "GET" && rel.startsWith(`${imagesPath}/`)) {
       const hash = rel.slice(imagesPath.length + 1);
       if (!hash) return new Response("Bad Request", { status: 400 });
-      const bytes = await adapter.images.get(imageKey(hash));
-      if (!bytes) {
+      // getWithMetadata があれば本体と content-type を 1 回の読み取りで済ませる
+      // (R2 の get+head 2 オペレーションを 1 回に抑える)。無い実装のみ get+head。
+      const stored = adapter.images.getWithMetadata
+        ? await adapter.images.getWithMetadata(imageKey(hash))
+        : await (async () => {
+            const bytes = await adapter.images.get(imageKey(hash));
+            if (!bytes) return null;
+            const head = await adapter.images.head(imageKey(hash));
+            return { bytes, contentType: head?.contentType };
+          })();
+      if (!stored) {
         adapter.logger?.warn?.("画像が見つかりません", {
           operation: "images",
           status: 404,
         });
         return new Response("Not Found", { status: 404 });
       }
-      const head = await adapter.images.head(imageKey(hash));
       const headers = new Headers({
         "cache-control": "public, max-age=31536000, immutable",
       });
-      if (head?.contentType) headers.set("content-type", head.contentType);
-      return new Response(bytes as BodyInit, { headers });
+      if (stored.contentType) headers.set("content-type", stored.contentType);
+      return new Response(stored.bytes as BodyInit, { headers });
     }
 
     if (

@@ -18,6 +18,7 @@ import type { EntryStore } from "../store/entry-store.js";
 import type { IndexStore } from "../store/index-store.js";
 import type { BlobStore } from "../store/types.js";
 import type { CollectionDef } from "../types/collection.js";
+import type { IndexEntry } from "../types/collection-index.js";
 import type { ImageMapEntry } from "../types/entry-snapshot.js";
 import type { JsonValue } from "../types/json-value.js";
 import type { Logger } from "../types/logger.js";
@@ -183,6 +184,10 @@ export function createCollectionDriver(
   // coordinator は同一 runChunk() 内で listChanged 直後に syncEntry を呼ぶため、
   // 追加の Notion 呼び出し無しで page を渡せる(#437 の設計判断)。
   let chunkCache = new Map<string, PageObjectResponse>();
+  // listChanged が差分判定のために読んだ index 点キーの値も同様に持ち回り、
+  // syncEntry → upsertEntry での同一キー再読み込み(KV read の二重化)を省く。
+  // null は「存在しないことを確認済み」、キー不在は「未読(upsert 側で読み直す)」。
+  let chunkIndexCache = new Map<string, IndexEntry | null>();
 
   type QueryArgs = Omit<
     Parameters<NotionClientLike["dataSources"]["query"]>[0],
@@ -241,18 +246,61 @@ export function createCollectionDriver(
   }): Promise<ImageMapEntry> {
     const key = `image/${ref.hash}`;
     const existing = await deps.blobs.head(key);
-    let bytes: Uint8Array;
-    let contentType: string | undefined;
     if (existing) {
-      bytes = (await deps.blobs.get(key)) ?? new Uint8Array(0);
-      contentType = existing.contentType;
-    } else {
-      const res = await fetchImpl(ref.url);
-      bytes = new Uint8Array(await res.arrayBuffer());
-      contentType = res.headers.get("content-type") ?? undefined;
-      await deps.blobs.put(key, bytes, { contentType });
+      // put 時に寸法を customMetadata へ保存してあれば、寸法再計算のための
+      // 本体ダウンロード(R2 Class B + 帯域)を丸ごと省略できる。
+      // 保存前の既存画像(キー無し)は従来どおり本体から再計算する。
+      const md = existing.customMetadata;
+      if (md && "width" in md) {
+        return {
+          hash: ref.hash,
+          width: md.width ? Number(md.width) : null,
+          height: md.height ? Number(md.height) : null,
+          contentType: existing.contentType ?? "application/octet-stream",
+        };
+      }
+      const bytes = (await deps.blobs.get(key)) ?? new Uint8Array(0);
+      const dims = parseImageDimensions(bytes);
+      return {
+        hash: ref.hash,
+        width: dims.width,
+        height: dims.height,
+        contentType:
+          existing.contentType ??
+          dims.contentType ??
+          "application/octet-stream",
+      };
     }
+
+    // Notion の署名付き URL は一過性の 429/5xx を返すことがあるため、Notion API と
+    // 同じバックオフ設定でリトライする。それ以外のステータスは従来どおり素通しする。
+    const retryCfg = effectiveRetry ?? DEFAULT_RETRY_CONFIG;
+    const res = await withRetry(async () => {
+      const r = await fetchImpl(ref.url);
+      if (retryCfg.retryOn.includes(r.status)) {
+        throw Object.assign(
+          new CMSError({
+            code: "sync/image_fetch_failed",
+            message: `画像の取得に失敗しました(${r.status}): ${ref.url}`,
+            context: { operation: "resolveImage", collection },
+          }),
+          { status: r.status },
+        );
+      }
+      return r;
+    }, retryCfg);
+    const bytes = new Uint8Array(await res.arrayBuffer());
+    const contentType = res.headers.get("content-type") ?? undefined;
     const dims = parseImageDimensions(bytes);
+    await deps.blobs.put(key, bytes, {
+      contentType,
+      // 空文字は「解析済みだが寸法不明(SVG 等)」の印。次回同期はキーの存在だけ見て
+      // 本体ダウンロードをスキップする。
+      customMetadata: {
+        width: dims.width != null ? String(dims.width) : "",
+        height: dims.height != null ? String(dims.height) : "",
+      },
+    });
     return {
       hash: ref.hash,
       width: dims.width,
@@ -275,12 +323,14 @@ export function createCollectionDriver(
       // 内容編集のみの更新では version を更新しない(index-store.ts 参照)ため、
       // ここで一覧側の version と比較すると内容編集の同期漏れになる。
       const nextChunkCache = new Map<string, PageObjectResponse>();
+      const nextChunkIndexCache = new Map<string, IndexEntry | null>();
       const changes: EntryChange[] = [];
       let stoppedEarly = false;
       for (const page of pages) {
         const slug = slugOf(def, page) ?? page.id;
         nextChunkCache.set(slug, page);
         const existing = await deps.indexStore.findEntry(collection, slug);
+        nextChunkIndexCache.set(slug, existing);
         if (existing && existing.version === page.last_edited_time) {
           stoppedEarly = true;
           break;
@@ -288,6 +338,7 @@ export function createCollectionDriver(
         changes.push({ slug, lastEditedTime: page.last_edited_time });
       }
       chunkCache = nextChunkCache;
+      chunkIndexCache = nextChunkIndexCache;
 
       const nextCursor = stoppedEarly
         ? null
@@ -387,12 +438,18 @@ export function createCollectionDriver(
         images,
         links,
       });
-      await deps.indexStore.upsertEntry(collection, {
-        slug,
-        version: page.last_edited_time,
-        listed: isListed(def, status),
-        meta,
-      });
+      await deps.indexStore.upsertEntry(
+        collection,
+        {
+          slug,
+          version: page.last_edited_time,
+          listed: isListed(def, status),
+          meta,
+        },
+        chunkIndexCache.has(slug)
+          ? (chunkIndexCache.get(slug) ?? null)
+          : undefined,
+      );
 
       if (deps.realtime) {
         await publishVersionUpdate(

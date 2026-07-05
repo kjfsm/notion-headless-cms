@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { memoryBlobStore } from "../../store/memory.js";
+import type { BlobStore } from "../../store/types.js";
 import type { HttpHandlerAdapter } from "../handler.js";
 import { createFetchHandler } from "../handler.js";
 import { hmacSha256Hex } from "../webhook.js";
@@ -46,6 +47,55 @@ describe("createFetchHandler", () => {
     const handler = createFetchHandler(makeAdapter(), { routes: ROUTES });
     const res = await handler(new Request(`https://x${ROUTES}/images/missing`));
     expect(res.status).toBe(404);
+  });
+
+  it("画像配信は getWithMetadata で 1 回の読み取りに抑える(get/head は呼ばない)", async () => {
+    const images = memoryBlobStore();
+    await images.put("image/abc123", new Uint8Array([1, 2, 3]), {
+      contentType: "image/png",
+    });
+    let legacyReads = 0;
+    const originalGet = images.get.bind(images);
+    const originalHead = images.head.bind(images);
+    images.get = async (key) => {
+      legacyReads++;
+      return originalGet(key);
+    };
+    images.head = async (key) => {
+      legacyReads++;
+      return originalHead(key);
+    };
+    const handler = createFetchHandler(makeAdapter({ images }), {
+      routes: ROUTES,
+    });
+
+    const res = await handler(new Request(`https://x${ROUTES}/images/abc123`));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/png");
+    expect(legacyReads).toBe(0);
+  });
+
+  it("getWithMetadata を持たない実装でも get+head にフォールバックして配信する", async () => {
+    const base = memoryBlobStore();
+    await base.put("image/abc123", new Uint8Array([1, 2, 3]), {
+      contentType: "image/png",
+    });
+    const legacy: BlobStore = {
+      get: (key) => base.get(key),
+      put: (key, value, opts) => base.put(key, value, opts),
+      head: (key) => base.head(key),
+      delete: (key) => base.delete(key),
+    };
+    const handler = createFetchHandler(makeAdapter({ images: legacy }), {
+      routes: ROUTES,
+    });
+
+    const res = await handler(new Request(`https://x${ROUTES}/images/abc123`));
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toBe("image/png");
+    expect(new Uint8Array(await res.arrayBuffer())).toEqual(
+      new Uint8Array([1, 2, 3]),
+    );
   });
 
   it("realtime は onRealtimeUpgrade に委譲する", async () => {

@@ -17,18 +17,26 @@ export interface KVNamespaceLike {
 export interface R2ObjectLike {
   arrayBuffer(): Promise<ArrayBuffer>;
   httpMetadata?: { contentType?: string };
+  customMetadata?: Record<string, string>;
+  size?: number;
+}
+
+export interface R2HeadResultLike {
+  httpMetadata?: { contentType?: string };
+  customMetadata?: Record<string, string>;
   size?: number;
 }
 
 export interface R2BucketLike {
   get(key: string): Promise<R2ObjectLike | null>;
-  head?(
-    key: string,
-  ): Promise<{ httpMetadata?: { contentType?: string }; size?: number } | null>;
+  head?(key: string): Promise<R2HeadResultLike | null>;
   put(
     key: string,
     value: ArrayBuffer | Uint8Array,
-    opts?: { httpMetadata?: { contentType?: string } },
+    opts?: {
+      httpMetadata?: { contentType?: string };
+      customMetadata?: Record<string, string>;
+    },
   ): Promise<unknown>;
   delete(key: string): Promise<unknown>;
 }

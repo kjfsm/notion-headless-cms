@@ -2,7 +2,11 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe } from "vitest";
-import { runBlobStoreContract, runDocStoreContract } from "../contract.js";
+import {
+  runBlobStoreContract,
+  runBlobStoreMetadataContract,
+  runDocStoreContract,
+} from "../contract.js";
 import { memoryBlobStore, memoryDocStore } from "../memory.js";
 import { fileBlobStore, fileDocStore } from "../node-file.js";
 
@@ -12,6 +16,7 @@ describe("DocStore contract: memory", () => {
 
 describe("BlobStore contract: memory", () => {
   runBlobStoreContract({ factory: () => memoryBlobStore() });
+  runBlobStoreMetadataContract({ factory: () => memoryBlobStore() });
 });
 
 describe("DocStore contract: file", () => {
@@ -40,6 +45,13 @@ describe("BlobStore contract: file", () => {
   runBlobStoreContract({
     factory: async () => {
       const dir = await mkdtemp(join(tmpdir(), "v3-blob-"));
+      dirs.push(dir);
+      return fileBlobStore(dir);
+    },
+  });
+  runBlobStoreMetadataContract({
+    factory: async () => {
+      const dir = await mkdtemp(join(tmpdir(), "v3-blob-meta-"));
       dirs.push(dir);
       return fileBlobStore(dir);
     },
