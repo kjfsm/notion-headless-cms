@@ -1,5 +1,12 @@
 # @notion-headless-cms/react-renderer
 
+## 3.0.6
+
+### Patch Changes
+
+- Updated dependencies [0918cce]
+  - @notion-headless-cms/cms@3.0.5
+
 ## 3.0.5
 
 ### Patch Changes
