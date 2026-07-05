@@ -1,6 +1,6 @@
 {
   "name": "@notion-headless-cms/cms",
-  "version": "3.0.4",
+  "version": "3.0.5",
   "description": "notion-headless-cms v3 — マテリアライズドコンテンツレプリカ + 非同期同期。読者リクエスト中に Notion API を呼ばない",
   "keywords": [
     "notion",
