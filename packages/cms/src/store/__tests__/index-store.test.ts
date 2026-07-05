@@ -45,6 +45,7 @@ describe("createIndexStore", () => {
 
     const result = await store.upsertEntry("posts", entry("a", "v1"));
     expect(result.wrote).toBe(false);
+    expect(result.writes).toBe(0);
     expect(putCount()).toBe(2); // 追加の書き込みは発生しない
   });
 
@@ -57,6 +58,7 @@ describe("createIndexStore", () => {
     const putCount = spyPutCount(docs);
     const result = await store.upsertEntry("posts", entry("a", "v2", { meta }));
     expect(result.wrote).toBe(true);
+    expect(result.writes).toBe(1); // 点読みキーのみ
     expect(putCount()).toBe(1); // 点読みキーのみ、マニフェストへの書き込みは無い
 
     expect((await store.findEntry("posts", "a"))?.version).toBe("v2");
@@ -101,10 +103,11 @@ describe("createIndexStore", () => {
     );
 
     const putCount = spyPutCount(docs);
-    await store.upsertEntry(
+    const result = await store.upsertEntry(
       "posts",
       entry("a", "v2", { meta: { title: "新" } }),
     );
+    expect(result.writes).toBe(2); // 点読みキー + マニフェスト
     expect(putCount()).toBe(2); // 点読みキー + マニフェスト
 
     const listed = await store.listAllEntries("posts");
@@ -131,6 +134,7 @@ describe("createIndexStore", () => {
     await store.upsertEntry("posts", entry("a", "v1"));
     const result = await store.removeEntry("posts", "a");
     expect(result.wrote).toBe(true);
+    expect(result.writes).toBe(2); // 点読みキー delete + マニフェスト put
     expect(await store.findEntry("posts", "a")).toBeNull();
     expect(await store.listAllEntries("posts")).toHaveLength(0);
   });
@@ -139,6 +143,7 @@ describe("createIndexStore", () => {
     const store = createIndexStore(memoryDocStore());
     const result = await store.removeEntry("posts", "missing");
     expect(result.wrote).toBe(false);
+    expect(result.writes).toBe(0);
   });
 
   it("listEntries は where/sort/pagination を評価する", async () => {

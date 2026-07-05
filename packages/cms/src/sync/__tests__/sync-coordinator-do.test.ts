@@ -219,6 +219,7 @@ describe("readerReadOnly", () => {
       lastReconcileAt: null,
       failureCount: 0,
       recentFailures: [],
+      writeBudget: null,
     });
   });
 });

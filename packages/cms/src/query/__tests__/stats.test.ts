@@ -11,6 +11,7 @@ describe("getSyncStats", () => {
       lastReconcileAt: null,
       failureCount: 0,
       recentFailures: [],
+      writeBudget: null,
     });
   });
 
@@ -28,5 +29,18 @@ describe("getSyncStats", () => {
     expect(stats.lastSyncAt).toBe("2026-01-01T00:00:00.000Z");
     expect(stats.failureCount).toBe(1);
     expect(stats.recentFailures[0]?.slug).toBe("a");
+  });
+
+  it("state の writeBudget を読み出す", async () => {
+    const scheduler = createNodeSyncScheduler();
+    await scheduler.setState({
+      cursor: null,
+      lastSyncAt: null,
+      lastReconcileAt: null,
+      failures: [],
+      writeBudget: { date: "2026-07-05", count: 42 },
+    });
+    const stats = await getSyncStats(scheduler);
+    expect(stats.writeBudget).toEqual({ date: "2026-07-05", count: 42 });
   });
 });

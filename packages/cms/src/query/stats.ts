@@ -1,4 +1,8 @@
-import type { SyncFailure, SyncState } from "../sync/coordinator.js";
+import type {
+  SyncFailure,
+  SyncState,
+  WriteBudgetState,
+} from "../sync/coordinator.js";
 import type { SyncScheduler } from "../sync-scheduler.js";
 
 const EMPTY_STATE: SyncState = {
@@ -6,6 +10,7 @@ const EMPTY_STATE: SyncState = {
   lastSyncAt: null,
   lastReconcileAt: null,
   failures: [],
+  writeBudget: null,
 };
 
 export interface SyncStats {
@@ -13,6 +18,8 @@ export interface SyncStats {
   readonly lastReconcileAt: string | null;
   readonly failureCount: number;
   readonly recentFailures: readonly SyncFailure[];
+  /** 当日ぶんの KV write 累計（無料枠の予算監視用）。未同期なら null。 */
+  readonly writeBudget: WriteBudgetState | null;
 }
 
 /**
@@ -28,5 +35,6 @@ export async function getSyncStats(
     lastReconcileAt: state.lastReconcileAt,
     failureCount: state.failures.length,
     recentFailures: state.failures.slice(-10),
+    writeBudget: state.writeBudget ?? null,
   };
 }

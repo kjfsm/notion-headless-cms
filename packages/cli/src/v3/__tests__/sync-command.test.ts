@@ -43,8 +43,9 @@ describe("runSyncCommand", () => {
       listIndexedSlugs: async () => [],
       syncEntry: async (c) => {
         synced.push(c.slug);
+        return { writes: 0 };
       },
-      removeEntry: async () => {},
+      removeEntry: async () => ({ writes: 0 }),
       chunkSize: 1,
     };
     const coordinator = new SyncCoordinatorCore(makeMemoryScheduler(), deps);
@@ -65,7 +66,7 @@ describe("runSyncCommand", () => {
       syncEntry: async () => {
         throw new Error("boom");
       },
-      removeEntry: async () => {},
+      removeEntry: async () => ({ writes: 0 }),
     };
     const coordinator = new SyncCoordinatorCore(makeMemoryScheduler(), deps);
     const result = await runSyncCommand(coordinator);
@@ -89,8 +90,8 @@ describe("runSyncCommand", () => {
         pages[cursor ?? "root"] ?? { changes: [], nextCursor: null },
       listAllSlugs: async () => [],
       listIndexedSlugs: async () => [],
-      syncEntry: async () => {},
-      removeEntry: async () => {},
+      syncEntry: async () => ({ writes: 0 }),
+      removeEntry: async () => ({ writes: 0 }),
       chunkSize: 1,
     };
     const coordinator = new SyncCoordinatorCore(makeMemoryScheduler(), deps);

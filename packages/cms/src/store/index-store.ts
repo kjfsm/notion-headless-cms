@@ -29,13 +29,23 @@ export interface IndexStore {
    * 該当 slug の entry を追加/更新する。差分が無ければ書き込みをスキップする。
    * `knownExisting` に呼び出し側が直前に読んだ現行値（存在しなければ null）を渡すと
    * 点キーの再読み込みを省略できる（省略時 = undefined は内部で読み直す）。
+   *
+   * `writes` は実際に発行した KV 書き込み操作数（0=スキップ / 1=点キーのみ /
+   * 2=点キー+マニフェスト）。無料枠（1日1000 write）の予算計測に使う。
    */
   upsertEntry(
     collection: string,
     entry: IndexEntry,
     knownExisting?: IndexEntry | null,
-  ): Promise<{ wrote: boolean }>;
-  removeEntry(collection: string, slug: string): Promise<{ wrote: boolean }>;
+  ): Promise<IndexWriteResult>;
+  removeEntry(collection: string, slug: string): Promise<IndexWriteResult>;
+}
+
+export interface IndexWriteResult {
+  /** 1 回でも KV 書き込みが発生したか。 */
+  readonly wrote: boolean;
+  /** 発行した KV 書き込み操作数（delete も 1 回として数える）。 */
+  readonly writes: number;
 }
 
 function pointKey(collection: string, slug: string): string {
@@ -134,10 +144,11 @@ export function createIndexStore(docs: DocStore): IndexStore {
           ? knownExisting
           : await findEntry(collection, entry.slug);
       if (existing && existing.version === entry.version) {
-        return { wrote: false }; // Notion 側で何も変わっていない
+        return { wrote: false, writes: 0 }; // Notion 側で何も変わっていない
       }
 
       await docs.put(pointKey(collection, entry.slug), JSON.stringify(entry));
+      let writes = 1;
 
       const manifestChanged =
         !existing ||
@@ -154,19 +165,20 @@ export function createIndexStore(docs: DocStore): IndexStore {
             ? [...manifest, entry]
             : manifest.map((e, i) => (i === idx ? entry : e));
         await docs.put(manifestKey(collection), JSON.stringify(next));
+        writes += 1;
       }
-      return { wrote: true };
+      return { wrote: true, writes };
     },
     async removeEntry(collection, slug) {
       const existing = await findEntry(collection, slug);
-      if (!existing) return { wrote: false };
+      if (!existing) return { wrote: false, writes: 0 };
       await docs.delete(pointKey(collection, slug));
       const manifest = await readManifest(collection);
       await docs.put(
         manifestKey(collection),
         JSON.stringify(manifest.filter((e) => e.slug !== slug)),
       );
-      return { wrote: true };
+      return { wrote: true, writes: 2 };
     },
   };
 }

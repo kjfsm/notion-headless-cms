@@ -22,7 +22,7 @@ import type { IndexEntry } from "../types/collection-index.js";
 import type { ImageMapEntry } from "../types/entry-snapshot.js";
 import type { JsonValue } from "../types/json-value.js";
 import type { Logger } from "../types/logger.js";
-import type { EntryChange } from "./coordinator.js";
+import type { EntryChange, SyncWriteResult } from "./coordinator.js";
 import type { BlockChildrenListResult } from "./fetch-block-tree.js";
 import { fetchBlockTree } from "./fetch-block-tree.js";
 import type { RateLimiter } from "./rate-limiter.js";
@@ -98,8 +98,8 @@ export interface CollectionDriver {
   ): Promise<{ changes: readonly EntryChange[]; nextCursor: string | null }>;
   listAllSlugs(): Promise<readonly string[]>;
   listIndexedSlugs(): Promise<readonly string[]>;
-  syncEntry(change: EntryChange): Promise<void>;
-  removeEntry(slug: string): Promise<void>;
+  syncEntry(change: EntryChange): Promise<SyncWriteResult>;
+  removeEntry(slug: string): Promise<SyncWriteResult>;
 }
 
 function slugOf(
@@ -385,8 +385,11 @@ export function createCollectionDriver(
       if (!isAccessible(def, status)) {
         const slugForRemoval = rawSlug ?? page.id;
         await deps.entryStore.delete(collection, slugForRemoval);
-        await deps.indexStore.removeEntry(collection, slugForRemoval);
-        return;
+        const removed = await deps.indexStore.removeEntry(
+          collection,
+          slugForRemoval,
+        );
+        return { writes: removed.writes };
       }
       // slug プロパティを設定しているのに値が空 = 設定ミス（壊れた URL を生む）なので弾く。
       // slug 未設定のコレクション（設定値一覧等）は page id をキーにするため throw しない。
@@ -438,7 +441,7 @@ export function createCollectionDriver(
         images,
         links,
       });
-      await deps.indexStore.upsertEntry(
+      const upserted = await deps.indexStore.upsertEntry(
         collection,
         {
           slug,
@@ -466,11 +469,14 @@ export function createCollectionDriver(
         slug,
         pageId: page.id,
       });
+
+      return { writes: upserted.writes };
     },
 
     async removeEntry(slug) {
       await deps.entryStore.delete(collection, slug);
-      await deps.indexStore.removeEntry(collection, slug);
+      const removed = await deps.indexStore.removeEntry(collection, slug);
+      return { writes: removed.writes };
     },
   };
 }
