@@ -82,6 +82,27 @@ describe("listEntries", () => {
   it("空コレクションは空配列を返す", async () => {
     const store = createIndexStore(memoryDocStore());
     const result = await listEntries(store, "posts", {});
-    expect(result).toEqual({ items: [], nextCursor: null, hasMore: false });
+    expect(result).toEqual({
+      items: [],
+      nextCursor: null,
+      hasMore: false,
+      total: 0,
+    });
+  });
+
+  it("total は where 適用後・ページング前の件数を返す(ページャ UI の件数表示用)", async () => {
+    const store = createIndexStore(memoryDocStore());
+    for (let i = 0; i < 5; i++) {
+      await store.upsertEntry(
+        "posts",
+        entry(`slug-${i}`, true, { status: i < 3 ? "published" : "review" }),
+      );
+    }
+    const page = await listEntries(store, "posts", {
+      where: { status: { equals: "published" } },
+      limit: 2,
+    });
+    expect(page.items).toHaveLength(2);
+    expect(page.total).toBe(3);
   });
 });
