@@ -9,6 +9,7 @@ import type {
 import {
   broadcastToSockets,
   durableObjectRealtime,
+  forwardRealtimeUpgrade,
   parseSubscribeChannel,
   RealtimeHubDO,
 } from "../realtime-hub-do.js";
@@ -101,6 +102,45 @@ describe("durableObjectRealtime", () => {
       "c:posts",
       { collection: "posts", version: "v" },
     );
+    expect(idFromName).toHaveBeenCalledWith("hub-1");
+  });
+});
+
+describe("forwardRealtimeUpgrade", () => {
+  it("idFromName('global') から解決した stub にリクエストを転送する", async () => {
+    const request = new Request(
+      "https://site/api/cms/realtime?collection=posts",
+      {
+        headers: { Upgrade: "websocket" },
+      },
+    );
+    const hubResponse = new Response("upgraded");
+    const fetchMock = vi
+      .fn<DurableObjectStubLike["fetch"]>()
+      .mockResolvedValue(hubResponse);
+    const idFromName = vi.fn().mockReturnValue("id-token");
+    const get = vi.fn().mockReturnValue({ fetch: fetchMock });
+    const namespace: DurableObjectNamespaceLike = { idFromName, get };
+
+    const res = await forwardRealtimeUpgrade({ namespace, request });
+
+    expect(idFromName).toHaveBeenCalledWith("global");
+    expect(get).toHaveBeenCalledWith("id-token");
+    expect(fetchMock).toHaveBeenCalledWith(request);
+    expect(res).toBe(hubResponse);
+  });
+
+  it("name で購読ハブを指定できる（publish 側と揃える）", async () => {
+    const idFromName = vi.fn().mockReturnValue("id");
+    const namespace: DurableObjectNamespaceLike = {
+      idFromName,
+      get: () => ({ fetch: vi.fn().mockResolvedValue(new Response(null)) }),
+    };
+    await forwardRealtimeUpgrade({
+      namespace,
+      request: new Request("https://site/api/cms/realtime"),
+      name: "hub-1",
+    });
     expect(idFromName).toHaveBeenCalledWith("hub-1");
   });
 });

@@ -154,6 +154,20 @@ Cloudflare Workers（特に無料プラン）は 1 リクエストあたりの s
 Object インスタンスに一元化でき、レート制限をアプリ全体で 1 箇所のリミッタ（`rate-limiter.ts`）
 だけで守れる。読者側 Worker は同期そのものには関与せず、KV/R2 の読み取りに専念できる。
 
+### Cloudflare 配線の合成プリミティブ（明示的・DI 可能）
+
+consumer の定型配線を薄くするヘルパーを `@notion-headless-cms/cms/cloudflare` に用意している。
+いずれも env を覗いて自動検出はせず、実依存（namespace / cache / request）を引数で明示的に受け取る
+（構造型なので `@cloudflare/workers-types` に実依存せず、テストで差し替え可能）。
+
+- `durableObjectSyncDelegate({ namespace })`: `{ stub }` に加え namespace を受け、内部で
+  `idFromName("global")` から stub を解決する（stub 取得の定型を 1 行に）
+- `forwardRealtimeUpgrade({ namespace, request })`: `cms.fetch()` が処理しない WebSocket 購読
+  リクエスト（`/api/cms/realtime`）を `RealtimeHubDO` へ転送する（publish 側と `name` を揃える）
+- `edgeVersionedCache(cache)`: `createVersionedCacheLayer({ cache })` の糖衣
+- `readerReadOnly()`: 同期しない読み取り専用の `CMSSyncDelegate`（DO を持たないプレビュー/読者専用
+  Worker が、本番 DO の同期済み KV/R2 を読むだけの構成で使う）
+
 ### なぜ画像・内部リンク・プロパティの変換を読み取り時ではなく同期時に行うのか
 
 Notion 画像 URL の解決・内部リンクの href 生成・プロパティの正規化はどれも「重い」か「外部

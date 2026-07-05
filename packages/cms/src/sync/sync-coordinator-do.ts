@@ -2,7 +2,10 @@ import type { CMSSyncDelegate } from "../cms/create-cms.js";
 import type { SyncStats } from "../query/stats.js";
 import type { SyncState } from "./coordinator.js";
 import type { DurableObjectStateLike } from "./durable-object-scheduler.js";
-import type { DurableObjectStubLike } from "./durable-object-types.js";
+import type {
+  DurableObjectNamespaceLike,
+  DurableObjectStubLike,
+} from "./durable-object-types.js";
 
 /** `SyncCoordinatorDO` が内部で保持すべき最小の CMS 面（`createCMS()` の戻り値の一部）。 */
 export interface SyncCoordinatorCMS {
@@ -119,21 +122,53 @@ export function createSyncCoordinatorDO<Env = unknown>(
   };
 }
 
-export interface DurableObjectSyncDelegateOptions {
+export interface DurableObjectSyncDelegateStubOptions {
   readonly stub: DurableObjectStubLike;
   /** DO 内部エンドポイントのベース URL。`stub.fetch` は経路のみ見るため任意の値でよい。 */
   readonly baseUrl?: string;
 }
 
+export interface DurableObjectSyncDelegateNamespaceOptions {
+  /** SyncCoordinatorDO の namespace binding（`env.SYNC_COORDINATOR` 等）。 */
+  readonly namespace: DurableObjectNamespaceLike;
+  /**
+   * DO インスタンス名（`idFromName`）。既定 `"global"`。
+   * Notion アクセスを単一インスタンスへ集約するため、通常は既定のままにする。
+   */
+  readonly name?: string;
+  readonly baseUrl?: string;
+}
+
+/**
+ * `durableObjectSyncDelegate` の引数。`stub` を直接渡す形と、`namespace`（+任意 `name`）を渡して
+ * 内部で `idFromName` から stub を解決する形の両方を受け付ける。
+ */
+export type DurableObjectSyncDelegateOptions =
+  | DurableObjectSyncDelegateStubOptions
+  | DurableObjectSyncDelegateNamespaceOptions;
+
+function resolveDelegateStub(
+  opts: DurableObjectSyncDelegateOptions,
+): DurableObjectStubLike {
+  if ("stub" in opts) return opts.stub;
+  return opts.namespace.get(opts.namespace.idFromName(opts.name ?? "global"));
+}
+
 /**
  * stateless Worker 側の `createCMS({ syncDelegate })` に渡す、DO stub への転送実装。
  * `createSyncCoordinatorDO` が作る DO クラスと対になる。
+ *
+ * @example
+ * // namespace を渡すと idFromName("global") から stub を解決する
+ * durableObjectSyncDelegate({ namespace: env.SYNC_COORDINATOR });
+ * // 既存どおり stub を直接渡すことも可能
+ * durableObjectSyncDelegate({ stub: ns.get(ns.idFromName("global")) });
  */
 export function durableObjectSyncDelegate(
   opts: DurableObjectSyncDelegateOptions,
 ): CMSSyncDelegate {
   const base = opts.baseUrl ?? "https://sync-coordinator";
-  const { stub } = opts;
+  const stub = resolveDelegateStub(opts);
   return {
     async kick() {
       await stub.fetch(`${base}/kick`, { method: "POST" });
@@ -155,6 +190,35 @@ export function durableObjectSyncDelegate(
       const res = await stub.fetch(`${base}/stats`);
       const body = (await res.json()) as { stats: SyncStats };
       return body.stats;
+    },
+  };
+}
+
+/**
+ * 同期を一切行わない読み取り専用の `CMSSyncDelegate`。
+ * DO を持たないプレビュー/読者専用 Worker が、本番 DO の同期済み KV/R2 を読むだけの構成で使う
+ * （同期の書き込み直列化を迂回させないため、こちらからは Notion へ一切アクセスしない）。
+ *
+ * @example
+ * createCMS({ schema, stores, syncDelegate: readerReadOnly() });
+ */
+export function readerReadOnly(): CMSSyncDelegate {
+  return {
+    async kick() {},
+    async onWebhook() {},
+    async reconcile() {
+      return { removed: [] };
+    },
+    async getState() {
+      return null;
+    },
+    async stats() {
+      return {
+        lastSyncAt: null,
+        lastReconcileAt: null,
+        failureCount: 0,
+        recentFailures: [],
+      };
     },
   };
 }

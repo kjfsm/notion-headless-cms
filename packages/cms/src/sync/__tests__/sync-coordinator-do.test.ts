@@ -1,9 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
-import type { DurableObjectStubLike } from "../durable-object-types.js";
+import type {
+  DurableObjectNamespaceLike,
+  DurableObjectStubLike,
+} from "../durable-object-types.js";
 import type { SyncCoordinatorCMS } from "../sync-coordinator-do.js";
 import {
   createSyncCoordinatorDO,
   durableObjectSyncDelegate,
+  readerReadOnly,
 } from "../sync-coordinator-do.js";
 
 function makeFakeCMS(
@@ -169,5 +173,52 @@ describe("durableObjectSyncDelegate", () => {
     );
     const delegate = durableObjectSyncDelegate({ stub });
     expect(await delegate.stats()).toEqual(stats);
+  });
+
+  function makeNamespace(stub: DurableObjectStubLike) {
+    const idFromName = vi.fn((name: string) => ({ name }));
+    const get = vi.fn(() => stub);
+    const namespace: DurableObjectNamespaceLike = { idFromName, get };
+    return { namespace, idFromName, get };
+  }
+
+  it("namespace 指定時は idFromName('global') から stub を解決して転送する", async () => {
+    const calls: string[] = [];
+    const stub = makeStub(async (url) => {
+      calls.push(String(url));
+      return new Response(JSON.stringify({ ok: true }));
+    });
+    const { namespace, idFromName, get } = makeNamespace(stub);
+    const delegate = durableObjectSyncDelegate({ namespace });
+    await delegate.kick();
+    expect(idFromName).toHaveBeenCalledWith("global");
+    expect(get).toHaveBeenCalledTimes(1);
+    expect(calls).toEqual(["https://sync-coordinator/kick"]);
+  });
+
+  it("namespace + name 指定時はその name を idFromName に渡す", async () => {
+    const stub = makeStub(
+      async () => new Response(JSON.stringify({ ok: true })),
+    );
+    const { namespace, idFromName } = makeNamespace(stub);
+    const delegate = durableObjectSyncDelegate({ namespace, name: "tenant-a" });
+    await delegate.onWebhook();
+    expect(idFromName).toHaveBeenCalledWith("tenant-a");
+  });
+});
+
+describe("readerReadOnly", () => {
+  it("全メソッドが no-op（Notion へ同期しない）", async () => {
+    const delegate = readerReadOnly();
+    await expect(delegate.kick()).resolves.toBeUndefined();
+    await expect(delegate.onWebhook()).resolves.toBeUndefined();
+    expect(await delegate.reconcile()).toEqual({ removed: [] });
+    expect(await delegate.getState()).toBeNull();
+    expect(await delegate.stats()).toEqual({
+      lastSyncAt: null,
+      lastReconcileAt: null,
+      failureCount: 0,
+      recentFailures: [],
+    });
   });
 });
