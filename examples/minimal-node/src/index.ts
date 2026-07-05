@@ -1,16 +1,11 @@
-import {
-  createCMS,
-  createNodeSyncScheduler,
-  memoryBlobStore,
-  memoryDocStore,
-} from "@notion-headless-cms/cms";
+import { createCMS } from "@notion-headless-cms/cms";
 import { schema } from "./schema.js";
 
+// stores/scheduler を省略すると in-memory ストア + Node スケジューラにフォールバックする
+// （KV/R2/DO バインディング無しで動く最小構成）。
 const cms = createCMS({
   schema,
   notion: { token: process.env.NOTION_TOKEN ?? "" },
-  stores: { docs: memoryDocStore(), blobs: memoryBlobStore() },
-  scheduler: createNodeSyncScheduler(),
 });
 
 // kick() は 1 チャンク（既定 2 件）だけ処理する設計（Workers の chunked sync 用）。

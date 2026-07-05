@@ -18,11 +18,13 @@ import { getSyncStats } from "../query/stats.js";
 import type { RealtimeAdapter } from "../realtime.js";
 import { createEntryStore } from "../store/entry-store.js";
 import { createIndexStore } from "../store/index-store.js";
+import { memoryBlobStore, memoryDocStore } from "../store/memory.js";
 import type { BlobStore, DocStore } from "../store/types.js";
 import type { VersionedCacheLayer } from "../store/versioned-cache.js";
 import type { SyncState } from "../sync/coordinator.js";
 import { SyncCoordinatorCore } from "../sync/coordinator.js";
 import { createMultiSourceDeps } from "../sync/multi-source.js";
+import { createNodeSyncScheduler } from "../sync/node-scheduler.js";
 import type { NotionClientLike } from "../sync/notion-driver.js";
 import { createCollectionDriver } from "../sync/notion-driver.js";
 import { buildPageIndex } from "../sync/page-index.js";
@@ -51,8 +53,10 @@ export interface CreateCMSNotionOptions {
 }
 
 export interface CreateCMSStoresOptions {
-  readonly docs: DocStore;
-  readonly blobs: BlobStore;
+  /** index 用ストア。省略時は in-memory（`memoryDocStore()`）にフォールバックする。 */
+  readonly docs?: DocStore;
+  /** entry 本体・画像用ストア。省略時は in-memory（`memoryBlobStore()`）にフォールバックする。 */
+  readonly blobs?: BlobStore;
   readonly versionedCache?: VersionedCacheLayer;
 }
 
@@ -89,10 +93,14 @@ export interface CMSSyncDelegate {
 
 export interface CreateCMSOptions<S extends SchemaDef> {
   readonly schema: S;
-  readonly stores: CreateCMSStoresOptions;
+  /**
+   * ストレージ。省略した slot は in-memory 実装にフォールバックするため、KV/R2 バインディングが
+   * 無い環境（ローカル・プレビュー等）でも動作する。KV/R2 を渡すと永続化・高速化される。
+   */
+  readonly stores?: CreateCMSStoresOptions;
   /** `syncDelegate` 未指定時は必須（ローカルで `SyncCoordinatorCore` を組み立てるため）。 */
   readonly notion?: CreateCMSNotionOptions;
-  /** `syncDelegate` 未指定時は必須。 */
+  /** 省略時は `createNodeSyncScheduler()`（`setTimeout` ベース）にフォールバックする。 */
   readonly scheduler?: SyncScheduler;
   /** 同期完了時に version 同梱で push する（#437 ADR-5）。省略時は push しない。 */
   readonly realtime?: RealtimeAdapter;
@@ -216,6 +224,17 @@ function toRuntimeListParams(params: unknown): ListRuntimeParams {
  * });
  * const post = await cms.posts.find(slug); // EntrySnapshot<InferEntry<...>> | null
  * ```
+ *
+ * `stores`/`scheduler` は省略でき、その場合は in-memory ストア（`memoryDocStore()`/
+ * `memoryBlobStore()`）と `createNodeSyncScheduler()` にフォールバックする。KV/R2/DO が
+ * 無い環境でも最低限動作し（cold start ごとに Notion から再同期・永続なし）、バインディングを
+ * 足すと永続化・高速化される。
+ *
+ * ```ts
+ * // 最小構成（KV/R2/DO 無し）: Notion トークンだけで動く
+ * const cms = createCMS({ schema, notion: { token: env.NOTION_TOKEN } });
+ * await cms.sync.kick();
+ * ```
  */
 export function createCMS<const S extends SchemaDef>(
   opts: CreateCMSOptions<S>,
@@ -242,8 +261,11 @@ export function createCMS<const S extends SchemaDef>(
     }
   }
 
-  const entryStore = createEntryStore(opts.stores.blobs);
-  const indexStore = createIndexStore(opts.stores.docs);
+  const docs = opts.stores?.docs ?? memoryDocStore();
+  const blobs = opts.stores?.blobs ?? memoryBlobStore();
+  const versionedCache = opts.stores?.versionedCache;
+  const entryStore = createEntryStore(blobs);
+  const indexStore = createIndexStore(docs);
   const logger = createLeveledLogger(opts.logger, opts.logLevel);
   const routes = opts.routes ?? "/api/cms";
   const imagesPath = opts.imagesPath ?? "/images";
@@ -283,16 +305,8 @@ export function createCMS<const S extends SchemaDef>(
         context: { operation: "createCMS" },
       });
     }
-    if (!opts.scheduler) {
-      throw new CMSError({
-        code: "schema/scheduler_missing",
-        message:
-          "scheduler の指定が必要です（もしくは syncDelegate を指定してください）",
-        context: { operation: "createCMS" },
-      });
-    }
     const client = resolveClient(opts.notion);
-    const scheduler = opts.scheduler;
+    const scheduler = opts.scheduler ?? createNodeSyncScheduler();
     const rateLimiter = createRateLimiter({
       requestsPerSecond: opts.sync?.requestsPerSecond ?? 3,
     });
@@ -312,7 +326,7 @@ export function createCMS<const S extends SchemaDef>(
         retry: opts.sync?.retry,
         entryStore,
         indexStore,
-        blobs: opts.stores.blobs,
+        blobs,
         transforms: opts.transforms,
         imagesPath,
         pageIndex,
@@ -360,7 +374,7 @@ export function createCMS<const S extends SchemaDef>(
           {
             entryStore,
             indexStore,
-            versionedCache: opts.stores.versionedCache,
+            versionedCache,
           },
           collection,
           slug,
@@ -373,7 +387,7 @@ export function createCMS<const S extends SchemaDef>(
   }
 
   const httpAdapter: HttpHandlerAdapter = {
-    images: opts.stores.blobs,
+    images: blobs,
     webhookSecret: opts.webhookSecret,
     onVerificationToken: opts.onVerificationToken,
     onWebhookEvent,
