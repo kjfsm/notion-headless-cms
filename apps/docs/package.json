@@ -26,7 +26,6 @@
     "@shikijs/rehype": "^4.0.2",
     "@tailwindcss/typography": "^0.5.19",
     "clsx": "^2.1.1",
-    "dotenv": "catalog:",
     "katex": "catalog:",
     "lucide-react": "^1.16.0",
     "react": "catalog:",

@@ -119,17 +119,12 @@ export default {
       // workers/app.ts / app/root.tsx / app/routes.ts / app/routes/** /
       // vite.config.ts / playwright.config.ts は React Router / Vite / Playwright プラグインで
       // 自動検出される。それ以外で knip が拾えないエントリだけ明示する。
-      entry: ["nhc.config.ts", "app/__tests__/**/*.{ts,tsx}"],
+      entry: ["app/__tests__/**/*.{ts,tsx}"],
       project: ["app/**/*.{ts,tsx}", "workers/**/*.{ts,tsx}"],
       // ./+types/* は `react-router typegen` が生成するルート型ファイル。
       // ビルド前の静的解析では存在しないため未解決になるが、実害はない。
       ignoreUnresolved: ["./\\+types/.*"],
       ignoreDependencies: [
-        // 生成物 (app/generated/nhc.ts) が要求する間接依存（ユーザーは pnpm add するだけ）
-        "@notion-headless-cms/notion-orm",
-        // ルートは @notion-headless-cms/client/react 経由で使う。テストが /server サブパスを
-        // モックするため直接依存として残すが、ソースの直接 import は無い。
-        "@notion-headless-cms/react-renderer",
         // @shikijs/rehype の peerDep。直接 import はない
         "shiki",
         // app.css の @import "katex/dist/katex.min.css" 経由でロードされる。knip は CSS を解析しない
