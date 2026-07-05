@@ -14,9 +14,9 @@
 
 3. 生成された `.changeset/*.md` ファイルをコミットして PR に含める。
 
-4. PR が main にマージされると、GitHub Actions がバージョンアップ PR（"chore: バージョンアップ"）を自動作成する。
+4. PR が main にマージされると、`release.yml` が自動で snapshot バージョン（`0.0.0-canary-<sha>`）を `canary` タグへ npm 公開する（Version Packages PR は作られず、changeset ファイルも消費されずに残る）。
 
-5. バージョンアップ PR をマージすると、全パッケージが npm に自動公開される。
+5. 正式な `latest` リリースを出したい時は、メンテナが `release-stable.yml` を workflow_dispatch で手動起動する。保留中 changeset があれば "Version Packages" PR が自動作成され、それをマージすると全パッケージが `latest` タグで npm に自動公開される。
 
 ## bump 種別の判定基準
 

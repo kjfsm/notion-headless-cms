@@ -18,6 +18,8 @@ allowed-tools:
 
 `packages/*` の変更がリリースに影響する場合、`pnpm changeset` によるバージョン管理ファイルを作成する。このリポジトリは changesets で自動リリースされるため、**changeset が無い PR は CI で失敗する**（`.github/workflows/changeset-check.yml`）。
 
+このリポジトリは main マージのたびに `canary` タグへの snapshot 自動公開が走る（`.github/workflows/release.yml`、詳細は `/release`）。つまり **feature PR のマージ＝即座に canary publish の材料になる**。changeset の内容（bump 種別・変更内容の一言）は正式リリース判断だけでなく canary の中身にも直結するため、これまで以上に正確に書く。
+
 ## 実行手順
 
 ### 1. 影響を受けるパッケージを特定する

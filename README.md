@@ -451,6 +451,18 @@ flowchart LR
 
 ---
 
+## canary（main の最新を試す）
+
+main へマージされた変更は、正式な `latest` リリースを待たずに `canary` タグとして npm へ自動公開されている（`0.0.0-canary-<commit sha>` 形式）。
+
+```bash
+pnpm add @notion-headless-cms/cms@canary @notion-headless-cms/react-renderer@canary
+```
+
+- `0.0.0-canary-*` は prerelease のため `^3.x` のような semver range には解決されない。`latest` を使う既存ユーザーへ影響が及ぶことはない。
+- 依存関係も同じ commit の canary で解決されるため、`pnpm add ...@canary` は毎回 exact pin として `package.json` / `pnpm-lock.yaml` に記録される（再現性のため caret を付けない）。
+- 動作保証は無い（unpublish はしないが latest ほど検証されていない）。壊れた canary を掴んだ場合は 1 つ前の canary（過去の commit sha）へ pin し直せば復旧できる。
+
 ## レンダラの選択
 
 → [`docs/ja/choosing-a-renderer.md`](./docs/ja/choosing-a-renderer.md)

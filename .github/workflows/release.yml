@@ -1,30 +1,35 @@
-name: Release
+name: Release Canary
 
+# main への push (= feature PR のマージ) のたびに、Version Packages PR を経由せず
+# pending changeset の内容から snapshot バージョン (0.0.0-canary-<sha>) を組み立てて
+# `canary` dist-tag で npm publish する。
+#
+# - pending changeset を消費・削除しない (次の正式リリース判断のためにそのまま残す)
+# - Version PR も git tag も作らないため RELEASE_PAT は不要 (default token で足りる)
+# - 正式な latest リリースは release-stable.yml (workflow_dispatch) に分離した
 on:
   push:
     branches:
       - main
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  # release-stable.yml と同じグループ名にして直列化する (Version PR マージ時に
+  # canary の no-op publish と stable の latest publish が競合しないようにするため)
+  group: npm-publish
+  cancel-in-progress: false
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
   id-token: write
 
 jobs:
-  release:
+  canary:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
         with:
+          # snapshot バージョン名の {commit} 解決に必要
           fetch-depth: 0
-          # デフォルトの GITHUB_TOKEN で作成した PR は他ワークフロー (release-dry-run.yml など)
-          # を起動しない仕様のため、PAT 経由で checkout / changesets/action を動かす。
-          # これにより Version Packages PR 上でも publish --dry-run が走る。
-          # 公式: https://github.com/changesets/action#with-publishing
-          token: ${{ secrets.RELEASE_PAT }}
 
       # pnpm のバージョンは package.json の packageManager フィールドから自動検出させる
       - uses: pnpm/action-setup@v6
@@ -47,12 +52,13 @@ jobs:
       # publish 時に dist が必要なので build のみ実施。typecheck / test は CI で通過済み前提
       - run: pnpm turbo build --filter="./packages/*"
 
-      - name: バージョン更新PRの作成 または npm 公開
-        uses: changesets/action@v1
-        with:
-          publish: "pnpm release"
+      # pending changeset が 0 件なら version:snapshot は何もバンプせず、
+      # 後続の release:snapshot も publish 対象なしで no-op 終了する (安全)
+      - run: pnpm version:snapshot
+      - name: canary タグで npm 公開
+        run: pnpm release:snapshot
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_PAT }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           # npm provenance を有効化（permissions.id-token: write と連動）
           NPM_CONFIG_PROVENANCE: "true"

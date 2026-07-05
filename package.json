@@ -34,8 +34,10 @@
     "size": "size-limit",
     "changeset": "changeset",
     "version": "changeset version",
+    "version:snapshot": "changeset version --snapshot canary",
     "cf-typegen": "pnpm --filter example-cloudflare-* cf-typegen",
-    "release": "changeset publish"
+    "release": "changeset publish",
+    "release:snapshot": "changeset publish --tag canary --no-git-tag"
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.3",
