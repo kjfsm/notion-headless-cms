@@ -1,49 +1,42 @@
-import { isReloadRequest } from "@notion-headless-cms/client";
-import { NotionRevalidator, Renderer } from "@notion-headless-cms/client/react";
+import { NotionRenderer } from "@notion-headless-cms/react-renderer";
+import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
+import {
+  denormalizeBlocks,
+  toPageLinkMap,
+} from "@notion-headless-cms/react-renderer/v3";
 import { Link, redirect } from "react-router";
 import { makeCms } from "../lib/cms";
+import { remapPageLinks } from "../lib/cms-helpers";
 import type { Route } from "./+types/index";
 
-export async function loader({ request, context }: Route.LoaderArgs) {
+export async function loader({ context }: Route.LoaderArgs) {
   const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
-  // 明示リロード（F5）時は recheck ウィンドウを無視して Notion を再取得する。
-  const page = await cms.pages.find("home", {
-    force: isReloadRequest(request),
-  });
-  if (!page) return redirect("/docs");
-  // fetch-blocks 戦略で Notion BlockObjectResponse ツリーを取得し、
-  // react-renderer の <Renderer> で callout / column / embed を React コンポーネントに展開する。
-  const blocks = await page.notionBlocks();
+  const entry = await cms.pages.find("home");
+  if (!entry) return redirect("/docs");
+  const blocks = denormalizeBlocks(entry.blocks);
+  const pageLinks = remapPageLinks(toPageLinkMap(entry.links));
   return {
     blocks,
-    item: {
-      slug: page.slug,
-      title: page.title,
-      lastEditedTime: page.lastEditedTime,
-    },
+    pageLinks,
+    item: entry.meta,
   };
 }
 
 export function meta({ data: loaderData }: Route.MetaArgs) {
   return [
     {
-      title: loaderData?.item.title
-        ? `${loaderData.item.title} | notion-headless-cms`
+      title: loaderData?.item.name
+        ? `${loaderData.item.name} | notion-headless-cms`
         : "notion-headless-cms",
     },
   ];
 }
 
 export default function Index({ loaderData }: Route.ComponentProps) {
-  const { blocks, item } = loaderData;
+  const { blocks, pageLinks, item } = loaderData;
   return (
     <main className="animate-fade-in-up">
-      <NotionRevalidator
-        poll={{
-          url: `/api/pages/${item.slug}/check`,
-          version: item.lastEditedTime,
-        }}
-      />
+      <NotionRevalidator on={["mount", "visibility"]} />
 
       {/* バンドサイトと同じ放射状グラデのヒーロー。clamp() で見出しを流体スケーリング */}
       <section className="bg-[radial-gradient(ellipse_at_top,#f3e8ff_0%,#fff_60%)]">
@@ -55,7 +48,7 @@ export default function Index({ loaderData }: Route.ComponentProps) {
             className="font-black tracking-tighter leading-none text-gray-900"
             style={{ fontSize: "clamp(2.75rem, 9vw, 7rem)" }}
           >
-            {item.title ?? "NOTION-HEADLESS-CMS"}
+            {item.name ?? "NOTION-HEADLESS-CMS"}
           </h1>
           <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
             <Link
@@ -77,7 +70,7 @@ export default function Index({ loaderData }: Route.ComponentProps) {
       </section>
 
       <article className="mx-auto max-w-3xl px-6 py-16 prose prose-neutral max-w-none prose-headings:tracking-tighter prose-headings:font-bold prose-a:text-purple-600 prose-a:no-underline hover:prose-a:underline prose-code:text-purple-600">
-        <Renderer blocks={blocks} />
+        <NotionRenderer blocks={blocks} pageLinks={pageLinks} />
       </article>
     </main>
   );
