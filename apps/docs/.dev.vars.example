@@ -4,6 +4,6 @@
 # Notion API トークン (必須)
 NOTION_TOKEN=secret_xxxx
 
-# Notion Webhook 受信時の HMAC-SHA256 署名検証用シークレット (任意)
-# /api/revalidate を使う場合のみ設定
+# Notion Webhook 受信時の署名検証用シークレット (任意)
+# POST /api/cms/webhook を使う場合のみ設定
 NOTION_WEBHOOK_SECRET=

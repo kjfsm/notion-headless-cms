@@ -128,18 +128,9 @@ importers:
       '@icons-pack/react-simple-icons':
         specifier: ^13.13.0
         version: 13.13.0(react@19.2.7)
-      '@notion-headless-cms/client':
+      '@notion-headless-cms/cms':
         specifier: workspace:*
-        version: link:../../packages/client
-      '@notion-headless-cms/core':
-        specifier: workspace:*
-        version: link:../../packages/core
-      '@notion-headless-cms/notion-orm':
-        specifier: workspace:*
-        version: link:../../packages/notion-orm
-      '@notion-headless-cms/notion-source':
-        specifier: workspace:*
-        version: link:../../packages/notion-source
+        version: link:../../packages/cms
       '@notion-headless-cms/react-renderer':
         specifier: workspace:*
         version: link:../../packages/react-renderer
@@ -155,9 +146,6 @@ importers:
       clsx:
         specifier: ^2.1.1
         version: 2.1.1
-      dotenv:
-        specifier: 'catalog:'
-        version: 17.4.2
       katex:
         specifier: 'catalog:'
         version: 0.16.47
@@ -203,16 +191,10 @@ importers:
       unist-util-visit:
         specifier: ^5.1.0
         version: 5.1.0
-      zod:
-        specifier: 'catalog:'
-        version: 4.4.3
     devDependencies:
       '@cloudflare/vite-plugin':
         specifier: ^1.37.1
         version: 1.40.2(vite@8.0.16(@types/node@25.9.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.22.4)(yaml@2.9.0))(workerd@1.20260611.1)(wrangler@4.100.0(@cloudflare/workers-types@4.20260615.1))
-      '@notion-headless-cms/cli':
-        specifier: workspace:*
-        version: link:../../packages/cli
       '@playwright/test':
         specifier: 'catalog:'
         version: 1.60.0

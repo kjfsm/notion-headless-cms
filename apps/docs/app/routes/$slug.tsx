@@ -1,25 +1,24 @@
-import { isReloadRequest } from "@notion-headless-cms/client";
-import { NotionRevalidator, Renderer } from "@notion-headless-cms/client/react";
+import { NotionRenderer } from "@notion-headless-cms/react-renderer";
+import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
+import {
+  denormalizeBlocks,
+  toPageLinkMap,
+} from "@notion-headless-cms/react-renderer/v3";
 import { data } from "react-router";
 import { makeCms } from "../lib/cms";
+import { remapPageLinks } from "../lib/cms-helpers";
 import type { Route } from "./+types/$slug";
 
-export async function loader({ params, request, context }: Route.LoaderArgs) {
+export async function loader({ params, context }: Route.LoaderArgs) {
   const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
-  // 明示リロード（F5）時は recheck ウィンドウを無視して Notion を再取得する。
-  const page = await cms.pages.find(params.slug ?? "", {
-    force: isReloadRequest(request),
-  });
-  if (!page) throw data("Not Found", { status: 404 });
-  const blocks = await page.notionBlocks();
+  const entry = await cms.pages.find(params.slug ?? "");
+  if (!entry) throw data("Not Found", { status: 404 });
+  const blocks = denormalizeBlocks(entry.blocks);
+  const pageLinks = remapPageLinks(toPageLinkMap(entry.links));
   return {
     blocks,
-    item: {
-      slug: page.slug,
-      title: page.title,
-      description: page.description,
-      lastEditedTime: page.lastEditedTime,
-    },
+    pageLinks,
+    item: entry.meta,
   };
 }
 
@@ -27,7 +26,7 @@ export function meta({ data: loaderData }: Route.MetaArgs) {
   if (!loaderData) return [{ title: "Not Found" }];
   return [
     {
-      title: `${loaderData.item.title ?? loaderData.item.slug} | notion-headless-cms`,
+      title: `${loaderData.item.name ?? loaderData.item.slug} | notion-headless-cms`,
     },
     ...(loaderData.item.description
       ? [{ name: "description", content: loaderData.item.description }]
@@ -36,18 +35,13 @@ export function meta({ data: loaderData }: Route.MetaArgs) {
 }
 
 export default function Page({ loaderData }: Route.ComponentProps) {
-  const { blocks, item } = loaderData;
+  const { blocks, pageLinks, item } = loaderData;
   return (
     <main className="mx-auto max-w-3xl px-6 py-16 animate-fade-in-up">
-      <NotionRevalidator
-        poll={{
-          url: `/api/pages/${item.slug}/check`,
-          version: item.lastEditedTime,
-        }}
-      />
+      <NotionRevalidator on={["mount", "visibility"]} />
       <header className="mb-10">
         <h1 className="text-4xl md:text-5xl font-black tracking-tighter text-gray-900">
-          {item.title ?? item.slug}
+          {item.name ?? item.slug}
         </h1>
         {item.description && (
           <p className="mt-3 text-gray-500 leading-relaxed">
@@ -56,7 +50,7 @@ export default function Page({ loaderData }: Route.ComponentProps) {
         )}
       </header>
       <article className="prose prose-neutral max-w-none prose-headings:tracking-tighter prose-headings:font-bold prose-a:text-purple-600 prose-a:no-underline hover:prose-a:underline prose-code:text-purple-600">
-        <Renderer blocks={blocks} />
+        <NotionRenderer blocks={blocks} pageLinks={pageLinks} />
       </article>
     </main>
   );

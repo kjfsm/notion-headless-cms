@@ -5,16 +5,19 @@ declare global {
   namespace Cloudflare {
     interface Env {
       NOTION_TOKEN: string;
-      /** Notion Webhook 署名検証用シークレット。/api/revalidate を有効化する場合のみ設定。 */
+      /** Notion Webhook 署名検証用シークレット。webhook を有効化する場合のみ設定。 */
       NOTION_WEBHOOK_SECRET?: string;
-      /** ドキュメント / ページ キャッシュ用 KV namespace（任意）。 */
-      DOC_CACHE?: KVNamespace;
+      /** ドキュメント / ページ キャッシュ用 KV namespace。 */
+      DOC_CACHE: KVNamespace;
+      /** Notion API アクセスを直列化する同期コーディネータ DO。 */
+      SYNC_COORDINATOR: DurableObjectNamespace;
     }
   }
   interface Env {
     NOTION_TOKEN: string;
     NOTION_WEBHOOK_SECRET?: string;
-    DOC_CACHE?: KVNamespace;
+    DOC_CACHE: KVNamespace;
+    SYNC_COORDINATOR: DurableObjectNamespace;
   }
 }
 

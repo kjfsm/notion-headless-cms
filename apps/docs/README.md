@@ -2,11 +2,9 @@
 
 `notion-headless-cms` 公式ドキュメントサイト。**dogfooding として本ライブラリ自身**で構築されている。
 
-- `/` ・ `/:slug` … Notion 固定ページDB から `@notion-headless-cms/cloudflare` 経由で配信（ランディング + about / showcase / privacy 等）
+- `/` ・ `/:slug` … Notion 固定ページDB から `@notion-headless-cms/cms`（v3、完全マテリアライズド方式）経由で配信（ランディング + about / showcase / privacy 等）。Notion API は `SyncCoordinatorDO` のみが叩き、reader は KV/R2 を読むだけ
 - `/docs` ・ `/docs/*` … リポジトリ直下 `docs/ja/**/*.md` を直接静的レンダリング（unified + remark + rehype-shiki）
-- `/api/cms/images/:hash` … Notion 画像プロキシ（R2 キャッシュ、createCMS の固定 imageProxyBase に一致）
-- `/api/pages/:slug/check` … クライアント側ポーリングで Notion ページの最終更新を確認
-- `/api/revalidate` … Notion Webhook 受信（HMAC-SHA256 署名検証）
+- `/api/cms/*` … `cms.fetch()` が画像プロキシ・OGP・Webhook (`POST /api/cms/webhook`) をまとめて mount
 
 技術スタック: Cloudflare Workers + React Router v7 + Vite + Tailwind v4 / shadcn
 
@@ -23,12 +21,11 @@ $EDITOR apps/docs/.dev.vars
 # 3. ワークスペースをビルド（packages/*）
 pnpm build
 
-# 4. Notion DB からスキーマを再生成
-pnpm --filter @notion-headless-cms/docs generate
-
-# 5. dev server 起動
+# 4. dev server 起動（KV/R2/DO は @cloudflare/vite-plugin がローカルでシミュレートする）
 pnpm --filter @notion-headless-cms/docs dev
 ```
+
+Notion DB のプロパティを変更した場合は `app/schema.ts` を手動で書き換える（codegen は行わない）。
 
 ## デプロイ: Cloudflare GitHub App (Workers Builds)
 
@@ -44,7 +41,7 @@ pnpm --filter @notion-headless-cms/docs dev
 
    | 項目 | 値 |
    |---|---|
-   | Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm build && pnpm --filter @notion-headless-cms/docs generate && pnpm --filter @notion-headless-cms/docs build` |
+   | Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm build && pnpm --filter @notion-headless-cms/docs build` |
    | Deploy command | `npx wrangler deploy` |
    | Root directory | `apps/docs` |
    | Node.js version | `24` |
@@ -56,17 +53,18 @@ pnpm --filter @notion-headless-cms/docs dev
 
    | 名前 | 種別 | 用途 |
    |---|---|---|
-   | `NOTION_TOKEN` | Secret | `nhc generate` と Notion API ランタイム呼び出し |
-   | `NOTION_WEBHOOK_SECRET` | Secret | `/api/revalidate` の署名検証（任意） |
+   | `NOTION_TOKEN` | Secret | `SyncCoordinatorDO` の Notion API 呼び出し |
+   | `NOTION_WEBHOOK_SECRET` | Secret | `POST /api/cms/webhook` の署名検証（任意） |
 
-   `NOTION_TOKEN` は **Build / Runtime 両方** で必要なので "Build" と "Runtime" の両側に登録すること。
+   `NOTION_TOKEN` は Runtime（`SyncCoordinatorDO`）でのみ必要。
 
 4. **バインディング**（ダッシュボードの "Bindings"、もしくは `wrangler.toml`）
 
    | バインディング | 種別 | 値 |
    |---|---|---|
    | `IMG_BUCKET` | R2 | `nhc-docs-site-cache`（事前作成: `wrangler r2 bucket create nhc-docs-site-cache`） |
-   | `DOC_CACHE` | KV | `wrangler kv namespace create DOC_CACHE` で作成した namespace ID を `wrangler.toml` に記入 |
+   | `DOC_CACHE` | KV | `wrangler kv namespace create DOC_CACHE` で作成した namespace ID を `wrangler.toml` に記入（`wrangler.toml` に必須バインディングとして既に宣言済み） |
+   | `SYNC_COORDINATOR` | Durable Object | `SyncCoordinatorDO`（`wrangler.toml` に宣言済み、追加設定不要） |
 
 5. **ブランチ設定**
    - Production branch: `main`
@@ -80,13 +78,14 @@ pnpm --filter @notion-headless-cms/docs dev
 
 ### Notion Webhook 連携
 
-`/api/revalidate` を使う場合のみ:
+Webhook を使う場合のみ:
 
-1. Notion インテグレーション設定で Webhook を作成し、URL に `https://<deployed-domain>/api/revalidate` を指定
+1. Notion インテグレーション設定で Webhook を作成し、URL に `https://<deployed-domain>/api/cms/webhook` を指定
 2. Notion 側で発行された secret を Cloudflare ダッシュボードの `NOTION_WEBHOOK_SECRET` (Runtime Secret) に登録
 3. Notion 側で対象 DB を Webhook subscription に追加
 
-Webhook は HMAC-SHA256 (`x-notion-signature` ヘッダ) で署名検証され、不一致なら 401 を返す。
+署名検証・同期のトリガーはライブラリ（`SyncCoordinatorDO`）が行う。webhook が無い間も
+`<NotionRevalidator on={["mount","visibility"]} />` によるマウント時・タブ復帰時の再取得が保険になる。
 
 ## ライブラリ本体のドキュメント追加
 

@@ -1,44 +1,30 @@
-import { createCMS, memoryCache } from "@notion-headless-cms/client";
-import { kvCache, r2Cache } from "@notion-headless-cms/client/cloudflare";
-import { schema } from "../generated/nhc";
+import { createCMS } from "@notion-headless-cms/cms";
+import {
+  durableObjectSyncDelegate,
+  kvDocStore,
+  r2BlobStore,
+} from "@notion-headless-cms/cms/cloudflare";
+import { schema } from "../schema";
 
-export interface Env {
-  NOTION_TOKEN: string;
-  /** Notion Webhook 署名検証用 secret。`/api/revalidate` で使う。 */
-  NOTION_WEBHOOK_SECRET?: string;
-  DOC_CACHE?: KVNamespace;
-  IMG_BUCKET?: R2Bucket;
-}
-
-// Notion からは "ランディング + 固定ページ" のみを取得する。
-// content:"react" は blocks 取得戦略で BlockObjectResponse ツリーを取得し、react-renderer で
-// callout / column / embed などを高忠実度に描画する。
-// 本体ドキュメントは docs/ 配下の md を直接配信するため、ここには出てこない。
+/**
+ * 読者用の stateless CMS インスタンス。KV/R2 の読み取り（`find`/`list`）はここで直接行い、
+ * Notion API への直列アクセスは `SyncCoordinatorDO`（`workers/sync-coordinator-do.ts`）に
+ * 一元化する（`syncDelegate` 経由で転送する）。
+ */
 export function makeCms(
   env: Env,
   ctx: { waitUntil(p: Promise<unknown>): void },
 ) {
   return createCMS({
-    notion: {
-      schema,
-      token: env.NOTION_TOKEN,
-      collections: {
-        pages: {
-          published: ["完了"],
-          accessible: ["未着手", "進行中", "完了"],
-        },
-      },
+    schema,
+    stores: {
+      docs: kvDocStore(env.DOC_CACHE),
+      blobs: r2BlobStore(env.IMG_BUCKET),
     },
-    render: { content: "react" },
-    // binding があれば KV/R2、無ければ in-process memory（ローカル / テスト用）にフォールバック。
-    cache: {
-      document: env.DOC_CACHE
-        ? kvCache({ namespace: env.DOC_CACHE })
-        : memoryCache(),
-      image: env.IMG_BUCKET
-        ? r2Cache({ bucket: env.IMG_BUCKET })
-        : memoryCache(),
-      waitUntil: (p) => ctx.waitUntil(p),
-    },
+    syncDelegate: durableObjectSyncDelegate({
+      namespace: env.SYNC_COORDINATOR,
+    }),
+    webhookSecret: env.NOTION_WEBHOOK_SECRET,
+    waitUntil: (p: Promise<unknown>) => ctx.waitUntil(p),
   });
 }
