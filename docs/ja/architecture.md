@@ -189,7 +189,6 @@ webhook 駆動同期・realtime push・mount/visibility revalidate の 3 つは�
 ## 今後の拡張ポイント
 
 - `source-*` プラグイン化（`@notion-headless-cms/source-contentful` 等）
-- `notion-source` の `parseWebhook` 実装（Webhook 即時無効化の有効化。core の `cms.handler({ webhookSecret })` 側は実装済み）
 - `DocumentCacheAdapter<T>` ジェネリクスで任意メタデータ対応
 - 画像変換（resize / format 変換）の CDN 統合
 

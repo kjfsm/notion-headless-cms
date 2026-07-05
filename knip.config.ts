@@ -34,11 +34,6 @@ export default {
       entry: ["src/index.ts", "src/cli.ts"],
       project: ["src/**/*.ts"],
     },
-    "packages/notion-embed": {
-      // package.json の exports サブパスに対応する 3 エントリーポイント
-      entry: ["src/index.ts", "src/providers/index.ts", "src/rehype/index.ts"],
-      project: ["src/**/*.ts"],
-    },
     "packages/cache": {
       // package.json の exports サブパス (./, ./cloudflare, ./next)
       entry: ["src/index.ts", "src/cloudflare.ts", "src/next.ts"],
@@ -47,7 +42,8 @@ export default {
       ignoreDependencies: ["next"],
     },
     "packages/block-html": {
-      entry: ["src/index.ts", "src/rehype/index.ts"],
+      // package.json の exports サブパス (./, ./providers, ./rehype)
+      entry: ["src/index.ts", "src/providers/index.ts", "src/rehype/index.ts"],
       project: ["src/**/*.ts"],
     },
     "packages/fetch-blocks": {
