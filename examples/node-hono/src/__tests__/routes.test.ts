@@ -47,6 +47,7 @@ describe("GET /posts", () => {
       ],
       nextCursor: null,
       hasMore: false,
+      total: 1,
     });
     const res = await app.request("/posts");
     expect(res.status).toBe(200);
@@ -111,6 +112,7 @@ describe("GET /ui/posts", () => {
       ],
       nextCursor: null,
       hasMore: false,
+      total: 1,
     });
     const res = await app.request("/ui/posts");
     expect(res.status).toBe(200);

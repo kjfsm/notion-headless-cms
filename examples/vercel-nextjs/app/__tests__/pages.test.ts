@@ -55,6 +55,7 @@ describe("HomePage", () => {
       ],
       nextCursor: null,
       hasMore: false,
+      total: 1,
     });
     await HomePage();
     expect(fakeCms.posts.list).toHaveBeenCalled();
@@ -84,6 +85,7 @@ describe("generateStaticParams", () => {
       ],
       nextCursor: null,
       hasMore: false,
+      total: 1,
     });
     expect(await generateStaticParams()).toEqual([{ slug: "hello" }]);
   });
