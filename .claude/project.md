@@ -116,7 +116,12 @@ rsync -a --delete .claude-next/ .claude/
 
 ## リリース
 
-main マージで `release.yml` が "Version Packages" PR を作成。その PR をマージすると npm に公開される。
+二段構え。日常の main 追従は canary が自動、正式な latest は手動トリガーのみ。
+
+- **canary（自動、routine）**: main への push（feature PR のマージ）のたびに `release.yml` が pending changeset の内容から snapshot バージョン `0.0.0-canary-<sha>` を組み立て、`canary` タグで npm publish する。Version Packages PR は作らず、changeset ファイルも消費しない（次の正式リリース判断のために main 上に残り続ける）。
+- **stable（手動、正式リリース）**: `release-stable.yml` を workflow_dispatch で起動すると、pending changeset があれば "Version Packages" PR を作成する。その PR をマージすると（コミットメッセージが `Version Packages` で始まる push を検知して）同ワークフローが再度走り、`latest` タグで npm publish する。
+- 両ワークフローは `concurrency.group: npm-publish` を共有し直列化される（Version PR マージ時に canary の no-op publish と stable の publish が競合しないようにするため）。
+- band site 側は `@notion-headless-cms/cms@canary` のように canary タグを exact pin して main の変更を追従できる（`^3.x` のような semver range は `0.0.0-canary-*` にはマッチしないため、stable 利用者が誤って canary を掴むことはない）。
 
 ### ローカルから手動公開する（緊急フォールバック）
 

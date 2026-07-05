@@ -7,6 +7,10 @@
   "access": "public",
   "baseBranch": "main",
   "updateInternalDependencies": "patch",
+  "snapshot": {
+    "useCalculatedVersion": false,
+    "prereleaseTemplate": "{tag}-{commit}"
+  },
   "ignore": [
     "example-cloudflare-astro",
     "example-cloudflare-hono",
