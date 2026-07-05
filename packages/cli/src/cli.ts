@@ -2,9 +2,11 @@
 import { isCMSError } from "@notion-headless-cms/core";
 import { Command } from "commander";
 import { runCheck } from "./commands/check.js";
+import { runDoctor } from "./commands/doctor.js";
 import { runGenerate } from "./commands/generate.js";
 import { runInit } from "./commands/init.js";
 import { runPull } from "./commands/pull.js";
+import { runSync } from "./commands/sync.js";
 
 const COMMON_PITFALLS = `
 よくある詰まり所:
@@ -152,5 +154,67 @@ program
   )
   .addHelpText("after", COMMON_PITFALLS)
   .action(run(runCheck));
+
+program
+  .command("doctor")
+  .description(
+    "binding 宣言(wrangler.toml)・webhook secret・token 権限・同期状態・slug 重複を診断します(#446)",
+  )
+  .option("-c, --config <path>", "設定ファイルのパス", "nhc.config.ts")
+  .option(
+    "-t, --token <token>",
+    "Notion API トークン（省略時は NOTION_TOKEN 環境変数を使用）",
+  )
+  .option(
+    "-e, --env-file <path>",
+    "環境変数ファイルのパス（例: .dev.vars, .env.local）",
+  )
+  .option(
+    "--wrangler-config <path>",
+    "wrangler 設定ファイルのパス",
+    "wrangler.toml",
+  )
+  .option(
+    "--stats-url <url>",
+    "デプロイ済み Worker が公開する同期統計エンドポイントの URL（任意）",
+  )
+  .option("--json", "機械可読な JSON で結果を出力する")
+  .option("-s, --silent", "ログ出力を抑制する")
+  .option("-v, --verbose", "詳細ログを出力する")
+  .option(
+    "--debug",
+    "スタックトレースを含む最大詳細ログを出力する (失敗時のみ意味あり)",
+  )
+  .addHelpText("after", COMMON_PITFALLS)
+  .action(run(runDoctor));
+
+program
+  .command("sync")
+  .description(
+    "v3.schemaModule の全コレクションをローカルファイルストアへ同期します(初回 kick 経路、#446)",
+  )
+  .option("-c, --config <path>", "設定ファイルのパス", "nhc.config.ts")
+  .option(
+    "-t, --token <token>",
+    "Notion API トークン（省略時は NOTION_TOKEN 環境変数を使用）",
+  )
+  .option(
+    "-e, --env-file <path>",
+    "環境変数ファイルのパス（例: .dev.vars, .env.local）",
+  )
+  .option(
+    "--cache-dir <path>",
+    "マテリアライズ先のローカルディレクトリ",
+    ".nhc-cache",
+  )
+  .option("--json", "機械可読な JSON で結果を出力する")
+  .option("-s, --silent", "ログ出力を抑制する")
+  .option("-v, --verbose", "詳細ログを出力する")
+  .option(
+    "--debug",
+    "スタックトレースを含む最大詳細ログを出力する (失敗時のみ意味あり)",
+  )
+  .addHelpText("after", COMMON_PITFALLS)
+  .action(run(runSync));
 
 program.parse();

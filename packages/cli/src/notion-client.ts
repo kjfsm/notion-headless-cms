@@ -4,16 +4,22 @@ import {
   Client,
   ClientErrorCode,
   type DataSourceObjectResponse,
+  isFullPage,
   isNotionClientError,
+  type PageObjectResponse,
 } from "@notionhq/client";
 
-export type { DataSourceObjectResponse };
+export type { DataSourceObjectResponse, PageObjectResponse };
 
 export interface NotionCLIClient {
   /** dbName と完全一致する data_source の ID を返す。一致するものが無い場合は null。 */
   resolveId(dbName: string): Promise<string | null>;
   /** data_source_id で DataSourceObjectResponse を取得する。 */
   retrieveDataSource(id: string): Promise<DataSourceObjectResponse>;
+  /** token が有効かを軽量に検証する(`nhc doctor`)。401 のみ false、それ以外は throw。 */
+  validateToken(): Promise<boolean>;
+  /** data_source の全ページを取得する(`nhc doctor` の slug 重複検出用)。 */
+  queryAllPages(id: string): Promise<readonly PageObjectResponse[]>;
 }
 
 // 公式 SDK が分類する一時的な失敗コード一覧。
@@ -114,5 +120,36 @@ export function createNotionCLIClient(token: string): NotionCLIClient {
     return result as DataSourceObjectResponse;
   }
 
-  return { resolveId, retrieveDataSource };
+  async function validateToken(): Promise<boolean> {
+    try {
+      await withRetry(() => client.users.me({}));
+      return true;
+    } catch (err) {
+      if (isNotionClientError(err) && err.code === APIErrorCode.Unauthorized) {
+        return false;
+      }
+      throw err;
+    }
+  }
+
+  async function queryAllPages(
+    id: string,
+  ): Promise<readonly PageObjectResponse[]> {
+    const pages: PageObjectResponse[] = [];
+    let cursor: string | undefined;
+    do {
+      const res = await withRetry(() =>
+        client.dataSources.query({
+          data_source_id: id,
+          start_cursor: cursor,
+          page_size: 100,
+        }),
+      );
+      pages.push(...res.results.filter(isFullPage));
+      cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined;
+    } while (cursor);
+    return pages;
+  }
+
+  return { resolveId, retrieveDataSource, validateToken, queryAllPages };
 }

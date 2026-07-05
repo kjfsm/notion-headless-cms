@@ -2,6 +2,7 @@ import path from "node:path";
 import { CMSError } from "@notion-headless-cms/core";
 import { config as dotenvConfig } from "dotenv";
 import { fileExists } from "../fs-utils.js";
+import type { NotionCLIClient } from "../notion-client.js";
 
 export interface ReporterOptions {
   silent?: boolean;
@@ -83,4 +84,35 @@ export function resolveToken(
       "  - --token フラグを使用",
     context: { operation },
   });
+}
+
+/**
+ * v3 コレクション設定(`databaseId`/`dbName` のいずれか)から data_source_id を解決する。
+ * `nhc pull`/`nhc check`/`nhc doctor` で共通。
+ */
+export async function resolveDataSourceId(
+  name: string,
+  source: { databaseId?: string; dbName?: string },
+  client: NotionCLIClient,
+  reporter: Reporter,
+  operation: string,
+): Promise<string> {
+  if (source.databaseId) return source.databaseId;
+  if (!source.dbName) {
+    throw new CMSError({
+      code: "cli/config_invalid",
+      message: `[${name}] v3.collections["${name}"] に databaseId または dbName のいずれかを指定してください。`,
+      context: { operation, collection: name },
+    });
+  }
+  reporter.debug(`[${name}] dbName "${source.dbName}" を検索中...`);
+  const found = await client.resolveId(source.dbName);
+  if (!found) {
+    throw new CMSError({
+      code: "cli/notion_api_failed",
+      message: `[${name}] データベース "${source.dbName}" と完全一致する DB が見つかりませんでした。`,
+      context: { operation, collection: name, dbName: source.dbName },
+    });
+  }
+  return found;
 }
