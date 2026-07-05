@@ -4,6 +4,13 @@
  * 汎用の `.` エントリからは分離する — Node 専用ランタイム(Workers 以外)の利用者には
  * 不要な公開面のため。
  */
+import type { CreateCMSStoresOptions } from "./cms/create-cms.js";
+import { kvDocStore, r2BlobStore } from "./store/cloudflare.js";
+import type {
+  KVNamespaceLike,
+  R2BucketLike,
+} from "./store/cloudflare-types.js";
+import { memoryBlobStore, memoryDocStore } from "./store/memory.js";
 import {
   createVersionedCacheLayer,
   type VersionedCacheLayer,
@@ -66,4 +73,33 @@ export function edgeVersionedCache(
   cache?: VersionedCacheLike,
 ): VersionedCacheLayer {
   return createVersionedCacheLayer({ cache });
+}
+
+/**
+ * `env` のバインディング有無を見て `createCMS({ stores })` を組み立てるヘルパー。
+ * バインディングがある slot は KV/R2 ストア、無い slot は in-memory ストアに落ちるため、
+ * KV/R2 未設定のプレビュー・ローカルでもそのまま動作する（progressive enhancement）。
+ *
+ * @param bindings - `docs`(KV)/`blobs`(R2)/`cache`(Cache API) のバインディング。いずれも任意。
+ * @returns `createCMS({ stores })` に渡せる `CreateCMSStoresOptions`
+ *
+ * @example
+ * // KV/R2 があれば永続化・高速化、無ければメモリで動く
+ * const cache = typeof caches === "undefined" ? undefined : caches.default;
+ * createCMS({
+ *   schema,
+ *   notion: { token: env.NOTION_TOKEN },
+ *   stores: cloudflareStores({ docs: env.DOC_CACHE, blobs: env.IMG_BUCKET, cache }),
+ * });
+ */
+export function cloudflareStores(bindings: {
+  docs?: KVNamespaceLike;
+  blobs?: R2BucketLike;
+  cache?: VersionedCacheLike;
+}): CreateCMSStoresOptions {
+  return {
+    docs: bindings.docs ? kvDocStore(bindings.docs) : memoryDocStore(),
+    blobs: bindings.blobs ? r2BlobStore(bindings.blobs) : memoryBlobStore(),
+    versionedCache: createVersionedCacheLayer({ cache: bindings.cache }),
+  };
 }

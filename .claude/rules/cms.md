@@ -19,10 +19,10 @@ Notion アクセス・同期・ストレージ・HTTP 配信を 1 パッケー�
 | オプション | 役割 |
 |---|---|
 | `schema` | `defineSchema(collections)` の戻り値 |
-| `stores.docs` / `stores.blobs` | index 用 `DocStore` / entry 本体・画像用 `BlobStore`（`store/` 参照） |
+| `stores.docs` / `stores.blobs` | index 用 `DocStore` / entry 本体・画像用 `BlobStore`（`store/` 参照）。**省略時は in-memory（`memoryDocStore()`/`memoryBlobStore()`）にフォールバック**するため KV/R2 無しでも動く |
 | `stores.versionedCache` | `find()` の結果を version キーでキャッシュする任意層 |
 | `notion.client` / `notion.token` | ローカルで同期する場合の Notion クライアント（`syncDelegate` 未指定時は必須） |
-| `scheduler` | ローカル同期のスケジューラ（`syncDelegate` 未指定時は必須） |
+| `scheduler` | ローカル同期のスケジューラ。**省略時は `createNodeSyncScheduler()` にフォールバック**（`syncDelegate` 指定時は不要） |
 | `syncDelegate` | 同期制御を外部（DO 等）に丸ごと委譲する差し替え口。指定時は `notion`/`scheduler` 不要 |
 | `transforms` | shiki/katex 等の事前レンダー拡張（同期時に blocks へ焼き込む） |
 | `routes` / `imagesPath` | HTTP ハンドラのマウントパス（既定 `/api/cms`）と画像配信パス（既定 `/images`） |

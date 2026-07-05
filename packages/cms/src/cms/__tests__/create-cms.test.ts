@@ -454,17 +454,59 @@ describe("createCMS", () => {
     expect(logger2.debug).not.toHaveBeenCalled();
   });
 
-  it("syncDelegate 未指定で scheduler も無ければ CMSError(schema/scheduler_missing) を投げる", () => {
-    const client = makeFakeClient({});
-    expect(() =>
-      createCMS({
-        schema,
-        notion: { client },
-        stores: makeStores(),
-      }),
-    ).toThrowError(
-      expect.objectContaining({ code: "schema/scheduler_missing" }),
-    );
+  it("scheduler 省略時は Node スケジューラにフォールバックし、kick で同期できる", async () => {
+    const client = makeFakeClient({
+      "ds-posts": [
+        notionPage({
+          id: "p1",
+          dataSourceId: "ds-posts",
+          slug: "hello",
+          title: "Hello",
+          status: "published",
+        }),
+      ],
+    });
+    const cms = createCMS({
+      schema,
+      notion: { client },
+      stores: makeStores(),
+    });
+    await cms.sync.kick();
+    const post = await cms.posts.find("hello");
+    expect(post?.meta.title).toBe("Hello");
+  });
+
+  it("stores・scheduler を省略しても in-memory 既定で動作する（bindingless）", async () => {
+    const client = makeFakeClient({
+      "ds-posts": [
+        notionPage({
+          id: "p1",
+          dataSourceId: "ds-posts",
+          slug: "hello",
+          title: "Hello",
+          status: "published",
+        }),
+      ],
+      "ds-news": [
+        notionPage({
+          id: "n1",
+          dataSourceId: "ds-news",
+          slug: "flash",
+          title: "Flash",
+          titleKey: "heading",
+        }),
+      ],
+    });
+
+    const cms = createCMS({ schema, notion: { client } });
+    await cms.sync.kick();
+
+    const post = await cms.posts.find("hello");
+    expect(post?.meta.title).toBe("Hello");
+    const list = await cms.posts.list();
+    expect(list.items.map((i) => i.slug)).toEqual(["hello"]);
+    const newsItem = await cms.news.find("flash");
+    expect(newsItem?.meta.heading).toBe("Flash");
   });
 
   it("syncDelegate 指定時は notion/scheduler 無しでも動作し、sync.* が委譲先を呼ぶ", async () => {
