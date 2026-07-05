@@ -94,12 +94,16 @@ export default defineConfig({
 ```
 Options:
   -o, --output <path>    出力先 (デフォルト: nhc.config.ts)
-  -t, --template <name>  ランタイム別テンプレート (node / cloudflare-react-router / cloudflare-hono / next)
+  -t, --template <name>  ランタイム別テンプレート (node / cloudflare-react-router / cloudflare-hono / next / cloudflare-v3)
   -f, --force            既存ファイルを上書き
 ```
 
 `--template` はランタイムに合った `output` パスと「次のステップ」(依存・binding・example 導線) を出力する。
 例: `nhc init --template cloudflare-react-router`
+
+`cloudflare-v3`（v3, `@notion-headless-cms/cms`）のみ例外で、`nhc.config.ts` に加え `wrangler.toml`・
+`src/schema.ts`・`src/lib/do.ts`・`src/lib/cms.ts`・`src/index.ts` まで実働する Hono 雛形一式を生成する
+（既存ファイルは上書きしない）。
 
 ### `nhc generate`
 

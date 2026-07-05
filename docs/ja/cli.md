@@ -52,6 +52,7 @@ binding・対応する example への導線）を出力する。
 | `cloudflare-react-router` | Workers + React Router v7 | `./app/generated/nhc.ts` |
 | `cloudflare-hono` | Workers + Hono | `./src/generated/nhc.ts` |
 | `next` | Next.js App Router | `./app/generated/nhc.ts` |
+| `cloudflare-v3` | Workers + Hono、v3（`@notion-headless-cms/cms`） | — (`v3.schemaModule` 参照) |
 
 ```bash
 npx nhc init --template cloudflare-react-router
@@ -60,6 +61,9 @@ npx nhc init --template cloudflare-react-router
 
 > フルスタックの雛形（ルート・`wrangler.toml`・`workers/app.ts` など）が欲しい場合は、対応する
 > `examples/*` をコピーするのが早い。`--template` はその入口（config と手順）を用意する。
+> **`cloudflare-v3` のみ例外**で、`nhc.config.ts` に加え `wrangler.toml`・`src/schema.ts`・
+> `src/lib/do.ts`・`src/lib/cms.ts`・`src/index.ts` まで実働するフルスタック雛形を生成する
+> （`examples/cloudflare-hono` と同じ配線。既存ファイルは上書きしない）。
 
 生成されるテンプレート:
 

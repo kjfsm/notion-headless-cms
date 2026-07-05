@@ -69,7 +69,7 @@ program
   .option("-o, --output <path>", "出力先ファイルパス", "nhc.config.ts")
   .option(
     "-t, --template <name>",
-    "ランタイム別テンプレート (node / cloudflare-react-router / cloudflare-hono / next)",
+    "ランタイム別テンプレート (node / cloudflare-react-router / cloudflare-hono / next / cloudflare-v3)",
     "node",
   )
   .option("-f, --force", "既存ファイルを上書きする")

@@ -2,12 +2,22 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { CMSError } from "@notion-headless-cms/core";
 import { fileExists } from "../fs-utils.js";
+import {
+  generateMountCodeTemplate,
+  generateSchemaTemplate,
+  generateWranglerToml,
+} from "../v3/init.js";
 
 export interface InitOptions {
   output?: string;
   force?: boolean;
   silent?: boolean;
-  /** ランタイム別テンプレート名 (`node` / `cloudflare-react-router` / `cloudflare-hono` / `next`)。 */
+  /**
+   * ランタイム別テンプレート名
+   * (`node` / `cloudflare-react-router` / `cloudflare-hono` / `next` / `cloudflare-v3`)。
+   * `cloudflare-v3` のみ v3(#437, `@notion-headless-cms/cms`)向けで、
+   * `nhc.config.ts` に加え `wrangler.toml`・`src/schema.ts`・Hono マウントコード一式を生成する。
+   */
   template?: string;
 }
 
@@ -78,6 +88,101 @@ const TEMPLATES: Record<string, TemplateDef> = {
 };
 
 const DEFAULT_TEMPLATE = "node";
+const V3_TEMPLATE_NAME = "cloudflare-v3";
+
+const V3_NEXT_STEPS = [
+  "依存を追加: pnpm add @notion-headless-cms/cms hono",
+  "wrangler.toml の KV namespace ID / R2 bucket 名 (REPLACE_WITH_...) を実際の値に差し替える",
+  "NOTION_TOKEN を .dev.vars に設定する (wrangler dev が自動読込)",
+  "src/schema.ts の dataSourceId (REPLACE_WITH_DATA_SOURCE_ID) を実際の data source ID に差し替える",
+  "nhc.config.ts の v3.collections.posts.dbName を編集する (nhc pull/nhc check で使う)",
+  "pnpm nhc doctor で binding・token・slug 重複を診断する",
+  "pnpm wrangler dev → POST /api/sync/kick で初回同期を確認する",
+];
+
+function buildV3Config(): string {
+  return `import { defineConfig, env } from "@notion-headless-cms/cli";
+
+export default defineConfig({
+	// Notion インテグレーションのシークレット (環境変数 NOTION_TOKEN から読み込む)
+	notionToken: env("NOTION_TOKEN"),
+	// v2 codegen 用フィールド (v3 のみを使う場合は空のままでよい)
+	output: "src/generated/nhc.ts",
+	collections: {},
+	// v3(#437, @notion-headless-cms/cms) 向けの nhc pull/nhc check/nhc doctor 設定。
+	// スキーマ本体は src/schema.ts に TS ファーストで書く (codegen ではない)。
+	v3: {
+		schemaModule: "src/schema.ts",
+		collections: {
+			posts: {
+				// dbName で Notion DB を検索して data_source_id を自動解決します
+				dbName: "ブログ記事DB",
+				// databaseId (= data_source_id) を直接指定することもできます (databaseId が優先されます)
+				// databaseId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+
+				// 日本語など ASCII 変換できないプロパティ名は明示マッピングできます
+				// fieldMappings: { "タイトル": "title", "カテゴリ": "category" },
+			},
+		},
+	},
+});
+`;
+}
+
+/**
+ * `nhc init --template cloudflare-v3`: `nhc.config.ts` に加え、`wrangler.toml`・
+ * `src/schema.ts`・Hono マウントコード一式(`src/lib/do.ts`・`src/lib/cms.ts`・
+ * `src/index.ts`)を生成する。`nhc pull` と同様、既存ファイルは上書きしない
+ * (生成物の所有権はユーザーに移る)。
+ */
+async function runInitV3(opts: InitOptions): Promise<void> {
+  const configPath = path.resolve(
+    process.cwd(),
+    opts.output ?? "nhc.config.ts",
+  );
+  if (!opts.force && (await fileExists(configPath))) {
+    throw new CMSError({
+      code: "cli/init_failed",
+      message: `${configPath} はすでに存在します。上書きするには --force を指定してください。`,
+      context: { operation: "runInit", outputPath: configPath },
+    });
+  }
+  await fs.writeFile(configPath, buildV3Config(), "utf-8");
+
+  const projectName = path.basename(process.cwd());
+  const scaffoldFiles: Record<string, string> = {
+    "wrangler.toml": generateWranglerToml({ projectName }),
+    "src/schema.ts": generateSchemaTemplate(),
+    ...generateMountCodeTemplate({ projectName }),
+  };
+
+  let written = 0;
+  let skipped = 0;
+  for (const [rel, content] of Object.entries(scaffoldFiles)) {
+    const filePath = path.resolve(process.cwd(), rel);
+    if (await fileExists(filePath)) {
+      skipped++;
+      continue;
+    }
+    await fs.mkdir(path.dirname(filePath), { recursive: true });
+    await fs.writeFile(filePath, content, "utf-8");
+    written++;
+  }
+
+  if (!opts.silent) {
+    console.log(
+      `✓ ${configPath} を作成しました。(template: ${V3_TEMPLATE_NAME})`,
+    );
+    console.log(
+      `✓ 追加ファイルを生成: ${written} 件 / 既存のためスキップ: ${skipped} 件`,
+    );
+    console.log("");
+    console.log("次のステップ:");
+    V3_NEXT_STEPS.forEach((step, i) => {
+      console.log(`  ${i + 1}. ${step}`);
+    });
+  }
+}
 
 function buildConfig(def: TemplateDef): string {
   const dotenvLine = def.useDotenv ? 'import "dotenv/config";\n' : "";
@@ -116,11 +221,15 @@ export default defineConfig({
 
 export async function runInit(opts: InitOptions): Promise<void> {
   const templateName = opts.template ?? DEFAULT_TEMPLATE;
+  if (templateName === V3_TEMPLATE_NAME) {
+    return runInitV3(opts);
+  }
+
   const def = TEMPLATES[templateName];
   if (!def) {
     throw new CMSError({
       code: "cli/init_failed",
-      message: `未知のテンプレート "${templateName}" です。利用可能: ${Object.keys(TEMPLATES).join(", ")}`,
+      message: `未知のテンプレート "${templateName}" です。利用可能: ${[...Object.keys(TEMPLATES), V3_TEMPLATE_NAME].join(", ")}`,
       context: { operation: "runInit", template: templateName },
     });
   }
