@@ -36,6 +36,9 @@ function makeFakeDriver(opts: {
     },
     syncEntry,
     removeEntry,
+    async retrieveBySlug() {
+      return null;
+    },
   };
   return { driver, syncEntry, removeEntry };
 }

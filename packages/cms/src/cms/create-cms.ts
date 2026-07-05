@@ -10,6 +10,7 @@ import { createOgpHandler } from "../http/ogp.js";
 import { createScheduledHandler } from "../http/scheduled.js";
 import { createLeveledLogger } from "../logger.js";
 import type { TransformStage } from "../pipeline/transform-stage.js";
+import type { ColdStartFetch } from "../query/find.js";
 import { findEntry } from "../query/find.js";
 import type { ListRuntimeParams } from "../query/list.js";
 import { listEntries } from "../query/list.js";
@@ -106,6 +107,20 @@ export interface CreateCMSOptions<S extends SchemaDef> {
   readonly realtime?: RealtimeAdapter;
   /** 指定時は notion/scheduler によるローカル同期を行わず、こちらに委譲する。 */
   readonly syncDelegate?: CMSSyncDelegate;
+  /**
+   * index/entry が未マテリアライズの場合のみ、1 回だけブロッキング取得するフォールバック
+   * (#442)。既定では `find()` は未マテリアライズなら Notion を呼ばず null を返す
+   * (「読者リクエスト処理中は Notion API を呼ばない」という北極星どおり)。
+   * `syncDelegate` 経由(DO 等)で同等の read-through を行いたい場合はここに明示的に渡す。
+   */
+  readonly coldStartFetch?: ColdStartFetch;
+  /**
+   * `true` の場合、`notion` によるローカル同期(`syncDelegate` 未指定時)で各コレクション
+   * ドライバの `retrieveBySlug` を自動的にコールドスタートフォールバックとして使う
+   * (#442)。既定は無効(未マテリアライズな `find()` は null を返す)。`coldStartFetch` を
+   * 明示的に渡した場合はそちらが優先される。
+   */
+  readonly coldStart?: boolean;
   /** shiki/katex 等の事前レンダー拡張。省略時はページアクセス時のクライアント側レンダリングに委ねる。 */
   readonly transforms?: readonly TransformStage[];
   /** HTTP ハンドラのマウントパス。既定 `/api/cms`。 */
@@ -274,6 +289,9 @@ export function createCMS<const S extends SchemaDef>(
   let sync: CMSSyncControls;
   let onWebhookEvent: () => Promise<void> | void;
   let scheduledHandler: () => Promise<void>;
+  // opts.coldStart(既定 false)かつローカル同期時のみ、各コレクションドライバの
+  // retrieveBySlug を使ったコールドスタートフォールバックを配線する。
+  let localColdStartFetch: ColdStartFetch | undefined;
 
   if (opts.syncDelegate) {
     // sync 制御は DO 等の外部委譲先に一任し、ローカルの SyncCoordinatorCore は作らない
@@ -335,6 +353,13 @@ export function createCMS<const S extends SchemaDef>(
       });
     }
 
+    if (opts.coldStart) {
+      localColdStartFetch = async (collection, slug) => {
+        const driver = drivers[collection];
+        return driver ? driver.retrieveBySlug(slug) : null;
+      };
+    }
+
     const multiSourceDeps = createMultiSourceDeps({ drivers });
     const coordinator = new SyncCoordinatorCore(scheduler, {
       ...multiSourceDeps,
@@ -357,6 +382,8 @@ export function createCMS<const S extends SchemaDef>(
     scheduledHandler = createScheduledHandler(coordinator);
   }
 
+  const coldStartFetch = opts.coldStartFetch ?? localColdStartFetch;
+
   // CollectionHandle<C> は公開 API の型（InferEntry<C> による厳密な型推論）を表現するが、
   // C は createCMS<S> の中では未解決の型変数のため、ここでは型消去して構築し、
   // 呼び出し境界（return 文の `as CMS<S>`）でまとめて公開型に確定させる。
@@ -375,6 +402,7 @@ export function createCMS<const S extends SchemaDef>(
             entryStore,
             indexStore,
             versionedCache,
+            coldStartFetch,
           },
           collection,
           slug,
