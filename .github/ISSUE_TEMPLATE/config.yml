@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: セキュリティ脆弱性の報告
+    url: https://github.com/kjfsm/notion-headless-cms/security/advisories/new
+    about: 脆弱性は公開 issue ではなく、GitHub の Private vulnerability reporting（SECURITY.md 参照）で報告してください。

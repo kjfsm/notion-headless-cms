@@ -1,0 +1,42 @@
+name: バグ報告
+description: 既存の挙動に関する不具合を報告する
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        セキュリティ上の懸念事項（脆弱性）はこちらではなく、リポジトリ直下の `SECURITY.md` に記載の
+        Private vulnerability reporting（[Report a vulnerability](https://github.com/kjfsm/notion-headless-cms/security/advisories/new)）で報告してください。
+  - type: input
+    id: package
+    attributes:
+      label: 対象パッケージ・バージョン
+      description: 例 `@notion-headless-cms/cms@3.0.7`
+      placeholder: "@notion-headless-cms/xxx@x.y.z"
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: 再現手順
+      description: 最小再現コード・設定・実行コマンドを含めてください
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待される挙動
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 実際の挙動
+      description: エラーメッセージ・スタックトレースがあれば貼り付けてください
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 実行環境
+      description: 例 Node.js 24 / Cloudflare Workers / Next.js 15
