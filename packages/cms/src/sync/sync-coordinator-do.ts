@@ -218,6 +218,7 @@ export function readerReadOnly(): CMSSyncDelegate {
         lastReconcileAt: null,
         failureCount: 0,
         recentFailures: [],
+        writeBudget: null,
       };
     },
   };

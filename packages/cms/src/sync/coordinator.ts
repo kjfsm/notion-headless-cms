@@ -13,11 +13,26 @@ export interface SyncFailure {
   readonly at: string;
 }
 
+/** 1 件の同期/削除が発行した KV 書き込み操作数（無料枠の予算計測用）。 */
+export interface SyncWriteResult {
+  readonly writes: number;
+}
+
+/** 当日ぶんの KV 書き込み累計（UTC 日付でリセットする、DO storage 保存で KV は消費しない）。 */
+export interface WriteBudgetState {
+  /** UTC 日付（YYYY-MM-DD）。 */
+  readonly date: string;
+  /** その日に発行した KV 書き込み操作数の累計。 */
+  readonly count: number;
+}
+
 export interface SyncState {
   readonly cursor: string | null;
   readonly lastSyncAt: string | null;
   readonly lastReconcileAt: string | null;
   readonly failures: readonly SyncFailure[];
+  /** 当日ぶんの KV write 累計。旧フォーマットの state には無いため任意。 */
+  readonly writeBudget?: WriteBudgetState | null;
 }
 
 const EMPTY_STATE: SyncState = {
@@ -25,6 +40,7 @@ const EMPTY_STATE: SyncState = {
   lastSyncAt: null,
   lastReconcileAt: null,
   failures: [],
+  writeBudget: null,
 };
 
 export interface SyncCoordinatorDeps {
@@ -41,16 +57,23 @@ export interface SyncCoordinatorDeps {
   listAllSlugs(): Promise<readonly string[]>;
   /** index に現在登録されている slug 一覧(突合対象)。 */
   listIndexedSlugs(): Promise<readonly string[]>;
-  /** 1 entry を実際に同期する(パイプライン実行 + ストア書き込み)。 */
-  syncEntry(change: EntryChange): Promise<void>;
-  /** 削除・非公開化された slug を index から除去する。 */
-  removeEntry(slug: string): Promise<void>;
+  /**
+   * 1 entry を実際に同期する(パイプライン実行 + ストア書き込み)。
+   * 発行した KV 書き込み操作数(`writes`)を予算計測に反映する。
+   */
+  syncEntry(change: EntryChange): Promise<SyncWriteResult>;
+  /** 削除・非公開化された slug を index から除去する。KV 書き込み操作数を返す。 */
+  removeEntry(slug: string): Promise<SyncWriteResult>;
   /** 1 サイクルあたり処理する entry 数(chunked sync の粒度)。既定 2。 */
   chunkSize?: number;
   /** 次チャンクまでの待機時間(ms)。既定 300ms。 */
   chunkDelayMs?: number;
   /** webhook debounce 時間(ms)。既定 3000ms。 */
   debounceMs?: number;
+  /** KV write の日次ソフト上限（予算計測の基準値）。既定 1000（無料枠）。 */
+  dailyWriteBudget?: number;
+  /** ソフト上限に対する警告発火の割合（0〜1）。既定 0.8。 */
+  writeBudgetWarnRatio?: number;
   now?: () => string;
   logger?: Logger;
 }
@@ -79,6 +102,8 @@ export class SyncCoordinatorCore {
   private readonly chunkSize: number;
   private readonly chunkDelayMs: number;
   private readonly debounceMs: number;
+  private readonly dailyWriteBudget: number;
+  private readonly writeBudgetWarnRatio: number;
   private readonly now: () => string;
   private running = false;
   private rerunRequested = false;
@@ -90,7 +115,34 @@ export class SyncCoordinatorCore {
     this.chunkSize = deps.chunkSize ?? 2;
     this.chunkDelayMs = deps.chunkDelayMs ?? 300;
     this.debounceMs = deps.debounceMs ?? 3000;
+    this.dailyWriteBudget = deps.dailyWriteBudget ?? 1000;
+    this.writeBudgetWarnRatio = deps.writeBudgetWarnRatio ?? 0.8;
     this.now = deps.now ?? (() => new Date().toISOString());
+  }
+
+  /**
+   * 当日ぶんの KV write 累計を加算した新しい state を返す。UTC 日付が変われば 0 から数え直す。
+   * ソフト上限（`dailyWriteBudget * writeBudgetWarnRatio`）を跨いだ瞬間に一度だけ warn を出す。
+   * カウンタ自体は DO storage に載る state の一部で、KV write は増やさない。
+   */
+  private accumulateWrites(state: SyncState, writes: number): SyncState {
+    if (writes <= 0) return state;
+    const date = this.now().slice(0, 10);
+    const prev =
+      state.writeBudget && state.writeBudget.date === date
+        ? state.writeBudget
+        : { date, count: 0 };
+    const nextCount = prev.count + writes;
+    const threshold = this.dailyWriteBudget * this.writeBudgetWarnRatio;
+    if (prev.count <= threshold && nextCount > threshold) {
+      this.deps.logger?.warn?.("KV write が日次ソフト上限に接近しています", {
+        operation: "writeBudget",
+        date,
+        count: nextCount,
+        budget: this.dailyWriteBudget,
+      });
+    }
+    return { ...state, writeBudget: { date, count: nextCount } };
   }
 
   async getState(): Promise<SyncState> {
@@ -128,11 +180,15 @@ export class SyncCoordinatorCore {
     ]);
     const current = new Set(allSlugs);
     const removed = indexedSlugs.filter((slug) => !current.has(slug));
+    let writes = 0;
     for (const slug of removed) {
-      await this.deps.removeEntry(slug);
+      const result = await this.deps.removeEntry(slug);
+      writes += result?.writes ?? 0;
     }
     const state = await this.getState();
-    await this.setState({ ...state, lastReconcileAt: this.now() });
+    await this.setState(
+      this.accumulateWrites({ ...state, lastReconcileAt: this.now() }, writes),
+    );
     return { removed };
   }
 
@@ -181,10 +237,12 @@ export class SyncCoordinatorCore {
     }
 
     const failures = [...state.failures];
+    let writes = 0;
 
     for (const change of changes) {
       try {
-        await this.deps.syncEntry(change);
+        const result = await this.deps.syncEntry(change);
+        writes += result?.writes ?? 0;
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
         this.deps.logger?.warn?.("entry の同期に失敗しました", {
@@ -196,12 +254,18 @@ export class SyncCoordinatorCore {
       }
     }
 
-    await this.setState({
-      cursor: nextCursor,
-      lastSyncAt: this.now(),
-      lastReconcileAt: state.lastReconcileAt,
-      failures,
-    });
+    await this.setState(
+      this.accumulateWrites(
+        {
+          cursor: nextCursor,
+          lastSyncAt: this.now(),
+          lastReconcileAt: state.lastReconcileAt,
+          failures,
+          writeBudget: state.writeBudget ?? null,
+        },
+        writes,
+      ),
+    );
 
     if (nextCursor !== null) {
       await this.scheduler.schedule(this.chunkDelayMs, () => this.runChunk());

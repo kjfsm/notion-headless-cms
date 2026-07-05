@@ -28,8 +28,9 @@ describe("SyncCoordinatorCore", () => {
       listIndexedSlugs: async () => [],
       syncEntry: async (c) => {
         synced.push(c.slug);
+        return { writes: 0 };
       },
-      removeEntry: async () => {},
+      removeEntry: async () => ({ writes: 0 }),
       chunkSize: 2,
       chunkDelayMs: 100,
     };
@@ -58,8 +59,9 @@ describe("SyncCoordinatorCore", () => {
       listIndexedSlugs: async () => [],
       syncEntry: async (c) => {
         synced.push(c.slug);
+        return { writes: 0 };
       },
-      removeEntry: async () => {},
+      removeEntry: async () => ({ writes: 0 }),
       debounceMs: 3000,
     };
     const scheduler = createNodeSyncScheduler();
@@ -87,8 +89,9 @@ describe("SyncCoordinatorCore", () => {
       syncEntry: async (c) => {
         if (c.slug === "broken") throw new Error("sync failed");
         synced.push(c.slug);
+        return { writes: 0 };
       },
-      removeEntry: async () => {},
+      removeEntry: async () => ({ writes: 0 }),
       chunkSize: 10,
     };
     const scheduler = createNodeSyncScheduler();
@@ -108,9 +111,10 @@ describe("SyncCoordinatorCore", () => {
       listChanged: async () => ({ changes: [], nextCursor: null }),
       listAllSlugs: async () => ["a", "b"],
       listIndexedSlugs: async () => ["a", "b", "c-deleted"],
-      syncEntry: async () => {},
+      syncEntry: async () => ({ writes: 0 }),
       removeEntry: async (slug) => {
         removed.push(slug);
+        return { writes: 0 };
       },
     };
     const scheduler = createNodeSyncScheduler();
@@ -137,8 +141,9 @@ describe("SyncCoordinatorCore", () => {
       listIndexedSlugs: async () => [],
       syncEntry: async (c) => {
         synced.push(c.slug);
+        return { writes: 0 };
       },
-      removeEntry: async () => {},
+      removeEntry: async () => ({ writes: 0 }),
       chunkDelayMs: 100,
     };
     const scheduler = createNodeSyncScheduler();
@@ -176,8 +181,9 @@ describe("SyncCoordinatorCore", () => {
       listIndexedSlugs: async () => [],
       syncEntry: async (c) => {
         synced.push(c.slug);
+        return { writes: 0 };
       },
-      removeEntry: async () => {},
+      removeEntry: async () => ({ writes: 0 }),
     };
     const scheduler = createNodeSyncScheduler();
     const coordinator = new SyncCoordinatorCore(scheduler, deps);
@@ -196,7 +202,7 @@ describe("SyncCoordinatorCore", () => {
       listChanged: async () => ({ changes: [], nextCursor: null }),
       listAllSlugs: async () => ["a", "b"],
       listIndexedSlugs: async () => ["a", "b"],
-      syncEntry: async () => {},
+      syncEntry: async () => ({ writes: 0 }),
       removeEntry: async () => {
         throw new Error("should not be called");
       },
@@ -205,5 +211,112 @@ describe("SyncCoordinatorCore", () => {
     const coordinator = new SyncCoordinatorCore(scheduler, deps);
     const result = await coordinator.reconcile();
     expect(result.removed).toEqual([]);
+  });
+
+  describe("writeBudget(KV write の日次計測)", () => {
+    it("syncEntry が返す writes を当日ぶんとして加算する", async () => {
+      const deps: SyncCoordinatorDeps = {
+        listChanged: async () => ({
+          changes: [change("a"), change("b")],
+          nextCursor: null,
+        }),
+        listAllSlugs: async () => [],
+        listIndexedSlugs: async () => [],
+        syncEntry: async () => ({ writes: 2 }),
+        removeEntry: async () => ({ writes: 0 }),
+        chunkSize: 10,
+        now: () => "2026-07-05T10:00:00.000Z",
+      };
+      const coordinator = new SyncCoordinatorCore(
+        createNodeSyncScheduler(),
+        deps,
+      );
+
+      await coordinator.kick();
+      const state = await coordinator.getState();
+      expect(state.writeBudget).toEqual({ date: "2026-07-05", count: 4 });
+    });
+
+    it("reconcile の削除ぶんの writes も加算する", async () => {
+      const deps: SyncCoordinatorDeps = {
+        listChanged: async () => ({ changes: [], nextCursor: null }),
+        listAllSlugs: async () => ["a"],
+        listIndexedSlugs: async () => ["a", "gone"],
+        syncEntry: async () => ({ writes: 0 }),
+        removeEntry: async () => ({ writes: 2 }),
+        now: () => "2026-07-05T03:00:00.000Z",
+      };
+      const coordinator = new SyncCoordinatorCore(
+        createNodeSyncScheduler(),
+        deps,
+      );
+
+      await coordinator.reconcile();
+      const state = await coordinator.getState();
+      expect(state.writeBudget).toEqual({ date: "2026-07-05", count: 2 });
+    });
+
+    it("UTC 日付が変わると当日カウンタを 0 から数え直す", async () => {
+      let today = "2026-07-05T23:00:00.000Z";
+      const deps: SyncCoordinatorDeps = {
+        listChanged: async () => ({ changes: [change("a")], nextCursor: null }),
+        listAllSlugs: async () => [],
+        listIndexedSlugs: async () => [],
+        syncEntry: async () => ({ writes: 2 }),
+        removeEntry: async () => ({ writes: 0 }),
+        now: () => today,
+      };
+      const coordinator = new SyncCoordinatorCore(
+        createNodeSyncScheduler(),
+        deps,
+      );
+
+      await coordinator.kick();
+      expect((await coordinator.getState()).writeBudget).toEqual({
+        date: "2026-07-05",
+        count: 2,
+      });
+
+      today = "2026-07-06T00:30:00.000Z";
+      await coordinator.kick();
+      expect((await coordinator.getState()).writeBudget).toEqual({
+        date: "2026-07-06",
+        count: 2,
+      });
+    });
+
+    it("ソフト上限を跨いだ時に一度だけ warn を出す", async () => {
+      const warn = vi.fn();
+      const deps: SyncCoordinatorDeps = {
+        listChanged: async () => ({ changes: [change("a")], nextCursor: null }),
+        listAllSlugs: async () => [],
+        listIndexedSlugs: async () => [],
+        syncEntry: async () => ({ writes: 5 }),
+        removeEntry: async () => ({ writes: 0 }),
+        dailyWriteBudget: 10, // 閾値 = 10 * 0.8 = 8
+        writeBudgetWarnRatio: 0.8,
+        now: () => "2026-07-05T10:00:00.000Z",
+        logger: { warn },
+      };
+      const coordinator = new SyncCoordinatorCore(
+        createNodeSyncScheduler(),
+        deps,
+      );
+
+      await coordinator.kick(); // 5 → 閾値 8 未満、warn 無し
+      expect(warn).not.toHaveBeenCalled();
+
+      await coordinator.kick(); // 10 → 閾値 8 超過、warn 1 回
+      const budgetWarns = warn.mock.calls.filter(
+        (c) => (c[1] as { operation?: string })?.operation === "writeBudget",
+      );
+      expect(budgetWarns).toHaveLength(1);
+
+      await coordinator.kick(); // 15 → 既に閾値超過済み、追加の warn 無し
+      const budgetWarnsAfter = warn.mock.calls.filter(
+        (c) => (c[1] as { operation?: string })?.operation === "writeBudget",
+      );
+      expect(budgetWarnsAfter).toHaveLength(1);
+    });
   });
 });

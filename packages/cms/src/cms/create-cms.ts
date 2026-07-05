@@ -64,6 +64,10 @@ export interface CreateCMSSyncOptions {
   /** 全コレクションで共有する Notion API のレート上限。既定 3req/s。 */
   readonly requestsPerSecond?: number;
   readonly retry?: RetryConfig;
+  /** KV write の日次ソフト上限（予算計測の基準値）。既定 1000（無料枠）。 */
+  readonly dailyWriteBudget?: number;
+  /** ソフト上限に対する警告発火の割合（0〜1）。既定 0.8。 */
+  readonly writeBudgetWarnRatio?: number;
 }
 
 /**
@@ -323,6 +327,8 @@ export function createCMS<const S extends SchemaDef>(
       chunkSize: opts.sync?.chunkSize,
       chunkDelayMs: opts.sync?.chunkDelayMs,
       debounceMs: opts.sync?.debounceMs,
+      dailyWriteBudget: opts.sync?.dailyWriteBudget,
+      writeBudgetWarnRatio: opts.sync?.writeBudgetWarnRatio,
       logger,
     });
 

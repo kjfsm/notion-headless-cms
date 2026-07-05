@@ -143,8 +143,8 @@ export function createMultiSourceDeps(
 
     async syncEntry(change) {
       const parsed = splitNamespacedSlug(change.slug);
-      if (!parsed) return;
-      await driverFor(parsed.collection).syncEntry({
+      if (!parsed) return { writes: 0 };
+      return driverFor(parsed.collection).syncEntry({
         slug: parsed.slug,
         lastEditedTime: change.lastEditedTime,
       });
@@ -152,8 +152,8 @@ export function createMultiSourceDeps(
 
     async removeEntry(slug) {
       const parsed = splitNamespacedSlug(slug);
-      if (!parsed) return;
-      await driverFor(parsed.collection).removeEntry(parsed.slug);
+      if (!parsed) return { writes: 0 };
+      return driverFor(parsed.collection).removeEntry(parsed.slug);
     },
   };
 }
