@@ -1,5 +1,12 @@
 # example-docs-site
 
+## 0.0.32
+
+### Patch Changes
+
+- @notion-headless-cms/react-renderer@3.0.8
+- @notion-headless-cms/client@3.0.8
+
 ## 0.0.31
 
 ### Patch Changes
