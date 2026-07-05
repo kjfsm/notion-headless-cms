@@ -94,6 +94,35 @@ export function durableObjectRealtime(
   };
 }
 
+export interface ForwardRealtimeUpgradeOptions {
+  /** WebSocket ハブ Durable Object の namespace binding（`env.REALTIME_HUB` 等）。 */
+  readonly namespace: DurableObjectNamespaceLike;
+  /** 転送する購読リクエスト（`Upgrade: websocket`, `?collection=&slug=` を含む）。 */
+  readonly request: Request;
+  /**
+   * ハブのインスタンス名（`idFromName`）。既定 `"global"`。
+   * publish 側（{@link durableObjectRealtime} の `name`）と揃えないと通知が届かないため、
+   * 通常は両方とも既定のままにする。
+   */
+  readonly name?: string;
+}
+
+/**
+ * WebSocket 購読リクエスト（例: `GET /api/cms/realtime`）を {@link RealtimeHubDO} へ転送する。
+ * `cms.fetch()` は Upgrade を処理しないため、consumer は catch-all より前でこれを呼ぶ。
+ *
+ * @example
+ * app.all("/api/cms/realtime", (c) =>
+ *   forwardRealtimeUpgrade({ namespace: c.env.REALTIME_HUB, request: c.req.raw }));
+ */
+export function forwardRealtimeUpgrade(
+  opts: ForwardRealtimeUpgradeOptions,
+): Promise<Response> {
+  const { namespace, request } = opts;
+  const stub = namespace.get(namespace.idFromName(opts.name ?? "global"));
+  return stub.fetch(request);
+}
+
 interface WebSocketPairLike {
   0: HibernatableWebSocketLike;
   1: HibernatableWebSocketLike;
