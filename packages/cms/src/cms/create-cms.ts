@@ -279,9 +279,9 @@ export function createCMS<const S extends SchemaDef>(
   const docs = opts.stores?.docs ?? memoryDocStore();
   const blobs = opts.stores?.blobs ?? memoryBlobStore();
   const versionedCache = opts.stores?.versionedCache;
-  const entryStore = createEntryStore(blobs);
-  const indexStore = createIndexStore(docs);
   const logger = createLeveledLogger(opts.logger, opts.logLevel);
+  const entryStore = createEntryStore(blobs);
+  const indexStore = createIndexStore(docs, logger);
   const routes = opts.routes ?? "/api/cms";
   const imagesPath = opts.imagesPath ?? "/images";
   const pageIndex = () => buildPageIndex(opts.schema, indexStore);
@@ -403,6 +403,7 @@ export function createCMS<const S extends SchemaDef>(
             indexStore,
             versionedCache,
             coldStartFetch,
+            logger,
           },
           collection,
           slug,

@@ -2,6 +2,7 @@ import type { RuntimeSortInput } from "../query/where.js";
 import { evaluateWhere, sortByMeta } from "../query/where.js";
 import type { IndexEntry } from "../types/collection-index.js";
 import type { JsonValue } from "../types/json-value.js";
+import type { Logger } from "../types/logger.js";
 import type { ListResult } from "../types/query.js";
 import { deepEqualJson } from "./deep-equal-json.js";
 import type { DocStore } from "./types.js";
@@ -89,10 +90,13 @@ function metaForManifestComparison(meta: JsonValue): JsonValue {
  *   実際に変わった時だけ書く(本文ブロックだけの編集は version は進むが meta/listed は
  *   変わらないことがほとんどのため、ここをスキップして KV 書き込み予算を節約する)。
  *
- * 同一コレクションへの並行書き込みは `SyncCoordinatorCore.runChunk()` が変更を
- * 1 件ずつ順次処理するため発生しない(マニフェストの read-modify-write レースは無い)。
+ * 同一コレクションへの並行書き込みは `SyncCoordinatorCore`(`runChunk()`/`reconcile()`
+ * とも同じキューで直列化される)が変更を 1 件ずつ順次処理するため発生しない
+ * (マニフェストの read-modify-write レースは無い)。ただし点キーとマニフェストは
+ * 別々の書き込みのため、部分失敗や KV の伝播遅延によって両者が食い違う(orphan)
+ * ケース自体は残る。ここでは検知した不整合を警告ログに出すのみで、自己修復は行わない。
  */
-export function createIndexStore(docs: DocStore): IndexStore {
+export function createIndexStore(docs: DocStore, logger?: Logger): IndexStore {
   async function readManifest(collection: string): Promise<IndexEntry[]> {
     const raw = await docs.get(manifestKey(collection));
     return raw ? (JSON.parse(raw) as IndexEntry[]) : [];
@@ -172,7 +176,18 @@ export function createIndexStore(docs: DocStore): IndexStore {
     },
     async removeEntry(collection, slug) {
       const existing = await findEntry(collection, slug);
-      if (!existing) return { wrote: false, writes: 0 };
+      if (!existing) {
+        // 点キーは既に無い。部分失敗や KV 伝播遅延でマニフェストにだけ slug が
+        // 残っている(orphan)可能性があるため検知して警告する(自己修復はしない)。
+        const manifest = await readManifest(collection);
+        if (manifest.some((e) => e.slug === slug)) {
+          logger?.warn?.(
+            "index の点キーとマニフェストが不整合です(マニフェストに orphan エントリ)",
+            { operation: "removeEntry", collection, slug },
+          );
+        }
+        return { wrote: false, writes: 0 };
+      }
       await docs.delete(pointKey(collection, slug));
       const manifest = await readManifest(collection);
       await docs.put(
