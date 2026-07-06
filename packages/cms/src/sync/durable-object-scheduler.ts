@@ -18,12 +18,13 @@ const STATE_KEY = "sync:state";
 /**
  * Durable Object storage を使う `SyncScheduler` 実装。
  *
- * 注意: DO インスタンスは Alarm 発火の間にエビクトされ得るため、`schedule` に渡した
- * `task` クロージャは同一インスタンスが生き続ける間のみ有効という前提を置いている。
- * 実際の `SyncCoordinatorDO`(#443 で結線)は `alarm()` ハンドラ内で
- * coordinator を都度再構築し `kick()` を呼ぶ設計にすることで、エビクト後も
- * 継続処理できるようにする。ここでの `task` 保持はホットパス(同一バースト内の
- * 連続実行)の最適化であり、正しさの前提ではない。
+ * 注意: `schedule` に渡された `task` クロージャは保持しない(`setAlarm` を
+ * 予約するのみ)。DO インスタンスは Alarm 発火の間にエビクトされ得るうえ、
+ * そもそも関数はシリアライズ不可能なため、storage 越しに `task` を持ち越す
+ * ことは原理的にできない。実際の起動は `alarm()` ハンドラの役目で、
+ * `SyncCoordinatorDO`(`sync-coordinator-do.ts`)がコンストラクタで
+ * `options.createCMS` を呼び直して coordinator を再構築し、`alarm()` から
+ * `kick()` を呼ぶことでエビクト後も継続処理できるようにしている。
  */
 export function createDurableObjectSyncScheduler(
   state: DurableObjectStateLike,
