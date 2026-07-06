@@ -1,9 +1,9 @@
 import { NotionRenderer } from "@notion-headless-cms/react-renderer";
-import { NotionRevalidator } from "@notion-headless-cms/react-renderer/next";
 import {
   denormalizeBlocks,
   toPageLinkMap,
-} from "@notion-headless-cms/react-renderer/v3";
+} from "@notion-headless-cms/react-renderer/cms";
+import { NotionRevalidator } from "@notion-headless-cms/react-renderer/next";
 import { notFound } from "next/navigation";
 import { ensureSynced } from "@/app/lib/cms";
 

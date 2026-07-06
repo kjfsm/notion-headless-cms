@@ -3,7 +3,7 @@
 [![CI](https://github.com/kjfsm/notion-headless-cms/actions/workflows/ci.yml/badge.svg)](https://github.com/kjfsm/notion-headless-cms/actions/workflows/ci.yml)
 [![E2E Nightly](https://github.com/kjfsm/notion-headless-cms/actions/workflows/e2e-nightly.yml/badge.svg)](https://github.com/kjfsm/notion-headless-cms/actions/workflows/e2e-nightly.yml)
 [![codecov](https://codecov.io/gh/kjfsm/notion-headless-cms/graph/badge.svg?token=H5R9JTFXU1)](https://codecov.io/gh/kjfsm/notion-headless-cms)
-[![npm:core](https://img.shields.io/npm/v/@notion-headless-cms/core?label=core)](https://www.npmjs.com/package/@notion-headless-cms/core)
+[![npm:cms](https://img.shields.io/npm/v/@notion-headless-cms/cms?label=cms)](https://www.npmjs.com/package/@notion-headless-cms/cms)
 
 Notion をヘッドレス CMS として利用するための TypeScript ライブラリ群。Node.js・Next.js・Cloudflare Workers に対応。SWR キャッシュ・画像プロキシ・Webhook 受信を標準装備。
 
@@ -14,9 +14,10 @@ Notion をヘッドレス CMS として利用するための TypeScript ライ�
 ### 1. インストール
 
 ```bash
-pnpm add @notion-headless-cms/client @notion-headless-cms/cli
-# peer deps（CLI 実行・スキーマ解決に必要）
-pnpm add @notionhq/client zod notion-to-md
+pnpm add @notion-headless-cms/cms
+pnpm add -D @notion-headless-cms/cli
+# peer dep（Notion API クライアント）
+pnpm add @notionhq/client
 ```
 
 ### 2. Notion インテグレーション設定
@@ -33,7 +34,10 @@ Notion DB には最低限これらプロパティが必要です:
 | slug | テキスト | URL スラッグ（一意） |
 | status | ステータス | 公開状態 |
 
-### 3. スキーマ生成
+### 3. スキーマの雛形を作る
+
+スキーマ本体は codegen ではなく TS ファースト（`defineCollection`/`defineSchema`）で書き、
+育てていく運用。`nhc pull` が Notion DB を introspect して雛形を一度だけ生成する。
 
 ```bash
 # nhc.config.ts を作成
@@ -42,297 +46,20 @@ import { defineConfig, env } from "@notion-headless-cms/cli";
 
 export default defineConfig({
   notionToken: env("NOTION_TOKEN"),
+  schemaModule: "src/schema.ts",
   collections: {
     // dbName で Notion DB を検索して ID を自動解決します
-    posts: { dbName: "ブログ記事DB", slugField: "slug", statusField: "status" },
+    posts: { dbName: "ブログ記事DB" },
   },
 });
 EOF
 
-# スキーマ生成
-npx nhc generate
+# Notion DB を introspect して雛形を src/collections/ に生成
+NOTION_TOKEN=secret_xxx npx nhc pull
 ```
 
-### 4. クライアント作成
-
-`createCMS` 一本で組み立てる。引数はデータの流れ「**取得 → 表現 → 永続化**」で
-3 グループに分かれる：**`notion`（取得元: schema / token / 公開ポリシー）**、
-**`render`（出力先: content / OGP）**、**`cache`（キャッシュ戦略）**。
-
-> ⚠️ `@notion-headless-cms/cms`（後述の「完全マテリアライズド方式で動かす (v3)」節）にも
-> 同名の `createCMS` が存在するが、引数・戻り値ともに**別物**（互換性なし）。
-> import 元のパッケージ名を必ず確認すること。
-
-```ts
-// src/lib/cms.ts
-import { createCMS } from "@notion-headless-cms/client";
-import { schema } from "./generated/nhc.js";
-
-export const cms = createCMS({
-  notion: {
-    schema,
-    token: process.env.NOTION_TOKEN!,
-    collections: {
-      // published の値は schema の status options で型補完される
-      posts: { published: ["公開済み"] },
-    },
-  },
-  render: { content: "html" }, // "html" | "react"（取得戦略 + renderer を内部結線）
-  // cache 省略時は in-process memory が既定（document / image 兼用）
-});
-```
-
-### 5. データ取得
-
-本文は **`async` メソッド** で取得する（`title` などのメタデータはプロパティ）。
-取り出し方は `content` モードで型が切り替わる。
-
-```ts
-const posts = await cms.posts.list();
-const post = await cms.posts.find("my-first-post");
-
-// content: "html" のとき
-const html = await post?.html();     // HTML 文字列（Hono / Express / Astro 等）
-const md = await post?.markdown();   // Markdown 文字列
-
-// content: "react" のとき
-//   const blocks = await post?.notionBlocks(); // BlockObjectResponse ツリー（React 描画用）
-```
-
-> `content` モードでアクセサ型が切り替わるため、`"html"` で `notionBlocks()` を呼ぶような
-> 不整合は型エラーになる。React 描画は下記「React Router」を参照。
-
----
-
-## ランタイム別セットアップ
-
-### Cloudflare Workers
-
-```bash
-pnpm add @notion-headless-cms/client @notion-headless-cms/cli
-pnpm add @notionhq/client zod notion-to-md
-```
-
-```ts
-// src/lib/cms.ts
-import { createCMS } from "@notion-headless-cms/client";
-import { kvCache, r2Cache } from "@notion-headless-cms/client/cloudflare";
-import { schema } from "../generated/nhc";
-
-export function makeCms(
-  env: { NOTION_TOKEN: string; DOC_CACHE: KVNamespace; IMG_BUCKET: R2Bucket },
-  ctx: ExecutionContext,
-) {
-  return createCMS({
-    notion: {
-      schema,
-      token: env.NOTION_TOKEN,
-      collections: { posts: { published: ["公開済み"] } },
-    },
-    render: { content: "html" },
-    // document=KV / image=R2 を役割別に明示。どの binding がどのキャッシュか一目で分かる。
-    cache: {
-      document: kvCache({ namespace: env.DOC_CACHE }),
-      image: r2Cache({ bucket: env.IMG_BUCKET }),
-      waitUntil: (p) => ctx.waitUntil(p),
-    },
-  });
-}
-```
-
-> **注意**: `ctx` (ExecutionContext) は必須です。省略すると SWR のバックグラウンド更新がレスポンス送信後に打ち切られ、キャッシュが更新されません。
-
-### React Router (Cloudflare Workers)
-
-React Router v7 (Framework mode) + Cloudflare Workers なら、loader でデータを取り、
-`react-renderer` で Notion ブロックを React として描画できる。最短構成は次の 4 ファイル。
-
-```bash
-pnpm add @notion-headless-cms/client @notion-headless-cms/cli
-pnpm add @notionhq/client zod notion-to-md react react-dom react-router
-```
-
-```ts
-// app/lib/cms.ts — env / ctx を受け取って CMS を作る
-import { createCMS } from "@notion-headless-cms/client";
-import { kvCache, r2Cache } from "@notion-headless-cms/client/cloudflare";
-import { schema } from "../generated/nhc";
-
-export interface Env {
-  NOTION_TOKEN: string;
-  DOC_CACHE: KVNamespace;
-  IMG_BUCKET: R2Bucket;
-}
-
-export function makeCms(env: Env, ctx: ExecutionContext) {
-  return createCMS({
-    notion: {
-      schema,
-      token: env.NOTION_TOKEN,
-      collections: { posts: { published: ["公開済み"] } },
-    },
-    // content: "react" は blocks 取得戦略。loader で notionBlocks() を React 描画する。
-    render: { content: "react" },
-    cache: {
-      document: kvCache({ namespace: env.DOC_CACHE }),
-      image: r2Cache({ bucket: env.IMG_BUCKET }),
-      waitUntil: (p) => ctx.waitUntil(p),
-    },
-  });
-}
-```
-
-```ts
-// workers/app.ts — env / ctx を loader に橋渡しする
-import { createRequestHandler } from "react-router";
-
-const requestHandler = createRequestHandler(
-  () => import("virtual:react-router/server-build"),
-  import.meta.env.MODE,
-);
-
-export default {
-  async fetch(request, env, ctx) {
-    return requestHandler(request, { cloudflare: { env, ctx } });
-  },
-} satisfies ExportedHandler<Env>;
-```
-
-```tsx
-// app/routes/post.tsx — loader で取得し、React として描画
-import { NotionRevalidator, Renderer } from "@notion-headless-cms/client/react";
-import { makeCms } from "../lib/cms";
-import type { Route } from "./+types/post";
-
-export async function loader({ params, context }: Route.LoaderArgs) {
-  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
-  const post = await cms.posts.find(params.slug ?? "");
-  if (!post) throw new Response("Not Found", { status: 404 });
-  const blocks = await post.notionBlocks(); // NotionBlock[]（キャスト不要）
-  return { blocks, title: post.title, lastEditedTime: post.lastEditedTime };
-}
-
-export default function Post({ loaderData }: Route.ComponentProps) {
-  const { blocks, title } = loaderData;
-  return (
-    <article>
-      {/* Notion を更新したら静かに loader を再走させる */}
-      <NotionRevalidator />
-      <h1>{title}</h1>
-      <Renderer blocks={blocks} />
-    </article>
-  );
-}
-```
-
-```ts
-// app/routes/images.ts — 画像プロキシ（Notion の署名 URL 失効対策）
-import { makeCms } from "../lib/cms";
-import type { Route } from "./+types/images";
-
-export async function loader({ params, context }: Route.LoaderArgs) {
-  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
-  const object = await cms.getCachedImage(params.hash ?? "");
-  if (!object) return new Response("Not Found", { status: 404 });
-  const headers = new Headers();
-  if (object.contentType) headers.set("content-type", object.contentType);
-  headers.set("cache-control", "public, max-age=31536000, immutable");
-  return new Response(object.data, { headers });
-}
-```
-
-ルート定義（`app/routes.ts`）に `/posts/:slug` と `/api/images/:hash` を登録する。
-
-完全に動く例 → [`examples/cloudflare-react-router/`](./examples/cloudflare-react-router/)、
-詳しい解説（KV ポーリング再検証・warm・キャッシュ戦略）→ [`docs/ja/recipes/react-router.md`](./docs/ja/recipes/react-router.md)。
-
-### Next.js (App Router)
-
-```bash
-pnpm add @notion-headless-cms/client @notion-headless-cms/cache @notion-headless-cms/cli
-pnpm add @notionhq/client zod notion-to-md
-```
-
-```ts
-// app/lib/cms.ts
-import { createCMS, memoryCache } from "@notion-headless-cms/client";
-import { nextCache } from "@notion-headless-cms/client/next";
-import { schema } from "@/app/generated/nhc";
-
-export const cms = createCMS({
-  notion: {
-    schema,
-    token: process.env.NOTION_TOKEN!,
-    collections: { posts: { published: ["公開済み"] } },
-  },
-  render: { content: "html" },
-  // document は Next.js の ISR、image は in-process メモリ
-  cache: {
-    document: nextCache({ tags: ["posts"] }),
-    image: memoryCache(),
-  },
-});
-```
-
-```ts
-// app/api/cms/[...path]/route.ts
-import { createNextHandler } from "@notion-headless-cms/client/next";
-import { cms } from "@/app/lib/cms";
-
-const handler = createNextHandler(cms, { webhookSecret: process.env.REVALIDATE_SECRET });
-export const GET = handler;
-export const POST = handler;
-```
-
-このハンドラは画像プロキシ (`/api/cms/images/:hash`) と Webhook (`/api/cms/revalidate`) の 2 ルートをまとめて受ける。Notion 画像 URL は約 1 時間で失効するため、`cms` 経由で生成された HTML 内の画像はこのプロキシ URL (`/api/cms/images/{sha256}`) に書き換えられ、キャッシュから配信される。
-
-ハンドラを使わず個別の route で受けたい場合のサンプル:
-
-```ts
-// app/api/cms/images/[hash]/route.ts
-import { cms } from "@/app/lib/cms";
-
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ hash: string }> },
-) {
-  const { hash } = await params;
-  const image = await cms.getCachedImage(hash);
-  if (!image) return new Response("Not Found", { status: 404 });
-  return new Response(image.data, {
-    headers: {
-      "content-type": image.contentType,
-      "cache-control": "public, max-age=31536000, immutable",
-    },
-  });
-}
-```
-
-`createCMS` の画像プロキシは `/api/cms/images` に固定されており、`createNextHandler(cms)` が同じパスで配信する（個別 route の自前実装は不要）。
-
----
-
-## 完全マテリアライズド方式で動かす (v3 / `@notion-headless-cms/cms`)
-
-上記の `client`（v2）は「アクセス時に Notion と突合する SWR キャッシュ」型。それとは別に、
-`@notion-headless-cms/cms`（v3）という**独立した**パッケージがもう一つのアーキテクチャを提供する:
-Notion との同期をリクエスト経路から完全に切り離し、KV/R2 上にコンテンツをマテリアライズしておく方式。
-
-> ⚠️ こちらの `createCMS`（`@notion-headless-cms/cms`）は v2 (`@notion-headless-cms/client`) の
-> `createCMS` と**名前が同じだが引数・戻り値は別物**。import 元（パッケージ名）で必ず区別すること。
-
-| パッケージ | 役割 |
-|---|---|
-| `@notion-headless-cms/cms` | v3 単一パッケージ。マテリアライズドコンテンツレプリカ + 非同期同期。読者リクエスト処理中に Notion API を呼ばない |
-
-どちらを選ぶかは要件次第で、優劣ではなく設計思想の違い:
-
-- **v2 (`client`)**: オンデマンド SWR/TTL 取得。キャッシュ無し／薄いキャッシュ構成にも向く、アクセス時に鮮度を突合したい場合
-- **v3 (`cms`)**: 完全事前同期 + push 型。読者 Worker の Notion API 呼び出し・レイテンシをゼロにしたい、Durable Object で同期を一元化したい場合
-
-### スキーマ定義
-
-`defineCollection`/`defineSchema` で TypeScript ファーストにスキーマを書く（codegen ではなく直接編集して育てる運用）。
+生成された雛形を `src/schema.ts` に移し、必要に応じて `published`/`accessible` などを調整する
+（そのまま `nhc.config.ts` の `schemaModule` が指すパスに置けば `nhc check`/`nhc doctor` から検証できる）。
 
 ```ts
 // src/schema.ts
@@ -356,7 +83,55 @@ const posts = defineCollection({
 export const schema = defineSchema({ posts });
 ```
 
-### Cloudflare Workers（stores + syncDelegate）
+### 4. クライアント作成
+
+`createCMS` は Notion アクセス・同期・ストレージ・HTTP 配信を1つに束ねる唯一のエントリ。
+**読者リクエスト処理中は Notion API を一切呼ばない**のが北極星で、実際の同期（Notion 取得）は
+`sync.kick()`（または webhook / Cron）が担う。`stores`/`scheduler` を省略すると in-memory
+実装にフォールバックするため、KV/R2/DO が無くても最小構成で動く。
+
+```ts
+// src/lib/cms.ts
+import { createCMS } from "@notion-headless-cms/cms";
+import { schema } from "../schema.js";
+
+export const cms = createCMS({
+  schema,
+  notion: { token: process.env.NOTION_TOKEN ?? "" },
+});
+```
+
+### 5. データ取得
+
+同期をキックしてから読み取る。`kick()` は 1 チャンク（既定 2 件）だけ処理する設計のため、
+一括スクリプトとして全件を反映したい場合は cursor が尽きるまで手動で回す。
+
+```ts
+let state = await cms.sync.getState();
+do {
+  await cms.sync.kick();
+  state = await cms.sync.getState();
+} while (state.cursor !== null);
+
+const { items: posts } = await cms.posts.list(); // { items, nextCursor, hasMore }
+const post = await cms.posts.find("my-first-post"); // EntrySnapshot | null
+
+// メタデータはプロパティ、本文は正規化済みブロック配列
+console.log(post?.meta.title, post?.slug);
+console.log(post?.blocks); // NormalizedBlock[]（JSON 互換）
+```
+
+本文（`blocks`）を HTML やコンポーネントとして描画する方法は下記
+「[レンダラの選択](./docs/ja/choosing-a-renderer.md)」を参照。
+
+---
+
+## ランタイム別セットアップ
+
+いずれのランタイムでも `createCMS` の組み立て方は同じで、違うのは `stores`（`docs`/`blobs` の
+永続化先）と `scheduler`/`syncDelegate`（Notion 同期の駆動方法）だけ。
+
+### Cloudflare Workers（KV/R2 + Durable Object）
 
 読者用の stateless Worker は KV/R2 の読み取りだけを行い、Notion API への直列アクセスは
 `SyncCoordinatorDO`（Durable Object）に一元化する。
@@ -371,7 +146,17 @@ import {
 } from "@notion-headless-cms/cms/cloudflare";
 import { schema } from "../schema.js";
 
-export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void }) {
+export interface Env {
+  readonly NOTION_TOKEN: string;
+  readonly DOC_CACHE: KVNamespace;
+  readonly IMG_BUCKET: R2Bucket;
+  readonly SYNC_COORDINATOR: DurableObjectNamespace;
+}
+
+export function makeCms(
+  env: Env,
+  ctx: { waitUntil(p: Promise<unknown>): void },
+) {
   const id = env.SYNC_COORDINATOR.idFromName("global");
   const stub = env.SYNC_COORDINATOR.get(id);
   return createCMS({
@@ -381,79 +166,269 @@ export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void })
       blobs: r2BlobStore(env.IMG_BUCKET),
     },
     syncDelegate: durableObjectSyncDelegate({ stub }),
-    waitUntil: (p) => ctx.waitUntil(p),
+    waitUntil: (p: Promise<unknown>) => ctx.waitUntil(p),
   });
 }
 ```
 
 ```ts
 // src/lib/do.ts — Notion アクセスを直列化する Durable Object 側
+import type { DurableObjectStateLike } from "@notion-headless-cms/cms";
 import {
   createCMS,
   createDurableObjectSyncScheduler,
 } from "@notion-headless-cms/cms";
-import { createSyncCoordinatorDO, kvDocStore, r2BlobStore } from "@notion-headless-cms/cms/cloudflare";
+import {
+  createSyncCoordinatorDO,
+  kvDocStore,
+  r2BlobStore,
+} from "@notion-headless-cms/cms/cloudflare";
 import { schema } from "../schema.js";
+import type { Env } from "./cms.js";
 
-export const SyncCoordinatorDO = createSyncCoordinatorDO({
-  createCMS: (state, env) =>
+export const SyncCoordinatorDO = createSyncCoordinatorDO<Env>({
+  createCMS: (state: DurableObjectStateLike, env: Env) =>
     createCMS({
       schema,
       notion: { token: env.NOTION_TOKEN },
-      stores: { docs: kvDocStore(env.DOC_CACHE), blobs: r2BlobStore(env.IMG_BUCKET) },
+      stores: {
+        docs: kvDocStore(env.DOC_CACHE),
+        blobs: r2BlobStore(env.IMG_BUCKET),
+      },
       scheduler: createDurableObjectSyncScheduler(state),
     }),
 });
 ```
 
-完全に動く例 → [`examples/cloudflare-hono/`](./examples/cloudflare-hono/)（`src/schema.ts` / `src/lib/cms.ts` / `src/lib/do.ts`）。
+同期のトリガーは Notion webhook（`cms.fetch(request)` が受ける）と、削除検知用の Cron
+Trigger（`cms.scheduled()` → DO の `reconcile()`）。完全に動く例 →
+[`examples/cloudflare-hono/`](./examples/cloudflare-hono/)（`src/schema.ts` /
+`src/lib/cms.ts` / `src/lib/do.ts`）。
+
+### React Router (Cloudflare Workers)
+
+Durable Object 無しでも、KV/R2 + Worker isolate 内スケジューラで動かせる（isolate の
+入れ替わりでカーソルは失われるが、差分クエリが既存 version と一致すれば打ち切るため
+再同期コストは小さい）。
+
+```ts
+// app/lib/cms.ts
+import { createCMS, createNodeSyncScheduler } from "@notion-headless-cms/cms";
+import { kvDocStore, r2BlobStore } from "@notion-headless-cms/cms/cloudflare";
+import { schema } from "../schema.js";
+
+export interface Env {
+  readonly NOTION_TOKEN: string;
+  readonly DOC_CACHE: KVNamespace;
+  readonly IMG_BUCKET: R2Bucket;
+}
+
+export function makeCms(
+  env: Env,
+  ctx: { waitUntil(p: Promise<unknown>): void },
+) {
+  return createCMS({
+    schema,
+    notion: { token: env.NOTION_TOKEN },
+    stores: {
+      docs: kvDocStore(env.DOC_CACHE),
+      blobs: r2BlobStore(env.IMG_BUCKET),
+    },
+    scheduler: createNodeSyncScheduler(),
+    waitUntil: (p: Promise<unknown>) => ctx.waitUntil(p),
+  });
+}
+
+export async function ensureSynced(cms: ReturnType<typeof makeCms>) {
+  let state = await cms.sync.getState();
+  do {
+    await cms.sync.kick();
+    state = await cms.sync.getState();
+  } while (state.cursor !== null);
+}
+```
+
+```tsx
+// app/routes/post.tsx — loader で取得し、React として描画
+import { NotionRenderer } from "@notion-headless-cms/react-renderer";
+import {
+  denormalizeBlocks,
+  toPageLinkMap,
+} from "@notion-headless-cms/react-renderer/cms";
+import { useNotionRevalidate } from "@notion-headless-cms/react-renderer/router";
+import { data } from "react-router";
+import { ensureSynced, makeCms } from "../lib/cms";
+import type { Route } from "./+types/post";
+
+export async function loader({ params, context }: Route.LoaderArgs) {
+  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
+  await ensureSynced(cms);
+  const post = await cms.posts.find(params.slug ?? "");
+  if (!post) throw data("Not Found", { status: 404 });
+  return { post };
+}
+
+export default function Post({ loaderData }: Route.ComponentProps) {
+  const { post } = loaderData;
+  const meta = post.meta as { title?: string | null };
+  useNotionRevalidate(); // mount / 再フォーカス時に loader を再走させる
+  return (
+    <article>
+      <h1>{meta.title ?? post.slug}</h1>
+      <NotionRenderer
+        blocks={denormalizeBlocks(post.blocks)}
+        pageLinks={toPageLinkMap(post.links)}
+      />
+    </article>
+  );
+}
+```
+
+ルート定義（`app/routes.ts`）で `/api/cms/*` を `cms.fetch(request)` に委譲するルートへ
+まとめて向ける（画像プロキシ・OGP・webhook を 1 本で受けられる）。
+
+完全に動く例 → [`examples/cloudflare-react-router/`](./examples/cloudflare-react-router/)。
+
+### Next.js (App Router / Vercel)
+
+Vercel の serverless/edge 関数はインスタンス間でメモリを共有しないため、in-memory store は
+永続しない（コールドスタートのたびに再同期が必要）。永続化したい場合は Vercel KV/Blob 向けの
+`DocStore`/`BlobStore` 実装に差し替える（実装契約は `@notion-headless-cms/cms/testing` の
+ストア契約テストを参照）。
+
+```ts
+// app/lib/cms.ts
+import {
+  createCMS,
+  createNodeSyncScheduler,
+  memoryBlobStore,
+  memoryDocStore,
+} from "@notion-headless-cms/cms";
+import { schema } from "@/app/schema";
+
+type Cms = ReturnType<typeof createCMS<typeof schema>>;
+
+let instance: Cms | undefined;
+
+// `next build` はモジュールを import するだけで実行しないため、トップレベルで
+// createCMS() を呼ぶと NOTION_TOKEN が無いビルド環境でビルドが失敗する。
+// 構築を実際に使う時点まで遅延することでこれを避ける。
+export function getCms(): Cms {
+  if (!instance) {
+    instance = createCMS({
+      schema,
+      notion: { token: process.env.NOTION_TOKEN ?? "" },
+      stores: { docs: memoryDocStore(), blobs: memoryBlobStore() },
+      scheduler: createNodeSyncScheduler(),
+      webhookSecret: process.env.REVALIDATE_SECRET,
+    });
+  }
+  return instance;
+}
+
+let syncing: Promise<void> | null = null;
+
+export async function ensureSynced(): Promise<Cms> {
+  const cms = getCms();
+  if (!syncing) {
+    syncing = (async () => {
+      let state = await cms.sync.getState();
+      do {
+        await cms.sync.kick();
+        state = await cms.sync.getState();
+      } while (state.cursor !== null);
+    })();
+  }
+  await syncing;
+  return cms;
+}
+```
+
+```ts
+// app/api/cms/[...path]/route.ts — 画像プロキシ・OGP・webhook を cms.fetch() 1 本に委譲
+import { getCms } from "@/app/lib/cms";
+
+export async function GET(request: Request) {
+  return getCms().fetch(request);
+}
+
+export async function POST(request: Request) {
+  return getCms().fetch(request);
+}
+```
+
+```tsx
+// app/posts/[slug]/page.tsx
+import { NotionRenderer } from "@notion-headless-cms/react-renderer";
+import {
+  denormalizeBlocks,
+  toPageLinkMap,
+} from "@notion-headless-cms/react-renderer/cms";
+import { NotionRevalidator } from "@notion-headless-cms/react-renderer/next";
+import { notFound } from "next/navigation";
+import { ensureSynced } from "@/app/lib/cms";
+
+export default async function PostPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
+  const cms = await ensureSynced();
+  const post = await cms.posts.find(slug);
+  if (!post) notFound();
+
+  return (
+    <article>
+      <NotionRevalidator />
+      <h1>{post.slug}</h1>
+      <NotionRenderer
+        blocks={denormalizeBlocks(post.blocks)}
+        pageLinks={toPageLinkMap(post.links)}
+        ogpEndpoint="/api/cms/ogp"
+      />
+    </article>
+  );
+}
+```
+
+完全に動く例 → [`examples/vercel-nextjs/`](./examples/vercel-nextjs/)。
 
 ---
 
 ## パッケージ構成
 
-### 利用側（これだけで揃う）
+このリポジトリの現行アーキテクチャは `@notion-headless-cms/cms` の 1 パッケージに集約されている
+（他 workspace パッケージへの依存を持たない独立パッケージ）。`react-renderer` / `cli` はいずれも
+`cms` にのみ依存する。
 
 | パッケージ / サブパス | 役割 |
 |---|---|
-| `@notion-headless-cms/client` | `createCMS` 単一エントリ。全ランタイム共通 |
-| `@notion-headless-cms/client/cloudflare` | `cloudflarePreset` / `restKvCache`（Cloudflare Workers） |
-| `@notion-headless-cms/client/next` | `createNextHandler` / `nextPreset`（Next.js App Router） |
-| `@notion-headless-cms/client/react` | `Renderer` / `NotionRevalidator`（React 描画） |
-| `@notion-headless-cms/cli` | `nhc init` / `nhc generate` スキーマ生成 CLI |
-
-### コアパッケージ（拡張作者向け）
-
-| パッケージ | 役割 |
-|---|---|
-| `@notion-headless-cms/core` | CMS エンジン・SWR・キャッシュ抽象 |
-| `@notion-headless-cms/notion-source` | Notion CMSAdapter 実装 |
-| `@notion-headless-cms/cache` | キャッシュアダプタ (memory / cloudflare / next) |
-| `@notion-headless-cms/markdown-html` | Markdown → HTML レンダラ |
-| `@notion-headless-cms/block-html` | Notion ブロック拡張 HTML レンダラ |
-| `@notion-headless-cms/fetch-blocks` | BlockObjectResponse ツリー取得（`notionBlocks()` 用）+ React `Renderer` |
-| `@notion-headless-cms/fetch-markdown` | Notion Markdown Export API で本文を 1 リクエスト取得（Cloudflare Workers Free プランの 50 subrequest 制限対策） |
-| `@notion-headless-cms/react-renderer` | BlockObjectResponse → React コンポーネント / 再検証フック |
-| `@notion-headless-cms/notion-katex` | fetch 時に数式ブロックを KaTeX で pre-render し、Workers バンドルから katex を除外する拡張 |
-| `@notion-headless-cms/notion-shiki` | fetch 時にコードブロックを shiki で pre-render し、Workers バンドルから shiki を除外する拡張 |
-| `@notion-headless-cms/testing` | フェイク DataSource・フェイクキャッシュ・fixture クライアントのテストユーティリティ |
-| `@notion-headless-cms/validate` | createClient / notionSource / CLI config を実行時検証する任意の zod ベースバリデーション |
+| `@notion-headless-cms/cms` | `createCMS` 単一エントリ。Notion アクセス・同期・ストレージ・HTTP 配信を統合 |
+| `@notion-headless-cms/cms/cloudflare` | `kvDocStore` / `r2BlobStore` / `createSyncCoordinatorDO` / `durableObjectSyncDelegate`（Cloudflare Workers） |
+| `@notion-headless-cms/cms/node` | `fileDocStore` / `fileBlobStore`（`node:fs` に依存する Node 専用ランタイム実装） |
+| `@notion-headless-cms/cms/html` | React を使わない HTML レンダラ |
+| `@notion-headless-cms/cms/testing` | `DocStore`/`BlobStore` 実装の契約テストユーティリティ |
+| `@notion-headless-cms/react-renderer` | 正規化ブロック（`NormalizedBlock[]`）→ React コンポーネント / 再検証フック |
+| `@notion-headless-cms/cli` | `nhc init` / `nhc pull` / `nhc check` / `nhc doctor` / `nhc sync` |
 
 ---
 
 ## データフロー
 
+**読者リクエスト処理中は Notion API を一切呼ばない**のが北極星。Notion との同期はリクエスト
+経路の外側（webhook / Cron / ローカル kick）で行われ、`find()`/`list()` はストアを読むだけで完結する。
+
 ```mermaid
 flowchart LR
-  notion[(Notion DB)]
-  orm["notion-orm\nAPI 取得 + Markdown 変換"]
-  core["core\ncreateClient / SWR / フック"]
-  cache[(KV / メモリ / Next.js cache)]
+  notion[(Notion API)]
+  sync["cms: 同期\nSyncCoordinatorCore / Durable Object"]
+  stores[(KV・R2 / メモリ / ローカルファイル)]
+  query["cms: find() / list()\n(Notion 未アクセス)"]
   output["Workers / Node.js / Next.js"]
 
-  notion --> orm --> core
-  core <--> cache
-  core --> output
+  notion --> sync --> stores
+  stores --> query --> output
 ```
 
 ---
@@ -483,6 +458,7 @@ pnpm add @notion-headless-cms/cms@canary @notion-headless-cms/react-renderer@can
 - [改善ロードマップ](./docs/ja/improvements.md)
 - [レシピ集](./docs/ja/recipes/) — [Cloudflare Workers](./docs/ja/recipes/cloudflare-workers.md) / [React Router](./docs/ja/recipes/react-router.md) / [Next.js](./docs/ja/recipes/nextjs-app-router.md)
 - [API リファレンス](./docs/ja/api/)
+- [v2 アーキテクチャ削除 → cms 移行ガイド](./docs/ja/migration/v2-removal.md)
 
 英語化に備えて `docs/{locale}/` の構造を採用しています。現在は `ja` のみ。
 
@@ -490,9 +466,9 @@ pnpm add @notion-headless-cms/cms@canary @notion-headless-cms/react-renderer@can
 
 [`apps/docs/`](./apps/docs/) は本ライブラリ自身で構築された公式サイトです。
 
-- ランディング・固定ページは Notion DB から `@notion-headless-cms/client`（`/cloudflare`）で配信（dogfooding）
+- ランディング・固定ページは Notion DB から `@notion-headless-cms/cms`（`/cloudflare`）で配信（dogfooding）
 - ライブラリ本体の API リファレンス・レシピは `docs/ja/` 配下の md を静的レンダリング
-- Cloudflare Workers + R2 + KV、`/api/revalidate` で Notion Webhook 受信
+- Cloudflare Workers + R2 + KV、`/api/cms/webhook` で Notion Webhook 受信
 
 ローカル起動: `pnpm --filter @notion-headless-cms/docs dev`
 
@@ -500,28 +476,27 @@ pnpm add @notion-headless-cms/cms@canary @notion-headless-cms/react-renderer@can
 
 ## アーキテクチャと拡張
 
-`createCMS` で足りない高度なケース（独自データソース・カスタム fetch 戦略）は、
-`@notion-headless-cms/client` が re-export する低レベル API（`createClient` /
-`notionSource` / `nodePreset` 等）を直接組み立てる escape hatch を使えます。
+`createCMS` の既定挙動で足りない高度なケースは、以下の差し替え口（escape hatch）で対応します。
+
+- **`transforms`**: shiki（コード）/ katex（数式）のような同期時の事前レンダー拡張。
+  `TransformStage`（`transform(blocks)` を実装する純関数的な契約）を自作して渡せます。
+- **`stores.docs` / `stores.blobs`**: KV/R2 以外の永続化先（Vercel KV/Blob 等）に差し替える場合は
+  `DocStore`/`BlobStore` を自作します。`@notion-headless-cms/cms/testing` の契約テスト
+  （`runDocStoreContract` / `runBlobStoreContract`）で実装の互換性を検証できます。
+- **`syncDelegate`**: Durable Object 以外の場所（別サービス等）に同期制御を委譲したい場合の口。
 
 ```ts
-import { createClient, nodePreset } from "@notion-headless-cms/client";
-import type { CMSAdapter } from "@notion-headless-cms/core/source-author";
+import type { TransformStage } from "@notion-headless-cms/cms";
 
-// カスタムデータソースは CMSAdapter を実装する
-const mySource: CMSAdapter = {
-  collections: {
-    articles: {
-      source: myDataSource,
-      slugField: "slug",
-    },
+const myTransform: TransformStage = {
+  name: "my-transform",
+  async transform(blocks) {
+    // blocks を加工した新しい配列を返す
+    return blocks;
   },
 };
 
-const cms = createClient({
-  sources: { custom: mySource },
-  ...nodePreset(),
-});
+const cms = createCMS({ schema, notion: { token }, transforms: [myTransform] });
 ```
 
 詳細は [`docs/ja/architecture.md`](./docs/ja/architecture.md) を参照してください。

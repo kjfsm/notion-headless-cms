@@ -9,140 +9,30 @@ order: 1
 
 CLAUDE.md と `.claude/rules/` は**事実**を述べる。ここではその**なぜ**を記録する。新規実装やリファクタの判断基準として参照。
 
-## 依存方向
+## packages/cms
+
+「何ができるか」は `.claude/rules/cms.md` に事実として書く。ここではこのアーキテクチャが**なぜ**こう設計されているかを記録する。
+
+### 依存方向
 
 ```
-Notion DB
-  └─ @notion-headless-cms/notion-orm（ユーザーは直接 import しない・notion-source 経由で利用）
-       ├─ @notion-headless-cms/fetch-blocks   （BlockObjectResponse ツリー取得 + React Renderer）
-       ├─ @notion-headless-cms/fetch-markdown （Notion Markdown API で本文取得 / サブリクエスト節約）
-       ├─ @notion-headless-cms/markdown-html  （Markdown→HTML / SSR-only / 非 React 向け）
-       ├─ @notion-headless-cms/react-renderer （BlockObjectResponse→React / shadcn/ui + Tailwind v4）
-       ├─ @notion-headless-cms/notion-source  （CMSAdapter 実装 / createCMS が内部で組み込む）
-       └─ @notion-headless-cms/core           （CMS 統合・キャッシュ・フック・nodePreset）
-            └─ @notion-headless-cms/cache      （memory + サブパス /cloudflare（KV+R2, kvCache / r2Cache）/next）
-
-利用側の単一エントリ（これ 1 つ + サブパスで揃う）:
-  @notion-headless-cms/client            = createCMS（core + notion-source + fetch-* + preset を集約）
-  @notion-headless-cms/client/cloudflare = kvCache / r2Cache / restKvCache
-  @notion-headless-cms/client/next       = createNextHandler / nextPreset
-  @notion-headless-cms/client/react      = Renderer / NotionRevalidator
+Notion API
+  └─ @notion-headless-cms/cms（Notion アクセス・同期・ストレージ・HTTP 配信を1パッケージに統合。ゼロ依存）
+       ├─ @notion-headless-cms/react-renderer（BlockObjectResponse→React、shadcn/ui + Tailwind v4）
+       └─ @notion-headless-cms/cli（nhc pull/check/doctor/sync/init）
 ```
 
-### なぜこの形か
+#### なぜこの形か
 
-- `core` を Notion 固有知識から隔離することで、将来 `source-contentful` などへの差し替えを可能にする
-- `markdown-html`（Markdown→HTML レンダラ）を差し替え可能にしたかった（remark → marked / markdown-it）
-- `react-renderer` は `renderer` (HTML) とは並列の出力経路。Markdown 中継せず Notion ブロックを直接 React に変換するため、rich_text annotations や mention 等の情報を失わずに描画できる。React アプリ向けに分離し、SSR-only / 非 React フレームワーク (Astro / Hono / Express) は `notion-embed` の HTML 出力を継続利用
-- アダプタが「ランタイム固有の面倒」を引き受け、core はランタイム中立を保つ
-- ランタイム差分（Node / Cloudflare）を `nodePreset` / `cloudflarePreset` という preset に閉じ込めているのは、ユーザーが `createClient` 一本で書けるようにするため（フレームワーク連携グルーとは役割を分離する）
-- 空の `CMSSources` インターフェースと `notion-source` パッケージを分離しているのは、生成物に Notion 固有のラッパー実装を埋め込まずに済ませるため。`declare module` でアダプターパッケージが `sources.<key>` を宣言マージできるので、Fastify プラグインのように `import` するだけで型が拡張される。生成物はスキーマだけを持ち、ランタイム設定は `createCMS` / `createClient` 側で組み立てる
-- ランタイム選択・取得戦略・renderer の組み合わせを `@notion-headless-cms/client` の `createCMS` + サブパスの 1 か所に集約しているのは、二重定義と不整合フットガンを無くすため（RFC: `rfc/v2-usability-redesign.md`）。`createClient` / `notionSource` / preset は client が re-export する escape hatch として残す
-
-## SWR（Stale-While-Revalidate）
-
-### 戦略
-
-| 条件 | 挙動 |
-|---|---|
-| TTL 設定あり + 期限切れ | ブロッキングフェッチ（stale を返さない） |
-| TTL 設定あり + 期限内 | キャッシュ即時返却 + バックグラウンド差分チェック |
-| TTL 設定なし（永続） | キャッシュ即時返却 + バックグラウンドで毎回差分チェック |
-| キャッシュなし | ブロッキングフェッチ |
-
-### バックグラウンド差分チェック
-
-- アイテム: `source.getLastModified(item)` を `cached.notionUpdatedAt` と比較
-  - 変更あり → 再レンダリング + キャッシュ更新
-  - 変更なし + TTL あり → `cachedAt` をリセット（次回の期限切れを先送り）
-- リスト: `source.getListVersion(items)` で比較
-  - 変更あり → 新しいリストでキャッシュ更新
-  - 変更なし + TTL あり → `cachedAt` をリセット
-
-### なぜ TTL 切れをブロッキングにしたか
-
-- TTL を「許容できる陳腐化の上限」として使いたいユーザー要件に対応
-- TTL 未設定なら KV/R2 を永続キャッシュとして扱い、差分があれば裏で追従
-- 毎回差分チェックを行うことで TTL なしでも Notion 更新が次のリクエストに反映される
-
-### Webhook で即時反映
-
-- `$handler` に webhook エンドポイントを登録し、Notion 変更通知を受信
-- `revalidate()` でキャッシュ全体または特定スラッグを即時無効化
-- webhook で更新を即時反映する構成では push が主経路になるため、バックグラウンド差分チェックの
-  間隔 `swr.recheckWindowMs`（既定 30 秒＝webhook なし基準）は長め（例: 5 分）にして
-  Notion API 消費を抑えてよい。フォアグラウンドは常にキャッシュ即返しのため体感速度には影響しない
-
-## Notion 更新検知
-
-`last_edited_time` は `BaseContentItem.lastEditedTime` として `core` で公開され、
-schema で直接マッピング可能なメタデータフィールドである。
-CLI が Notion DB を introspect する際は `status` 型と同様に自動検出されるが、
-`PropertyDef.type` として定義不要（システム自動セット）。
-
-判定に使う理由:
-
-- Notion API に変更通知 API は無い（v5 時点）
-- `last_edited_time` は ISO-8601 で単調増加（マイクロ秒まで）
-- キャッシュメタデータに保存した時刻と比較するだけで差分検知できる
-
-## 画像プロキシ
-
-### 問題
-
-Notion 画像 URL は**期限付き**（署名 URL）。1 時間で失効するため、ユーザーの HTML に直貼りできない。
-
-### 解決
-
-1. `fetchAndCacheImage()` で画像 bytes を取得
-2. SHA256 ハッシュをキーにストレージ保存
-3. HTML 内の `src` を `/{imageProxyBase}/{hash}` に書き換え
-4. プロキシエンドポイントがストレージから返す
-
-### イミュータブル前提
-
-ハッシュキーなので同じ画像は 1 回だけ fetch される。Notion が同じ画像を再アップしてもハッシュが変われば別物として扱われる。
-
-## キャッシュ抽象
-
-### DocumentCacheAdapter / ImageCacheAdapter
-
-- document: HTML + メタデータ（`last_edited_time` など）
-- image: bytes のみ + content-type
-
-分けた理由:
-
-- document は TTL と検知が重要（renderer が重いので）
-- image はほぼイミュータブルで TTL 不要
-- ストレージ特性が違う（document は KV 的 / image は Blob 的）
-
-### 構造型 `R2BucketLike`
-
-`@cloudflare/workers-types` を実依存に入れない理由:
-
-- `@notion-headless-cms/cache`（`/cloudflare` サブパス）を Node.js テストで動かせる
-- 将来 `R2Bucket` が変わっても、必要な最小メソッドのみ互換を保てば良い
-- ユーザーは `R2Bucket` をそのまま渡せる（構造的サブタイプ）
-
-## エラー名前空間
-
-`<namespace>/<kind>` の二段名前空間にした理由:
-
-- 利用側が `isCMSErrorInNamespace(err, "source/")` で広く捕捉できる
-- 原因の層（source / cache / renderer / core）が即わかる
-- サードパーティ拡張でも `cache-redis/connection_failed` のように被らない
-- エラーコードの string enum は強すぎるため `string & {}` でリテラル補完だけ残す
-
-## packages/cms（v3）
-
-「何ができるか」は `.claude/rules/cms.md` に事実として書く。ここでは v2 とは独立したこの
-アーキテクチャが**なぜ**こう設計されているかを記録する。
+- `cms` 自体をゼロ依存にしているのは、CLI からも Cloudflare Workers からも同じ核を使い回すため。React・Notion SDK・Cloudflare のいずれかの型に実依存させると、どちらか一方でしか動かせない核になってしまう。`@notionhq/client` 等はすべて peerDependencies に留め、利用側が選んで入れる
+- HTML 出力（`cms` の `./html` サブパス、`render/`）と React 出力（`react-renderer`）を並列の出力経路として分けているのは、Markdown 等の中間形式を経由せず Notion ブロックを直接それぞれの出力へ変換したいため。中間形式を挟むと rich_text の annotations や mention 等の情報を落とさずに描画するのが難しくなる
+- 設定を `createCMS(opts)` 1 か所（schema・stores・notion・scheduler・syncDelegate・routes 等）に集約しているのは、二重定義と不整合フットガンを無くすため。「利用側の設定入口を 1 つに集約する」という方針自体は、それ以前の設計見直し（RFC）に遡る。経緯は履歴として [`docs/ja/history/rfc-v2-usability-redesign.md`](./history/rfc-v2-usability-redesign.md) に残る
 
 ### なぜ読者リクエスト処理中に Notion API を一切呼ばないのか
 
 Cloudflare Workers（特に無料プラン）は 1 リクエストあたりの subrequest 数・CPU 時間に厳しい
-上限がある。v2 の SWR 方式のようにアクセス時に Notion と突合する設計では、この予算がリクエスト
-ごとの Notion API 呼び出し有無に左右され、予測が難しい。v3 は同期を完全に読者リクエストの外へ
+上限がある。アクセスの都度 Notion API と突合して鮮度を確認する設計だと、この予算がリクエスト
+ごとの Notion API 呼び出し有無に左右され、予測が難しい。そこで同期を完全に読者リクエストの外へ
 追い出し、`find()`/`list()` を KV/R2 の参照だけに限定することで、読者 Worker のリクエスト処理に
 「固定でハードな」subrequest/CPU 予算を持たせられるようにしている。
 
@@ -153,6 +43,11 @@ Cloudflare Workers（特に無料プラン）は 1 リクエストあたりの s
 `syncDelegate`（`durableObjectSyncDelegate`）を使うと、Notion への直列アクセスを単一の Durable
 Object インスタンスに一元化でき、レート制限をアプリ全体で 1 箇所のリミッタ（`rate-limiter.ts`）
 だけで守れる。読者側 Worker は同期そのものには関与せず、KV/R2 の読み取りに専念できる。
+
+同じ理由で、webhook 通知そのものも 1 件届くたびに同期するのではなく `debounceMs`（既定
+3000ms）でまとめる。編集中は 1 ページに対して短時間に複数の webhook が届くことがあり、都度
+同期すると Notion API 消費が跳ね上がる。`SyncScheduler.schedule` は「既存の予約があれば置き換
+える」契約を持つため、連続イベントは自然に 1 回の同期へ収束する（`sync/coordinator.ts`）。
 
 ### Cloudflare 配線の合成プリミティブ（明示的・DI 可能）
 
@@ -168,13 +63,50 @@ consumer の定型配線を薄くするヘルパーを `@notion-headless-cms/cms
 - `readerReadOnly()`: 同期しない読み取り専用の `CMSSyncDelegate`（DO を持たないプレビュー/読者専用
   Worker が、本番 DO の同期済み KV/R2 を読むだけの構成で使う）
 
+### なぜ `DocStore`/`BlobStore` を構造型インターフェースにしているのか
+
+`store/cloudflare-types.ts` の `KVNamespaceLike`/`R2BucketLike` は `@cloudflare/workers-types` を
+実依存に入れない構造型として定義している。理由:
+
+- `@notion-headless-cms/cms` の本体（`/cloudflare` サブパス以外）を Node.js のテストで動かせる
+- 将来 `KVNamespace`/`R2Bucket` の型が変わっても、必要な最小メソッドだけ互換を保てば良い
+- 利用側は Workers の `env.XXX`（実 `KVNamespace`/`R2Bucket`）をそのまま渡せる（構造的サブタイプ）
+
+`store/cloudflare.ts` の `kvDocStore()`/`r2BlobStore()` がこの構造型を、`store/types.ts` の
+`DocStore`（KV 想定・index 用）/`BlobStore`（R2 想定・entry 本体と画像バイナリ用）という
+ランタイム中立の抽象へ橋渡しする。両者を分けているのは TTL の違いではなく（cms は同期済みの
+複製をそのまま永続化するだけで、SWR のようなキャッシュ失効の概念を持たない）、KV の点キー
+get/put と R2 のバイナリ get/head/put という**ストレージ特性の違い**に対応するため。
+
 ### なぜ画像・内部リンク・プロパティの変換を読み取り時ではなく同期時に行うのか
 
 Notion 画像 URL の解決・内部リンクの href 生成・プロパティの正規化はどれも「重い」か「外部
-呼び出しを伴う」処理になり得る。これらを読み取り時に行うと、v3 の北極星（読み取り経路を
-外部呼び出しゼロに保つ）が崩れる。そこで `pipeline/`（`images.ts`/`links.ts`/`properties.ts`/
+呼び出しを伴う」処理になり得る。これらを読み取り時に行うと、読み取り経路を外部呼び出しゼロに
+保つという北極星が崩れる。そこで `pipeline/`（`images.ts`/`links.ts`/`properties.ts`/
 `resolve-images.ts`）がすべて同期時に実行され、`find()`/`list()` は変換済みのプレーンな
 `EntrySnapshot`/`IndexEntry`（JSON）を返すだけになる。
+
+画像はその中でも特に同期時実行が必須な理由がある。Notion の画像 URL は署名付きで**期限が
+切れる**（およそ 1 時間）ため、そのまま焼き込むと表示のたびに失効した URL を掴むことになる。
+`pipeline/images.ts` の `extractImageRefs()` が block tree から file 参照（image/video/audio/
+file/pdf）を集め、`imageCacheKeySource()` で Notion 署名付きホストの再署名クエリを正規化した
+うえで SHA256 ハッシュを算出する。同期エンジンがこのハッシュをキーに実 fetch した bytes を
+`BlobStore` へ `image/{hash}` として永続化し、`resolve-images.ts` の `resolveImageUrls()` が
+block data 内の URL を `{imagesPath}/{hash}` へ書き換える。ハッシュキーは content-addressed
+なので同じ画像は 1 回しか fetch されず、Notion 側で再アップロードされても bytes が同じなら
+ハッシュも同じで重複保存されない（別画像なら別ハッシュになるため上書き事故もない）。配信は
+`http/handler.ts` が同じ `BlobStore` から読むだけのプロキシに徹する。あわせて
+`parseImageDimensions()` が先頭バイトから width/height を読み取り、`_dimensions` として block
+data に埋め込む（react-renderer 等が CLS ゼロ化に使う）。
+
+### なぜ差分同期に `last_edited_time` を使うのか
+
+Notion API には変更通知 API が無く、「何が変わったか」を能動的に教えてくれる購読の仕組みは
+無い。`last_edited_time` は ISO-8601 で単調増加するため、`listChanged`（`sync/notion-driver.ts`）
+は `last_edited_time` 降順でクエリし、保存済み index の `version`（= 直近の `last_edited_time`）
+と一致した時点で差分終了とみなす、という単純な比較だけで差分検知できる。この値はそのまま KV
+index の `version` として保存され、`find()` の versioned cache キー（`store/versioned-cache.ts`）
+にもそのまま使い回される。
 
 ### なぜ webhook 駆動の同期に加えて realtime push（WebSocket hub）があるのか
 
@@ -186,10 +118,22 @@ Notion の webhook 通知は配送保証が無く、遅延・欠落があり得�
 webhook 駆動同期・realtime push・mount/visibility revalidate の 3 つは互いの弱点を補い合う、
 独立した鮮度保証のレイヤーとして設計されている。
 
+### エラー名前空間
+
+`<namespace>/<kind>` の二段名前空間にした理由（`errors.ts`）:
+
+- 利用側が `isCMSErrorInNamespace(err, "sync/")` で広く捕捉できる
+- 原因の層（schema 定義 / store 読み書き / HTTP handler / 同期処理 / CLI）が即わかる
+- サードパーティ拡張でも `cache-redis/connection_failed` のように名前空間を分ければ被らない
+- エラーコードの string enum は強すぎるため `CMSErrorCode = BuiltInCMSErrorCode | (string & {})`
+  でリテラル補完だけ残す（`matchCMSError`/`err.is`/`err.inNamespace` はこの上に薄く乗る糖衣）
+
+現在の組み込み名前空間は `schema`/`store`/`handler`/`sync`/`cli` の 5 つ。コード一覧は
+`.claude/rules/error-handling.md` または `docs/ja/errors/index.md` を参照。
+
 ## 今後の拡張ポイント
 
-- `source-*` プラグイン化（`@notion-headless-cms/source-contentful` 等）
-- `DocumentCacheAdapter<T>` ジェネリクスで任意メタデータ対応
-- 画像変換（resize / format 変換）の CDN 統合
+- 画像の resize / format 変換（CDN 連携）: `parseImageDimensions()` は現状 width/height の
+  読み取りのみを行い、variant 生成は行っていない（`pipeline/images.ts` 参照）
 
 > 改善ロードマップの全体像は [`docs/ja/improvements.md`](./improvements.md) を参照。

@@ -1,229 +1,170 @@
 ---
-title: カスタムキャッシュ
-description: 独自 CacheAdapter を実装する
+title: カスタムストア
+description: 独自 DocStore / BlobStore を実装する
 category: レシピ
 order: 5
 ---
 
-# カスタムキャッシュアダプタの実装
+# カスタムストア（`DocStore` / `BlobStore`）の実装
 
-`@notion-headless-cms/core` は `DocumentCacheOps` / `ImageCacheOps` という 2 つのインターフェースを公開している。
-`CacheAdapter` としてまとめてから `createClient` の `cache` に渡すことで、
-R2 / Next.js ISR 以外のストレージ（Redis / Memcached / S3 など）にキャッシュを差し替えられる。
+`@notion-headless-cms/cms` は `createCMS({ stores: { docs, blobs } })` に渡す 2 つの
+ストレージインターフェースを公開している。組み込みは KV/R2（`/cloudflare`）・ファイル
+（`/node`）・in-memory（`.` 本体）の 3 系統だが、Redis / S3 / Vercel KV・Blob など任意の
+バックエンドに差し替えられる。
 
-## CacheAdapter の構造
-
-```ts
-import type { CacheAdapter, DocumentCacheOps, ImageCacheOps } from "@notion-headless-cms/core";
-
-// handles で document / image のどちらを担当するかを宣言する
-const myAdapter: CacheAdapter = {
-  name: "my-cache",
-  handles: ["document", "image"],
-  doc: myDocumentOps,  // DocumentCacheOps の実装
-  img: myImageOps,     // ImageCacheOps の実装
-};
-```
-
-## DocumentCacheOps の実装例（Redis）
+## `DocStore` / `BlobStore` の構造
 
 ```ts
-import type {
-  DocumentCacheOps,
-  CachedItemList,
-  CachedItemMeta,
-  CachedItemContent,
-  BaseContentItem,
-  InvalidateScope,
-  CacheAdapter,
-} from "@notion-headless-cms/core";
-import { CMSError } from "@notion-headless-cms/core";
+import type { BlobStore, DocStore } from "@notion-headless-cms/cms";
 
-class RedisDocumentOps implements DocumentCacheOps {
-  constructor(private readonly redis: RedisClient, private readonly prefix = "") {}
-
-  async getList<T extends BaseContentItem>(collection: string): Promise<CachedItemList<T> | null> {
-    const raw = await this.redis.get(`${this.prefix}list:${collection}`);
-    return raw ? JSON.parse(raw) : null;
-  }
-
-  async setList<T extends BaseContentItem>(collection: string, data: CachedItemList<T>): Promise<void> {
-    await this.redis.set(`${this.prefix}list:${collection}`, JSON.stringify(data));
-  }
-
-  async getMeta<T extends BaseContentItem>(collection: string, slug: string): Promise<CachedItemMeta<T> | null> {
-    const raw = await this.redis.get(`${this.prefix}meta:${collection}:${slug}`);
-    return raw ? JSON.parse(raw) : null;
-  }
-
-  async setMeta<T extends BaseContentItem>(collection: string, slug: string, data: CachedItemMeta<T>): Promise<void> {
-    try {
-      await this.redis.set(`${this.prefix}meta:${collection}:${slug}`, JSON.stringify(data));
-    } catch (err) {
-      throw new CMSError({
-        code: "cache/io_failed",
-        message: "Failed to write to Redis cache.",
-        cause: err,
-        context: { operation: "RedisDocumentOps.setMeta", collection, slug },
-      });
-    }
-  }
-
-  async getContent(collection: string, slug: string): Promise<CachedItemContent | null> {
-    const raw = await this.redis.get(`${this.prefix}content:${collection}:${slug}`);
-    return raw ? JSON.parse(raw) : null;
-  }
-
-  async setContent(collection: string, slug: string, data: CachedItemContent): Promise<void> {
-    await this.redis.set(`${this.prefix}content:${collection}:${slug}`, JSON.stringify(data));
-  }
-
-  async invalidate(scope: InvalidateScope): Promise<void> {
-    if (scope === "all") {
-      await this.redis.del(`${this.prefix}*`); // パターン削除
-      return;
-    }
-    const { collection } = scope;
-    if ("slug" in scope) {
-      await Promise.all([
-        this.redis.del(`${this.prefix}meta:${collection}:${scope.slug}`),
-        this.redis.del(`${this.prefix}content:${collection}:${scope.slug}`),
-      ]);
-    } else {
-      await Promise.all([
-        this.redis.del(`${this.prefix}list:${collection}`),
-        this.redis.del(`${this.prefix}meta:${collection}:*`),
-        this.redis.del(`${this.prefix}content:${collection}:*`),
-      ]);
-    }
-  }
+/** コレクション index の読み書き（KV 想定）。構造型なので実依存パッケージは不要。 */
+interface DocStore {
+  get(key: string): Promise<string | null>;
+  put(key: string, value: string): Promise<void>;
+  delete(key: string): Promise<void>;
 }
 
-export function redisCache(redis: RedisClient, prefix = ""): CacheAdapter {
+/** entry 本体・画像バイナリの読み書き（R2 想定）。read-after-write 強整合を前提にする。 */
+interface BlobStore {
+  get(key: string): Promise<Uint8Array | null>;
+  /** 本体とメタデータを 1 回の読み取りで返す任意メソッド。未実装なら get+head にフォールバックされる。 */
+  getWithMetadata?(key: string): Promise<{ bytes: Uint8Array; contentType?: string } | null>;
+  put(key: string, value: Uint8Array, opts?: { contentType?: string; customMetadata?: Record<string, string> }): Promise<void>;
+  head(key: string): Promise<{ contentType?: string; size: number; customMetadata?: Record<string, string> } | null>;
+  delete(key: string): Promise<void>;
+}
+```
+
+`docs` はコレクション index（`list()` が読む一覧・メタデータ）、`blobs` は entry 本体
+（`find()` が返す `EntrySnapshot`）と画像バイナリを持つ。両方とも省略可能で、省略した slot は
+in-memory 実装（`memoryDocStore()`/`memoryBlobStore()`）にフォールバックする。
+
+## `DocStore` の実装例（Redis）
+
+```ts
+import type { DocStore } from "@notion-headless-cms/cms";
+import type { RedisClientType } from "redis";
+
+export function redisDocStore(redis: RedisClientType, prefix = ""): DocStore {
   return {
-    name: "redis",
-    handles: ["document"],
-    doc: new RedisDocumentOps(redis, prefix),
+    async get(key) {
+      return redis.get(`${prefix}${key}`);
+    },
+    async put(key, value) {
+      await redis.set(`${prefix}${key}`, value);
+    },
+    async delete(key) {
+      await redis.del(`${prefix}${key}`);
+    },
   };
 }
 ```
 
-## ImageCacheOps の実装例（S3）
+## `BlobStore` の実装例（S3）
 
 ```ts
-import type { ImageCacheOps, StorageBinary, CacheAdapter } from "@notion-headless-cms/core";
+import type { BlobStore } from "@notion-headless-cms/cms";
+import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
-class S3ImageOps implements ImageCacheOps {
-  async get(hash: string): Promise<StorageBinary | null> {
-    const obj = await s3.getObject({ Key: `images/${hash}` }).catch(() => null);
-    if (!obj) return null;
-    return {
-      data: await obj.Body!.transformToByteArray(),
-      contentType: obj.ContentType,
-    };
-  }
+export function s3BlobStore(s3: S3Client, bucket: string): BlobStore {
+  const key = (k: string) => `blobs/${k}`;
 
-  async set(hash: string, data: ArrayBuffer, contentType: string): Promise<void> {
-    await s3.putObject({
-      Key: `images/${hash}`,
-      Body: Buffer.from(data),
-      ContentType: contentType,
-    });
-  }
-}
-
-export function s3ImageCache(): CacheAdapter {
   return {
-    name: "s3",
-    handles: ["image"],
-    img: new S3ImageOps(),
+    async get(k) {
+      try {
+        const obj = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: key(k) }));
+        return new Uint8Array(await obj.Body!.transformToByteArray());
+      } catch {
+        return null;
+      }
+    },
+    async put(k, value, opts) {
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: key(k),
+          Body: value,
+          ContentType: opts?.contentType,
+          Metadata: opts?.customMetadata,
+        }),
+      );
+    },
+    async head(k) {
+      try {
+        const meta = await s3.send(new HeadObjectCommand({ Bucket: bucket, Key: key(k) }));
+        return {
+          contentType: meta.ContentType,
+          size: meta.ContentLength ?? 0,
+          customMetadata: meta.Metadata,
+        };
+      } catch {
+        return null;
+      }
+    },
+    async delete(k) {
+      await s3.send(new DeleteObjectCommand({ Bucket: bucket, Key: key(k) }));
+    },
   };
 }
 ```
 
-## createClient で利用
-
-複数のアダプタを配列で渡せる。先着順で `handles` の担当が割り当てられる。
+## `createCMS` で利用
 
 ```ts
-import { createClient } from "@notion-headless-cms/core";
-import { notionSource } from "@notion-headless-cms/notion-source";
-import { schema } from "./generated/nhc.schema";
+import { createCMS } from "@notion-headless-cms/cms";
+import { schema } from "./schema.js";
+import { redisDocStore } from "./redis-doc-store.js";
+import { s3BlobStore } from "./s3-blob-store.js";
 
-const cms = createClient({
-  sources: {
-    notion: notionSource({ schema, token: process.env.NOTION_TOKEN! }),
+const cms = createCMS({
+  schema,
+  notion: { token: process.env.NOTION_TOKEN! },
+  stores: {
+    docs: redisDocStore(redisClient, "myapp:"),
+    blobs: s3BlobStore(s3Client, "my-bucket"),
   },
-  cache: [
-    redisCache(redis, "myapp:"),
-    s3ImageCache(),
-  ],
-  swr: { recheckWindowMs: 30_000, staleBlockMs: 5 * 60_000 },
 });
 ```
 
-単一アダプタで document + image 両方を担う場合は:
+`docs`/`blobs` は個別に差し替えられる。片方だけカスタム実装にし、もう片方は組み込み
+（`kvDocStore`/`r2BlobStore`/`fileDocStore`/`fileBlobStore`）のままにしてもよい。
+
+## 契約テスト: `runDocStoreContract` / `runBlobStoreContract`
+
+`@notion-headless-cms/cms/testing`（`vitest` に依存する専用サブパス。汎用 `.` エントリからは
+import されない）が、組み込み実装（memory/file/Cloudflare）が満たしているのと同じ契約を
+検証するヘルパーを提供する。自作の `DocStore`/`BlobStore` にもそのまま使える。
 
 ```ts
-cache: [{
-  name: "my-unified",
-  handles: ["document", "image"],
-  doc: myDocOps,
-  img: myImgOps,
-}]
-```
+import { describe } from "vitest";
+import { runBlobStoreContract, runDocStoreContract } from "@notion-headless-cms/cms/testing";
+import { redisDocStore } from "./redis-doc-store.js";
+import { s3BlobStore } from "./s3-blob-store.js";
 
-## `handles` 判定と画像プロキシの責務境界
+describe("redisDocStore", () => {
+  runDocStoreContract({
+    factory: () => redisDocStore(testRedisClient),
+  });
+});
 
-`createClient({ cache })` は配列を先頭から走査し、
-
-- `handles.includes("document")` を満たす最初の adapter → document 担当
-- `handles.includes("image")` を満たす最初の adapter → image 担当
-
-を割り当てる。たとえば `[kvCache(...), r2Cache(...)]` を渡すと、KV が document、R2 が image を受け持ち、`memoryCache()` のように両方申告した adapter は単独で両領域を担当する。
-
-画像 URL は Notion 側で約 1 時間で失効するため、core は
-
-1. URL を SHA256 ハッシュに変換
-2. `ImageCacheOps.set(hash, bytes, contentType)` で保存
-3. `{imageProxyBase}/{hash}` のプロキシ URL を返す
-
-という一連の処理を `cms.cacheImage(url)` (= `RenderContext.cacheImage`) にまとめて公開している。**`ImageCacheOps` 実装側はこの関数を呼ばない**こと。`hash` をキーにしたバイナリの保存・取得のみを担当するのが約束。
-
-## テスト: `createFakeCache()` でユニットテスト
-
-`@notion-headless-cms/testing` の `createFakeCache()` は in-memory の `CacheAdapter` を返す。Notion API や永続ストレージを叩かずに、独自の hooks や invalidate 動線を検証するときに使う。
-
-```ts
-import { describe, expect, it } from "vitest";
-import { createFakeCache, createFixtureClient } from "@notion-headless-cms/testing";
-
-describe("私のアプリのキャッシュ動線", () => {
-  it("invalidate で hit がリセットされる", async () => {
-    const cache = createFakeCache();
-    const cms = createFixtureClient({
-      items: [
-        { id: "1", slug: "first", title: "first", lastEditedTime: "2024-01-01" },
-      ],
-      cache: [cache], // 第三者の adapter を差し込みたいときも同じ形
-    });
-
-    await cms.posts.list(); // miss
-    await cms.posts.list(); // hit
-
-    const before = await cms.stats();
-    expect(before.document?.hits).toBeGreaterThan(0);
-
-    await cms.invalidate();
-    await cms.posts.list();
-
-    const after = await cms.stats();
-    expect(after.document?.misses).toBeGreaterThanOrEqual(
-      (before.document?.misses ?? 0) + 1,
-    );
+describe("s3BlobStore", () => {
+  runBlobStoreContract({
+    factory: () => s3BlobStore(testS3Client, "test-bucket"),
   });
 });
 ```
 
-独自 adapter を実装した場合も、`createFakeCache()` と `createFixtureClient()` の組み合わせで「core が期待する読み書きシーケンス」を再現できる。fake は core のテストで使っているものと同じパターンなので、本番アダプタとの差分が `get` / `set` の本物実装だけに収まるよう設計するとよい。
+`runDocStoreContract` は「put した値が get で読み戻せる」「存在しないキーは null」
+「上書きされる」「delete 後は null」を検証する。`runBlobStoreContract` はこれに加えて
+`head`（本体を読まずメタデータだけ返す）・`customMetadata` の往復を検証する
+（`customMetadata`/`getWithMetadata` に未対応の実装向けには、これらを課さない
+`runBlobStoreMetadataContract` が別途ある）。
 
+自作の実装がこの契約さえ満たしていれば、`createCMS` から見て組み込み実装と差し替え可能で
+あることが保証される。
+
+## 関連ドキュメント
+
+- [テスト](./testing.md)
+- [Cloudflare Workers + R2 + KV](./cloudflare-workers.md) — 組み込み `kvDocStore`/`r2BlobStore`
+- [CMS メソッド一覧](../api/cms-methods.md)

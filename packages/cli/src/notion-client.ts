@@ -1,4 +1,4 @@
-import { CMSError } from "@notion-headless-cms/core";
+import { CMSError } from "@notion-headless-cms/cms";
 import {
   APIErrorCode,
   Client,
@@ -82,7 +82,7 @@ async function withRetry<T>(fn: () => Promise<T>): Promise<T> {
 export function createNotionCLIClient(token: string): NotionCLIClient {
   const client = new Client({
     auth: token,
-    // generate 時は常に最新データを取得するためキャッシュを無効化する
+    // CLI 実行時は常に最新データを取得するためキャッシュを無効化する
     fetch: (url, init) => fetch(url, { ...init, cache: "no-store" }),
   });
 

@@ -94,18 +94,18 @@ KV / R2 / DO のインメモリフェイクを `@notion-headless-cms/testing`（
 
 `packages/cli/src/v3/init.ts` の TODO 3件（DO 結線・binding 取り出し・SyncCoordinatorCore 構築）を完了し、wrangler.toml・プレビュー用 read-only 構成（`readerReadOnly()` + DO 無し preview Worker）まで生成する。現状、利用側は wrangler.preview.toml 冒頭34行ぶんの回避策ノウハウ（no_bundle でビルド済みバンドル指定・`preview_urls=true` 明示等）を自力で獲得しており、これをテンプレとして配布すれば v3 導入体験が完成する。
 
-### M5. 内部整合の負債解消
+### M5. 内部整合の負債解消 → 一部完了
 
-- 「v3」内部識別子の一括リネーム（`cli/src/v3/`・`react-renderer/src/v3.ts` 等）。パッケージ名は `cms` に改名済みで、「cms = v3」の対応が暗黙知になっている。
-- カバレッジ閾値のパッケージ別化（一律70% → 実態に合わせる）と、v2 周辺アダプタ（`notion-source`/`fetch-blocks`/`notion-katex`/`notion-shiki`、各テスト1本）の拡充。ただし後述 L1 の縮小判断とセットで優先度を決める。
+- 「v3」内部識別子の一括リネーム（`cli/src/v3/`・`react-renderer/src/v3.ts` 等）→ **✅ 完了**（本セッションで実行。`cli/src/v3/` は `cli/src/` へ平坦化、`react-renderer/src/v3.ts` は `src/cms.ts` へリネーム済み）
+- カバレッジ閾値のパッケージ別化（一律70% → 実態に合わせる）は未着手のまま残る。v2 周辺アダプタ（`notion-source`/`fetch-blocks`/`notion-katex`/`notion-shiki`）のテスト拡充は、L1 の実行（v2 全削除）により対象パッケージごと消滅したため不要になった。
 
 ---
 
 ## 長期（四半期〜: 方向性の決断）
 
-### L1. v2/v3 の一本化判断
+### L1. v2/v3 の一本化判断 → ✅ 決定・実行済み
 
-v3（`cms`）を主軸に据え、v2 系パッケージ群の統合・メンテナンスモード宣言のロードマップを決める。公開16パッケージ + 7 examples + docs の2アーキテクチャ並存が最大の固定費で、テスト・ドキュメント・リリースの全レイヤーに波及している（RFC ドキュメントの二転三転 #465 もこの負荷の兆候）。
+v3（`cms`）を主軸に据える方針が決定し、v2 系 13 パッケージ（`client`/`core`/`cache`/`notion-source`/`notion-orm`/`fetch-blocks`/`fetch-markdown`/`markdown-html`/`block-html`/`notion-katex`/`notion-shiki`/`testing`/`validate`）を本リポジトリから全削除した。公開パッケージ・examples・docs にまたがる2アーキテクチャ並存という最大の固定費は解消され、現行アーキテクチャは `@notion-headless-cms/cms`（と、それにのみ依存する `react-renderer`/`cli`）だけになった。移行の詳細は `docs/ja/migration/v2-removal.md` を参照。
 
 ### L2. 1.0 GA 到達と互換性ポリシーの明文化
 

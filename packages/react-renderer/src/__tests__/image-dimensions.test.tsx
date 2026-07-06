@@ -22,7 +22,7 @@ const makeImage = (
     },
   }) as unknown as NotionBlock;
 
-describe("Image CLS 対応(v3 パイプラインが焼き込む _dimensions)", () => {
+describe("Image CLS 対応(cms 同期パイプラインが焼き込む _dimensions)", () => {
   afterEach(() => cleanup());
 
   it("_dimensions があれば width/height 属性を付与する(CLS ゼロ化)", () => {
@@ -37,7 +37,7 @@ describe("Image CLS 対応(v3 パイプラインが焼き込む _dimensions)", (
     expect(img?.getAttribute("loading")).toBe("lazy");
   });
 
-  it("_dimensions が無ければ width/height 属性を付与しない(v2 互換)", () => {
+  it("_dimensions が無ければ width/height 属性を付与しない(通常データ互換)", () => {
     const block = makeImage("b1", "https://example.com/a.png");
     const { container } = render(<NotionRenderer blocks={[block]} />);
     const img = container.querySelector("img");

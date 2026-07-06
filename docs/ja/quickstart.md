@@ -10,193 +10,144 @@ order: 1
 ## 必要なもの
 
 - Notion API トークン（[Notion Developers](https://www.notion.so/my-integrations) で取得）
-- Notion データベース（`nhc generate` で introspect する対象）
+- Notion データベース（インテグレーションを「接続先」に追加しておく）
 - Node.js 24 以降
+
+## アーキテクチャの前提
+
+`@notion-headless-cms/cms` は **読者リクエスト処理中に Notion API を一切呼ばない**。
+`find()`/`list()` は KV（index）/R2（entry 本体・画像）のマテリアライズドレプリカを読むだけで完結し、
+Notion との同期は webhook 駆動の非同期処理として別に走る。KV/R2 が無い環境（ローカル・お試し）では
+in-memory ストアに自動フォールバックするため、まずは Notion トークンだけで動かせる。
 
 ## インストール
 
 ```bash
-pnpm add @notion-headless-cms/core @notion-headless-cms/notion-source \
-  @notion-headless-cms/cache \
-  @notionhq/client zod \
-  unified remark-parse remark-gfm remark-rehype rehype-stringify
+pnpm add @notion-headless-cms/cms @notionhq/client
 pnpm add -D @notion-headless-cms/cli
 ```
 
-`core` は CMS エンジン本体、`notion-source` は Notion 用データソースアダプター。`notion-orm` / `renderer` は `notion-source` の `dependencies` に含まれるため明示インストール不要。`@notionhq/client` / `zod` / unified 系は peer 依存のため利用側でインストールする。
+`cms` は他の workspace パッケージに依存しないゼロ依存パッケージ。`@notionhq/client` は peer 依存のため利用側でインストールする（`katex`/`shiki`/`vitest` は任意の peer 依存で、使う機能に応じて追加すればよい）。
 
-## スキーマを自動生成する
+## スキーマを書く
 
-```bash
-npx nhc init
-```
-
-`nhc.config.ts` を編集して DB を設定する:
+v3 の現行アーキテクチャは codegen ではなく **TypeScript ファースト**でスキーマを書く（`defineCollection`/`defineSchema`）。
 
 ```ts
-import "dotenv/config";
-import { defineConfig, env } from "@notion-headless-cms/cli";
+// src/schema.ts
+import { defineCollection, defineSchema, prop } from "@notion-headless-cms/cms";
 
-export default defineConfig({
-  notionToken: env("NOTION_TOKEN"),
-  collections: {
-    posts: {
-      dbName: "ブログ記事DB",
-      publishedStatuses: ["公開済み"],
+export const schema = defineSchema({
+  posts: defineCollection({
+    dataSourceId: "abc-123-def-456", // Notion の data_source_id
+    slug: "slug",
+    statusProperty: "status",
+    published: ["公開済み"],
+    properties: {
+      title: prop.title("名前"), // スキーマキーが実名と違う場合は実名を渡す
+      slug: prop.richText("URL"),
+      status: prop.status(["下書き", "公開済み"] as const, "ステータス"),
     },
-  },
-  output: "./app/generated/nhc.schema.ts",
+  }),
 });
 ```
 
+`dataSourceId` や実際の Notion プロパティ名を手で調べるのが手間な場合は、CLI の `nhc pull` が対象 DB を introspect して雛形コードを生成してくれる（詳細は [CLI ツール](./cli.md) を参照）。
+
 ```bash
-# Notion DB を introspect してスキーマを生成
-NOTION_TOKEN=secret_xxx npx nhc generate
+npx nhc init   # nhc.config.ts などの設定一式を生成
+npx nhc pull   # 対象 DB を introspect し、defineCollection の雛形を出力
+npx nhc check  # スキーマと実 DB の drift を検証（CI 向け）
 ```
 
-生成された `nhc.schema.ts` には DB 構造（`schema` 定数）だけが入る。トークン・公開ポリシー（`notion`）、content モードや画像プロキシ（`render`）、キャッシュ（`cache`）といった設定は `createCMS` 側で組み立てる。
+`nhc pull`/`nhc init` が生成するファイルは既存ファイルを上書きしない。生成後は自分のコードとして育てていく運用で、以降 Notion 側でプロパティを追加・変更したら `schema.ts` を直接編集する。
 
-## 最小構成（Node・既定ランタイム）
+## 最小構成（Node・KV/R2 無し）
 
 ```ts
-import { createCMS } from "@notion-headless-cms/client";
-import { schema } from "./app/generated/nhc.schema"; // nhc generate の出力
+import { createCMS } from "@notion-headless-cms/cms";
+import { schema } from "./src/schema";
 
 const cms = createCMS({
-  notion: {
-    schema,
-    token: process.env.NOTION_TOKEN!,
-    collections: {
-      posts: { published: ["公開済み"] },
-    },
-  },
-  render: {
-    content: "html",
-  },
+  schema,
+  notion: { token: process.env.NOTION_TOKEN! },
 });
 
-// 一覧取得
-const posts = await cms.posts.list();
+// ローカル同期を開始する（初回 kick）
+await cms.sync.kick();
 
-// スラッグで取得 → 本文を HTML / Markdown で取り出す
+// 一覧取得（既定 limit=20、{ items, nextCursor, hasMore }）
+const { items } = await cms.posts.list();
+
+// スラッグで 1 件取得
 const post = await cms.posts.find("my-first-post");
 if (post) {
-  console.log(await post.html());     // HTML 文字列
-  console.log(await post.markdown()); // Markdown 文字列
+  console.log(post.meta);   // コレクション固有のプロパティ値
+  console.log(post.blocks); // 正規化済みブロック（本文）
 }
 ```
 
-`cache` グループを省略すると Node 既定（インメモリ LRU キャッシュ）になる。
-キャッシュを細かく制御したいときは `cache: { document, image, swr: { recheckWindowMs, staleBlockMs } }` を渡す。`recheckWindowMs`（既定 30 秒）は Notion 再照会の最小間隔、`staleBlockMs`（webhook secret あり: 無期限 / なし: 7 日）は最終確認からこの時間を超えたら開いた際にブロッキング再取得する閾値。
+`stores`（KV/R2）を省略すると in-memory ストアにフォールバックする。永続化やエッジ配信が必要になったら `stores: { docs, blobs }` を渡すだけでよい。
 
 ## Cloudflare Workers の場合
 
+Workers + KV + R2 + Durable Objects で「読者用の stateless Worker」と「同期を直列化する Durable Object」を分離するのが既定の構成。`nhc init` はこの構成一式（`wrangler.toml`・`src/schema.ts`・Hono マウントコード）をそのまま生成する。
+
 ```ts
-import { createCMS, memoryCache } from "@notion-headless-cms/client";
-import { kvCache, r2Cache } from "@notion-headless-cms/client/cloudflare";
-import { schema } from "./app/generated/nhc.schema";
+// workers/sync-coordinator-do.ts（Notion 同期を担う DO）
+import { createCMS, createDurableObjectSyncScheduler } from "@notion-headless-cms/cms";
+import {
+  createSyncCoordinatorDO,
+  kvDocStore,
+  r2BlobStore,
+} from "@notion-headless-cms/cms/cloudflare";
+import { schema } from "../src/schema";
+
+export const SyncCoordinatorDO = createSyncCoordinatorDO<Env>({
+  createCMS: (state, env) =>
+    createCMS({
+      schema,
+      notion: { token: env.NOTION_TOKEN },
+      stores: {
+        docs: kvDocStore(env.DOC_INDEX),
+        blobs: r2BlobStore(env.ENTRY_BUCKET),
+      },
+      scheduler: createDurableObjectSyncScheduler(state),
+    }),
+});
+```
+
+```ts
+// workers/cms.ts（読者用 stateless Worker。KV/R2 読み取りのみ）
+import { createCMS } from "@notion-headless-cms/cms";
+import { durableObjectSyncDelegate, kvDocStore, r2BlobStore } from "@notion-headless-cms/cms/cloudflare";
+import { schema } from "../src/schema";
+
+export function getCMS(env: Env) {
+  return createCMS({
+    schema,
+    stores: {
+      docs: kvDocStore(env.DOC_INDEX),
+      blobs: r2BlobStore(env.ENTRY_BUCKET),
+    },
+    syncDelegate: durableObjectSyncDelegate({ namespace: env.SYNC_COORDINATOR }),
+  });
+}
 
 export default {
-  async fetch(req: Request, env: Env, ctx: ExecutionContext) {
-    const cms = createCMS({
-      notion: {
-        schema,
-        token: env.NOTION_TOKEN,
-        collections: { posts: { published: ["公開済み"] } },
-      },
-      render: { content: "html" },
-      cache: {
-        // env.DOC_CACHE (KV) を document、env.IMG_BUCKET (R2) を image に割り当てる。
-        // binding が optional 型のときは memoryCache() へフォールバックする。
-        document: env.DOC_CACHE ? kvCache({ namespace: env.DOC_CACHE }) : memoryCache(),
-        image: r2Cache({ bucket: env.IMG_BUCKET }),
-        waitUntil: (p) => ctx.waitUntil(p),
-      },
-    });
+  async fetch(req: Request, env: Env) {
+    const cms = getCMS(env);
     const posts = await cms.posts.list();
     return Response.json(posts);
   },
 };
 ```
 
-`document` には `env.DOC_CACHE` (KV)、`image` には `env.IMG_BUCKET` (R2) を役割別に明示して渡す。`waitUntil` に `ctx.waitUntil` を渡すと SWR のバックグラウンド更新がレスポンス送信後に配線される。
-
-## 複数の DB を扱う場合
-
-`nhc.config.ts` に複数の `collections` を書けば、`cms.posts` / `cms.news` のように型安全にアクセスできる。
-
-```ts
-import "dotenv/config";
-import { defineConfig, env } from "@notion-headless-cms/cli";
-
-export default defineConfig({
-  notionToken: env("NOTION_TOKEN"),
-  collections: {
-    posts: { dbName: "ブログ記事DB" },
-    news: { dbName: "ニュースDB" },
-  },
-  output: "./app/generated/nhc.schema.ts",
-});
-```
-
-```ts
-import { createCMS } from "@notion-headless-cms/client";
-import { schema } from "./app/generated/nhc.schema";
-
-const cms = createCMS({
-  notion: {
-    schema,
-    token: process.env.NOTION_TOKEN!,
-    collections: {
-      posts: { published: ["公開済み"] },
-      news: { published: ["公開済み"] },
-    },
-  },
-  render: { content: "html" },
-});
-
-const posts = await cms.posts.list(); // PostsItem[]
-const news = await cms.news.list();   // NewsItem[]
-```
-
-詳細は [CLI ドキュメント](./cli.md) と [マルチソースレシピ](./recipes/multi-source.md) を参照。
-
-## 画像プロキシ route を作る (Next.js)
-
-Notion の画像 URL は約 1 時間で失効する。`createCMS` は画像を SHA256 ハッシュキーで永続キャッシュへ書き込み、`{imageProxyBase}/{hash}` 形式の URL に書き換える。
-`createCMS` の `imageProxyBase` は **`/api/cms/images` に固定**で、`cms.handler()` の既定ルートと一致する。`cms.handler()` を 1 つマウントすれば画像配信もまとめて賄える（専用 route の自前実装は不要）。
-
-```ts
-// app/api/cms/images/[hash]/route.ts
-import { cms } from "@/app/lib/cms";
-
-export async function GET(
-  _req: Request,
-  { params }: { params: Promise<{ hash: string }> },
-) {
-  const { hash } = await params;
-  const image = await cms.getCachedImage(hash);
-  if (!image) return new Response("Not Found", { status: 404 });
-  return new Response(image.data, {
-    headers: {
-      "content-type": image.contentType,
-      "cache-control": "public, max-age=31536000, immutable",
-    },
-  });
-}
-```
-
-`createCMS` の画像プロキシは `/api/cms/images` に固定されている。`@notion-headless-cms/client/next` の `createNextHandler(cms)` を使うと `/api/cms/images/:hash` ルートが自動でマウントされる（個別 route 不要）。
-
-詳細は [`api/cms-methods.md#cmscacheimage-の利用例`](./api/cms-methods.md#cmscacheimage-の利用例) と [Next.js App Router レシピ](./recipes/nextjs-app-router.md) を参照。
+読者側は `syncDelegate` を渡すため `notion`/`scheduler` は不要（Notion アクセスは DO 側に一元化される）。同期のトリガーは Notion webhook（`POST /api/cms/webhook` → DO の `onWebhook()`）で、DO 自身の `alarm()` が変更を使い切るまで自己継続する。
 
 ## 次のステップ
 
 - [CLI ツール（nhc）](./cli.md)
-- [マルチソース](./recipes/multi-source.md)
-- [Cloudflare Workers + R2 + KV](./recipes/cloudflare-workers.md)
-- [Next.js App Router](./recipes/nextjs-app-router.md)
-- [Node スクリプト](./recipes/nodejs-script.md)
-- [カスタムデータソース](./recipes/custom-source.md)
-- [CMS メソッド一覧](./api/cms-methods.md)
 - [エラーコード一覧](./errors/index.md)
+- [他ヘッドレス CMS との比較](./comparison.md)
+- [設計思想（architecture.md）](./architecture.md)

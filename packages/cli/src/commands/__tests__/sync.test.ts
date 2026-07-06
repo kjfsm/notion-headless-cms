@@ -79,9 +79,8 @@ describe("runSync", () => {
     await fs.rm(tmpDir, { recursive: true, force: true });
   });
 
-  it("v3.schemaModule 未定義なら CMSError(cli/config_invalid) を投げる", async () => {
+  it("schemaModule 未定義なら CMSError(cli/config_invalid) を投げる", async () => {
     loadConfigMock.mockResolvedValue({
-      output: "x",
       collections: {},
     } as CMSConfig);
 
@@ -92,12 +91,8 @@ describe("runSync", () => {
 
   it("スキーマモジュールに対応する export が無ければ CMSError(cli/schema_invalid) を投げる", async () => {
     loadConfigMock.mockResolvedValue({
-      output: "x",
-      collections: {},
-      v3: {
-        schemaModule: "src/schema.ts",
-        collections: { posts: { databaseId: "ds-posts" } },
-      },
+      schemaModule: "src/schema.ts",
+      collections: { posts: { databaseId: "ds-posts" } },
     } as CMSConfig);
     jitiImportMock.mockResolvedValue({});
 
@@ -113,12 +108,8 @@ describe("runSync", () => {
       properties: { title: prop.title(), slug: prop.richText() },
     });
     loadConfigMock.mockResolvedValue({
-      output: "x",
-      collections: {},
-      v3: {
-        schemaModule: "src/schema.ts",
-        collections: { posts: { databaseId: "ds-posts" } },
-      },
+      schemaModule: "src/schema.ts",
+      collections: { posts: { databaseId: "ds-posts" } },
     } as CMSConfig);
     jitiImportMock.mockResolvedValue({ posts });
 

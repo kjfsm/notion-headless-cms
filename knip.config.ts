@@ -16,13 +16,14 @@ export default {
       ignoreBinaries: ["playwright"],
     },
     "packages/react-renderer": {
-      // package.json の exports サブパス (./, ./server, ./router, ./next, ./mermaid)
+      // package.json の exports サブパス (./, ./server, ./router, ./next, ./mermaid, ./cms)
       entry: [
         "src/index.ts",
         "src/server.ts",
         "src/router.tsx",
         "src/next.tsx",
         "src/mermaid.tsx",
+        "src/cms.ts",
       ],
       project: ["src/**/*.{ts,tsx}"],
       // mermaid は ./mermaid サブパスから動的 import される optional peer。
@@ -33,59 +34,6 @@ export default {
     "packages/cli": {
       entry: ["src/index.ts", "src/cli.ts"],
       project: ["src/**/*.ts"],
-    },
-    "packages/cache": {
-      // package.json の exports サブパス (./, ./cloudflare, ./next)
-      entry: ["src/index.ts", "src/cloudflare.ts", "src/next.ts"],
-      project: ["src/**/*.ts"],
-      // next は ./next エントリで動的 import するためのオプショナル peerDep
-      ignoreDependencies: ["next"],
-    },
-    "packages/block-html": {
-      // package.json の exports サブパス (./, ./providers, ./rehype)
-      entry: ["src/index.ts", "src/providers/index.ts", "src/rehype/index.ts"],
-      project: ["src/**/*.ts"],
-    },
-    "packages/fetch-blocks": {
-      // package.json の exports サブパス (./, ./react)
-      entry: ["src/index.ts", "src/react.ts"],
-      project: ["src/**/*.{ts,tsx}"],
-    },
-    "packages/fetch-markdown": {
-      // package.json の exports サブパス (./, ./react)
-      entry: ["src/index.ts", "src/react.tsx"],
-      project: ["src/**/*.{ts,tsx}"],
-    },
-    "packages/notion-katex": {
-      entry: ["src/index.ts"],
-      project: ["src/**/*.ts"],
-      // katex は peerDependency。rehype-katex 経由で間接消費するため直接 import はない
-      ignoreDependencies: ["katex"],
-    },
-    "packages/notion-shiki": {
-      entry: ["src/index.ts"],
-      project: ["src/**/*.ts"],
-      // shiki は peerDependency。@shikijs/rehype 経由で間接消費するため直接 import はない
-      ignoreDependencies: ["shiki"],
-    },
-    "packages/core": {
-      entry: ["src/index.ts", "src/source-author.ts"],
-      project: ["src/**/*.ts"],
-      // markdown-html は rendering.ts で動的 import するオプショナル peerDep
-      ignoreDependencies: ["@notion-headless-cms/markdown-html"],
-    },
-    "packages/client": {
-      // package.json の exports サブパス (./, ./next, ./cloudflare, ./react)
-      entry: [
-        "src/index.ts",
-        "src/next.ts",
-        "src/cloudflare.ts",
-        "src/react.ts",
-      ],
-      project: ["src/**/*.ts"],
-      // ./next と ./react サブパスからのみ使う optional peerDependencies。
-      // ルート (.) では不要なので optional のまま明示的に無視する。
-      ignoreDependencies: ["next", "react", "react-dom", "react-router"],
     },
     "packages/cms": {
       // package.json の exports サブパス (./, ./html, ./cloudflare, ./node, ./testing)
@@ -103,13 +51,6 @@ export default {
     "packages/*": {
       entry: ["src/index.ts"],
       project: ["src/**/*.ts"],
-    },
-    "packages/testing": {
-      // package.json の exports サブパス (./, ./contract)
-      entry: ["src/index.ts", "src/contract.ts"],
-      project: ["src/**/*.ts"],
-      // vitest は ./contract サブパスから使う optional peerDep
-      ignoreDependencies: ["vitest"],
     },
     "apps/docs": {
       // workers/app.ts / app/root.tsx / app/routes.ts / app/routes/** /

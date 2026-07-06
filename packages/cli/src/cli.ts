@@ -1,9 +1,8 @@
 #!/usr/bin/env node
-import { isCMSError } from "@notion-headless-cms/core";
+import { isCMSError } from "@notion-headless-cms/cms";
 import { Command } from "commander";
 import { runCheck } from "./commands/check.js";
 import { runDoctor } from "./commands/doctor.js";
-import { runGenerate } from "./commands/generate.js";
 import { runInit } from "./commands/init.js";
 import { runPull } from "./commands/pull.js";
 import { runSync } from "./commands/sync.js";
@@ -31,10 +30,13 @@ function run<T>(
     try {
       await fn(opts);
     } catch (err) {
-      // verbose / debug 時は CMSError の format() (nextSteps + docsUrl 付き) を、
+      // verbose / debug 時は CMSError のコード・context 付きの詳細を、
       // それ以外は短いメッセージのみを出力する。
       if (isCMSError(err) && (opts.verbose || opts.debug)) {
-        console.error("エラー:", err.format());
+        console.error(
+          "エラー:",
+          `[${err.code}] ${err.message} (operation: ${err.context.operation})`,
+        );
       } else {
         console.error(
           "エラー:",
@@ -65,12 +67,13 @@ const program = new Command()
 
 program
   .command("init")
-  .description("nhc.config.ts のテンプレートを生成します")
-  .option("-o, --output <path>", "出力先ファイルパス", "nhc.config.ts")
+  .description(
+    "nhc.config.ts・wrangler.toml・src/schema.ts・Hono マウントコード一式を生成します",
+  )
   .option(
-    "-t, --template <name>",
-    "ランタイム別テンプレート (node / cloudflare-react-router / cloudflare-hono / next / cloudflare-v3)",
-    "node",
+    "-o, --output <path>",
+    "nhc.config.ts の出力先ファイルパス",
+    "nhc.config.ts",
   )
   .option("-f, --force", "既存ファイルを上書きする")
   .option("-s, --silent", "ログ出力を抑制する")
@@ -79,35 +82,9 @@ program
   .action(run(runInit));
 
 program
-  .command("generate")
-  .description(
-    "nhc.config.ts を読み込み、Notion DB の定義からスキーマファイルを生成します",
-  )
-  .option("-c, --config <path>", "設定ファイルのパス", "nhc.config.ts")
-  .option(
-    "-t, --token <token>",
-    "Notion API トークン（省略時は NOTION_TOKEN 環境変数を使用）",
-  )
-  .option(
-    "-e, --env-file <path>",
-    "環境変数ファイルのパス（例: .dev.vars, .env.local）",
-  )
-  .option("-s, --silent", "ログ出力を抑制する")
-  .option(
-    "-v, --verbose",
-    "詳細ログを出力する (各コレクションのプロパティ数 / API レスポンス概要)",
-  )
-  .option(
-    "--debug",
-    "スタックトレースを含む最大詳細ログを出力する (失敗時のみ意味あり)",
-  )
-  .addHelpText("after", COMMON_PITFALLS)
-  .action(run(runGenerate));
-
-program
   .command("pull")
   .description(
-    "nhc.config.ts の v3.collections を introspect し、defineCollection の雛形コードを生成します(#437)",
+    "nhc.config.ts の collections を introspect し、defineCollection の雛形コードを生成します",
   )
   .option("-c, --config <path>", "設定ファイルのパス", "nhc.config.ts")
   .option(
@@ -120,7 +97,7 @@ program
   )
   .option(
     "--scaffold-dir <path>",
-    "雛形の出力先ディレクトリ（既定: v3.scaffoldDir または src/collections）",
+    "雛形の出力先ディレクトリ（既定: scaffoldDir または src/collections）",
   )
   .option("-s, --silent", "ログ出力を抑制する")
   .option("-v, --verbose", "詳細ログを出力する")
@@ -134,7 +111,7 @@ program
 program
   .command("check")
   .description(
-    "nhc.config.ts の v3.schemaModule と実 Notion DB の差分(drift)を検証します。CI 向け(#437)",
+    "nhc.config.ts の schemaModule と実 Notion DB の差分(drift)を検証します。CI 向け",
   )
   .option("-c, --config <path>", "設定ファイルのパス", "nhc.config.ts")
   .option(
@@ -191,7 +168,7 @@ program
 program
   .command("sync")
   .description(
-    "v3.schemaModule の全コレクションをローカルファイルストアへ同期します(初回 kick 経路、#446)",
+    "schemaModule の全コレクションをローカルファイルストアへ同期します(初回 kick 経路、#446)",
   )
   .option("-c, --config <path>", "設定ファイルのパス", "nhc.config.ts")
   .option(

@@ -12,9 +12,9 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@notion-headless-cms/core/html": path.resolve(
+      "@notion-headless-cms/cms/html": path.resolve(
         workspaceRoot,
-        "packages/core/src/html.ts",
+        "packages/cms/src/html.ts",
       ),
     },
   },

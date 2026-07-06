@@ -1,9 +1,9 @@
 import { NotionRenderer } from "@notion-headless-cms/react-renderer";
-import { useNotionRevalidate } from "@notion-headless-cms/react-renderer/router";
 import {
   denormalizeBlocks,
   toPageLinkMap,
-} from "@notion-headless-cms/react-renderer/v3";
+} from "@notion-headless-cms/react-renderer/cms";
+import { useNotionRevalidate } from "@notion-headless-cms/react-renderer/router";
 import { data, isRouteErrorResponse } from "react-router";
 import { ensureSynced, makeCms } from "../lib/cms";
 import { cloudflareContext } from "../lib/context";

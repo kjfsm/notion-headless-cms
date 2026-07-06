@@ -8,7 +8,7 @@ UI プリミティブは [shadcn/ui](https://ui.shadcn.com/) (`new-york` style) 
 ## インストール
 
 ```bash
-pnpm add @notion-headless-cms/react-renderer @notion-headless-cms/notion-orm @notionhq/client react react-dom
+pnpm add @notion-headless-cms/react-renderer @notion-headless-cms/cms @notionhq/client react react-dom
 ```
 
 利用側プロジェクトに **Tailwind v4 のセットアップが必須**。エントリ CSS で `@import "tailwindcss"` の後に、本パッケージの既定テーマを 1 行読み込む:
@@ -32,53 +32,43 @@ pnpm add @notion-headless-cms/react-renderer @notion-headless-cms/notion-orm @no
 
 ## 使い方
 
-```tsx
-import { Client } from "@notionhq/client";
-import { fetchBlockTree } from "@notion-headless-cms/notion-orm";
-import { NotionRenderer } from "@notion-headless-cms/react-renderer";
+`@notion-headless-cms/cms` の `find()` は KV/R2 を読むだけで完結し、リクエスト処理中に Notion API
+を呼ばない。返ってきた `entry.blocks`（正規化済みブロック）を `denormalizeBlocks()` で
+`NotionBlock[]` 形状へ変換して渡す。
 
-const client = new Client({ auth: process.env.NOTION_TOKEN });
-const blocks = await fetchBlockTree(client, pageId);
+```tsx
+import { NotionRenderer } from "@notion-headless-cms/react-renderer";
+import { denormalizeBlocks } from "@notion-headless-cms/react-renderer/cms";
+
+const post = await cms.posts.find(slug);
+if (!post) return null;
 
 export default function Page() {
-  return <NotionRenderer blocks={blocks} />;
+  return <NotionRenderer blocks={denormalizeBlocks(post.blocks)} />;
 }
 ```
 
-### `createCMS` (render: { content: "react" }) と組み合わせて使う (推奨)
+内部リンクの解決も含めた詳細は後述の「`@notion-headless-cms/cms` との統合」を参照。
 
-`@notion-headless-cms/client` の `createCMS({ render: { content: "react" } })` 経由で取得すると、
-ブロックツリーが SWR キャッシュに乗り、`notionBlocks()` の戻り値が `NotionBlock[]` に
-型付けされるため**キャストは不要**。画像 URL は `cms.cacheImage` 経由で永続プロキシ URL に
-書き換える (Notion 署名 URL の失効対策)。
+### 画像 URL を自前でキャッシュする（cms を使わない場合）
+
+`@notion-headless-cms/cms` 経由のブロックは同期時に画像 URL が永続化済みなので通常は不要。
+Notion API から直接ブロックを取得していて（`cms` を経由しない構成で）画像 URL の失効対策を
+自前で行いたい場合のみ、`./server` サブパスの `resolveBlockImageUrls` を使う。
 
 ```tsx
 import { NotionRenderer } from "@notion-headless-cms/react-renderer";
 // "use client" を含まないサーバーサイド専用エントリ
 import { resolveBlockImageUrls } from "@notion-headless-cms/react-renderer/server";
 
-const post = await cms.posts.find(slug);
-if (!post) return null;
-
-const blocks = await resolveBlockImageUrls(
-  await post.notionBlocks(),
-  cms.cacheImage,
-);
+const blocks = await resolveBlockImageUrls(rawBlocks, async (url) => {
+  // 独自の永続化ロジック（例: 自前の R2 バケットへのアップロード）
+  return await myCacheImage(url);
+});
 
 return <NotionRenderer blocks={blocks} />;
 ```
 
-低レベル API（`@notion-headless-cms/core` の `createClient`）から使う場合のみ、core の
-ゼロ依存ルールにより `notionBlocks()` は `unknown[] | undefined` を返すため利用側でキャストする:
-
-```tsx
-import type { NotionBlock } from "@notion-headless-cms/react-renderer";
-
-const notionBlocks =
-  ((await post?.notionBlocks()) as NotionBlock[] | undefined) ?? [];
-```
-
-- `cms.posts.find(slug).notionBlocks()` — ブロックツリーをキャッシュ経由で取得 (`DataSource.loadNotionBlocks` を実装している場合のみ。`@notion-headless-cms/notion-orm` は対応済み)
 - `resolveBlockImageUrls(blocks, cacheImage)` — `image` / `video` / `audio` / `file` / `pdf` の `file` 型 URL を `cacheImage(url)` で書き換えた**新しい**ツリーを返す。`cacheImage` が `undefined` のときは入力をそのまま返す。`external` 型は触らない。children も再帰的に処理する
 - このサブパスは React Server Component やサーバーローダから呼び出すために `"use client"` を含めていない
 
@@ -97,29 +87,27 @@ const components: ComponentOverrides = {
 ### 内部リンクを自サイト URL に解決する
 
 `link_to_page` ブロックやリッチテキスト内の page / database mention・`child_page` は、既定では
-Notion ページ ID 止まり（`link_to_page` は `#id`、mention は素の表示）。サーバ側で
-`buildPageLinkMap(cms)` を作って `pageLinks` プロップに渡すと、これらが
-`/${collection}/${slug}` のような自サイト URL に解決される。
+Notion ページ ID 止まり（`link_to_page` は `#id`、mention は素の表示）。`@notion-headless-cms/cms`
+の `find()` が返す `entry.links`（`EntrySnapshot.links`）を `toPageLinkMap()` で変換し `pageLinks`
+プロップに渡すと、これらが `/${collection}/${slug}` のような自サイト URL に解決される。
 
 ```tsx
-import { buildPageLinkMap } from "@notion-headless-cms/core";
-// もしくは: import { buildPageLinkMap } from "@notion-headless-cms/client";
+import { toPageLinkMap } from "@notion-headless-cms/react-renderer/cms";
 
-// サーバ（RSC / loader / route handler）で 1 回構築する
-const pageLinks = await buildPageLinkMap(cms);
+const post = await cms.posts.find(slug);
+if (!post) return null;
 
-return <NotionRenderer blocks={blocks} pageLinks={pageLinks} />;
+return (
+  <NotionRenderer blocks={blocks} pageLinks={toPageLinkMap(post.links)} />
+);
 ```
 
-- **`pageLinks` はプレーンオブジェクト**（`正規化pageId → { href, title }`）なので、React Router の
+- **`pageLinks` はプレーンオブジェクト**（正規化 pageId → `{ href, title }`）なので、React Router の
   loader 戻り値や RSC（Server → Client Component）境界をそのまま越えられる。`resolvePageUrl`
   などの**関数プロップはシリアライズ境界を越えられない**ため、内部リンクには `pageLinks` を使う。
-- `cms.collections` を走査し各 `list()` の `id` / `slug` / `title` からマップを構築する（`list()` は SWR キャッシュ経由なのでウォーム後は安価）。
-- URL 規約は `buildPageLinkMap(cms, { url: (entry) => \`/${entry.slug}\` })` で上書き可。既定は `/${collection}/${slug}`。
-- どのコレクションにも属さないページ ID はマップに無く、各ブロックの従来フォールバックに委ねられる。
-- リクエストごとの再構築を避けたい場合は `buildPageIndex(cms)` の結果を保持し `buildPageLinkMap(cms, { index })` に渡す。
-- 画像 URL 解決（`resolveBlockImageUrls`）と併用できる。
-- カスタムルーティング（コレクション一覧に依存しない解決）が必要なら `resolvePageUrl` / `resolvePageTitle` 関数プロップを escape hatch として使える（非シリアライズ境界のみ）。
+- href の生成規則（既定 `/${collection}/${slug}`）は同期パイプライン側が決める。アプリ固有のルーティング規約に合わせたい場合は、利用側で `entry.links` を走査し詰め替えるヘルパー（例: 消費側アプリの `remapPageLinks()`）を挟んでから `pageLinks` に渡す。
+- 画像 URL 解決（前述の `resolveBlockImageUrls`）と併用できる。
+- カスタムルーティング（`pageLinks` で解決できない場合のフォールバック）が必要なら `resolvePageUrl` / `resolvePageTitle` 関数プロップを escape hatch として使える（非シリアライズ境界のみ）。
 
 ### 数式 (KaTeX) を使う
 
@@ -207,13 +195,13 @@ import { MermaidCode } from "@notion-headless-cms/react-renderer/mermaid";
 > **prose は併用しない**。各ブロックは余白・サイズを自前で当てているため、
 > `@tailwindcss/typography` の `prose` を被せると二重適用で崩れる。
 
-## v3 との統合（`./v3` サブパス）
+## `@notion-headless-cms/cms` との統合（`./cms` サブパス）
 
-[`@notion-headless-cms/cms`](../cms)（#437 ゼロベース再設計）の `find()` は正規化済みブロック（`NormalizedBlock[]`、完全に JSON 互換）を返す。`react-renderer/v3` サブパスの変換関数を通せば、既存のブロックコンポーネント約 30 種を無改修のまま再利用できる。
+[`@notion-headless-cms/cms`](../cms) の `find()` は正規化済みブロック（`NormalizedBlock[]`、完全に JSON 互換）を返す。`react-renderer/cms` サブパスの変換関数を通せば、既存のブロックコンポーネント約 30 種を無改修のまま再利用できる。
 
 ```tsx
 import { NotionRenderer } from "@notion-headless-cms/react-renderer";
-import { denormalizeBlocks, toPageLinkMap } from "@notion-headless-cms/react-renderer/v3";
+import { denormalizeBlocks, toPageLinkMap } from "@notion-headless-cms/react-renderer/cms";
 
 const post = await cms.posts.find(slug);
 if (!post) return null;
@@ -226,9 +214,9 @@ return (
 );
 ```
 
-- `denormalizeBlocks(blocks)` — v3 の `NormalizedBlock[]` を既存コンポーネントが期待する `NotionBlock[]`（`BlockObjectResponse` 形状）へ変換する
-- `toPageLinkMap(links)` — v3 の `EntrySnapshot.links` を `NotionRenderer` の `pageLinks` プロップ形式に変換する（v2 の `buildPageLinkMap(cms)` 手動呼び出しが不要になる）
-- `Code` / `Equation` / `InlineEquation` / `Bookmark` / `LinkPreview` は、v3 側で事前レンダーされた `__cachedHtml` があればそれを優先描画し、無ければ従来通りクライアント側で shiki/katex を動的 import する
+- `denormalizeBlocks(blocks)` — `NormalizedBlock[]` を既存コンポーネントが期待する `NotionBlock[]`（`BlockObjectResponse` 形状）へ変換する
+- `toPageLinkMap(links)` — `EntrySnapshot.links` を `NotionRenderer` の `pageLinks` プロップ形式に変換する
+- `Code` / `Equation` / `InlineEquation` / `Bookmark` / `LinkPreview` は、同期時に事前レンダーされた `__cachedHtml` があればそれを優先描画し、無ければ従来通りクライアント側で shiki/katex を動的 import する
 
 ## Notion 更新の表示反映 (`/router`, `/next`)
 
@@ -289,7 +277,7 @@ export default async function Page({ params }) {
 // サーバーが Notion と突合した結果 stale: true のときだけ revalidate
 ```
 
-フック版 `useNotionRevalidate(opts)` も同じシグネチャで提供。React 非依存の素 HTML 向けには `@notion-headless-cms/core/html` の `notionRevalidatorScript()` を使う。
+フック版 `useNotionRevalidate(opts)` も同じシグネチャで提供。現状、React 非依存の素 HTML 向け revalidator スクリプトは提供していない（`@notion-headless-cms/cms` の `./html` サブパスは `renderBlocksToHtml()` 等の静的レンダリングのみで、revalidate 用のクライアントスクリプトは含まない）。
 
 ## 対応ブロック
 
@@ -300,7 +288,7 @@ synced_block / breadcrumb / table_of_contents / unsupported
 
 ## 設計
 
-- 入力は `fetchBlockTree` が返す **children を再帰解決済みのツリー**
+- 入力は `NotionBlock[]`（**children を再帰解決済みのツリー**）。`@notion-headless-cms/cms` を使う場合は `denormalizeBlocks(entry.blocks)` で得る
 - 全コンポーネントに `"use client"` ディレクティブが付き、Next.js App Router の server component から `<NotionRenderer>` を直接呼べる
 - 連続する `bulleted_list_item` / `numbered_list_item` は内部で `<ul>` / `<ol>` にグループ化される
 - interactive embed (Twitter widgets / YouTube facade) は副作用を hook で隔離

@@ -1,5 +1,4 @@
-import { CMSError, isCMSError } from "@notion-headless-cms/core";
-import { validateCMSConfig } from "@notion-headless-cms/validate";
+import { CMSError } from "@notion-headless-cms/cms";
 import type { CMSConfig } from "./index.js";
 
 export async function loadConfig(configPath: string): Promise<CMSConfig> {
@@ -16,18 +15,13 @@ export async function loadConfig(configPath: string): Promise<CMSConfig> {
       : mod
   ) as CMSConfig;
 
-  try {
-    validateCMSConfig(config);
-  } catch (err) {
-    if (isCMSError(err) && err.code === "core/schema_invalid") {
-      throw new CMSError({
-        code: "cli/config_invalid",
-        message: err.message,
-        cause: err,
-        context: { operation: "loadConfig", configPath },
-      });
-    }
-    throw err;
+  if (!config || typeof config !== "object" || !config.collections) {
+    throw new CMSError({
+      code: "cli/config_invalid",
+      message:
+        "nhc.config.ts は defineConfig({ collections: {...} }) の形で default export してください。",
+      context: { operation: "loadConfig", configPath },
+    });
   }
 
   return config;

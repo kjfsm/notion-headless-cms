@@ -34,10 +34,10 @@ skills: [changeset-flow]
 [OK/NG]
 
 ### 既存 changeset
-- xxx.md: @notion-headless-cms/core (patch), @notion-headless-cms/adapter-node (patch)
+- xxx.md: @notion-headless-cms/cms (patch), @notion-headless-cms/cli (patch)
 
 ### 不足している可能性
-- @notion-headless-cms/cache-r2: src/r2-cache.ts が変更されているが changeset 無し
+- @notion-headless-cms/react-renderer: src/blocks/Image.tsx が変更されているが changeset 無し
   - 推定 bump: patch
   - 理由: バグ修正と思われる変更
 

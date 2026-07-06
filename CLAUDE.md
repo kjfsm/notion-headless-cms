@@ -22,10 +22,9 @@ Notion をヘッドレス CMS として利用する TypeScript ライブラリ�
 
 ## このリポジトリ固有の絶対ルール
 
-1. **`packages/core` はゼロ依存**: `@notionhq/client` / `unified` / `zod` / `@notion-headless-cms/markdown-html` に静的 import で依存しない（詳細: `.claude/rules/core.md`）。
-2. **`.claude/` の編集は `.claude-next/` で作業してから一括コピー**する（手順: `.claude/project.md` の「`.claude/` 編集フロー」）。
-3. **changeset の bump 種別**: 明示的な指示がない限り **`patch`** を使う（`major` / `minor` は指示があった場合のみ）。
-4. **shadcn 生成ファイル (`**/components/ui/**`) は手編集せず再生成**する（`pnpm dlx shadcn@latest add <component> --overwrite`）。
+1. **`.claude/` の編集は `.claude-next/` で作業してから一括コピー**する（手順: `.claude/project.md` の「`.claude/` 編集フロー」）。
+2. **changeset の bump 種別**: 明示的な指示がない限り **`patch`** を使う（`major` / `minor` は指示があった場合のみ）。
+3. **shadcn 生成ファイル (`**/components/ui/**`) は手編集せず再生成**する（`pnpm dlx shadcn@latest add <component> --overwrite`）。
 
 ---
 

@@ -1,12 +1,5 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  transpilePackages: [
-    "@notion-headless-cms/client",
-    "@notion-headless-cms/cache",
-    "@notion-headless-cms/core",
-    "@notion-headless-cms/notion-orm",
-  ],
-};
+const nextConfig: NextConfig = {};
 
 export default nextConfig;

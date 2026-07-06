@@ -3,11 +3,11 @@ import path from "node:path";
 import type { PropertyMap } from "@notion-headless-cms/cms";
 import { mapPropertyValue } from "@notion-headless-cms/cms";
 import { loadConfig } from "../config-loader.js";
-import type { V3Config } from "../index.js";
+import type { DoctorInput } from "../doctor.js";
+import { runDoctorChecks } from "../doctor.js";
+import type { CMSConfig } from "../index.js";
 import type { NotionCLIClient } from "../notion-client.js";
 import { createNotionCLIClient } from "../notion-client.js";
-import type { DoctorInput } from "../v3/doctor.js";
-import { runDoctorChecks } from "../v3/doctor.js";
 import {
   loadEnvFile,
   makeReporter,
@@ -58,25 +58,25 @@ async function detectWranglerBindings(
 }
 
 /**
- * `v3.schemaModule` から各コレクションの slug プロパティを読み取り、Notion 側の
+ * `schemaModule` から各コレクションの slug プロパティを読み取り、Notion 側の
  * 全ページを問い合わせて実際の slug 値を集める(slug 重複検出用)。
  * `schemaModule`/`slug` 未設定のコレクションはスキップする(page id で一意なため)。
  */
 async function collectSlugs(
-  v3: V3Config,
+  config: CMSConfig,
   notionClient: NotionCLIClient,
   reporter: Reporter,
 ): Promise<readonly { collection: string; slug: string }[]> {
-  if (!v3.schemaModule) return [];
+  if (!config.schemaModule) return [];
 
-  const schemaModulePath = path.resolve(process.cwd(), v3.schemaModule);
+  const schemaModulePath = path.resolve(process.cwd(), config.schemaModule);
   const { createJiti } = await import("jiti");
   const jiti = createJiti(import.meta.url);
   const schemaModule =
     await jiti.import<Record<string, unknown>>(schemaModulePath);
 
   const collected: { collection: string; slug: string }[] = [];
-  for (const [name, source] of Object.entries(v3.collections)) {
+  for (const [name, source] of Object.entries(config.collections)) {
     const exported = schemaModule[name];
     if (
       !exported ||
@@ -123,7 +123,7 @@ const STATUS_ICON: Record<string, string> = { ok: "✓", warn: "△", error: "�
 
 /**
  * `nhc doctor`: binding 疎通(静的宣言)・webhook 設定・token 権限・同期状態・
- * slug 重複を診断する(#446)。判定ロジック自体は `v3/doctor.ts` の純関数
+ * slug 重複を診断する(#446)。判定ロジック自体は `doctor.ts` の純関数
  * `runDoctorChecks` に委譲し、ここでは入力(`DoctorInput`)の収集と結果表示を行う。
  */
 export async function runDoctor(opts: DoctorOptions): Promise<void> {
@@ -179,9 +179,7 @@ export async function runDoctor(opts: DoctorOptions): Promise<void> {
     }
   }
 
-  const slugs = config.v3
-    ? await collectSlugs(config.v3, notionClient, reporter)
-    : [];
+  const slugs = await collectSlugs(config, notionClient, reporter);
 
   const input: DoctorInput = {
     bindings,

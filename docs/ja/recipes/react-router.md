@@ -7,47 +7,69 @@ order: 3
 
 # React Router (Cloudflare Workers) レシピ
 
-React Router v7（Framework mode）を Cloudflare Workers 上で動かし、loader で Notion から
-取得したブロックを `react-renderer` で React として描画する構成。完全に動く実装は
+React Router v7（Framework mode）を Cloudflare Workers 上で動かし、loader で
+`@notion-headless-cms/cms` から読み出した block を `@notion-headless-cms/react-renderer` で
+React として描画する構成。完全に動く実装は
 [`examples/cloudflare-react-router/`](../../../examples/cloudflare-react-router/) にある。
 
 このレシピのゴール:
 
-- loader で `cms.posts.find()` / `cms.posts.list()` を呼ぶ
-- `post.notionBlocks()` を `<Renderer blocks={...} />` に渡して React 描画する
-- Notion 更新を `<NotionRevalidator>` で静かに画面反映する
-- 画像プロキシ・KV+R2 キャッシュを配線する
+- loader で `cms.posts.find()` / `cms.posts.list()` を呼ぶ（KV/R2 を読むだけ、Notion API は呼ばない）
+- `post.blocks` を `denormalizeBlocks()` で変換し `<NotionRenderer>` に渡す
+- Notion 更新を `useNotionRevalidate()` で静かに画面反映する
+- 画像プロキシ・OGP・Webhook を `cms.fetch()` 1 つで配信する
+
+このサンプルは Worker isolate 内の `createNodeSyncScheduler()` で同期カーソルを保持する
+（DO を使わない）最小構成。Notion アクセスを Durable Object に一元化したい場合は
+[`cloudflare-workers.md`](./cloudflare-workers.md) の DO 構成を参照。
 
 ## インストール
 
 ```bash
-pnpm add @notion-headless-cms/client
-pnpm add @notionhq/client zod notion-to-md react react-dom react-router
+pnpm add @notion-headless-cms/cms @notion-headless-cms/react-renderer @notionhq/client
 pnpm add -D @notion-headless-cms/cli
 ```
 
-## スキーマ生成
+## スキーマ定義
 
-```bash
-npx nhc init
-# nhc.config.ts を編集（dbName / slugField / statusField）
-NOTION_TOKEN=secret_xxx npx nhc generate
+```ts
+// app/schema.ts
+import { defineCollection, defineSchema, prop } from "@notion-headless-cms/cms";
+
+const posts = defineCollection({
+  dataSourceId: "d8221462-5ae9-8396-bdac-8731f4ef685a",
+  slug: "slug",
+  properties: {
+    title: prop.title(),
+    slug: prop.richText(),
+    status: prop.status(["下書き", "編集中", "公開済み"] as const),
+    publishedAt: prop.date(),
+    author: prop.select(),
+  },
+  statusProperty: "status",
+  published: ["公開済み"],
+  accessible: ["下書き", "編集中", "公開済み"],
+});
+
+export const schema = defineSchema({ posts });
 ```
-
-生成された `app/generated/nhc.ts` を loader 側から import する。
 
 ## wrangler.toml
 
-推奨 binding は `DOC_CACHE`（KV / ドキュメントキャッシュ）と `IMG_BUCKET`（R2 / 画像）。
-
 ```toml
+name = "my-app"
+main = "./workers/app.ts"
+compatibility_date = "2026-04-22"
+compatibility_flags = ["nodejs_compat"]
+assets = { directory = "./build/client" }
+
 [[kv_namespaces]]
 binding = "DOC_CACHE"
 id = "xxxxxxxxxxxxxxxxxxxx"
 
 [[r2_buckets]]
 binding = "IMG_BUCKET"
-bucket_name = "nhc-images"
+bucket_name = "my-app-cache"
 ```
 
 ```bash
@@ -55,77 +77,78 @@ wrangler secret put NOTION_TOKEN   # 本番
 # ローカルは .dev.vars に NOTION_TOKEN=secret_xxx を書く（wrangler dev が自動読込）
 ```
 
-binding が未設定でも `document` を `memoryCache()` へフォールバックさせておけば、キャッシュ無しで起動できる。
-
 ## CMS ファクトリ
-
-`cache` グループに `kvCache` / `r2Cache` を役割別に渡すと、KV を document、R2 を image に割り当てつつ `waitUntil` を配線できる。
 
 ```ts
 // app/lib/cms.ts
-import { createCMS, memoryCache } from "@notion-headless-cms/client";
-import { kvCache, r2Cache } from "@notion-headless-cms/client/cloudflare";
-import { schema } from "../generated/nhc";
+import { createCMS, createNodeSyncScheduler } from "@notion-headless-cms/cms";
+import { kvDocStore, r2BlobStore } from "@notion-headless-cms/cms/cloudflare";
+import { schema } from "../schema.js";
 
 export interface Env {
-  NOTION_TOKEN: string;
-  DOC_CACHE?: KVNamespace;
-  IMG_BUCKET?: R2Bucket;
+  readonly NOTION_TOKEN: string;
+  readonly DOC_CACHE: KVNamespace;
+  readonly IMG_BUCKET: R2Bucket;
 }
 
-export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void }) {
+/**
+ * KV/R2 は永続化されるが、同期カーソル自体は Worker isolate 内の
+ * `createNodeSyncScheduler()`（setTimeout ベース、Workers ランタイムでも動く）に
+ * 保持するため isolate が入れ替わると失われる。差分クエリは既存 version と
+ * 一致すれば打ち切るため、この場合の再同期は「再検証クエリ 1 回」で済み、
+ * 変更の無いページを再マテリアライズすることはない。
+ */
+export function makeCms(
+  env: Env,
+  ctx: { waitUntil(p: Promise<unknown>): void },
+) {
   return createCMS({
-    notion: {
-      schema,
-      token: env.NOTION_TOKEN,
-      collections: {
-        posts: { published: ["公開済み"] },
-      },
+    schema,
+    notion: { token: env.NOTION_TOKEN },
+    stores: {
+      docs: kvDocStore(env.DOC_CACHE),
+      blobs: r2BlobStore(env.IMG_BUCKET),
     },
-    render: {
-      // content: "react" は blocks 取得戦略。loader で notionBlocks() を React 描画する。
-      // 大きなページで CF Free のサブリクエスト上限が厳しいときは content: "html" を検討。
-      content: "react",
-      // ogp は省略可。react モードでは既定オン（下記参照）。
-    },
-    cache: {
-      // KV を document、R2 を image に割り当てる。
-      // DOC_CACHE は optional 型なので未設定時は memoryCache() へフォールバック。
-      document: env.DOC_CACHE ? kvCache({ namespace: env.DOC_CACHE }) : memoryCache(),
-      image: r2Cache({ bucket: env.IMG_BUCKET }),
-      // waitUntil を渡さないと SWR のバックグラウンド更新が打ち切られ、古いキャッシュが残る。
-      waitUntil: (p) => ctx.waitUntil(p),
-    },
+    scheduler: createNodeSyncScheduler(),
+    waitUntil: (p: Promise<unknown>) => ctx.waitUntil(p),
   });
 }
+
+/**
+ * cursor が尽きるまで kick をループする。差分が無ければ最初のチャンクで
+ * `nextCursor: null` になり 1 回の軽い再検証クエリで終わる。
+ */
+export async function ensureSynced(
+  cms: ReturnType<typeof makeCms>,
+): Promise<void> {
+  let state = await cms.sync.getState();
+  do {
+    await cms.sync.kick();
+    state = await cms.sync.getState();
+  } while (state.cursor !== null);
+}
 ```
-
-### リンクプレビュー（OGP）
-
-`content: "react"` では bookmark / link_preview / embed ブロックの OGP（タイトル・説明・OG 画像）取得が **既定でオン**になり、`<NotionRenderer>` が Notion 本家風のリンクカードを描画する。
-
-- メタデータはブロック取得時にサーバー側で取得され、**既存のドキュメントキャッシュに同梱**されるため、専用のキャッシュ設定は不要。
-- OG 画像は**既定で元 URL のままブラウザが直接読み込む**（R2 等への永続キャッシュなし）。`<img loading="lazy">` で遅延読み込みされるため、初回表示が遅れても本文描画はブロックしない。
-- 無効化したいときは `render.ogp: false`。OG 画像も R2 等へ永続化したい上級者は `render.ogp: { enabled: true, imageCache }` を渡す。
-
-```ts
-// OGP を切る（notion / render を分けて渡す）
-createCMS({
-  notion: { schema, token, collections: { posts: { published: ["公開済み"] } } },
-  render: { content: "react", ogp: false },
-});
-```
-
-> リンクを多用するページでは bookmark / link_preview ごとに外部 fetch が増える。CF Free のサブリクエスト上限（50/invocation）に近づく場合は `render.ogp: false` を検討する。初回（キャッシュミス）のみで、以降は SWR ドキュメントキャッシュが効く。
 
 ## Workers エントリ
 
-`createRequestHandler` の第 2 引数で `cloudflare: { env, ctx }` を渡すと、各 loader の
-`context.cloudflare` から `env` / `ctx` にアクセスできる。
+React Router の `context` に `env`/`ctx` を積んで loader から参照できるようにする。
+
+```ts
+// app/lib/context.ts
+import { createContext } from "react-router";
+
+/**
+ * v8_middleware 有効時、loader/action の `context` は `RouterContextProvider`
+ * になり `AppLoadContext` のプロパティ拡張では受け取れない
+ * （`context.get(cloudflareContext)` で読む）。
+ */
+export const cloudflareContext = createContext<{ env: Env; ctx: ExecutionContext }>();
+```
 
 ```ts
 // workers/app.ts
-import { createRequestHandler } from "react-router";
+import { createRequestHandler, RouterContextProvider } from "react-router";
+import { cloudflareContext } from "../app/lib/context.js";
 
 const requestHandler = createRequestHandler(
   () => import("virtual:react-router/server-build"),
@@ -134,7 +157,9 @@ const requestHandler = createRequestHandler(
 
 export default {
   async fetch(request, env, ctx) {
-    return requestHandler(request, { cloudflare: { env, ctx } });
+    const context = new RouterContextProvider();
+    context.set(cloudflareContext, { env, ctx });
+    return requestHandler(request, context);
   },
 } satisfies ExportedHandler<Env>;
 ```
@@ -148,144 +173,149 @@ import { type RouteConfig, route } from "@react-router/dev/routes";
 export default [
   route("/", "routes/home.tsx"),
   route("/posts/:slug", "routes/post.tsx"),
-  route("/api/cms/*", "routes/api.cms.$.ts"),           // cms.handler() を splat で配線（画像 / check / webhook）
+  // 画像プロキシ・WebSocket 更新通知(/realtime)・Webhook をまとめて cms.fetch() に委譲。
+  route("/api/cms/*", "routes/api.cms.ts"),
 ] satisfies RouteConfig;
 ```
 
-| ルート | 役割 |
-|---|---|
-| `/` (`home.tsx`) | `cms.posts.list()` で一覧 |
-| `/posts/:slug` (`post.tsx`) | `cms.posts.find()` → `notionBlocks()` → React 描画 |
-| `/api/cms/*` (`api.cms.$.ts`) | `cms.handler()`。画像プロキシ・`POST /check/:collection/:slug`（更新検知）・Webhook を一括配信 |
+```ts
+// app/routes/api.cms.ts
+import { makeCms } from "../lib/cms";
+import { cloudflareContext } from "../lib/context";
+import type { Route } from "./+types/api.cms";
+
+export async function loader({ request, context }: Route.LoaderArgs) {
+  const { env, ctx } = context.get(cloudflareContext);
+  return makeCms(env, ctx).fetch(request);
+}
+
+export async function action({ request, context }: Route.ActionArgs) {
+  const { env, ctx } = context.get(cloudflareContext);
+  return makeCms(env, ctx).fetch(request);
+}
+```
 
 ## 一覧ページ
 
 ```tsx
 // app/routes/home.tsx
+import { useNotionRevalidate } from "@notion-headless-cms/react-renderer/router";
 import { Link } from "react-router";
-import { makeCms } from "../lib/cms";
+import { ensureSynced, makeCms } from "../lib/cms";
+import { cloudflareContext } from "../lib/context";
 import type { Route } from "./+types/home";
 
 export async function loader({ context }: Route.LoaderArgs) {
-  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
-  return { items: await cms.posts.list() };
+  const { env, ctx } = context.get(cloudflareContext);
+  const cms = makeCms(env, ctx);
+  await ensureSynced(cms);
+  const { items } = await cms.posts.list();
+  return { items };
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
+  const { items } = loaderData;
+  // mount / 再フォーカス時に loader を再走させ、裏で進んだ同期結果を反映する。
+  useNotionRevalidate();
   return (
-    <ul>
-      {loaderData.items.map((post) => (
-        <li key={post.slug}>
-          <Link to={`/posts/${post.slug}`}>{post.title ?? post.slug}</Link>
-        </li>
-      ))}
-    </ul>
+    <main>
+      <h1>記事一覧</h1>
+      <ul>
+        {items.map((post) => {
+          const meta = post.meta as { publishedAt?: string | null };
+          return (
+            <li key={post.slug}>
+              <Link to={`/posts/${post.slug}`}>
+                <strong>{post.slug}</strong>
+                {meta.publishedAt && <time>{meta.publishedAt}</time>}
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
+    </main>
   );
 }
 ```
 
 ## 記事ページ（React 描画）
 
-`post.notionBlocks()` が BlockObjectResponse ツリーを返す。`@notion-headless-cms/client/react`
-の `Renderer` に渡すだけで shadcn/ui ベースのコンポーネントとして描画される。
+`post.blocks` は同期時に画像 URL 解決・リンク解決まで済んだプレーンな `NormalizedBlock[]`。
+`denormalizeBlocks()` で `react-renderer` が期待する `BlockObjectResponse` 形状に変換する。
 
 ```tsx
 // app/routes/post.tsx
-import { isReloadRequest } from "@notion-headless-cms/client";
-import { NotionRevalidator, Renderer } from "@notion-headless-cms/client/react";
+import { NotionRenderer } from "@notion-headless-cms/react-renderer";
+import {
+  denormalizeBlocks,
+  toPageLinkMap,
+} from "@notion-headless-cms/react-renderer/cms";
+import { useNotionRevalidate } from "@notion-headless-cms/react-renderer/router";
 import { data } from "react-router";
-import { makeCms } from "../lib/cms";
+import { ensureSynced, makeCms } from "../lib/cms";
+import { cloudflareContext } from "../lib/context";
 import type { Route } from "./+types/post";
 
-export async function loader({ params, request, context }: Route.LoaderArgs) {
-  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
-  // F5 等の明示リロード時のみ recheck ウィンドウを無視して最新化
-  const post = await cms.posts.find(params.slug ?? "", { force: isReloadRequest(request) });
+export async function loader({ params, context }: Route.LoaderArgs) {
+  const { env, ctx } = context.get(cloudflareContext);
+  const cms = makeCms(env, ctx);
+  await ensureSynced(cms);
+  const post = await cms.posts.find(params.slug ?? "");
   if (!post) throw data("Not Found", { status: 404 });
-  const blocks = await post.notionBlocks(); // NotionBlock[]（キャスト不要）
-  return {
-    blocks,
-    item: { slug: post.slug, title: post.title, lastEditedTime: post.lastEditedTime },
-  };
+  return { post };
 }
 
 export default function Post({ loaderData }: Route.ComponentProps) {
-  const { blocks, item } = loaderData;
+  const { post } = loaderData;
+  const meta = post.meta as { title?: string | null; publishedAt?: string | null };
+  useNotionRevalidate();
   return (
     <article>
-      {/* collection と item だけで poll URL(/api/cms/check/...) と version を自動導出 */}
-      <NotionRevalidator poll={{ collection: "posts", item }} />
-      <h1>{item.title ?? item.slug}</h1>
-      <Renderer blocks={blocks} />
+      <h1>{meta.title ?? post.slug}</h1>
+      {meta.publishedAt && <time>{meta.publishedAt}</time>}
+      <NotionRenderer
+        blocks={denormalizeBlocks(post.blocks)}
+        pageLinks={toPageLinkMap(post.links)}
+        ogpEndpoint="/api/cms/ogp"
+      />
     </article>
   );
 }
 ```
 
-## 表示の自動更新（`<NotionRevalidator>`）
+## 表示の自動更新（`useNotionRevalidate` / `<NotionRevalidator>`）
 
-`@notion-headless-cms/client/react` の `NotionRevalidator` はポーリングを行わない。内部で
-`POST {basePath}/check/{collection}/{slug}` を叩き、`stale: true`（更新あり）のときだけ
-`useRevalidator()` で loader を再走させる。既定トリガーは **mount** と **visibility（再フォーカス）**。
-
-### 推奨: collection + item を渡す
+`@notion-headless-cms/react-renderer/router` の `useNotionRevalidate()`（レンダーを伴わない
+コンポーネント版が `<NotionRevalidator>`）は、`useRevalidator().revalidate()` を呼んで
+現在の loader を再走させるだけの薄いフック。別 API への fetch や輪読ポーリングは行わない。
+既定トリガーは `["mount", "visibility"]`（マウント時 + タブ再フォーカス時）。
 
 ```tsx
-// URL(/api/cms/check/posts/:slug) と version(item.lastEditedTime) を自動導出
-<NotionRevalidator poll={{ collection: "posts", item }} />
-
-// slug + version を直接渡す形も可
-<NotionRevalidator poll={{ collection: "posts", slug: item.slug, version: item.lastEditedTime }} />
+useNotionRevalidate();                          // 既定: mount + visibility
+useNotionRevalidate({ on: "visibility" });       // 再フォーカス時のみ
+<NotionRevalidator on={["mount", "visibility"]} />
 ```
 
-`POST /check` は Notion を coalescing（`recheckWindowMs`）付きで実照会し、差分があればその場で
-キャッシュを更新して `{ stale, version }` を返す。差分時はキャッシュ更新済みのため、`stale: true` を
-受けた `NotionRevalidator` が loader を再走させれば最新本文が得られる。
+同期自体は `ensureSynced()`（loader 内で `cms.sync.kick()` をキックする）または Notion webhook
+（`createCMS({ webhookSecret })`、[`cloudflare-workers.md`](./cloudflare-workers.md) 参照）が
+裏で進める。`useNotionRevalidate()` は「その進んだ結果を画面に反映するタイミング」を制御する。
 
-### 定期チェックを足す / push 経路に切り替える
+より高度に、同期完了を WebSocket で push したい場合は `createCMS({ realtime })` +
+`RealtimeHubDO`（`@notion-headless-cms/cms/cloudflare`）と `useNotionRevalidate({ realtime: { collection, item } })`
+を組み合わせる（`cloudflare-workers.md` の Durable Object 構成を参照）。
 
-- 連続インターバルは既定なし。`poll.intervalMs` を明示したときだけ定期チェックが加わる
-  （`<NotionRevalidator poll={{ collection: "posts", item, intervalMs: 60_000 }} />`）。
-- `realtime`（Durable Object / WebSocket）を設定すると push が主経路になり、ポーリングは停止する。
+## 画像プロキシ・OGP・Webhook
 
-## 画像プロキシ
+Notion 画像 URL は期限付きのため、同期時に SHA256 ハッシュキーで R2 に永続保存し、block 内の
+参照を書き換え済みで返す。`cms.fetch()` が `GET {routes}/images/:hash` を自動で配信するため、
+専用ルートの実装は不要（上記の `api.cms.ts` がまとめて処理する）。
 
-Notion 画像 URL は約 1 時間で失効するため、core が SHA256 ハッシュキーで R2 に永続保存し、
-HTML/JSX 内の参照を `/api/images/<hash>` に書き換える。同じハッシュを返すルートを置くだけ。
-
-```ts
-// app/routes/images.ts
-import { makeCms } from "../lib/cms";
-import type { Route } from "./+types/images";
-
-export async function loader({ params, context }: Route.LoaderArgs) {
-  const cms = makeCms(context.cloudflare.env, context.cloudflare.ctx);
-  const object = await cms.getCachedImage(params.hash ?? "");
-  if (!object) return new Response("Not Found", { status: 404 });
-  const headers = new Headers();
-  if (object.contentType) headers.set("content-type", object.contentType);
-  headers.set("cache-control", "public, max-age=31536000, immutable");
-  return new Response(object.data, { headers });
-}
-```
-
-## キャッシュ戦略: 永続 KV + バックグラウンド更新検知
-
-`cache.swr.staleBlockMs` は **指定せず既定に任せる** のが推奨。Notion webhook secret を設定して
-push 経路を稼働させると `staleBlockMs` の既定が無期限になり、KV キャッシュは常に即表示される。
-
-- KV キャッシュは期限なしで永続させ、リクエスト時は即時返却する。
-- `waitUntil` 経由でバックグラウンドに Notion の `lastEditedTime` と照合する（照会は
-  `recheckWindowMs`（既定 30 秒）で coalescing される）。
-- 差分があれば KV を差し替え、コンテンツキャッシュを無効化する。差分が無ければ何もしない。
-
-`staleBlockMs` を短く入れると閾値超過時にブロッキング再取得が走り、変更が無くても遅延の原因になる
-（webhook 稼働時は既定の無期限のままでよい）。F5 等の明示リロードで最新化したいなら、loader 側で
-`cms.posts.find(slug, { force: isReloadRequest(request) })` を使う（`isReloadRequest` は
-`@notion-headless-cms/client` から export）。
+bookmark / link_preview / embed の OGP カードは `<NotionRenderer ogpEndpoint="/api/cms/ogp">`
+を明示することでページアクセス時にクライアント側から取得される。
 
 ## 関連
 
 - 動作する完全な例: [`examples/cloudflare-react-router/`](../../../examples/cloudflare-react-router/)
-- Cloudflare Workers（非 React / Hono・Astro 等）: [`cloudflare-workers.md`](./cloudflare-workers.md)
+- Durable Object で Notion アクセスを一元化する構成: [`cloudflare-workers.md`](./cloudflare-workers.md)
 - レンダラの選び方: [`../choosing-a-renderer.md`](../choosing-a-renderer.md)
+- CMS メソッド一覧: [`../api/cms-methods.md`](../api/cms-methods.md)

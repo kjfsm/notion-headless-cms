@@ -1,13 +1,13 @@
 ---
-description: packages/cms（v3）の設計方針（マテリアライズドレプリカ・sync 委譲・公開ポリシー）
+description: packages/cms の設計方針（マテリアライズドレプリカ・sync 委譲・公開ポリシー）
 paths:
   - "packages/cms/**"
 ---
 
-# cms パッケージ（v3）
+# cms パッケージ
 
-`@notion-headless-cms/cms` は v2 系（`client`/`core`/`cache`/`notion-source` 等）とは独立したパッケージ。
-Notion アクセス・同期・ストレージ・HTTP 配信を 1 パッケージにまとめて提供する（`package.json` に v2 系への依存は無い）。
+`@notion-headless-cms/cms` は Notion アクセス・同期・ストレージ・HTTP 配信を 1 パッケージにまとめて提供する、
+このリポジトリの唯一の現行アーキテクチャ（他の workspace パッケージへの依存を持たない独立パッケージ）。
 
 ## 北極星
 

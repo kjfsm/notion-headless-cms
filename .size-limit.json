@@ -1,30 +1,5 @@
 [
   {
-    "name": "core",
-    "path": "packages/core/dist/index.mjs",
-    "limit": "65 kB"
-  },
-  {
-    "name": "markdown-html",
-    "path": "packages/markdown-html/dist/index.mjs",
-    "limit": "55 kB"
-  },
-  {
-    "name": "cache",
-    "path": "packages/cache/dist/index.mjs",
-    "limit": "5 kB"
-  },
-  {
-    "name": "cache/cloudflare",
-    "path": "packages/cache/dist/cloudflare.mjs",
-    "limit": "5 kB"
-  },
-  {
-    "name": "validate",
-    "path": "packages/validate/dist/index.mjs",
-    "limit": "65 kB"
-  },
-  {
     "name": "cms",
     "path": "packages/cms/dist/index.mjs",
     "limit": "100 kB",
@@ -41,29 +16,9 @@
     "limit": "15 kB"
   },
   {
-    "name": "client",
-    "path": "packages/client/dist/index.mjs",
-    "limit": "260 kB"
-  },
-  {
     "name": "react-renderer",
     "path": "packages/react-renderer/dist/index.mjs",
     "limit": "55 kB",
     "ignore": ["shiki", "shiki/engine/javascript", "katex"]
-  },
-  {
-    "name": "notion-source",
-    "path": "packages/notion-source/dist/index.mjs",
-    "limit": "175 kB"
-  },
-  {
-    "name": "fetch-blocks",
-    "path": "packages/fetch-blocks/dist/index.mjs",
-    "limit": "165 kB"
-  },
-  {
-    "name": "fetch-markdown",
-    "path": "packages/fetch-markdown/dist/index.mjs",
-    "limit": "245 kB"
   }
 ]

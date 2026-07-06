@@ -1,5 +1,5 @@
 ---
-description: vitest によるテスト執筆パターン（DataSource / renderer / R2 fake / fakeTimers / fetch モック）
+description: vitest によるテスト執筆パターン（KV/R2 fake / fakeTimers / fetch モック / CMSError 検証）
 paths:
   - "packages/**/__tests__/**"
   - "packages/**/*.test.ts"
@@ -16,77 +16,44 @@ paths:
 ## 実行
 
 ```bash
-pnpm test                                     # ワークスペース全体
-pnpm --filter @notion-headless-cms/core test  # 個別
-pnpm exec vitest --watch                      # watch
+pnpm test                                    # ワークスペース全体
+pnpm --filter @notion-headless-cms/cms test  # 個別
+pnpm exec vitest --watch                     # watch
 ```
 
-## パターン 1: DataSource モック
+## パターン 1: KV/R2 fake（`Map` ベース）
+
+`packages/cms/src/store/__tests__/cloudflare.test.ts` を参考。`KVNamespaceLike`/`R2BucketLike` の構造型を満たす fake:
 
 ```ts
-import { vi } from "vitest";
-import type { BaseContentItem, DataSource } from "../types/index";
-
-const makeMockSource = (items: BaseContentItem[] = []): DataSource => ({
-	name: "mock",
-	list: vi.fn().mockImplementation(async (opts) => {
-		if (opts?.publishedStatuses?.length) {
-			return items.filter(
-				(i) => i.status && (opts.publishedStatuses as string[]).includes(i.status),
-			);
-		}
-		return items;
-	}),
-	loadMarkdown: vi.fn().mockResolvedValue("# Hello"),
-});
-```
-
-## パターン 2: renderer モック
-
-core のテストでは renderer を必ずモック（`core` はゼロ依存なので import はダミー）:
-
-```ts
-vi.mock("@notion-headless-cms/markdown-html", () => ({
-	renderMarkdown: vi.fn().mockResolvedValue("<p>rendered</p>"),
-}));
-```
-
-## パターン 3: R2 fake bucket
-
-`packages/cache/src/__tests__/` を参考。`Map` ベースの fake:
-
-```ts
-const makeFakeBucket = () => {
-	const store = new Map<string, { value: ArrayBuffer; meta?: Record<string, string> }>();
+function fakeKvNamespace(): KVNamespaceLike {
+	const store = new Map<string, string>();
 	return {
-		async get(key: string) {
-			const entry = store.get(key);
-			if (!entry) return null;
-			return {
-				arrayBuffer: async () => entry.value,
-				customMetadata: entry.meta,
-			};
+		async get(key) {
+			return store.get(key) ?? null;
 		},
-		async put(
-			key: string,
-			value: ArrayBuffer,
-			opts?: { customMetadata?: Record<string, string> },
-		) {
-			store.set(key, { value, meta: opts?.customMetadata });
+		async put(key, value) {
+			store.set(key, value);
 		},
-		async delete(key: string) {
+		async delete(key) {
 			store.delete(key);
 		},
-		async list() {
-			return { objects: [...store.keys()].map((key) => ({ key })), truncated: false };
+		async list(opts) {
+			const prefix = opts?.prefix ?? "";
+			const keys = [...store.keys()]
+				.filter((k) => k.startsWith(prefix))
+				.map((name) => ({ name }));
+			return { keys, list_complete: true };
 		},
 	};
-};
+}
 ```
 
-## パターン 4: fetch モック
+`store/contract.ts` の `runDocStoreContract`/`runBlobStoreContract` に fake を渡せば、実装間で共通のテストを再利用できる。
 
-画像フェッチのテストでは `global.fetch` を置換:
+## パターン 2: fetch モック
+
+画像フェッチ・OGP・Notion API のテストでは `global.fetch` を置換:
 
 ```ts
 const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(
@@ -94,34 +61,28 @@ const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(
 );
 ```
 
-## パターン 5: fakeTimers
+## パターン 3: fakeTimers
 
-TTL / SWR のテストで時間を進める:
+sync のデバウンス・chunk 間隔のテストで時間を進める:
 
 ```ts
 beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
-it("TTL 切れでキャッシュを更新する", () => {
+it("debounceMs 経過後に同期が発火する", () => {
 	vi.setSystemTime(new Date("2024-01-01"));
 	// ...
-	vi.advanceTimersByTime(60_000);
+	vi.advanceTimersByTime(10_000);
 });
 ```
 
-## パターン 6: CMSError の検証
+## パターン 4: CMSError の検証
 
 ```ts
 import { CMSError, isCMSError, matchCMSError } from "../errors";
 
-// 旧来の判定（引き続き使用可）
-await expect(cms.list()).rejects.toSatisfy(
-	(err: unknown) => isCMSError(err) && err.code === "source/fetch_items_failed",
-);
-
-// err.is() による簡潔な判定
-await expect(cms.list()).rejects.toSatisfy(
-	(err: unknown) => isCMSError(err) && err.is("source/fetch_items_failed"),
+await expect(cms.find(slug)).rejects.toSatisfy(
+	(err: unknown) => isCMSError(err) && err.is("sync/notion_query_failed"),
 );
 
 // matchCMSError によるコードごとの分岐
@@ -129,13 +90,13 @@ try {
 	await cms.posts.find("slug");
 } catch (err) {
 	matchCMSError(err, {
-		"source/fetch_item_failed": (e) => console.error("取得失敗", e),
-		"cache/io_failed": (e) => console.error("キャッシュ I/O 失敗", e),
+		"sync/notion_query_failed": (e) => console.error("取得失敗", e),
+		"store/rest_request_failed": (e) => console.error("ストア I/O 失敗", e),
 	});
 }
 ```
 
-## パターン 7: 環境変数のスタブ
+## パターン 5: 環境変数のスタブ
 
 ```ts
 vi.stubEnv("NOTION_TOKEN", "test-token");

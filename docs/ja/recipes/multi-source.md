@@ -1,194 +1,110 @@
 ---
-title: マルチソース構成
-description: 複数 DataSource を組み合わせる
+title: 複数コレクション構成
+description: 複数の Notion データベースを 1 つの schema にまとめる
 category: レシピ
 order: 7
 ---
 
-# マルチソースレシピ
+# 複数コレクション構成
 
-複数の Notion DB（あるいは別ソース）を 1 つのクライアントで型安全に扱うパターン。
+`@notion-headless-cms/cms` は Notion 専用設計であり、v2 にあった「Notion 以外のバックエンドと
+混在させる」DataSource 抽象は無い（[`choosing-a-renderer.md`](../choosing-a-renderer.md) や
+`.claude/rules/cms.md` が明示するとおり、`cms` は他パッケージへの依存を持たない独立パッケージ
+として Notion アクセス・同期・配信を一括提供する）。
 
-## 事前準備：スキーマの生成
+その代わり「複数の Notion データベースを 1 つのクライアントで型安全に扱う」パターンは
+そのまま現行する。`defineSchema()` に複数の `defineCollection()` を渡すだけでよく、各コレクションは
+別々の `dataSourceId`（別々の Notion DB）を指すことができる。
 
-```bash
-pnpm add -D @notion-headless-cms/cli
-npx nhc init
-# nhc.config.ts を編集して複数 DB を設定
-npx nhc generate
-```
-
-`nhc.config.ts` の例:
+## スキーマ定義（2 つの Notion DB）
 
 ```ts
-import { defineConfig, env } from "@notion-headless-cms/cli";
+// app/schema.ts
+import { defineCollection, defineSchema, prop } from "@notion-headless-cms/cms";
 
-export default defineConfig({
-  notionToken: env("NOTION_TOKEN"),
-  output: "src/generated/nhc.schema.ts",
-  collections: {
-    posts: { dbName: "ブログ記事DB", publishedStatuses: ["公開済み"] },
-    news: {
-      databaseId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-      publishedStatuses: ["公開済み"],
-    },
+const posts = defineCollection({
+  dataSourceId: "d8221462-5ae9-8396-bdac-8731f4ef685a", // ブログ記事DB
+  slug: "slug",
+  properties: {
+    title: prop.title(),
+    slug: prop.richText(),
+    status: prop.status(["下書き", "公開済み"] as const),
+    publishedAt: prop.date(),
   },
-});
-```
-
-詳細は [CLI ドキュメント](../cli.md) を参照。
-
----
-
-## Node.js（Notion 複数 DB）
-
-```ts
-import { memoryCache } from "@notion-headless-cms/cache";
-import { createClient } from "@notion-headless-cms/core";
-import { notionSource } from "@notion-headless-cms/notion-source";
-import { schema } from "./generated/nhc.schema";
-
-const cms = createClient({
-  sources: {
-    notion: notionSource({
-      schema,
-      token: process.env.NOTION_TOKEN!,
-      publishOptions: {
-        posts: { publishedStatuses: ["公開済み"] },
-        news: { publishedStatuses: ["公開済み"] },
-      },
-    }),
-  },
-  cache: [memoryCache()],
-  swr: { recheckWindowMs: 30_000, staleBlockMs: 5 * 60_000 },
+  statusProperty: "status",
+  published: ["公開済み"],
 });
 
-// 各コレクションは個別の CollectionClient として推論される
-const posts = await cms.posts.list(); // Post[]
-const news = await cms.news.list();   // News[]
-```
-
-## Cloudflare Workers
-
-```toml
-# wrangler.toml
-[[kv_namespaces]]
-binding = "DOC_CACHE"
-id = "xxxx"
-
-[[r2_buckets]]
-binding = "IMG_BUCKET"
-bucket_name = "nhc-images"
-```
-
-```ts
-import { cloudflareCache } from "@notion-headless-cms/cache/cloudflare";
-import { createClient } from "@notion-headless-cms/core";
-import { notionSource } from "@notion-headless-cms/notion-source";
-import { schema } from "./generated/nhc.schema";
-
-export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
-    const cms = createClient({
-      sources: {
-        notion: notionSource({
-          schema,
-          token: env.NOTION_TOKEN,
-          publishOptions: {
-            posts: { publishedStatuses: ["公開済み"] },
-            news: { publishedStatuses: ["公開済み"] },
-          },
-        }),
-      },
-      cache: cloudflareCache(env),
-      swr: { recheckWindowMs: 30_000, staleBlockMs: 5 * 60_000 },
-    });
-
-    const url = new URL(request.url);
-    if (url.pathname === "/posts") return Response.json(await cms.posts.list());
-    if (url.pathname === "/news") return Response.json(await cms.news.list());
-    return new Response("Not Found", { status: 404 });
+const news = defineCollection({
+  dataSourceId: "a1b2c3d4-5678-90ab-cdef-1234567890ab", // ニュースDB（別 Notion DB）
+  slug: "slug",
+  properties: {
+    heading: prop.title(),
+    slug: prop.richText(),
+    status: prop.status(["下書き", "公開済み"] as const),
   },
-};
-```
-
----
-
-## 異なるソースを混在させる
-
-`createClient({ sources })` は複数アダプターの `collections` を自動マージする。各アダプターは `@notion-headless-cms/core` の `CMSSources` インターフェースを宣言マージで拡張するため、`import` するだけで sources のキーが補完候補に現れる。
-
-```ts
-import { createClient } from "@notion-headless-cms/core";
-import { notionSource } from "@notion-headless-cms/notion-source";
-import { contentfulSource } from "@example/contentful-source"; // 仮想例
-import { schema as notionSchema } from "./generated/nhc.schema";
-
-const cms = createClient({
-  sources: {
-    notion: notionSource({ schema: notionSchema, token: process.env.NOTION_TOKEN! }),
-    contentful: contentfulSource({ /* ... */ }),
-  },
-  cache: [memoryCache()],
+  statusProperty: "status",
+  published: ["公開済み"],
 });
 
-await cms.posts.list();    // Notion 由来
-await cms.products.list(); // Contentful 由来
+export const schema = defineSchema({ posts, news });
 ```
 
-> 同名コレクションは後勝ち（`Object.assign`）。ソース間で名前が衝突しないように調整する。
+## `createCMS` での利用
 
----
-
-## 型推論の仕組み
-
-`MergeSourceCollections<S>` 型ユーティリティで、すべてのソースの `collections` が交差型としてマージされる。各 `CollectionDef<T>` の `T` がそのまま `CollectionClient<T>` に伝わる。
+追加の設定は不要。`schema` に複数コレクションを渡すだけで、各コレクションが個別の
+`{ find, list }` ハンドルとして生える。
 
 ```ts
-// 生成ファイル (nhc.schema.ts) — 編集不要
-export interface Post {
-  id: string;
-  slug: string;
-  title: string | null;
-  /* ... */
-}
-export interface News {
-  id: string;
-  slug: string;
-  headline: string | null;
-}
+import { createCMS } from "@notion-headless-cms/cms";
+import { schema } from "./schema.js";
 
-export const schema = {
-  posts: { dataSourceId: "...", properties: postsProperties, slugField: "slug" },
-  news: { dataSourceId: "...", properties: newsProperties, slugField: "slug" },
-} as const satisfies SchemaMap;
-
-// アプリコード
-const cms = createClient({ sources: { notion: notionSource({ schema, token }) } });
-//    ^? CMSClient<{ posts: CollectionDef<Post>; news: CollectionDef<News> }>
-
-const posts = await cms.posts.list();
-//    ^? Post[]
-```
-
----
-
-## 1 ソースのみ扱いたい場合
-
-`nhc.config.ts` の `collections` に 1 件だけ登録すれば、そのまま単一 DB 構成としても使える。
-
-```ts
-const cms = createClient({
-  sources: { notion: notionSource({ schema, token }) },
-  cache: [memoryCache()],
+const cms = createCMS({
+  schema,
+  notion: { token: process.env.NOTION_TOKEN! },
 });
-const posts = await cms.posts.list();
+
+await cms.sync.kick();
+
+const posts = await cms.posts.list(); // ブログ記事DB 由来
+const news = await cms.news.list();   // ニュースDB 由来（別 Notion DB）
 ```
+
+`cms.posts` / `cms.news` はそれぞれ `defineCollection` の `properties` から型推論された
+`InferEntry<C>` を持つ（`cms.posts.find()` は `Post` 形、`cms.news.find()` は `News` 形）。
+
+## URL を持たない設定値コレクション
+
+`slug` を省略すると、そのコレクションは Notion の page id でアドレスされる。ブログ記事のような
+URL を持つコンテンツとは別に、サイト全体の設定値・選択肢一覧を同じ `schema` に混在させられる。
+
+```ts
+const siteTexts = defineCollection({
+  dataSourceId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
+  // slug を省略 → find(pageId) でアドレスする
+  properties: {
+    key: prop.richText(),
+    value: prop.richText(),
+  },
+});
+
+export const schema = defineSchema({ posts, news, siteTexts });
+```
+
+## 内部実装: 単一の同期コーディネータに合成される
+
+複数コレクションは `createCMS` 内部で `createMultiSourceDeps()`（`sync/multi-source.ts`）により
+1 つの `SyncCoordinatorCore` に合成される。ユーザーが明示的に配線する概念ではないが、動作を
+理解しておくと役立つ点が 2 つある。
+
+- **レートリミッタ・chunk 処理はコレクション横断で共有される**。`sync.chunkSize`（既定 2）は
+  「1 サイクルで処理する entry 数」を全コレクション合計で数える。コレクションが増えるほど
+  1 コレクションあたりの同期頻度は相対的に下がる。
+- **コレクション名に `":"` を含められない**。合成カーソルが `"{collection}:{slug}"` で
+  名前空間化するため、`":"` を含む名前は `schema/reserved_collection_name` エラーになる。
 
 ## 関連ドキュメント
 
-- [CLI ツール](../cli.md)
-- [Node.js スクリプト](./nodejs-script.md)
 - [Cloudflare Workers + R2 + KV](./cloudflare-workers.md)
-- [カスタムデータソース](./custom-source.md) — 自前のソースアダプターを作る
+- [Node.js スクリプト](./nodejs-script.md)
 - [CMS メソッド一覧](../api/cms-methods.md)
