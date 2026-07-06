@@ -50,7 +50,11 @@ function run<T>(fn: (opts: T) => Promise<void>): (opts: T & CommonOpts) => Promi
           "\nヒント: --verbose で次の対処手順、--debug でスタックトレースを表示します。",
         );
       }
-      process.exit(1);
+      // process.exit(1) は stdout/stderr がフラッシュされる前でも即座にプロセスを
+      // 落とすため、`nhc check --json | jq` のようにパイプした際に出力末尾が
+      // 欠けることがある。exitCode を設定して自然に終了させる(他コマンドの
+      // runCheck/runDoctor/runSync も同様に process.exitCode を使っている)。
+      process.exitCode = 1;
     }
   };
 }

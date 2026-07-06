@@ -39,6 +39,18 @@ interface WranglerBindings {
 }
 
 /**
+ * TOML のコメント行(`#` 始まり、前後の空白は無視)を取り除く。
+ * `# kv_namespaces = [...]` のようにコメントアウトされた宣言を正規表現が
+ * 誤って「宣言あり」と判定しないようにするため。
+ */
+function stripTomlComments(text: string): string {
+  return text
+    .split("\n")
+    .filter((line) => !line.trim().startsWith("#"))
+    .join("\n");
+}
+
+/**
  * wrangler.toml のテキストを見て KV/R2/DO の binding 宣言有無を静的にチェックする。
  * 実際のバインディング疎通(ランタイム)ではなく設定ファイル上の宣言確認に留める
  * (`doctor.ts` の remediation メッセージが想定する対処 = wrangler.toml への追記)。
@@ -50,6 +62,7 @@ async function detectWranglerBindings(wranglerPath: string): Promise<WranglerBin
   } catch {
     return { kv: false, r2: false, durableObject: false };
   }
+  text = stripTomlComments(text);
   return {
     kv: /kv_namespaces\s*=/.test(text),
     r2: /r2_buckets\s*=/.test(text),

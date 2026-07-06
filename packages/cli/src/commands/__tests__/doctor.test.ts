@@ -86,6 +86,30 @@ describe("runDoctor", () => {
     expect(process.exitCode).toBeUndefined();
   });
 
+  it("コメントアウトされた binding 宣言は「宣言あり」と誤検出しない", async () => {
+    const commentedOutToml = `
+name = "example"
+# kv_namespaces = [{ binding = "DOC_INDEX", id = "abc" }]
+  # r2_buckets = [{ binding = "ENTRY_BUCKET", bucket_name = "abc" }]
+
+# [[durable_objects.bindings]]
+# name = "SYNC_COORDINATOR"
+# class_name = "SyncCoordinatorDO"
+`;
+    await fs.writeFile(path.join(tmpDir, "wrangler.toml"), commentedOutToml);
+    loadConfigMock.mockResolvedValue({
+      collections: {},
+    } as CMSConfig);
+    validateTokenMock.mockResolvedValue(true);
+
+    await runDoctor({ token: "tok", silent: true, json: true });
+
+    const output = JSON.parse(logSpy.mock.calls.map((c: unknown[]) => c[0]).join("\n"));
+    expect(output.ok).toBe(false);
+    const bindingChecks = output.checks.filter((c: { name: string }) => c.name.endsWith("binding"));
+    expect(bindingChecks.every((c: { status: string }) => c.status === "error")).toBe(true);
+  });
+
   it("wrangler.toml が無ければ KV/R2/DO binding をすべて error として報告する", async () => {
     loadConfigMock.mockResolvedValue({
       collections: {},

@@ -3,6 +3,7 @@ import type { IndexStore } from "../store/index-store.js";
 import type { VersionedCacheLayer } from "../store/versioned-cache.js";
 import type { EntrySnapshot } from "../types/entry-snapshot.js";
 import type { JsonValue } from "../types/json-value.js";
+import type { Logger } from "../types/logger.js";
 
 export type ColdStartFetch = (collection: string, slug: string) => Promise<EntrySnapshot | null>;
 
@@ -12,6 +13,7 @@ export interface FindDeps {
   readonly versionedCache?: VersionedCacheLayer;
   /** index/entry が未マテリアライズの場合のみ、SyncCoordinator 経由で 1 回だけブロッキング取得する。 */
   readonly coldStartFetch?: ColdStartFetch;
+  readonly logger?: Logger;
 }
 
 /**
@@ -38,7 +40,13 @@ export async function findEntry<Meta extends JsonValue = JsonValue>(
 
   const snapshot = await deps.entryStore.get<Meta>(collection, slug);
   if (!snapshot) {
-    // index にはあるが R2 に無い(同期タイミングのズレ)。コールドスタート経路にフォールバックする。
+    // index にはあるが R2 に無い(同期タイミングのズレ・部分失敗)。運用者が検知できるよう
+    // 警告した上で、コールドスタート経路が指定されていればそちらにフォールバックする。
+    deps.logger?.warn?.("index にあるが entry 本体が見つかりません(index/entry 不整合)", {
+      operation: "find",
+      collection,
+      slug,
+    });
     return deps.coldStartFetch
       ? ((await deps.coldStartFetch(collection, slug)) as EntrySnapshot<Meta> | null)
       : null;

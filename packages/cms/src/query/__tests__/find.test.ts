@@ -61,6 +61,31 @@ describe("findEntry", () => {
     expect(result).toBeNull();
   });
 
+  it("index にあるが R2 に entry が無い不整合を検知して警告する", async () => {
+    const indexStore = createIndexStore(memoryDocStore());
+    const entryStore = createEntryStore(memoryBlobStore());
+    await indexStore.upsertEntry("posts", {
+      slug: "hello",
+      version: "v1",
+      listed: true,
+      meta: {},
+    });
+    // entryStore.put を呼ばず、index だけ存在する不整合状態を作る。
+    const warn = vi.fn();
+
+    const result = await findEntry({ entryStore, indexStore, logger: { warn } }, "posts", "hello");
+
+    expect(result).toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("不整合"),
+      expect.objectContaining({
+        operation: "find",
+        collection: "posts",
+        slug: "hello",
+      }),
+    );
+  });
+
   it("versioned cache にヒットすればそこから返す(R2 を読まない)", async () => {
     const indexStore = createIndexStore(memoryDocStore());
     const entryStore = createEntryStore(memoryBlobStore());

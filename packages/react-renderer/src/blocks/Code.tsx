@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { CodeCollapsibleWrapper } from "../components/code-collapsible-wrapper.js";
 import { CopyButton } from "../components/copy-button.js";
 import { Badge } from "../components/ui/badge.js";
+import type { CodeWithCachedHtml } from "../internal/notion-extensions.js";
 import { cn } from "../lib/utils.js";
 import type { BlockComponentProps } from "../types.js";
 
@@ -101,8 +102,7 @@ function normalizeLanguage(lang: string): string {
  * の `MermaidCode` を `<NotionRenderer components={{ Code: MermaidCode }} />` で差し込む。
  */
 export function Code({ block, className }: BlockComponentProps<CodeBlockObjectResponse>) {
-  const cachedHtml = (block.code as CodeBlockObjectResponse["code"] & { __cachedHtml?: string })
-    .__cachedHtml;
+  const cachedHtml = (block.code as CodeWithCachedHtml).__cachedHtml;
   const language = normalizeLanguage(block.code.language);
   const source = plainText(block.code.rich_text);
   const fileName = plainText(block.code.caption);

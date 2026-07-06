@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import type { IndexEntry } from "../../types/collection-index.js";
 import type { JsonValue } from "../../types/json-value.js";
@@ -139,6 +139,28 @@ describe("createIndexStore", () => {
     const result = await store.removeEntry("posts", "missing");
     expect(result.wrote).toBe(false);
     expect(result.writes).toBe(0);
+  });
+
+  it("点キーが無くマニフェストにだけ orphan が残る不整合を検知して警告する", async () => {
+    const docs = memoryDocStore();
+    const warn = vi.fn();
+    const store = createIndexStore(docs, { warn });
+    await store.upsertEntry("posts", entry("a", "v1"));
+    // 部分失敗を模して点キーだけ直接削除する(マニフェストは残ったまま)。
+    await docs.delete("entry-index:posts:a");
+
+    const result = await store.removeEntry("posts", "a");
+
+    expect(result.wrote).toBe(false);
+    expect(result.writes).toBe(0);
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("不整合"),
+      expect.objectContaining({
+        operation: "removeEntry",
+        collection: "posts",
+        slug: "a",
+      }),
+    );
   });
 
   it("listEntries は where/sort/pagination を評価する", async () => {

@@ -3,6 +3,7 @@
 import type { EquationBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { useEffect, useState } from "react";
 
+import type { EquationWithCachedHtml } from "../internal/notion-extensions.js";
 import { cn } from "../lib/utils.js";
 import type { BlockComponentProps } from "../types.js";
 
@@ -13,7 +14,7 @@ import type { BlockComponentProps } from "../types.js";
  * peer に `katex` が無いか KaTeX が失敗したら原文を `<pre>` で出す。
  */
 export function Equation({ block, className }: BlockComponentProps<EquationBlockObjectResponse>) {
-  const cachedHtml = (block.equation as { expression: string; __cachedHtml?: string }).__cachedHtml;
+  const cachedHtml = (block.equation as EquationWithCachedHtml).__cachedHtml;
   const expression = block.equation.expression;
   const [html, setHtml] = useState<string | null>(cachedHtml ?? null);
 

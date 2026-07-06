@@ -27,17 +27,23 @@ export function memoryBlobStore(): BlobStore {
     }
   >();
   return {
+    // R2 は書き込み時にバイト列をコピーして保持する(呼び出し側の配列を後から
+    // 変異させても保存内容には影響しない)。in-memory 実装が参照をそのまま
+    // 共有すると、この不変性を前提にしたコードが R2 実装とだけ整合し、
+    // in-memory 実装ではデータ破損する形でコントラクトテストの穴になる。
+    // put/get の両方で `.slice()` してコピーを渡すことで挙動を合わせる。
     async get(key) {
-      return map.get(key)?.bytes ?? null;
+      const entry = map.get(key);
+      return entry ? entry.bytes.slice() : null;
     },
     async getWithMetadata(key): Promise<BlobGetResult | null> {
       const entry = map.get(key);
       if (!entry) return null;
-      return { bytes: entry.bytes, contentType: entry.contentType };
+      return { bytes: entry.bytes.slice(), contentType: entry.contentType };
     },
     async put(key, value, opts?: BlobPutOptions) {
       map.set(key, {
-        bytes: value,
+        bytes: value.slice(),
         contentType: opts?.contentType,
         customMetadata: opts?.customMetadata,
       });

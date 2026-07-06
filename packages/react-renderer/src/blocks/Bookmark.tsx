@@ -2,15 +2,12 @@
 
 import type { BookmarkBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
-import { OgCard, type OgCardData } from "../embeds/OgCard";
+import { OgCard } from "../embeds/OgCard";
 import { useOgp } from "../embeds/useOgp.js";
+import type { BookmarkWithOgp } from "../internal/notion-extensions.js";
 import { cn } from "../lib/utils";
 import { Caption } from "../rich-text/Caption";
 import type { BlockComponentProps } from "../types";
-
-type BookmarkBlockMaybeWithOgp = BookmarkBlockObjectResponse & {
-  ogp?: OgCardData;
-};
 
 /**
  * bookmark ブロックの既定描画。`block.ogp`（同期時に付与済みの OGP メタデータ）が
@@ -19,7 +16,7 @@ type BookmarkBlockMaybeWithOgp = BookmarkBlockObjectResponse & {
  */
 export function Bookmark({ block, className }: BlockComponentProps<BookmarkBlockObjectResponse>) {
   const url = block.bookmark.url;
-  const preloadedOgp = (block as BookmarkBlockMaybeWithOgp).ogp;
+  const preloadedOgp = (block as BookmarkWithOgp).ogp;
   const fetchedOgp = useOgp(preloadedOgp ? null : url);
   const ogp = preloadedOgp ?? fetchedOgp;
   return (

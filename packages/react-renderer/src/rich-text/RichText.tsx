@@ -4,6 +4,7 @@ import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoi
 import { Fragment } from "react";
 
 import { useNotionContext } from "../context.js";
+import type { EquationRichTextWithCachedHtml } from "../internal/notion-extensions.js";
 import { Annotated } from "./Annotation";
 import { InlineEquation as DefaultInlineEquation } from "./InlineEquation";
 import { Mention } from "./Mention";
@@ -50,8 +51,7 @@ function RichTextItem({ item }: { item: RichTextItemResponse }) {
 
   if (item.type === "equation") {
     const InlineEquation = components.InlineEquation ?? DefaultInlineEquation;
-    const cachedHtml = (item.equation as { expression: string; __cachedHtml?: string })
-      .__cachedHtml;
+    const cachedHtml = (item.equation as EquationRichTextWithCachedHtml).__cachedHtml;
     return (
       <Annotated annotations={item.annotations} href={item.href}>
         <InlineEquation expression={item.equation.expression} cachedHtml={cachedHtml} />
