@@ -2,6 +2,7 @@
 
 import type { EquationBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { useEffect, useState } from "react";
+
 import { cn } from "../lib/utils.js";
 import type { BlockComponentProps } from "../types.js";
 
@@ -11,13 +12,8 @@ import type { BlockComponentProps } from "../types.js";
  * クライアントで `katex` を動的 import して `displayMode: true` で組版する。
  * peer に `katex` が無いか KaTeX が失敗したら原文を `<pre>` で出す。
  */
-export function Equation({
-  block,
-  className,
-}: BlockComponentProps<EquationBlockObjectResponse>) {
-  const cachedHtml = (
-    block.equation as { expression: string; __cachedHtml?: string }
-  ).__cachedHtml;
+export function Equation({ block, className }: BlockComponentProps<EquationBlockObjectResponse>) {
+  const cachedHtml = (block.equation as { expression: string; __cachedHtml?: string }).__cachedHtml;
   const expression = block.equation.expression;
   const [html, setHtml] = useState<string | null>(cachedHtml ?? null);
 
@@ -27,7 +23,7 @@ export function Equation({
     // tree-shaking で除外される。
     if (import.meta.env.SSR || cachedHtml) return;
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const katex = (await import("katex")).default;
         const out = katex.renderToString(expression, {
@@ -56,10 +52,7 @@ export function Equation({
 
   return (
     <pre
-      className={cn(
-        "my-3 overflow-x-auto rounded-lg bg-muted p-4 font-mono text-sm",
-        className,
-      )}
+      className={cn("my-3 overflow-x-auto rounded-lg bg-muted p-4 font-mono text-sm", className)}
     >
       {expression}
     </pre>

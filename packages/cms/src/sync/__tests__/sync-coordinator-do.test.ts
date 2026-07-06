@@ -1,8 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
-import type {
-  DurableObjectNamespaceLike,
-  DurableObjectStubLike,
-} from "../durable-object-types.js";
+
+import type { DurableObjectNamespaceLike, DurableObjectStubLike } from "../durable-object-types.js";
 import type { SyncCoordinatorCMS } from "../sync-coordinator-do.js";
 import {
   createSyncCoordinatorDO,
@@ -10,9 +8,7 @@ import {
   readerReadOnly,
 } from "../sync-coordinator-do.js";
 
-function makeFakeCMS(
-  overrides: Partial<SyncCoordinatorCMS["sync"]> = {},
-): SyncCoordinatorCMS {
+function makeFakeCMS(overrides: Partial<SyncCoordinatorCMS["sync"]> = {}): SyncCoordinatorCMS {
   return {
     sync: {
       kick: vi.fn().mockResolvedValue(undefined),
@@ -40,9 +36,7 @@ describe("createSyncCoordinatorDO", () => {
     const cms = makeFakeCMS();
     const DO = createSyncCoordinatorDO({ createCMS: () => cms });
     const instance = new DO({} as never, {});
-    const res = await instance.fetch(
-      new Request("https://do/kick", { method: "POST" }),
-    );
+    const res = await instance.fetch(new Request("https://do/kick", { method: "POST" }));
     expect(cms.sync.kick).toHaveBeenCalledTimes(1);
     expect(await res.json()).toEqual({ ok: true });
   });
@@ -61,9 +55,7 @@ describe("createSyncCoordinatorDO", () => {
     });
     const DO = createSyncCoordinatorDO({ createCMS: () => cms });
     const instance = new DO({} as never, {});
-    const res = await instance.fetch(
-      new Request("https://do/reconcile", { method: "POST" }),
-    );
+    const res = await instance.fetch(new Request("https://do/reconcile", { method: "POST" }));
     expect(await res.json()).toEqual({ ok: true, removed: ["a", "b"] });
   });
 
@@ -105,9 +97,7 @@ describe("createSyncCoordinatorDO", () => {
     });
     const DO = createSyncCoordinatorDO({ createCMS: () => cms });
     const instance = new DO({} as never, {});
-    const res = await instance.fetch(
-      new Request("https://do/kick", { method: "POST" }),
-    );
+    const res = await instance.fetch(new Request("https://do/kick", { method: "POST" }));
     expect(res.status).toBe(500);
     expect(await res.json()).toEqual({ ok: false, error: "notion down" });
   });
@@ -139,24 +129,17 @@ describe("durableObjectSyncDelegate", () => {
     const delegate = durableObjectSyncDelegate({ stub });
     await delegate.kick();
     await delegate.onWebhook();
-    expect(calls).toEqual([
-      "https://sync-coordinator/kick",
-      "https://sync-coordinator/webhook",
-    ]);
+    expect(calls).toEqual(["https://sync-coordinator/kick", "https://sync-coordinator/webhook"]);
   });
 
   it("reconcile は removed を DO のレスポンスから取り出す", async () => {
-    const stub = makeStub(
-      async () => new Response(JSON.stringify({ ok: true, removed: ["x"] })),
-    );
+    const stub = makeStub(async () => new Response(JSON.stringify({ ok: true, removed: ["x"] })));
     const delegate = durableObjectSyncDelegate({ stub });
     expect(await delegate.reconcile()).toEqual({ removed: ["x"] });
   });
 
   it("getState は DO のレスポンスから state を取り出す(未設定時は null)", async () => {
-    const stub = makeStub(
-      async () => new Response(JSON.stringify({ ok: true, state: null })),
-    );
+    const stub = makeStub(async () => new Response(JSON.stringify({ ok: true, state: null })));
     const delegate = durableObjectSyncDelegate({ stub });
     expect(await delegate.getState()).toBeNull();
   });
@@ -168,9 +151,7 @@ describe("durableObjectSyncDelegate", () => {
       failureCount: 0,
       recentFailures: [],
     };
-    const stub = makeStub(
-      async () => new Response(JSON.stringify({ ok: true, stats })),
-    );
+    const stub = makeStub(async () => new Response(JSON.stringify({ ok: true, stats })));
     const delegate = durableObjectSyncDelegate({ stub });
     expect(await delegate.stats()).toEqual(stats);
   });
@@ -197,9 +178,7 @@ describe("durableObjectSyncDelegate", () => {
   });
 
   it("namespace + name 指定時はその name を idFromName に渡す", async () => {
-    const stub = makeStub(
-      async () => new Response(JSON.stringify({ ok: true })),
-    );
+    const stub = makeStub(async () => new Response(JSON.stringify({ ok: true })));
     const { namespace, idFromName } = makeNamespace(stub);
     const delegate = durableObjectSyncDelegate({ namespace, name: "tenant-a" });
     await delegate.onWebhook();

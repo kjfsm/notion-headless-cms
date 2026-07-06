@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+
 import type { RealtimeAdapter } from "../realtime.js";
 import { channelTag, publishVersionUpdate } from "../realtime.js";
 

@@ -1,10 +1,8 @@
 import { NotionRenderer } from "@notion-headless-cms/react-renderer";
-import {
-  denormalizeBlocks,
-  toPageLinkMap,
-} from "@notion-headless-cms/react-renderer/cms";
+import { denormalizeBlocks, toPageLinkMap } from "@notion-headless-cms/react-renderer/cms";
 import { useNotionRevalidate } from "@notion-headless-cms/react-renderer/router";
 import { data, isRouteErrorResponse } from "react-router";
+
 import { ensureSynced, makeCms } from "../lib/cms";
 import { cloudflareContext } from "../lib/context";
 import type { Route } from "./+types/post";
@@ -17,8 +15,7 @@ type SerializedError = {
 };
 
 function serializeError(err: unknown, depth = 0): SerializedError {
-  if (depth > 5)
-    return { message: "(too deep)", code: null, stack: null, cause: null };
+  if (depth > 5) return { message: "(too deep)", code: null, stack: null, cause: null };
   const e = err as Record<string, unknown>;
   return {
     message: err instanceof Error ? err.message : String(err),

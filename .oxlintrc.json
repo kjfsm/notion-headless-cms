@@ -4,10 +4,13 @@
   "categories": {
     "correctness": "error"
   },
-  "rules": {},
+  "rules": {
+    // vi.fn() への型パラメータ必須化。既存テストの書き方と合わないため無効化
+    "vitest/require-mock-type-parameters": "off"
+  },
   "env": {
     "builtin": true
   },
   "options": { "typeAware": true },
-  "ignorePatterns": ["worker-configuration.d.ts", ".react-router/**"]
+  "ignorePatterns": ["worker-configuration.d.ts", "**/components/ui/**", "**/*.hbs"]
 }

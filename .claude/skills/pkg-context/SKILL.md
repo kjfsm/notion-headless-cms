@@ -27,6 +27,7 @@ Read packages/<name>/package.json
 ```
 
 抜き出す項目だけ会話に残す:
+
 - `name`
 - `dependencies` / `peerDependencies` / `devDependencies`（バージョン番号は省略可）
 - `exports`（公開エントリの形）
@@ -49,6 +50,7 @@ ls .claude/rules/
 `<name>` または所属層名（`core` / `cache` / `cloudflare` / `cli` / `adapter` / `source-notion` / `error-handling` / `testing` 等）に対応する rule を Read する。
 
 例:
+
 - `core` → `core.md` + `package-boundaries.md`
 - `cache-r2` → `cache.md` + `cloudflare.md`
 - `notion-source` → `source-notion.md` + `adapter.md`

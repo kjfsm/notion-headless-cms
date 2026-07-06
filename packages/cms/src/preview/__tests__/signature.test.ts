@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { createPreviewUrl, verifyPreviewSignature } from "../signature.js";
 
 const SECRET = "s3cr3t";
@@ -6,15 +7,12 @@ const SECRET = "s3cr3t";
 describe("createPreviewUrl / verifyPreviewSignature", () => {
   it("発行した URL の sig/exp で検証が通る", async () => {
     const now = 1_000_000;
-    const url = await createPreviewUrl(
-      "https://x/api/cms/preview/posts/hello",
-      {
-        secret: SECRET,
-        collection: "posts",
-        slug: "hello",
-        now,
-      },
-    );
+    const url = await createPreviewUrl("https://x/api/cms/preview/posts/hello", {
+      secret: SECRET,
+      collection: "posts",
+      slug: "hello",
+      now,
+    });
     const parsed = new URL(url);
     const sig = parsed.searchParams.get("sig");
     const exp = parsed.searchParams.get("exp");

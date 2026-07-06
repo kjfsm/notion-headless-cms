@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import type { DoctorInput } from "../doctor.js";
 import { runDoctorChecks } from "../doctor.js";
 
@@ -43,9 +44,7 @@ describe("runDoctorChecks", () => {
 
   it("token 無効は error", () => {
     const report = runDoctorChecks({ ...healthyInput(), tokenValid: false });
-    expect(report.checks.find((c) => c.name === "Notion token")?.status).toBe(
-      "error",
-    );
+    expect(report.checks.find((c) => c.name === "Notion token")?.status).toBe("error");
     expect(report.ok).toBe(false);
   });
 
@@ -54,9 +53,7 @@ describe("runDoctorChecks", () => {
       ...healthyInput(),
       tokenValid: "unknown",
     });
-    expect(report.checks.find((c) => c.name === "Notion token")?.status).toBe(
-      "warn",
-    );
+    expect(report.checks.find((c) => c.name === "Notion token")?.status).toBe("warn");
   });
 
   it("同期失敗件数が 1 件以上あれば warn", () => {

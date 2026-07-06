@@ -37,13 +37,7 @@ export default {
     },
     "packages/cms": {
       // package.json の exports サブパス (./, ./html, ./cloudflare, ./node, ./testing)
-      entry: [
-        "src/index.ts",
-        "src/html.ts",
-        "src/cloudflare.ts",
-        "src/node.ts",
-        "src/testing.ts",
-      ],
+      entry: ["src/index.ts", "src/html.ts", "src/cloudflare.ts", "src/node.ts", "src/testing.ts"],
       project: ["src/**/*.ts"],
       // vitest は ./testing サブパスから使う optional peerDep
       ignoreDependencies: ["vitest"],

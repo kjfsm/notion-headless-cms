@@ -1,7 +1,9 @@
 import path from "node:path";
+
 import type { CollectionDef } from "@notion-headless-cms/cms";
 import { CMSError, createCMS, defineSchema } from "@notion-headless-cms/cms";
 import { fileBlobStore, fileDocStore } from "@notion-headless-cms/cms/node";
+
 import { loadConfig } from "../config-loader.js";
 import { runSyncCommand } from "../sync-command.js";
 import { loadEnvFile, makeReporter, resolveToken } from "./shared.js";
@@ -27,17 +29,13 @@ export async function runSync(opts: SyncOptions): Promise<void> {
   const reporter = makeReporter(opts);
   await loadEnvFile(opts.envFile, reporter);
 
-  const configPath = path.resolve(
-    process.cwd(),
-    opts.config ?? "nhc.config.ts",
-  );
+  const configPath = path.resolve(process.cwd(), opts.config ?? "nhc.config.ts");
   const config = await loadConfig(configPath);
 
   if (!config.schemaModule || Object.keys(config.collections).length === 0) {
     throw new CMSError({
       code: "cli/config_invalid",
-      message:
-        "nhc.config.ts に schemaModule と collections を定義してください。",
+      message: "nhc.config.ts に schemaModule と collections を定義してください。",
       context: { operation: "runSync" },
     });
   }
@@ -47,17 +45,12 @@ export async function runSync(opts: SyncOptions): Promise<void> {
   const schemaModulePath = path.resolve(process.cwd(), config.schemaModule);
   const { createJiti } = await import("jiti");
   const jiti = createJiti(import.meta.url);
-  const schemaModule =
-    await jiti.import<Record<string, unknown>>(schemaModulePath);
+  const schemaModule = await jiti.import<Record<string, unknown>>(schemaModulePath);
 
   const collections: Record<string, CollectionDef> = {};
   for (const name of Object.keys(config.collections)) {
     const exported = schemaModule[name];
-    if (
-      !exported ||
-      typeof exported !== "object" ||
-      !("properties" in exported)
-    ) {
+    if (!exported || typeof exported !== "object" || !("properties" in exported)) {
       throw new CMSError({
         code: "cli/schema_invalid",
         message: `[${name}] スキーマモジュールに defineCollection の export "${name}" が見つかりません。`,
@@ -77,9 +70,7 @@ export async function runSync(opts: SyncOptions): Promise<void> {
   });
 
   const result = await runSyncCommand(cms.sync, (state) => {
-    reporter.debug(
-      `cursor=${state.cursor ?? "(完了)"} failures=${state.failures.length}`,
-    );
+    reporter.debug(`cursor=${state.cursor ?? "(完了)"} failures=${state.failures.length}`);
   });
 
   if (opts.json) {

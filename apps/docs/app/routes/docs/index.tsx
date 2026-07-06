@@ -1,4 +1,5 @@
 import { Link } from "react-router";
+
 import { defaultLocale } from "../../lib/i18n/config";
 import { listDocEntries } from "../../lib/markdown/load";
 import type { Route } from "./+types/index";
@@ -33,19 +34,17 @@ export default function DocsIndex({ loaderData }: Route.ComponentProps) {
   return (
     <div>
       <header className="mb-12">
-        <p className="mb-4 font-mono text-xs uppercase tracking-widest text-purple-500">
+        <p className="mb-4 font-mono text-xs tracking-widest text-purple-500 uppercase">
           Documentation
         </p>
-        <h1 className="text-4xl font-black tracking-tighter text-gray-900">
-          ドキュメント
-        </h1>
-        <p className="mt-3 text-gray-500 leading-relaxed">
+        <h1 className="text-4xl font-black tracking-tighter text-gray-900">ドキュメント</h1>
+        <p className="mt-3 leading-relaxed text-gray-500">
           notion-headless-cms のセットアップ・API・運用ガイド。
         </p>
       </header>
       {Array.from(grouped.entries()).map(([category, items]) => (
         <section key={category} className="mb-12">
-          <h2 className="mb-4 font-mono text-xs uppercase tracking-widest text-purple-500">
+          <h2 className="mb-4 font-mono text-xs tracking-widest text-purple-500 uppercase">
             {category}
           </h2>
           <ul className="grid gap-4 sm:grid-cols-2">
@@ -59,9 +58,7 @@ export default function DocsIndex({ loaderData }: Route.ComponentProps) {
                     {item.title}
                   </div>
                   {item.description && (
-                    <p className="mt-2 text-sm text-gray-500 leading-relaxed">
-                      {item.description}
-                    </p>
+                    <p className="mt-2 text-sm leading-relaxed text-gray-500">{item.description}</p>
                   )}
                 </Link>
               </li>

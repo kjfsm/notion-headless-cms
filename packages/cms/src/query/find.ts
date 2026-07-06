@@ -4,10 +4,7 @@ import type { VersionedCacheLayer } from "../store/versioned-cache.js";
 import type { EntrySnapshot } from "../types/entry-snapshot.js";
 import type { JsonValue } from "../types/json-value.js";
 
-export type ColdStartFetch = (
-  collection: string,
-  slug: string,
-) => Promise<EntrySnapshot | null>;
+export type ColdStartFetch = (collection: string, slug: string) => Promise<EntrySnapshot | null>;
 
 export interface FindDeps {
   readonly entryStore: EntryStore;
@@ -30,19 +27,12 @@ export async function findEntry<Meta extends JsonValue = JsonValue>(
   const indexed = await deps.indexStore.findEntry(collection, slug);
   if (!indexed) {
     return deps.coldStartFetch
-      ? ((await deps.coldStartFetch(
-          collection,
-          slug,
-        )) as EntrySnapshot<Meta> | null)
+      ? ((await deps.coldStartFetch(collection, slug)) as EntrySnapshot<Meta> | null)
       : null;
   }
 
   if (deps.versionedCache) {
-    const cached = await deps.versionedCache.get(
-      collection,
-      slug,
-      indexed.version,
-    );
+    const cached = await deps.versionedCache.get(collection, slug, indexed.version);
     if (cached) return (await cached.json()) as EntrySnapshot<Meta>;
   }
 
@@ -50,10 +40,7 @@ export async function findEntry<Meta extends JsonValue = JsonValue>(
   if (!snapshot) {
     // index にはあるが R2 に無い(同期タイミングのズレ)。コールドスタート経路にフォールバックする。
     return deps.coldStartFetch
-      ? ((await deps.coldStartFetch(
-          collection,
-          slug,
-        )) as EntrySnapshot<Meta> | null)
+      ? ((await deps.coldStartFetch(collection, slug)) as EntrySnapshot<Meta> | null)
       : null;
   }
 

@@ -29,12 +29,12 @@ Notion 側ではインテグレーションを作成し、対象 DB に接続し
 
 ## ルート構成
 
-| ルート | ファイル | 役割 |
-|---|---|---|
-| `/` | `app/routes/home.tsx` | `cms.posts.list()` で記事一覧。`useNotionRevalidate()` で mount / 再フォーカス時に再取得 |
-| `/posts/:slug` | `app/routes/post.tsx` | `cms.posts.find(slug)` → `denormalizeBlocks`/`toPageLinkMap` → `<NotionRenderer>` で React 描画 + `useNotionRevalidate()` |
-| `/api/cms/*` | `app/routes/api.cms.ts` | `cms.fetch(request)` に委譲。画像プロキシ（`/api/cms/images/:hash`）・Webhook（`/api/cms/webhook`）をまとめて処理 |
-| `/api/warm` | `app/routes/warm.ts` | `ensureSynced()` で同期を完了させ、進捗状態を返す手動トリガー（action） |
+| ルート         | ファイル                | 役割                                                                                                                      |
+| -------------- | ----------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| `/`            | `app/routes/home.tsx`   | `cms.posts.list()` で記事一覧。`useNotionRevalidate()` で mount / 再フォーカス時に再取得                                  |
+| `/posts/:slug` | `app/routes/post.tsx`   | `cms.posts.find(slug)` → `denormalizeBlocks`/`toPageLinkMap` → `<NotionRenderer>` で React 描画 + `useNotionRevalidate()` |
+| `/api/cms/*`   | `app/routes/api.cms.ts` | `cms.fetch(request)` に委譲。画像プロキシ（`/api/cms/images/:hash`）・Webhook（`/api/cms/webhook`）をまとめて処理         |
+| `/api/warm`    | `app/routes/warm.ts`    | `ensureSynced()` で同期を完了させ、進捗状態を返す手動トリガー（action）                                                   |
 
 CMS の生成は `app/lib/cms.ts` の `makeCms(env, ctx)` に集約。`workers/app.ts` が
 `createRequestHandler` で `cloudflare: { env, ctx }` を各 loader に渡す。
@@ -62,13 +62,13 @@ WebSocket によるリアルタイム push（Durable Object 経由）は行わ�
 
 ## スクリプト
 
-| コマンド | 内容 |
-|---|---|
-| `pnpm dev` | React Router 開発サーバー |
-| `pnpm build` | 本番ビルド |
-| `pnpm check` | `tsc` + build + `wrangler deploy --dry-run`（構成検証） |
-| `pnpm deploy` | Workers へデプロイ |
-| `pnpm cf-typegen` | `wrangler types` + `react-router typegen` |
+| コマンド          | 内容                                                    |
+| ----------------- | ------------------------------------------------------- |
+| `pnpm dev`        | React Router 開発サーバー                               |
+| `pnpm build`      | 本番ビルド                                              |
+| `pnpm check`      | `tsc` + build + `wrangler deploy --dry-run`（構成検証） |
+| `pnpm deploy`     | Workers へデプロイ                                      |
+| `pnpm cf-typegen` | `wrangler types` + `react-router typegen`               |
 
 ## デプロイ（Cloudflare）
 

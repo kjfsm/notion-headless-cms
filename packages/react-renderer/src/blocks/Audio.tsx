@@ -1,16 +1,14 @@
 "use client";
 
 import type { AudioBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+
 import { useNotionContext } from "../context";
 import { getFileUrl } from "../lib/notion-file";
 import { cn } from "../lib/utils";
 import { Caption } from "../rich-text/Caption";
 import type { BlockComponentProps } from "../types";
 
-export function Audio({
-  block,
-  className,
-}: BlockComponentProps<AudioBlockObjectResponse>) {
+export function Audio({ block, className }: BlockComponentProps<AudioBlockObjectResponse>) {
   const { resolveImageUrl } = useNotionContext();
   const rawUrl = getFileUrl(block.audio);
   const src = resolveImageUrl ? resolveImageUrl(rawUrl, block) : rawUrl;

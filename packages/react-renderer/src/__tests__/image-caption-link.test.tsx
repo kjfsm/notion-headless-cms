@@ -2,6 +2,7 @@
 import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+
 import { NotionRenderer } from "../NotionRenderer.js";
 import type { NotionBlock } from "../types.js";
 
@@ -38,9 +39,7 @@ describe("Image caption リンク", () => {
   afterEach(() => cleanup());
 
   it("caption が単一 URL のみのとき画像をリンクで包み caption を出さない", () => {
-    const block = makeImage([
-      link("https://example.com/dest", "https://example.com/dest"),
-    ]);
+    const block = makeImage([link("https://example.com/dest", "https://example.com/dest")]);
     const { container } = render(<NotionRenderer blocks={[block]} />);
     const anchor = container.querySelector("figure > a");
     expect(anchor).not.toBeNull();

@@ -14,9 +14,7 @@ afterEach(() => {
   revalidate.mockClear();
 });
 
-function Caller(props: {
-  on?: "mount" | "visibility" | ("mount" | "visibility")[];
-}) {
+function Caller(props: { on?: "mount" | "visibility" | ("mount" | "visibility")[] }) {
   useNotionRevalidate({ on: props.on });
   return null;
 }

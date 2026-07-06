@@ -42,8 +42,7 @@ export async function sha256Hex(input: string): Promise<string> {
 }
 
 function fileUrlFromBlockData(data: JsonValue): string | null {
-  if (typeof data !== "object" || data === null || Array.isArray(data))
-    return null;
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return null;
   const record = data as Record<string, JsonValue>;
   if (record.type === "file") {
     const file = record.file as Record<string, JsonValue> | undefined;
@@ -60,9 +59,7 @@ function fileUrlFromBlockData(data: JsonValue): string | null {
  * block tree から画像等の file 参照を抽出し、キャッシュハッシュを算出する。
  * 実 fetch は行わない（「取得すべき画像のリスト」を返すだけ — I/O は同期エンジン側の責務）。
  */
-export async function extractImageRefs(
-  blocks: readonly NormalizedBlock[],
-): Promise<ImageRef[]> {
+export async function extractImageRefs(blocks: readonly NormalizedBlock[]): Promise<ImageRef[]> {
   const refs: { blockId: string; url: string }[] = [];
   walkBlocks(blocks, (block) => {
     if (!FILE_BLOCK_TYPES.has(block.type)) return;
@@ -141,22 +138,14 @@ function parseJpeg(bytes: Uint8Array): ImageDimensions | null {
     const marker = bytes[offset + 1]!;
     // SOF0-SOF3, SOF5-SOF7, SOF9-SOF11, SOF13-SOF15 (SOF マーカー群。SOF4/8/12 は除く)。
     const isSof =
-      marker >= 0xc0 &&
-      marker <= 0xcf &&
-      marker !== 0xc4 &&
-      marker !== 0xc8 &&
-      marker !== 0xcc;
+      marker >= 0xc0 && marker <= 0xcf && marker !== 0xc4 && marker !== 0xc8 && marker !== 0xcc;
     const segmentLength = readUInt16BE(bytes, offset + 2);
     if (isSof) {
       const height = readUInt16BE(bytes, offset + 5);
       const width = readUInt16BE(bytes, offset + 7);
       return { width, height, contentType: "image/jpeg" };
     }
-    if (
-      marker === 0xd8 ||
-      marker === 0x01 ||
-      (marker >= 0xd0 && marker <= 0xd9)
-    ) {
+    if (marker === 0xd8 || marker === 0x01 || (marker >= 0xd0 && marker <= 0xd9)) {
       offset += 2;
       continue;
     }

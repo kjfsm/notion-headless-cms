@@ -1,13 +1,13 @@
 "use client";
 
 import type { EmbedBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+
 import { AspectRatio } from "../components/ui/aspect-ratio.js";
 import { cn } from "../lib/utils";
 import { Caption } from "../rich-text/Caption";
 import type { BlockComponentProps } from "../types";
 
-const YOUTUBE_RE =
-  /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+const YOUTUBE_RE = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
 
 /** YouTube の watch URL を embed URL（?rel=0 付き）に変換する。非 YouTube URL はそのまま返す。 */
 function toYoutubeEmbedUrl(url: string): string {
@@ -32,10 +32,7 @@ function resolveEmbedSize(url: string): {
 } {
   try {
     const { hostname, pathname } = new URL(url);
-    if (
-      hostname === "store.steampowered.com" &&
-      pathname.startsWith("/widget/")
-    ) {
+    if (hostname === "store.steampowered.com" && pathname.startsWith("/widget/")) {
       // Steam ウィジェットは幅を指定すると埋め込み幅より狭くなるため、幅は全幅（w-full）に委ねる
       return { height: 190 };
     }
@@ -45,10 +42,7 @@ function resolveEmbedSize(url: string): {
   return { ratio: 16 / 9 };
 }
 
-export function Embed({
-  block,
-  className,
-}: BlockComponentProps<EmbedBlockObjectResponse>) {
+export function Embed({ block, className }: BlockComponentProps<EmbedBlockObjectResponse>) {
   const url = toYoutubeEmbedUrl(block.embed.url);
   const size = resolveEmbedSize(url);
   const caption = <Caption value={block.embed.caption} />;
@@ -56,10 +50,7 @@ export function Embed({
   if (size.ratio) {
     return (
       <figure className={cn("my-4", className)}>
-        <AspectRatio
-          ratio={size.ratio}
-          className="overflow-hidden rounded-lg border"
-        >
+        <AspectRatio ratio={size.ratio} className="overflow-hidden rounded-lg border">
           <iframe
             src={url}
             title="Embed"

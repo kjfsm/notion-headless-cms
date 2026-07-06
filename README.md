@@ -28,11 +28,11 @@ pnpm add @notionhq/client
 
 Notion DB には最低限これらプロパティが必要です:
 
-| プロパティ名 | タイプ | 役割 |
-|---|---|---|
-| Name (title) | タイトル | ページ名 |
-| slug | テキスト | URL スラッグ（一意） |
-| status | ステータス | 公開状態 |
+| プロパティ名 | タイプ     | 役割                 |
+| ------------ | ---------- | -------------------- |
+| Name (title) | タイトル   | ページ名             |
+| slug         | テキスト   | URL スラッグ（一意） |
+| status       | ステータス | 公開状態             |
 
 ### 3. スキーマの雛形を作る
 
@@ -76,7 +76,7 @@ const posts = defineCollection({
     author: prop.select(),
   },
   statusProperty: "status",
-  published: ["公開済み"],       // list() に載せる値
+  published: ["公開済み"], // list() に載せる値
   accessible: ["下書き", "編集中", "公開済み"], // find() を許す値（限定公開込み）
 });
 
@@ -153,10 +153,7 @@ export interface Env {
   readonly SYNC_COORDINATOR: DurableObjectNamespace;
 }
 
-export function makeCms(
-  env: Env,
-  ctx: { waitUntil(p: Promise<unknown>): void },
-) {
+export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void }) {
   const id = env.SYNC_COORDINATOR.idFromName("global");
   const stub = env.SYNC_COORDINATOR.get(id);
   return createCMS({
@@ -174,10 +171,7 @@ export function makeCms(
 ```ts
 // src/lib/do.ts — Notion アクセスを直列化する Durable Object 側
 import type { DurableObjectStateLike } from "@notion-headless-cms/cms";
-import {
-  createCMS,
-  createDurableObjectSyncScheduler,
-} from "@notion-headless-cms/cms";
+import { createCMS, createDurableObjectSyncScheduler } from "@notion-headless-cms/cms";
 import {
   createSyncCoordinatorDO,
   kvDocStore,
@@ -223,10 +217,7 @@ export interface Env {
   readonly IMG_BUCKET: R2Bucket;
 }
 
-export function makeCms(
-  env: Env,
-  ctx: { waitUntil(p: Promise<unknown>): void },
-) {
+export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void }) {
   return createCMS({
     schema,
     notion: { token: env.NOTION_TOKEN },
@@ -251,10 +242,7 @@ export async function ensureSynced(cms: ReturnType<typeof makeCms>) {
 ```tsx
 // app/routes/post.tsx — loader で取得し、React として描画
 import { NotionRenderer } from "@notion-headless-cms/react-renderer";
-import {
-  denormalizeBlocks,
-  toPageLinkMap,
-} from "@notion-headless-cms/react-renderer/cms";
+import { denormalizeBlocks, toPageLinkMap } from "@notion-headless-cms/react-renderer/cms";
 import { useNotionRevalidate } from "@notion-headless-cms/react-renderer/router";
 import { data } from "react-router";
 import { ensureSynced, makeCms } from "../lib/cms";
@@ -360,19 +348,12 @@ export async function POST(request: Request) {
 ```tsx
 // app/posts/[slug]/page.tsx
 import { NotionRenderer } from "@notion-headless-cms/react-renderer";
-import {
-  denormalizeBlocks,
-  toPageLinkMap,
-} from "@notion-headless-cms/react-renderer/cms";
+import { denormalizeBlocks, toPageLinkMap } from "@notion-headless-cms/react-renderer/cms";
 import { NotionRevalidator } from "@notion-headless-cms/react-renderer/next";
 import { notFound } from "next/navigation";
 import { ensureSynced } from "@/app/lib/cms";
 
-export default async function PostPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const cms = await ensureSynced();
   const post = await cms.posts.find(slug);
@@ -402,15 +383,15 @@ export default async function PostPage({
 （他 workspace パッケージへの依存を持たない独立パッケージ）。`react-renderer` / `cli` はいずれも
 `cms` にのみ依存する。
 
-| パッケージ / サブパス | 役割 |
-|---|---|
-| `@notion-headless-cms/cms` | `createCMS` 単一エントリ。Notion アクセス・同期・ストレージ・HTTP 配信を統合 |
+| パッケージ / サブパス                 | 役割                                                                                                         |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `@notion-headless-cms/cms`            | `createCMS` 単一エントリ。Notion アクセス・同期・ストレージ・HTTP 配信を統合                                 |
 | `@notion-headless-cms/cms/cloudflare` | `kvDocStore` / `r2BlobStore` / `createSyncCoordinatorDO` / `durableObjectSyncDelegate`（Cloudflare Workers） |
-| `@notion-headless-cms/cms/node` | `fileDocStore` / `fileBlobStore`（`node:fs` に依存する Node 専用ランタイム実装） |
-| `@notion-headless-cms/cms/html` | React を使わない HTML レンダラ |
-| `@notion-headless-cms/cms/testing` | `DocStore`/`BlobStore` 実装の契約テストユーティリティ |
-| `@notion-headless-cms/react-renderer` | 正規化ブロック（`NormalizedBlock[]`）→ React コンポーネント / 再検証フック |
-| `@notion-headless-cms/cli` | `nhc init` / `nhc pull` / `nhc check` / `nhc doctor` / `nhc sync` |
+| `@notion-headless-cms/cms/node`       | `fileDocStore` / `fileBlobStore`（`node:fs` に依存する Node 専用ランタイム実装）                             |
+| `@notion-headless-cms/cms/html`       | React を使わない HTML レンダラ                                                                               |
+| `@notion-headless-cms/cms/testing`    | `DocStore`/`BlobStore` 実装の契約テストユーティリティ                                                        |
+| `@notion-headless-cms/react-renderer` | 正規化ブロック（`NormalizedBlock[]`）→ React コンポーネント / 再検証フック                                   |
+| `@notion-headless-cms/cli`            | `nhc init` / `nhc pull` / `nhc check` / `nhc doctor` / `nhc sync`                                            |
 
 ---
 

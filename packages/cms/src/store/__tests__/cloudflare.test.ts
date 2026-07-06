@@ -1,10 +1,7 @@
 import { describe } from "vitest";
+
+import type { KVNamespaceLike, R2BucketLike, R2ObjectLike } from "../cloudflare-types.js";
 import { kvDocStore, r2BlobStore } from "../cloudflare.js";
-import type {
-  KVNamespaceLike,
-  R2BucketLike,
-  R2ObjectLike,
-} from "../cloudflare-types.js";
 import {
   runBlobStoreContract,
   runBlobStoreMetadataContract,
@@ -25,9 +22,7 @@ function fakeKvNamespace(): KVNamespaceLike {
     },
     async list(opts) {
       const prefix = opts?.prefix ?? "";
-      const keys = [...store.keys()]
-        .filter((k) => k.startsWith(prefix))
-        .map((name) => ({ name }));
+      const keys = [...store.keys()].filter((k) => k.startsWith(prefix)).map((name) => ({ name }));
       return { keys, list_complete: true };
     },
   };

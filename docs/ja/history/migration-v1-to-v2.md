@@ -23,15 +23,15 @@
 
 #### 対応表
 
-| 旧（フラット） | 新（グループ） | 備考 |
-|---|---|---|
-| `schema` | `notion.schema` | |
-| `token` | `notion.token` | |
-| `collections` | `notion.collections` | |
-| `content` | `render.content` | 省略時 `"html"` |
-| `ogp` | `render.ogp` | 省略可（`react` モードのみ有効） |
-| `imageProxyBase` | （廃止） | createCMS では `/api/cms/images` に固定（`cms.handler()` の既定ルートと一致）。低レベルに変えたい場合のみ `createClient({ imageProxyBase })` |
-| `runtime` | `cache`（下記参照） | フィールド廃止 |
+| 旧（フラット）   | 新（グループ）       | 備考                                                                                                                                         |
+| ---------------- | -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `schema`         | `notion.schema`      |                                                                                                                                              |
+| `token`          | `notion.token`       |                                                                                                                                              |
+| `collections`    | `notion.collections` |                                                                                                                                              |
+| `content`        | `render.content`     | 省略時 `"html"`                                                                                                                              |
+| `ogp`            | `render.ogp`         | 省略可（`react` モードのみ有効）                                                                                                             |
+| `imageProxyBase` | （廃止）             | createCMS では `/api/cms/images` に固定（`cms.handler()` の既定ルートと一致）。低レベルに変えたい場合のみ `createClient({ imageProxyBase })` |
+| `runtime`        | `cache`（下記参照）  | フィールド廃止                                                                                                                               |
 
 `render` グループが空になる（`content` 既定が `"html"` で他も未指定）場合は `render` ごと省略してよい。
 
@@ -40,6 +40,7 @@
 `runtime` フィールドは廃止し、中身に応じて `cache` グループへ展開する。
 
 - **Cloudflare**: `runtime: cloudflarePreset({ env, ctx })` は、役割別アダプタへ明示展開する。
+
   ```ts
   import { createCMS, memoryCache } from "@notion-headless-cms/client";
   import { kvCache, r2Cache } from "@notion-headless-cms/client/cloudflare";
@@ -56,6 +57,7 @@
     },
   });
   ```
+
   import も `cloudflarePreset` から `kvCache` / `r2Cache` へ変更する。
 
 - **Next.js**: `runtime: { cache: [nextCache({ tags: ["posts"] }), memoryCache()] }` は

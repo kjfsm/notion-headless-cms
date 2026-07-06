@@ -18,10 +18,10 @@ pnpm start
 
 ## 構成
 
-| ファイル | 役割 |
-|---|---|
+| ファイル        | 役割                                                                                |
+| --------------- | ----------------------------------------------------------------------------------- |
 | `src/schema.ts` | `defineCollection`/`defineSchema` によるスキーマ定義（TS ファースト。codegen なし） |
-| `src/index.ts` | `createCMS` → 同期 → `cms.posts.list()` → console.log（30 行以内） |
+| `src/index.ts`  | `createCMS` → 同期 → `cms.posts.list()` → console.log（30 行以内）                  |
 
 v3 では `nhc generate` によるコード生成は廃止された。`nhc pull` は Notion DB から `defineCollection` の雛形を**一度だけ**生成する補助コマンドで、以降は `src/schema.ts` を直接編集して育てる（詳細: [`docs/ja/cli.md`](../../docs/ja/cli.md)）。このサンプルでは `src/schema.ts` を直接手書きしている。
 

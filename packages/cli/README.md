@@ -47,11 +47,11 @@ export default defineConfig({
 
 ### `CollectionSourceConfig` オプション
 
-| フィールド | 必須 | 説明 |
-|---|---|---|
-| `dbName` | (`databaseId` 未指定時) | Notion DB 名（完全一致で検索） |
-| `databaseId` | (`dbName` 未指定時) | Notion DB ID（指定時は `dbName` より優先） |
-| `fieldMappings` | – | `{ Notion プロパティ名: TS フィールド名 }` の明示マッピング |
+| フィールド      | 必須                    | 説明                                                        |
+| --------------- | ----------------------- | ----------------------------------------------------------- |
+| `dbName`        | (`databaseId` 未指定時) | Notion DB 名（完全一致で検索）                              |
+| `databaseId`    | (`dbName` 未指定時)     | Notion DB ID（指定時は `dbName` より優先）                  |
+| `fieldMappings` | –                       | `{ Notion プロパティ名: TS フィールド名 }` の明示マッピング |
 
 ## コマンド一覧
 

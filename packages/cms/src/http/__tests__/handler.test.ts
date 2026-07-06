@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+
 import { memoryBlobStore } from "../../store/memory.js";
 import type { BlobStore } from "../../store/types.js";
 import type { HttpHandlerAdapter } from "../handler.js";
@@ -7,9 +8,7 @@ import { hmacSha256Hex } from "../webhook.js";
 
 const ROUTES = "/api/cms";
 
-function makeAdapter(
-  overrides: Partial<HttpHandlerAdapter> = {},
-): HttpHandlerAdapter {
+function makeAdapter(overrides: Partial<HttpHandlerAdapter> = {}): HttpHandlerAdapter {
   return {
     images: memoryBlobStore(),
     ...overrides,
@@ -34,13 +33,9 @@ describe("createFetchHandler", () => {
 
     const res = await handler(new Request(`https://x${ROUTES}/images/abc123`));
     expect(res.status).toBe(200);
-    expect(res.headers.get("cache-control")).toBe(
-      "public, max-age=31536000, immutable",
-    );
+    expect(res.headers.get("cache-control")).toBe("public, max-age=31536000, immutable");
     expect(res.headers.get("content-type")).toBe("image/png");
-    expect(new Uint8Array(await res.arrayBuffer())).toEqual(
-      new Uint8Array([1, 2, 3]),
-    );
+    expect(new Uint8Array(await res.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3]));
   });
 
   it("存在しない画像ハッシュは 404", async () => {
@@ -93,17 +88,13 @@ describe("createFetchHandler", () => {
     const res = await handler(new Request(`https://x${ROUTES}/images/abc123`));
     expect(res.status).toBe(200);
     expect(res.headers.get("content-type")).toBe("image/png");
-    expect(new Uint8Array(await res.arrayBuffer())).toEqual(
-      new Uint8Array([1, 2, 3]),
-    );
+    expect(new Uint8Array(await res.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3]));
   });
 
   it("realtime は onRealtimeUpgrade に委譲する", async () => {
     // 実際の Workers ランタイムでは WebSocket アップグレード時に 101 を返すが、
     // Node/undici の Response は 101 を許可しないため、委譲そのものをテストする。
-    const onRealtimeUpgrade = vi
-      .fn()
-      .mockResolvedValue(new Response("upgraded", { status: 200 }));
+    const onRealtimeUpgrade = vi.fn().mockResolvedValue(new Response("upgraded", { status: 200 }));
     const handler = createFetchHandler(makeAdapter({ onRealtimeUpgrade }), {
       routes: ROUTES,
     });
@@ -123,9 +114,7 @@ describe("createFetchHandler", () => {
     const handler = createFetchHandler(makeAdapter({ onPreview }), {
       routes: ROUTES,
     });
-    const res = await handler(
-      new Request(`https://x${ROUTES}/preview/posts/hello?sig=abc`),
-    );
+    const res = await handler(new Request(`https://x${ROUTES}/preview/posts/hello?sig=abc`));
     expect(await res.text()).toBe("preview ok");
     expect(onPreview).toHaveBeenCalledWith(expect.any(Request), "posts/hello");
   });
@@ -161,10 +150,9 @@ describe("createFetchHandler", () => {
   });
 
   it("署名不正なら 401", async () => {
-    const handler = createFetchHandler(
-      makeAdapter({ webhookSecret: "s3cr3t" }),
-      { routes: ROUTES },
-    );
+    const handler = createFetchHandler(makeAdapter({ webhookSecret: "s3cr3t" }), {
+      routes: ROUTES,
+    });
     const res = await handler(
       new Request(`https://x${ROUTES}/webhook`, {
         method: "POST",
@@ -180,10 +168,9 @@ describe("createFetchHandler", () => {
     const body = JSON.stringify({ entity: { type: "page", id: "page-123" } });
     const signature = `sha256=${await hmacSha256Hex(secret, body)}`;
     const onWebhookEvent = vi.fn();
-    const handler = createFetchHandler(
-      makeAdapter({ webhookSecret: secret, onWebhookEvent }),
-      { routes: ROUTES },
-    );
+    const handler = createFetchHandler(makeAdapter({ webhookSecret: secret, onWebhookEvent }), {
+      routes: ROUTES,
+    });
 
     const res = await handler(
       new Request(`https://x${ROUTES}/webhook`, {
@@ -227,9 +214,7 @@ describe("createFetchHandler", () => {
     const handler = createFetchHandler(makeAdapter({ onOgp }), {
       routes: ROUTES,
     });
-    const res = await handler(
-      new Request(`https://x${ROUTES}/ogp?url=https://example.com`),
-    );
+    const res = await handler(new Request(`https://x${ROUTES}/ogp?url=https://example.com`));
     expect(await res.text()).toBe("ogp ok");
     expect(onOgp).toHaveBeenCalledWith(expect.any(Request));
   });
@@ -245,10 +230,9 @@ describe("createFetchHandler", () => {
     const body = JSON.stringify({ entity: { type: "database", id: "db-1" } });
     const signature = `sha256=${await hmacSha256Hex(secret, body)}`;
     const onWebhookEvent = vi.fn();
-    const handler = createFetchHandler(
-      makeAdapter({ webhookSecret: secret, onWebhookEvent }),
-      { routes: ROUTES },
-    );
+    const handler = createFetchHandler(makeAdapter({ webhookSecret: secret, onWebhookEvent }), {
+      routes: ROUTES,
+    });
 
     const res = await handler(
       new Request(`https://x${ROUTES}/webhook`, {

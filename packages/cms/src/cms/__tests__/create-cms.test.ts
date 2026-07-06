@@ -1,5 +1,6 @@
 import type { PageObjectResponse } from "@notionhq/client";
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
+
 import { memoryBlobStore, memoryDocStore } from "../../store/memory.js";
 import { createNodeSyncScheduler } from "../../sync/node-scheduler.js";
 import type { NotionClientLike } from "../../sync/notion-driver.js";
@@ -49,9 +50,7 @@ function notionPage(opts: {
     properties: {
       [titleKey]: { type: "title", title: richText(opts.title ?? "Title") },
       slug: { type: "rich_text", rich_text: richText(opts.slug) },
-      ...(opts.status
-        ? { status: { type: "status", status: { name: opts.status } } }
-        : {}),
+      ...(opts.status ? { status: { type: "status", status: { name: opts.status } } } : {}),
     },
   } as unknown as PageObjectResponse;
 }
@@ -249,9 +248,7 @@ describe("createCMS", () => {
         stores: makeStores(),
         scheduler: createNodeSyncScheduler(),
       }),
-    ).toThrowError(
-      expect.objectContaining({ code: "schema/reserved_collection_name" }),
-    );
+    ).toThrowError(expect.objectContaining({ code: "schema/reserved_collection_name" }));
   });
 
   it('"stats" はトップレベル API と衝突しないため予約名扱いしない(sync.stats() の内側にネストされるだけ)', () => {
@@ -287,9 +284,7 @@ describe("createCMS", () => {
         stores: makeStores(),
         scheduler: createNodeSyncScheduler(),
       }),
-    ).toThrowError(
-      expect.objectContaining({ code: "schema/reserved_collection_name" }),
-    );
+    ).toThrowError(expect.objectContaining({ code: "schema/reserved_collection_name" }));
   });
 
   it("notion.client も token も無ければ CMSError(schema/notion_config_missing) を投げる", () => {
@@ -300,9 +295,7 @@ describe("createCMS", () => {
         stores: makeStores(),
         scheduler: createNodeSyncScheduler(),
       }),
-    ).toThrowError(
-      expect.objectContaining({ code: "schema/notion_config_missing" }),
-    );
+    ).toThrowError(expect.objectContaining({ code: "schema/notion_config_missing" }));
   });
 
   it("fetch は webhook を受けて debounce 後に同期をキックする", async () => {
@@ -372,15 +365,11 @@ describe("createCMS", () => {
     });
     expectTypeOf(cms.posts.find).parameter(0).toEqualTypeOf<string>();
 
-    type PostMeta = NonNullable<
-      Awaited<ReturnType<typeof cms.posts.find>>
-    >["meta"];
+    type PostMeta = NonNullable<Awaited<ReturnType<typeof cms.posts.find>>>["meta"];
     expectTypeOf<PostMeta["status"]>().toEqualTypeOf<"draft" | "published">();
     expectTypeOf<PostMeta["title"]>().toEqualTypeOf<string>();
 
-    type NewsMeta = NonNullable<
-      Awaited<ReturnType<typeof cms.news.find>>
-    >["meta"];
+    type NewsMeta = NonNullable<Awaited<ReturnType<typeof cms.news.find>>>["meta"];
     expectTypeOf<NewsMeta["heading"]>().toEqualTypeOf<string>();
     expectTypeOf<NewsMeta>().not.toHaveProperty("status");
   });
@@ -393,12 +382,8 @@ describe("createCMS", () => {
       stores: makeStores(),
       scheduler: createNodeSyncScheduler(),
     });
-    type PostListMeta = Awaited<
-      ReturnType<typeof cms.posts.list>
-    >["items"][number]["meta"];
-    expectTypeOf<PostListMeta["status"]>().toEqualTypeOf<
-      "draft" | "published"
-    >();
+    type PostListMeta = Awaited<ReturnType<typeof cms.posts.list>>["items"][number]["meta"];
+    expectTypeOf<PostListMeta["status"]>().toEqualTypeOf<"draft" | "published">();
     expectTypeOf<PostListMeta["title"]>().toEqualTypeOf<string>();
     expectTypeOf<PostListMeta["slug"]>().toEqualTypeOf<string>();
   });
@@ -455,9 +440,7 @@ describe("createCMS", () => {
     const found = await cms.siteTexts.find("page-xyz");
     expect(found?.meta.text).toBe("最高のバンド");
 
-    type TextListMeta = Awaited<
-      ReturnType<typeof cms.siteTexts.list>
-    >["items"][number]["meta"];
+    type TextListMeta = Awaited<ReturnType<typeof cms.siteTexts.list>>["items"][number]["meta"];
     expectTypeOf<TextListMeta["key"]>().toEqualTypeOf<string>();
   });
 

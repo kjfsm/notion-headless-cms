@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { defineCollection } from "../../types/collection.js";
 import { prop } from "../../types/property.js";
 import { decidePublication } from "../publication-policy.js";

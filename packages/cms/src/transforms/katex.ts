@@ -9,10 +9,7 @@ export interface KatexTransformOptions {
    * 組版関数の注入（テスト・独自レンダラ用）。省略時は動的 `import("katex")` の
    * `renderToString`。`null` を返した数式は素通しになる。
    */
-  readonly render?: (
-    expression: string,
-    displayMode: boolean,
-  ) => Promise<string | null>;
+  readonly render?: (expression: string, displayMode: boolean) => Promise<string | null>;
 }
 
 function createDefaultRender(
@@ -66,9 +63,7 @@ function createDefaultRender(
  * createCMS({ ..., transforms: [createKatexTransform()] });
  * ```
  */
-export function createKatexTransform(
-  opts?: KatexTransformOptions,
-): TransformStage {
+export function createKatexTransform(opts?: KatexTransformOptions): TransformStage {
   const render = opts?.render ?? createDefaultRender(opts?.macros);
 
   return {

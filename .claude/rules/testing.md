@@ -27,25 +27,23 @@ pnpm exec vitest --watch                     # watch
 
 ```ts
 function fakeKvNamespace(): KVNamespaceLike {
-	const store = new Map<string, string>();
-	return {
-		async get(key) {
-			return store.get(key) ?? null;
-		},
-		async put(key, value) {
-			store.set(key, value);
-		},
-		async delete(key) {
-			store.delete(key);
-		},
-		async list(opts) {
-			const prefix = opts?.prefix ?? "";
-			const keys = [...store.keys()]
-				.filter((k) => k.startsWith(prefix))
-				.map((name) => ({ name }));
-			return { keys, list_complete: true };
-		},
-	};
+  const store = new Map<string, string>();
+  return {
+    async get(key) {
+      return store.get(key) ?? null;
+    },
+    async put(key, value) {
+      store.set(key, value);
+    },
+    async delete(key) {
+      store.delete(key);
+    },
+    async list(opts) {
+      const prefix = opts?.prefix ?? "";
+      const keys = [...store.keys()].filter((k) => k.startsWith(prefix)).map((name) => ({ name }));
+      return { keys, list_complete: true };
+    },
+  };
 }
 ```
 
@@ -56,9 +54,11 @@ function fakeKvNamespace(): KVNamespaceLike {
 画像フェッチ・OGP・Notion API のテストでは `global.fetch` を置換:
 
 ```ts
-const fetchSpy = vi.spyOn(global, "fetch").mockResolvedValue(
-	new Response(new ArrayBuffer(8), { headers: { "content-type": "image/png" } }),
-);
+const fetchSpy = vi
+  .spyOn(global, "fetch")
+  .mockResolvedValue(
+    new Response(new ArrayBuffer(8), { headers: { "content-type": "image/png" } }),
+  );
 ```
 
 ## パターン 3: fakeTimers
@@ -70,9 +70,9 @@ beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
 it("debounceMs 経過後に同期が発火する", () => {
-	vi.setSystemTime(new Date("2024-01-01"));
-	// ...
-	vi.advanceTimersByTime(10_000);
+  vi.setSystemTime(new Date("2024-01-01"));
+  // ...
+  vi.advanceTimersByTime(10_000);
 });
 ```
 
@@ -82,17 +82,17 @@ it("debounceMs 経過後に同期が発火する", () => {
 import { CMSError, isCMSError, matchCMSError } from "../errors";
 
 await expect(cms.find(slug)).rejects.toSatisfy(
-	(err: unknown) => isCMSError(err) && err.is("sync/notion_query_failed"),
+  (err: unknown) => isCMSError(err) && err.is("sync/notion_query_failed"),
 );
 
 // matchCMSError によるコードごとの分岐
 try {
-	await cms.posts.find("slug");
+  await cms.posts.find("slug");
 } catch (err) {
-	matchCMSError(err, {
-		"sync/notion_query_failed": (e) => console.error("取得失敗", e),
-		"store/rest_request_failed": (e) => console.error("ストア I/O 失敗", e),
-	});
+  matchCMSError(err, {
+    "sync/notion_query_failed": (e) => console.error("取得失敗", e),
+    "store/rest_request_failed": (e) => console.error("ストア I/O 失敗", e),
+  });
 }
 ```
 

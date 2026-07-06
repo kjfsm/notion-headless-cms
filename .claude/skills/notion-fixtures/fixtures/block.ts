@@ -28,10 +28,7 @@ export const richText = (content: string) => ({
   href: null,
 });
 
-export const paragraph = (
-  content: string,
-  overrides: Partial<BlockObjectResponse> = {},
-) =>
+export const paragraph = (content: string, overrides: Partial<BlockObjectResponse> = {}) =>
   asBlock({
     ...baseBlock,
     type: "paragraph",
@@ -57,10 +54,7 @@ export const heading = (
   });
 };
 
-export const image = (
-  url: string,
-  overrides: Partial<BlockObjectResponse> = {},
-) =>
+export const image = (url: string, overrides: Partial<BlockObjectResponse> = {}) =>
   asBlock({
     ...baseBlock,
     type: "image",

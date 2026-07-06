@@ -1,10 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  CMSError,
-  isCMSError,
-  isCMSErrorInNamespace,
-  matchCMSError,
-} from "../errors.js";
+
+import { CMSError, isCMSError, isCMSErrorInNamespace, matchCMSError } from "../errors.js";
 import { defineCollection } from "../types/collection.js";
 import { prop } from "../types/property.js";
 

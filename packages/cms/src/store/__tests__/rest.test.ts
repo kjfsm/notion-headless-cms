@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { CMSError } from "../../errors.js";
 import { readRestEnv, restKvNamespace, restR2Bucket } from "../rest.js";
 
@@ -15,9 +16,7 @@ describe("restKvNamespace", () => {
     const value = await kv.get("k1", "text");
     expect(value).toBe("hello");
     expect(fetchSpy).toHaveBeenCalledWith(
-      expect.stringContaining(
-        "/accounts/acc1/storage/kv/namespaces/ns1/values/k1",
-      ),
+      expect.stringContaining("/accounts/acc1/storage/kv/namespaces/ns1/values/k1"),
       expect.objectContaining({
         headers: expect.objectContaining({ Authorization: "Bearer token1" }),
       }),
@@ -25,17 +24,13 @@ describe("restKvNamespace", () => {
   });
 
   it("404 は null を返す", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(null, { status: 404 }),
-    );
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 404 }));
     const kv = restKvNamespace({ ...OPTS, namespaceId: "ns1" });
     expect(await kv.get("missing", "text")).toBeNull();
   });
 
   it("失敗レスポンスは CMSError を投げる", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response("server error", { status: 500 }),
-    );
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response("server error", { status: 500 }));
     const kv = restKvNamespace({ ...OPTS, namespaceId: "ns1" });
     await expect(kv.get("k1", "text")).rejects.toThrow(CMSError);
   });
@@ -66,15 +61,11 @@ describe("restR2Bucket", () => {
     const bucket = restR2Bucket({ ...OPTS, bucketName: "b1" });
     const obj = await bucket.get("k1");
     expect(obj?.httpMetadata?.contentType).toBe("image/png");
-    expect(new Uint8Array(await obj!.arrayBuffer())).toEqual(
-      new Uint8Array([1, 2, 3]),
-    );
+    expect(new Uint8Array(await obj!.arrayBuffer())).toEqual(new Uint8Array([1, 2, 3]));
   });
 
   it("404 は null を返す", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue(
-      new Response(null, { status: 404 }),
-    );
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(null, { status: 404 }));
     const bucket = restR2Bucket({ ...OPTS, bucketName: "b1" });
     expect(await bucket.get("missing")).toBeNull();
   });

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import type { DataSourceObjectResponse } from "../notion-client.js";
 import { generateCollectionScaffold } from "../pull.js";
 
@@ -37,19 +38,13 @@ describe("generateCollectionScaffold", () => {
       collectionName: "posts",
       dataSourceId: "ds1",
     });
-    expect(code).toContain(
-      'import { defineCollection, prop } from "@notion-headless-cms/cms";',
-    );
+    expect(code).toContain('import { defineCollection, prop } from "@notion-headless-cms/cms";');
     // 自動導出した識別子(先頭小文字化)は実プロパティ名と大文字小文字が異なるため、
     // raw[key] の完全一致lookupに合わせて notion 別名を渡す必要がある。
     expect(code).toContain('title: prop.title("Title"),');
     expect(code).toContain('slug: prop.richText("Slug"),');
-    expect(code).toContain(
-      'status: prop.status(["draft", "published"] as const, "Status"),',
-    );
-    expect(code).toContain(
-      'tags: prop.multiSelect(["tech", "life"] as const, "Tags"),',
-    );
+    expect(code).toContain('status: prop.status(["draft", "published"] as const, "Status"),');
+    expect(code).toContain('tags: prop.multiSelect(["tech", "life"] as const, "Tags"),');
     expect(code).toContain('dataSourceId: "ds1"');
   });
 

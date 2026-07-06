@@ -3,11 +3,8 @@
 import type { LinkPreviewBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { Link as LinkIcon } from "lucide-react";
 import type { ElementType } from "react";
-import {
-  HoverCard,
-  HoverCardContent,
-  HoverCardTrigger,
-} from "../components/ui/hover-card.js";
+
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "../components/ui/hover-card.js";
 import { useNotionContext } from "../context";
 import { OgCard, type OgCardData } from "../embeds/OgCard";
 import { useOgp } from "../embeds/useOgp.js";
@@ -41,9 +38,7 @@ export function LinkPreview({
     );
   }
 
-  const LinkComp = (LinkSlot ?? "a") as ElementType<
-    React.AnchorHTMLAttributes<HTMLAnchorElement>
-  >;
+  const LinkComp = (LinkSlot ?? "a") as ElementType<React.AnchorHTMLAttributes<HTMLAnchorElement>>;
   return (
     <HoverCard>
       <HoverCardTrigger asChild>

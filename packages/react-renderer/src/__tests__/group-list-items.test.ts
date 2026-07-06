@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { groupListItems } from "../lib/group-list-items";
 import type { NotionBlock } from "../types";
 
@@ -7,10 +8,7 @@ const b = (id: string, type: NotionBlock["type"]): NotionBlock =>
 
 describe("groupListItems", () => {
   it("連続した bulleted_list_item は ul にまとまる", () => {
-    const groups = groupListItems([
-      b("1", "bulleted_list_item"),
-      b("2", "bulleted_list_item"),
-    ]);
+    const groups = groupListItems([b("1", "bulleted_list_item"), b("2", "bulleted_list_item")]);
     expect(groups).toHaveLength(1);
     expect(groups[0]).toMatchObject({ kind: "ul" });
     expect(groups[0]?.kind === "ul" && groups[0].items).toHaveLength(2);
@@ -26,10 +24,7 @@ describe("groupListItems", () => {
   });
 
   it("bulleted と numbered は別グループに分かれる", () => {
-    const groups = groupListItems([
-      b("1", "bulleted_list_item"),
-      b("2", "numbered_list_item"),
-    ]);
+    const groups = groupListItems([b("1", "bulleted_list_item"), b("2", "numbered_list_item")]);
     expect(groups.map((g) => g.kind)).toEqual(["ul", "ol"]);
   });
 });

@@ -5,6 +5,7 @@
 
 import type { CodeBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { useEffect, useId, useState } from "react";
+
 import { Code as DefaultCode } from "./blocks/Code.js";
 import type { BlockComponentProps } from "./types.js";
 
@@ -23,9 +24,7 @@ function plainText(rt: CodeBlockObjectResponse["code"]["rich_text"]): string {
  * <NotionRenderer blocks={blocks} components={{ Code: MermaidCode }} />
  * ```
  */
-export function MermaidCode(
-  props: BlockComponentProps<CodeBlockObjectResponse>,
-) {
+export function MermaidCode(props: BlockComponentProps<CodeBlockObjectResponse>) {
   if (props.block.code.language === "mermaid") {
     return <MermaidSvg source={plainText(props.block.code.rich_text)} />;
   }
@@ -37,7 +36,7 @@ function MermaidSvg({ source }: { source: string }) {
   const [svg, setSvg] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const mermaid = (await import("mermaid")).default;
         mermaid.initialize({ startOnLoad: false, securityLevel: "loose" });

@@ -1,9 +1,4 @@
-export type {
-  EntryChange,
-  SyncCoordinatorDeps,
-  SyncFailure,
-  SyncState,
-} from "./coordinator.js";
+export type { EntryChange, SyncCoordinatorDeps, SyncFailure, SyncState } from "./coordinator.js";
 export { SyncCoordinatorCore } from "./coordinator.js";
 export type {
   DurableObjectStateLike,

@@ -1,13 +1,11 @@
 import type { BookmarkBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { Bookmark } from "../blocks/Bookmark.js";
 import { NotionContext } from "../context.js";
 
-function bookmarkBlock(
-  url: string,
-  ogp?: { title?: string },
-): BookmarkBlockObjectResponse {
+function bookmarkBlock(url: string, ogp?: { title?: string }): BookmarkBlockObjectResponse {
   return {
     object: "block",
     id: "bm-1",
@@ -27,12 +25,8 @@ describe("Bookmark", () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
     const { container } = render(
-      <NotionContext.Provider
-        value={{ components: {}, ogpEndpoint: "/api/cms/ogp" }}
-      >
-        <Bookmark
-          block={bookmarkBlock("https://example.com", { title: "Preloaded" })}
-        />
+      <NotionContext.Provider value={{ components: {}, ogpEndpoint: "/api/cms/ogp" }}>
+        <Bookmark block={bookmarkBlock("https://example.com", { title: "Preloaded" })} />
       </NotionContext.Provider>,
     );
     expect(container.textContent).toContain("Preloaded");
@@ -47,24 +41,18 @@ describe("Bookmark", () => {
     });
     vi.stubGlobal("fetch", fetchSpy);
     const { container } = render(
-      <NotionContext.Provider
-        value={{ components: {}, ogpEndpoint: "/api/cms/ogp" }}
-      >
+      <NotionContext.Provider value={{ components: {}, ogpEndpoint: "/api/cms/ogp" }}>
         <Bookmark block={bookmarkBlock("https://example.com")} />
       </NotionContext.Provider>,
     );
-    expect(fetchSpy).toHaveBeenCalledWith(
-      "/api/cms/ogp?url=https%3A%2F%2Fexample.com",
-    );
+    expect(fetchSpy).toHaveBeenCalledWith("/api/cms/ogp?url=https%3A%2F%2Fexample.com");
     await waitFor(() => {
       expect(container.textContent).toContain("Hydrated");
     });
   });
 
   it("ogpEndpoint も block.ogp も無ければホスト名だけのシェルのまま", async () => {
-    const { container } = render(
-      <Bookmark block={bookmarkBlock("https://example.com")} />,
-    );
+    const { container } = render(<Bookmark block={bookmarkBlock("https://example.com")} />);
     expect(container.textContent).toContain("example.com");
   });
 });

@@ -7,6 +7,7 @@ import type {
   Heading4BlockObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
 import { ChevronRight } from "lucide-react";
+
 import {
   Collapsible,
   CollapsibleContent,
@@ -66,10 +67,7 @@ function meta(block: HeadingBlock): HeadingMeta {
   }
 }
 
-export function Heading({
-  block,
-  className: extra,
-}: BlockComponentProps<HeadingBlock>) {
+export function Heading({ block, className: extra }: BlockComponentProps<HeadingBlock>) {
   const { Tag, size, margin, payload } = meta(block);
   const color = notionBlockColorClass(payload.color);
   const inner = <RichText value={payload.rich_text} />;
@@ -85,10 +83,7 @@ export function Heading({
             aria-hidden
             className="size-4 shrink-0 translate-y-[0.15em] text-muted-foreground transition-transform group-data-[state=open]:rotate-90"
           />
-          <Tag
-            id={block.id}
-            className={cn("m-0 flex-1 min-w-0", size, color, extra)}
-          >
+          <Tag id={block.id} className={cn("m-0 flex-1 min-w-0", size, color, extra)}>
             {inner}
           </Tag>
         </CollapsibleTrigger>

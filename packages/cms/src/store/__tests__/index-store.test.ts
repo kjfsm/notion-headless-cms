@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import type { IndexEntry } from "../../types/collection-index.js";
 import type { JsonValue } from "../../types/json-value.js";
 import { createIndexStore } from "../index-store.js";
@@ -97,16 +98,10 @@ describe("createIndexStore", () => {
   it("meta が変化した更新はマニフェストも書き込む", async () => {
     const docs = memoryDocStore();
     const store = createIndexStore(docs);
-    await store.upsertEntry(
-      "posts",
-      entry("a", "v1", { meta: { title: "旧" } }),
-    );
+    await store.upsertEntry("posts", entry("a", "v1", { meta: { title: "旧" } }));
 
     const putCount = spyPutCount(docs);
-    const result = await store.upsertEntry(
-      "posts",
-      entry("a", "v2", { meta: { title: "新" } }),
-    );
+    const result = await store.upsertEntry("posts", entry("a", "v2", { meta: { title: "新" } }));
     expect(result.writes).toBe(2); // 点読みキー + マニフェスト
     expect(putCount()).toBe(2); // 点読みキー + マニフェスト
 
@@ -148,18 +143,9 @@ describe("createIndexStore", () => {
 
   it("listEntries は where/sort/pagination を評価する", async () => {
     const store = createIndexStore(memoryDocStore());
-    await store.upsertEntry(
-      "posts",
-      entry("a", "v1", { meta: { title: "A", order: 2 } }),
-    );
-    await store.upsertEntry(
-      "posts",
-      entry("b", "v1", { meta: { title: "B", order: 1 } }),
-    );
-    await store.upsertEntry(
-      "posts",
-      entry("c", "v1", { meta: { title: "C", order: 3 } }),
-    );
+    await store.upsertEntry("posts", entry("a", "v1", { meta: { title: "A", order: 2 } }));
+    await store.upsertEntry("posts", entry("b", "v1", { meta: { title: "B", order: 1 } }));
+    await store.upsertEntry("posts", entry("c", "v1", { meta: { title: "C", order: 3 } }));
 
     const sorted = await store.listEntries("posts", {
       sort: [{ by: "order", direction: "asc" }],
@@ -237,11 +223,7 @@ describe("createIndexStore", () => {
     const docs = memoryDocStore();
     const putCount = spyPutCount(docs);
     const store = createIndexStore(docs);
-    const result = await store.upsertEntry(
-      "posts",
-      entry("a", "v1"),
-      entry("a", "v1"),
-    );
+    const result = await store.upsertEntry("posts", entry("a", "v1"), entry("a", "v1"));
     expect(result.wrote).toBe(false);
     expect(putCount()).toBe(0);
   });

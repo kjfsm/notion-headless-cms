@@ -1,4 +1,5 @@
 import { createCMS } from "@notion-headless-cms/cms";
+
 import { schema } from "./schema.js";
 
 // stores/scheduler を省略すると in-memory ストア + Node スケジューラにフォールバックする

@@ -1,4 +1,5 @@
 import type * as React from "react";
+
 import { cn } from "../lib/utils.js";
 import { Alert, AlertDescription, AlertTitle } from "./ui/alert.js";
 
@@ -29,9 +30,7 @@ export function Callout({
     >
       {icon}
       {title && <AlertTitle>{title}</AlertTitle>}
-      <AlertDescription className="text-card-foreground/80">
-        {children}
-      </AlertDescription>
+      <AlertDescription className="text-card-foreground/80">{children}</AlertDescription>
     </Alert>
   );
 }

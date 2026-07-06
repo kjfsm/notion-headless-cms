@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import type { EntryChange } from "../coordinator.js";
 import { SyncCoordinatorCore } from "../coordinator.js";
 import { createMultiSourceDeps } from "../multi-source.js";
@@ -24,8 +25,7 @@ function makeFakeDriver(opts: {
       const nextOffset = offset + page.length;
       return {
         changes: page,
-        nextCursor:
-          nextOffset < opts.changes.length ? String(nextOffset) : null,
+        nextCursor: nextOffset < opts.changes.length ? String(nextOffset) : null,
       };
     },
     async listAllSlugs() {
@@ -131,11 +131,7 @@ describe("createMultiSourceDeps", () => {
     const deps = createMultiSourceDeps({
       drivers: { posts: posts.driver, news: news.driver },
     });
-    expect(await deps.listIndexedSlugs()).toEqual([
-      "posts:x",
-      "news:y",
-      "news:z",
-    ]);
+    expect(await deps.listIndexedSlugs()).toEqual(["posts:x", "news:y", "news:z"]);
   });
 
   it("syncEntry は名前空間を解いて対応するコレクションのドライバに委譲する", async () => {
@@ -167,9 +163,9 @@ describe("createMultiSourceDeps", () => {
     const posts = makeFakeDriver({ changes: [] });
     posts.syncEntry.mockRejectedValueOnce(new Error("boom"));
     const deps = createMultiSourceDeps({ drivers: { posts: posts.driver } });
-    await expect(
-      deps.syncEntry({ slug: "posts:broken", lastEditedTime: "t1" }),
-    ).rejects.toThrow("boom");
+    await expect(deps.syncEntry({ slug: "posts:broken", lastEditedTime: "t1" })).rejects.toThrow(
+      "boom",
+    );
   });
 
   it("空の drivers では変化なしを返す", async () => {
@@ -242,10 +238,7 @@ describe("createMultiSourceDeps", () => {
       const coordinator = new SyncCoordinatorCore(scheduler, deps);
 
       const { removed } = await coordinator.reconcile();
-      expect([...removed].sort()).toEqual([
-        "news:deleted-news",
-        "posts:deleted-post",
-      ]);
+      expect([...removed].sort()).toEqual(["news:deleted-news", "posts:deleted-post"]);
       expect(posts.removeEntry).toHaveBeenCalledWith("deleted-post");
       expect(news.removeEntry).toHaveBeenCalledWith("deleted-news");
     });

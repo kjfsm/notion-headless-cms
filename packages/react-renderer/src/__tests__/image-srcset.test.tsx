@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
+
 import { NotionRenderer } from "../NotionRenderer.js";
 import type { NotionBlock } from "../types.js";
 
@@ -25,9 +26,7 @@ describe("Image srcSet (M5)", () => {
     const { container } = render(
       <NotionRenderer
         blocks={[block]}
-        resolveImageUrl={(url) =>
-          `/api/images/abc?orig=${encodeURIComponent(url)}`
-        }
+        resolveImageUrl={(url) => `/api/images/abc?orig=${encodeURIComponent(url)}`}
         imageSizes={[400, 800, 1200]}
         imageSizesAttr="(max-width: 768px) 100vw, 800px"
       />,
@@ -44,9 +43,7 @@ describe("Image srcSet (M5)", () => {
 
   it("resolveImageUrl 未指定 (= proxy 化されない) なら srcSet を出さない", () => {
     const block = makeImage("b1", "https://notion-signed.example/i.png");
-    const { container } = render(
-      <NotionRenderer blocks={[block]} imageSizes={[400, 800]} />,
-    );
+    const { container } = render(<NotionRenderer blocks={[block]} imageSizes={[400, 800]} />);
     const img = container.querySelector("img");
     expect(img?.getAttribute("srcset")).toBeNull();
   });

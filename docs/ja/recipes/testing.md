@@ -83,9 +83,7 @@ function makeFakeClient(pages: PageObjectResponse[]): NotionClientLike {
     pages: { retrieve: vi.fn().mockRejectedValue(new Error("not found")) },
     blocks: {
       children: {
-        list: vi
-          .fn()
-          .mockResolvedValue({ results: [], next_cursor: null, has_more: false }),
+        list: vi.fn().mockResolvedValue({ results: [], next_cursor: null, has_more: false }),
       },
     },
   };
@@ -136,9 +134,7 @@ import { cms } from "../lib/cms.js";
 
 describe("画像プロキシ", () => {
   it("存在しないハッシュは 404", async () => {
-    const res = await cms.fetch(
-      new Request("http://localhost/api/cms/images/does-not-exist"),
-    );
+    const res = await cms.fetch(new Request("http://localhost/api/cms/images/does-not-exist"));
     expect(res.status).toBe(404);
   });
 });
@@ -170,11 +166,11 @@ describe("redisDocStore", () => {
 
 ## CI で何をモックして何をモックしないか
 
-| レイヤ | テスト戦略 |
-|---|---|
-| Notion API (`notion.client`) | **必ずフェイク**。実 token を使うテストは CI でスキップする |
-| `DocStore`/`BlobStore` | 独自実装は契約テスト（上記 2）、それ以外は `memoryDocStore()`/`memoryBlobStore()` |
-| `cms.fetch()` のルーティング | `Request`/`Response` を直接組み立てて assertion する |
+| レイヤ                       | テスト戦略                                                                        |
+| ---------------------------- | --------------------------------------------------------------------------------- |
+| Notion API (`notion.client`) | **必ずフェイク**。実 token を使うテストは CI でスキップする                       |
+| `DocStore`/`BlobStore`       | 独自実装は契約テスト（上記 2）、それ以外は `memoryDocStore()`/`memoryBlobStore()` |
+| `cms.fetch()` のルーティング | `Request`/`Response` を直接組み立てて assertion する                              |
 
 実 Notion API を叩く E2E テストが必要な場合は `examples/*` ディレクトリを参照し、CI 上では
 `NOTION_TOKEN` が無い環境を前提に skip する（`examples/*/e2e/*.spec.ts` が Playwright での実例）。

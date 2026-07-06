@@ -26,9 +26,7 @@ const PARAGRAPH_BLOCK = {
   id: "b1",
   type: "paragraph",
   data: {
-    rich_text: [
-      { type: "text", plain_text: "内容", annotations: {}, href: null },
-    ],
+    rich_text: [{ type: "text", plain_text: "内容", annotations: {}, href: null }],
   },
 };
 
@@ -116,9 +114,9 @@ describe("PostPage", () => {
   it("存在しないスラグは notFound() を呼ぶ", async () => {
     fakeCms.posts.find.mockResolvedValue(null);
     const { notFound } = await import("next/navigation");
-    await expect(
-      PostPage({ params: Promise.resolve({ slug: "not-found" }) }),
-    ).rejects.toThrow("NOT_FOUND");
+    await expect(PostPage({ params: Promise.resolve({ slug: "not-found" }) })).rejects.toThrow(
+      "NOT_FOUND",
+    );
     expect(notFound).toHaveBeenCalled();
   });
 });

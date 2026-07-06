@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+
 import type { NormalizedBlock } from "../../types/entry-snapshot.js";
 import { createShikiTransform, normalizeShikiLang } from "../shiki.js";
 
@@ -35,7 +36,7 @@ describe("createShikiTransform", () => {
     const result = await transform.transform(blocks);
 
     expect(highlight).toHaveBeenCalledWith("const x = 1;", "ts");
-    expect((result[0]?.data as { __cachedHtml?: string }).__cachedHtml).toBe(
+    expect((result[0]!.data as { __cachedHtml?: string }).__cachedHtml).toBe(
       "<pre>highlighted</pre>",
     );
   });
@@ -43,9 +44,7 @@ describe("createShikiTransform", () => {
   it("code 以外のブロックは素通しする", async () => {
     const highlight = vi.fn();
     const transform = createShikiTransform({ highlight });
-    const blocks: NormalizedBlock[] = [
-      { id: "p1", type: "paragraph", data: { rich_text: [] } },
-    ];
+    const blocks: NormalizedBlock[] = [{ id: "p1", type: "paragraph", data: { rich_text: [] } }];
     const result = await transform.transform(blocks);
     expect(result).toBe(blocks);
     expect(highlight).not.toHaveBeenCalled();
@@ -62,9 +61,7 @@ describe("createShikiTransform", () => {
   it("既に __cachedHtml があるブロックは再ハイライトしない", async () => {
     const highlight = vi.fn();
     const transform = createShikiTransform({ highlight });
-    const blocks = [
-      codeBlock("x", "ts", { __cachedHtml: "<pre>cached</pre>" }),
-    ];
+    const blocks = [codeBlock("x", "ts", { __cachedHtml: "<pre>cached</pre>" })];
     const result = await transform.transform(blocks);
     expect(result).toBe(blocks);
     expect(highlight).not.toHaveBeenCalled();

@@ -1,11 +1,10 @@
 import { describe, expect, it } from "vitest";
+
 import type { EntrySnapshot } from "../../types/entry-snapshot.js";
 import { createEntryStore } from "../entry-store.js";
 import { memoryBlobStore } from "../memory.js";
 
-function makeSnapshot(
-  overrides: Partial<EntrySnapshot> = {},
-): EntrySnapshot<{ title: string }> {
+function makeSnapshot(overrides: Partial<EntrySnapshot> = {}): EntrySnapshot<{ title: string }> {
   return {
     collection: "posts",
     slug: "hello",

@@ -1,5 +1,6 @@
 import { useNotionRevalidate } from "@notion-headless-cms/react-renderer/router";
 import { Link } from "react-router";
+
 import { ensureSynced, makeCms } from "../lib/cms";
 import { cloudflareContext } from "../lib/context";
 import type { Route } from "./+types/home";

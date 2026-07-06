@@ -8,12 +8,7 @@
  */
 
 export type FormulaResultType = "string" | "number" | "boolean" | "date";
-export type RollupResultType =
-  | "string"
-  | "number"
-  | "boolean"
-  | "date"
-  | "array";
+export type RollupResultType = "string" | "number" | "boolean" | "date" | "array";
 
 /**
  * 実際の Notion プロパティ名。省略時はスキーマのプロパティキー自身を実名とみなす
@@ -28,23 +23,17 @@ export interface RichTextPropDef {
   readonly kind: "richText";
   readonly notion?: string;
 }
-export interface SelectPropDef<
-  Options extends readonly string[] = readonly string[],
-> {
+export interface SelectPropDef<Options extends readonly string[] = readonly string[]> {
   readonly kind: "select";
   readonly options?: Options;
   readonly notion?: string;
 }
-export interface StatusPropDef<
-  Options extends readonly string[] = readonly string[],
-> {
+export interface StatusPropDef<Options extends readonly string[] = readonly string[]> {
   readonly kind: "status";
   readonly options: Options;
   readonly notion?: string;
 }
-export interface MultiSelectPropDef<
-  Options extends readonly string[] = readonly string[],
-> {
+export interface MultiSelectPropDef<Options extends readonly string[] = readonly string[]> {
   readonly kind: "multiSelect";
   readonly options?: Options;
   readonly notion?: string;
@@ -65,9 +54,7 @@ export interface UrlPropDef {
   readonly kind: "url";
   readonly notion?: string;
 }
-export interface FormulaPropDef<
-  T extends FormulaResultType = FormulaResultType,
-> {
+export interface FormulaPropDef<T extends FormulaResultType = FormulaResultType> {
   readonly kind: "formula";
   readonly resultType: T;
   readonly notion?: string;
@@ -172,9 +159,7 @@ export type InferPropValue<D extends PropDef> = D extends TitlePropDef
       : D extends StatusPropDef<infer Options>
         ? Options[number]
         : D extends MultiSelectPropDef<infer Options>
-          ? readonly (Options extends readonly string[]
-              ? Options[number]
-              : string)[]
+          ? readonly (Options extends readonly string[] ? Options[number] : string)[]
           : D extends DatePropDef
             ? string | null
             : D extends NumberPropDef
@@ -262,10 +247,7 @@ export const prop = {
     resultType,
     notion,
   }),
-  rollup: <const T extends RollupResultType>(
-    resultType: T,
-    notion?: string,
-  ): RollupPropDef<T> => ({
+  rollup: <const T extends RollupResultType>(resultType: T, notion?: string): RollupPropDef<T> => ({
     kind: "rollup",
     resultType,
     notion,

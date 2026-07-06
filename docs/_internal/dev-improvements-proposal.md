@@ -12,30 +12,30 @@
 
 ### ライブラリ側（本リポジトリ）
 
-| 摩擦点 | 根拠 |
-|---|---|
-| リリース事務の氾濫: 直近200コミット中 約10% が `Version Packages` PR | git log（機能コミット1件ごとにリリース PR が挟まる） |
-| KV 無料枠クォータ対応が同一領域で4回連鎖 | #466 → #468 → #470 → #472（`packages/cms/src/store/index-store.ts`・`sync/coordinator.ts` 等を連続改修） |
-| v3 着地直後に公開 API の後追い修正が連続 | #458（未 export 型の export）・#460（公開 API 相当の型 export）・#462（shiki/katex の SSR バンドル除外） |
-| v2（16パッケージ）と v3（`cms`）の2アーキテクチャ並存保守 | `.claude/project.md`（「置き換えではなく選択」） |
-| `cms` の peerDependencies に `vitest`（testing サブパスのため） | `packages/cms/package.json` |
-| 「v3」内部識別子が改名後も残存 | `packages/cli/src/v3/`・`packages/react-renderer/src/v3.ts` |
-| cli init の Cloudflare 配線が TODO のまま | `packages/cli/src/v3/init.ts:46-55`（DO 結線・binding 取り出し・Core 構築の3箇所） |
-| 1.0 GA が attw 失敗1件でブロック、fixed mode 未設定 | `docs/_internal/1.0-progress-memo.md`（validate のみ失敗、node 版差異の疑い） |
-| `RELEASE_PAT` 依存・初回公開404のローカルフォールバック手順が常設 | `.github/workflows/release.yml`・`.claude/project.md` |
-| カバレッジ閾値がグローバル一律70%、v2 周辺アダプタはテスト各1本 | `vitest.config.ts`・`notion-source`/`validate`/`fetch-blocks`/`notion-katex`/`notion-shiki` |
+| 摩擦点                                                               | 根拠                                                                                                     |
+| -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| リリース事務の氾濫: 直近200コミット中 約10% が `Version Packages` PR | git log（機能コミット1件ごとにリリース PR が挟まる）                                                     |
+| KV 無料枠クォータ対応が同一領域で4回連鎖                             | #466 → #468 → #470 → #472（`packages/cms/src/store/index-store.ts`・`sync/coordinator.ts` 等を連続改修） |
+| v3 着地直後に公開 API の後追い修正が連続                             | #458（未 export 型の export）・#460（公開 API 相当の型 export）・#462（shiki/katex の SSR バンドル除外） |
+| v2（16パッケージ）と v3（`cms`）の2アーキテクチャ並存保守            | `.claude/project.md`（「置き換えではなく選択」）                                                         |
+| `cms` の peerDependencies に `vitest`（testing サブパスのため）      | `packages/cms/package.json`                                                                              |
+| 「v3」内部識別子が改名後も残存                                       | `packages/cli/src/v3/`・`packages/react-renderer/src/v3.ts`                                              |
+| cli init の Cloudflare 配線が TODO のまま                            | `packages/cli/src/v3/init.ts:46-55`（DO 結線・binding 取り出し・Core 構築の3箇所）                       |
+| 1.0 GA が attw 失敗1件でブロック、fixed mode 未設定                  | `docs/_internal/1.0-progress-memo.md`（validate のみ失敗、node 版差異の疑い）                            |
+| `RELEASE_PAT` 依存・初回公開404のローカルフォールバック手順が常設    | `.github/workflows/release.yml`・`.claude/project.md`                                                    |
+| カバレッジ閾値がグローバル一律70%、v2 周辺アダプタはテスト各1本      | `vitest.config.ts`・`notion-source`/`validate`/`fetch-blocks`/`notion-katex`/`notion-shiki`              |
 
 ### 利用側（euphoric-band-site）
 
-| 摩擦点 | 根拠 |
-|---|---|
-| 方式転換への追従移行が履歴の主軸（v2 → 新 API → v3） | site#60/#69/#73/#74/#88 + 3.0.2〜3.0.7 追従（package.json 32回変更） |
-| 壊れた publish が利用側をブロック | site#88 本文（存在しない `@notion-headless-cms/v3@0.0.0` 依存で npm 404、据え置きを強制） |
-| ライブラリ不足を app 側で補うコード | `app/lib/cms-helpers.ts` の `listAll()`（RSS/sitemap/一覧/ナビで全件回収）・`remapPageLinks()`（href 書き換え） |
-| `imagesPath` の意味が同期側と reader 側で異なる | site CLAUDE.md に「唯一のハマりどころ」と明記（片方は絶対パス、片方は routes からの相対） |
-| workers/・DO・同期経路が完全に無テスト | KV `list()` 枯渇による本番 `GET /` 500（site#91）・OG 生成失敗（site#80）はいずれも本番で発覚 |
-| 「入れて→消す」試行錯誤 | edge-cache 自前実装（site#93）→ 同日撤回（site#94）、version チェック API 追加→削除、F5 強制再取得の v3 廃止 |
-| DO Worker のプレビュー URL 不可を職人芸で吸収 | `wrangler.preview.toml` 冒頭34行がほぼ回避策コメント（site#81/#82/#83 と3PR連続調整） |
+| 摩擦点                                               | 根拠                                                                                                            |
+| ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 方式転換への追従移行が履歴の主軸（v2 → 新 API → v3） | site#60/#69/#73/#74/#88 + 3.0.2〜3.0.7 追従（package.json 32回変更）                                            |
+| 壊れた publish が利用側をブロック                    | site#88 本文（存在しない `@notion-headless-cms/v3@0.0.0` 依存で npm 404、据え置きを強制）                       |
+| ライブラリ不足を app 側で補うコード                  | `app/lib/cms-helpers.ts` の `listAll()`（RSS/sitemap/一覧/ナビで全件回収）・`remapPageLinks()`（href 書き換え） |
+| `imagesPath` の意味が同期側と reader 側で異なる      | site CLAUDE.md に「唯一のハマりどころ」と明記（片方は絶対パス、片方は routes からの相対）                       |
+| workers/・DO・同期経路が完全に無テスト               | KV `list()` 枯渇による本番 `GET /` 500（site#91）・OG 生成失敗（site#80）はいずれも本番で発覚                   |
+| 「入れて→消す」試行錯誤                              | edge-cache 自前実装（site#93）→ 同日撤回（site#94）、version チェック API 追加→削除、F5 強制再取得の v3 廃止    |
+| DO Worker のプレビュー URL 不可を職人芸で吸収        | `wrangler.preview.toml` 冒頭34行がほぼ回避策コメント（site#81/#82/#83 と3PR連続調整）                           |
 
 ---
 

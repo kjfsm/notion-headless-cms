@@ -45,9 +45,7 @@ crons = ["0 * * * *"]
  * 実働構成(`src/lib/do.ts` + `src/lib/cms.ts` + `src/index.ts`)と同じ配線を
  * `generateWranglerToml` の binding 名で再現する。相対パス → ファイル内容のマップを返す。
  */
-export function generateMountCodeTemplate(
-  opts: InitScaffoldOptions,
-): Record<string, string> {
+export function generateMountCodeTemplate(opts: InitScaffoldOptions): Record<string, string> {
   const kv = opts.kvBinding ?? "DOC_INDEX";
   const r2 = opts.r2Binding ?? "ENTRY_BUCKET";
   const doClass = opts.doClassName ?? "SyncCoordinatorDO";

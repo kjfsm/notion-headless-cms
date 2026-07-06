@@ -1,6 +1,7 @@
 import type { RichTextItemResponse } from "@notionhq/client";
 import { render, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+
 import { RichText } from "../rich-text/RichText";
 
 const text = (
@@ -31,24 +32,18 @@ describe("RichText", () => {
   });
 
   it("bold + italic を入れ子で描画する", () => {
-    const { container } = render(
-      <RichText value={[text("x", { bold: true, italic: true })]} />,
-    );
+    const { container } = render(<RichText value={[text("x", { bold: true, italic: true })]} />);
     expect(container.querySelector("em strong")).not.toBeNull();
   });
 
   it("code は <code> タグで他の装飾を抑制する", () => {
-    const { container } = render(
-      <RichText value={[text("x", { bold: true, code: true })]} />,
-    );
+    const { container } = render(<RichText value={[text("x", { bold: true, code: true })]} />);
     expect(container.querySelector("code")).not.toBeNull();
     expect(container.querySelector("strong")).toBeNull();
   });
 
   it("href があればリンクで包む", () => {
-    const { container } = render(
-      <RichText value={[text("x", {}, "https://example.com")]} />,
-    );
+    const { container } = render(<RichText value={[text("x", {}, "https://example.com")]} />);
     const a = container.querySelector("a");
     expect(a?.getAttribute("href")).toBe("https://example.com");
     expect(a?.getAttribute("target")).toBe("_blank");

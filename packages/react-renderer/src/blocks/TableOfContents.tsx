@@ -1,6 +1,7 @@
 "use client";
 
 import type { ElementType } from "react";
+
 import { useNotionContext } from "../context.js";
 import { cn } from "../lib/utils.js";
 import type { BlockComponentProps } from "../types.js";
@@ -20,15 +21,11 @@ const INDENT_BY_LEVEL: Record<1 | 2 | 3 | 4, string> = {
  * 内部ラッパが `display:table` を被せるため `truncate` が機能しなくなり、
  * 長い見出しテキストが横に溢れて視覚的に重なるのを避けるため。
  */
-export function TableOfContents({
-  className,
-}: Pick<BlockComponentProps, "className"> = {}) {
+export function TableOfContents({ className }: Pick<BlockComponentProps, "className"> = {}) {
   const { headings, Link: LinkSlot } = useNotionContext();
   const items = headings ?? [];
   if (items.length === 0) return null;
-  const LinkComp = (LinkSlot ?? "a") as ElementType<
-    React.AnchorHTMLAttributes<HTMLAnchorElement>
-  >;
+  const LinkComp = (LinkSlot ?? "a") as ElementType<React.AnchorHTMLAttributes<HTMLAnchorElement>>;
   return (
     <nav
       aria-label="table of contents"

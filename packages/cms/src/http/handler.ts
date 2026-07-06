@@ -61,9 +61,7 @@ export function createFetchHandler(
   adapter: HttpHandlerAdapter,
   opts: HttpHandlerOptions,
 ): (request: Request) => Promise<Response> {
-  const routes = opts.routes.endsWith("/")
-    ? opts.routes.slice(0, -1)
-    : opts.routes;
+  const routes = opts.routes.endsWith("/") ? opts.routes.slice(0, -1) : opts.routes;
   const imagesPath = opts.imagesPath ?? DEFAULTS.imagesPath;
   const webhookPath = opts.webhookPath ?? DEFAULTS.webhookPath;
   const realtimePath = opts.realtimePath ?? DEFAULTS.realtimePath;
@@ -104,17 +102,13 @@ export function createFetchHandler(
       return new Response(stored.bytes as BodyInit, { headers });
     }
 
-    if (
-      request.method === "GET" &&
-      (rel === realtimePath || rel.startsWith(`${realtimePath}/`))
-    ) {
+    if (request.method === "GET" && (rel === realtimePath || rel.startsWith(`${realtimePath}/`))) {
       if (adapter.onRealtimeUpgrade) return adapter.onRealtimeUpgrade(request);
       return new Response("Not Found", { status: 404 });
     }
 
     if (rel.startsWith(`${previewPath}/`)) {
-      if (adapter.onPreview)
-        return adapter.onPreview(request, rel.slice(previewPath.length + 1));
+      if (adapter.onPreview) return adapter.onPreview(request, rel.slice(previewPath.length + 1));
       return new Response("Not Found", { status: 404 });
     }
 
@@ -132,43 +126,26 @@ export function createFetchHandler(
         return jsonResponse({ ok: false, reason: "invalid json" }, 400);
       }
 
-      if (
-        payload &&
-        typeof payload === "object" &&
-        "verification_token" in payload
-      ) {
-        const token = String(
-          (payload as Record<string, unknown>).verification_token,
-        );
+      if (payload && typeof payload === "object" && "verification_token" in payload) {
+        const token = String((payload as Record<string, unknown>).verification_token);
         adapter.onVerificationToken?.(token);
         return jsonResponse({ ok: true, verification_token: token }, 200);
       }
 
       if (!adapter.webhookSecret) {
-        return jsonResponse(
-          { ok: false, reason: "webhook secret not configured" },
-          503,
-        );
+        return jsonResponse({ ok: false, reason: "webhook secret not configured" }, 503);
       }
       const signature = request.headers.get("X-Notion-Signature");
-      const valid = await verifyNotionSignature(
-        adapter.webhookSecret,
-        raw,
-        signature,
-      );
+      const valid = await verifyNotionSignature(adapter.webhookSecret, raw, signature);
       if (!valid) {
         adapter.logger?.warn?.("webhook 署名が不正です", {
           operation: "webhook",
           status: 401,
         });
-        return jsonResponse(
-          { ok: false, code: "handler/signature_invalid" },
-          401,
-        );
+        return jsonResponse({ ok: false, code: "handler/signature_invalid" }, 401);
       }
 
-      const entity = (payload as { entity?: { id?: string; type?: string } })
-        .entity;
+      const entity = (payload as { entity?: { id?: string; type?: string } }).entity;
       const pageId = entity?.type === "page" ? entity.id : undefined;
       if (!pageId) {
         return jsonResponse({ ok: true, skipped: "no page entity" }, 200);

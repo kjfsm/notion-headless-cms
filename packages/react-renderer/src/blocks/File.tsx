@@ -3,12 +3,8 @@
 import type { FileBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { FileIcon } from "lucide-react";
 import type { ElementType } from "react";
-import {
-  Item,
-  ItemContent,
-  ItemMedia,
-  ItemTitle,
-} from "../components/ui/item.js";
+
+import { Item, ItemContent, ItemMedia, ItemTitle } from "../components/ui/item.js";
 import { useNotionContext } from "../context";
 import { getFileUrl } from "../lib/notion-file";
 import { cn } from "../lib/utils";
@@ -25,16 +21,11 @@ function fileName(block: FileBlockObjectResponse): string {
   }
 }
 
-export function File({
-  block,
-  className,
-}: BlockComponentProps<FileBlockObjectResponse>) {
+export function File({ block, className }: BlockComponentProps<FileBlockObjectResponse>) {
   const { resolveImageUrl, Link: LinkSlot } = useNotionContext();
   const rawUrl = getFileUrl(block.file);
   const href = resolveImageUrl ? resolveImageUrl(rawUrl, block) : rawUrl;
-  const LinkComp = (LinkSlot ?? "a") as ElementType<
-    React.AnchorHTMLAttributes<HTMLAnchorElement>
-  >;
+  const LinkComp = (LinkSlot ?? "a") as ElementType<React.AnchorHTMLAttributes<HTMLAnchorElement>>;
   return (
     <figure className={cn("my-3", className)}>
       <Item variant="outline" asChild>

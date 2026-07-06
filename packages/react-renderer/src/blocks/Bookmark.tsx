@@ -1,6 +1,7 @@
 "use client";
 
 import type { BookmarkBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+
 import { OgCard, type OgCardData } from "../embeds/OgCard";
 import { useOgp } from "../embeds/useOgp.js";
 import { cn } from "../lib/utils";
@@ -16,10 +17,7 @@ type BookmarkBlockMaybeWithOgp = BookmarkBlockObjectResponse & {
  * あればそれを最優先で使う。無ければ `useOgp` がページアクセス時にクライアントから
  * `ogpEndpoint` を叩いて取得する（それも無ければシェルのリンクカードのまま）。
  */
-export function Bookmark({
-  block,
-  className,
-}: BlockComponentProps<BookmarkBlockObjectResponse>) {
+export function Bookmark({ block, className }: BlockComponentProps<BookmarkBlockObjectResponse>) {
   const url = block.bookmark.url;
   const preloadedOgp = (block as BookmarkBlockMaybeWithOgp).ogp;
   const fetchedOgp = useOgp(preloadedOgp ? null : url);

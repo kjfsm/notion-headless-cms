@@ -1,4 +1,5 @@
 import { expect, it } from "vitest";
+
 import type { BlobStore, DocStore } from "./types.js";
 
 export interface DocStoreContractOptions {

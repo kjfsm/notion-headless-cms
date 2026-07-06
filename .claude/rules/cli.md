@@ -15,13 +15,13 @@ paths:
 
 ## 主要コマンド
 
-| コマンド | 用途 |
-|---|---|
-| `nhc init` | `nhc.config.ts`・`wrangler.toml`・`src/schema.ts`・Hono マウントコード一式を生成 |
-| `nhc pull` | `collections` の各 DB を introspect し、`defineCollection` の雛形コードを `scaffoldDir` に出力 |
-| `nhc check` | `schemaModule` と実 Notion DB の drift を検証（CI 向け、`--json` 対応） |
-| `nhc doctor` | binding 宣言・webhook secret・token 権限・同期状態・slug 重複を診断 |
-| `nhc sync` | `schemaModule` の全コレクションをローカルファイルストアへ同期（初回 kick 経路） |
+| コマンド     | 用途                                                                                           |
+| ------------ | ---------------------------------------------------------------------------------------------- |
+| `nhc init`   | `nhc.config.ts`・`wrangler.toml`・`src/schema.ts`・Hono マウントコード一式を生成               |
+| `nhc pull`   | `collections` の各 DB を introspect し、`defineCollection` の雛形コードを `scaffoldDir` に出力 |
+| `nhc check`  | `schemaModule` と実 Notion DB の drift を検証（CI 向け、`--json` 対応）                        |
+| `nhc doctor` | binding 宣言・webhook secret・token 権限・同期状態・slug 重複を診断                            |
+| `nhc sync`   | `schemaModule` の全コレクションをローカルファイルストアへ同期（初回 kick 経路）                |
 
 ## `nhc.config.ts` ヘルパー
 

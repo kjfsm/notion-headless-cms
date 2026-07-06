@@ -1,7 +1,4 @@
-import type {
-  ImageMapEntry,
-  NormalizedBlock,
-} from "../types/entry-snapshot.js";
+import type { ImageMapEntry, NormalizedBlock } from "../types/entry-snapshot.js";
 import type { JsonValue } from "../types/json-value.js";
 import { imageCacheKeySource, sha256Hex } from "./images.js";
 
@@ -12,8 +9,7 @@ function rewriteFileUrl(
   proxyUrl: string,
   dims: ImageMapEntry | undefined,
 ): JsonValue {
-  if (typeof data !== "object" || data === null || Array.isArray(data))
-    return data;
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return data;
   const record = { ...(data as Record<string, JsonValue>) };
   if (record.type === "file") {
     const file = record.file as Record<string, JsonValue> | undefined;
@@ -30,8 +26,7 @@ function rewriteFileUrl(
 }
 
 function extractRawUrl(data: JsonValue): string | null {
-  if (typeof data !== "object" || data === null || Array.isArray(data))
-    return null;
+  if (typeof data !== "object" || data === null || Array.isArray(data)) return null;
   const record = data as Record<string, JsonValue>;
   if (record.type === "file") {
     const file = record.file as Record<string, JsonValue> | undefined;
@@ -54,9 +49,7 @@ export async function resolveImageUrls(
   images: Readonly<Record<string, ImageMapEntry>>,
   imagesPath = "/images",
 ): Promise<NormalizedBlock[]> {
-  async function resolveBlock(
-    block: NormalizedBlock,
-  ): Promise<NormalizedBlock> {
+  async function resolveBlock(block: NormalizedBlock): Promise<NormalizedBlock> {
     const children = block.children
       ? await Promise.all(block.children.map(resolveBlock))
       : undefined;
@@ -70,11 +63,7 @@ export async function resolveImageUrls(
     const proxyUrl = `${imagesPath}/${hash}`;
     return {
       ...block,
-      data: rewriteFileUrl(
-        block.data,
-        proxyUrl,
-        block.type === "image" ? dims : undefined,
-      ),
+      data: rewriteFileUrl(block.data, proxyUrl, block.type === "image" ? dims : undefined),
       ...(children ? { children } : {}),
     };
   }

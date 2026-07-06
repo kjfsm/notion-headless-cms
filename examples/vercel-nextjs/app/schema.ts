@@ -14,10 +14,7 @@ const posts = defineCollection({
   properties: {
     title: prop.title("名前"),
     slug: prop.richText("URL"),
-    status: prop.status(
-      ["下書き", "編集中", "公開済み"] as const,
-      "ステータス",
-    ),
+    status: prop.status(["下書き", "編集中", "公開済み"] as const, "ステータス"),
     publishedAt: prop.date("公開日"),
     author: prop.select(undefined, "著者"),
   },

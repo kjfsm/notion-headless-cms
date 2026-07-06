@@ -8,8 +8,7 @@ function toBaseIdentifier(name: string): string {
     .replace(/[\s-]+(.)/g, (_, c: string) => c.toUpperCase())
     .replace(/[^a-zA-Z0-9_]/g, "");
   if (!normalized) return "";
-  const withLowerFirst =
-    normalized.charAt(0).toLowerCase() + normalized.slice(1);
+  const withLowerFirst = normalized.charAt(0).toLowerCase() + normalized.slice(1);
   return /^[0-9]/.test(withLowerFirst) ? `_${withLowerFirst}` : withLowerFirst;
 }
 

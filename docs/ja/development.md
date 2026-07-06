@@ -15,11 +15,11 @@ order: 5
 
 ### 必要なツール
 
-| ツール | バージョン | 備考 |
-|---|---|---|
-| Node.js | `>=24` | 全パッケージの `engines.node` |
-| pnpm | `10.x` | `package.json` の `packageManager` に固定 |
-| git | 任意 | |
+| ツール  | バージョン | 備考                                      |
+| ------- | ---------- | ----------------------------------------- |
+| Node.js | `>=24`     | 全パッケージの `engines.node`             |
+| pnpm    | `10.x`     | `package.json` の `packageManager` に固定 |
+| git     | 任意       |                                           |
 
 ### 初回セットアップ
 
@@ -94,11 +94,11 @@ claude mcp add --transport http context7 https://mcp.context7.com/mcp
 
 ### 3-1. Secrets 登録
 
-| Secret | 必須 | 取得元 |
-|---|---|---|
-| `NPM_TOKEN` | 必須 | npm アカウントで **Automation** トークンを発行 |
-| `RELEASE_PAT` | 必須 | 下記参照 |
-| `NOTION_TOKEN` | examples の CI smoke test で使う場合のみ | Notion インテグレーション |
+| Secret         | 必須                                     | 取得元                                         |
+| -------------- | ---------------------------------------- | ---------------------------------------------- |
+| `NPM_TOKEN`    | 必須                                     | npm アカウントで **Automation** トークンを発行 |
+| `RELEASE_PAT`  | 必須                                     | 下記参照                                       |
+| `NOTION_TOKEN` | examples の CI smoke test で使う場合のみ | Notion インテグレーション                      |
 
 ```bash
 gh secret set NPM_TOKEN --body "<npm automation token>"
@@ -111,6 +111,7 @@ gh secret set NOTION_TOKEN --body "<notion integration token>"
 > （[changesets/action 公式の推奨](https://github.com/changesets/action#with-publishing)）。
 >
 > 発行するトークンの権限:
+>
 > - Fine-grained PAT（推奨）: 対象リポジトリに `Contents: Read and write` + `Pull requests: Read and write`
 > - Classic PAT: `repo` スコープ
 
@@ -222,13 +223,13 @@ gh pr create
 
 ## 8. CI ワークフロー一覧
 
-| ワークフロー | トリガー | 内容 |
-|---|---|---|
-| `ci.yml` | PR / main push | lint + build + typecheck + test |
-| `release.yml` | main push | changesets/action による Version PR 作成・npm 公開 |
-| `changeset-check.yml` | PR | packages/ 変更時に changeset 有無を検証 |
-| `publint.yml` | PR (packages/ 変更時) | publint + are-the-types-wrong |
-| `codeql.yml` | PR / main / 毎週月曜 | セキュリティスキャン |
-| `dependency-review.yml` | PR | 依存の脆弱性・ライセンスチェック |
+| ワークフロー            | トリガー              | 内容                                               |
+| ----------------------- | --------------------- | -------------------------------------------------- |
+| `ci.yml`                | PR / main push        | lint + build + typecheck + test                    |
+| `release.yml`           | main push             | changesets/action による Version PR 作成・npm 公開 |
+| `changeset-check.yml`   | PR                    | packages/ 変更時に changeset 有無を検証            |
+| `publint.yml`           | PR (packages/ 変更時) | publint + are-the-types-wrong                      |
+| `codeql.yml`            | PR / main / 毎週月曜  | セキュリティスキャン                               |
+| `dependency-review.yml` | PR                    | 依存の脆弱性・ライセンスチェック                   |
 
 `skip-changeset` ラベルを PR に付けると `changeset-check` をスキップできる（docs のみ変更などで使う）。

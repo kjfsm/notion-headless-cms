@@ -1,7 +1,9 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import type { CMSConfig } from "../../index.js";
 
 const loadConfigMock = vi.fn<() => Promise<CMSConfig>>();
@@ -84,9 +86,9 @@ describe("runSync", () => {
       collections: {},
     } as CMSConfig);
 
-    await expect(runSync({ token: "tok", silent: true })).rejects.toMatchObject(
-      { code: "cli/config_invalid" },
-    );
+    await expect(runSync({ token: "tok", silent: true })).rejects.toMatchObject({
+      code: "cli/config_invalid",
+    });
   });
 
   it("スキーマモジュールに対応する export が無ければ CMSError(cli/schema_invalid) を投げる", async () => {
@@ -96,9 +98,9 @@ describe("runSync", () => {
     } as CMSConfig);
     jitiImportMock.mockResolvedValue({});
 
-    await expect(runSync({ token: "tok", silent: true })).rejects.toMatchObject(
-      { code: "cli/schema_invalid" },
-    );
+    await expect(runSync({ token: "tok", silent: true })).rejects.toMatchObject({
+      code: "cli/schema_invalid",
+    });
   });
 
   it("ローカルファイルストアへ同期し、cacheDir に entry を書き込む", async () => {
@@ -120,9 +122,7 @@ describe("runSync", () => {
       cacheDir: ".cache",
     });
 
-    const output = JSON.parse(
-      logSpy.mock.calls.map((c: unknown[]) => c[0]).join("\n"),
-    );
+    const output = JSON.parse(logSpy.mock.calls.map((c: unknown[]) => c[0]).join("\n"));
     expect(output.ok).toBe(true);
     const files = await fs.readdir(path.join(tmpDir, ".cache"));
     expect(files.some((f) => f.includes("entry"))).toBe(true);

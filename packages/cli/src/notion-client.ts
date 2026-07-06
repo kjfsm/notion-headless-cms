@@ -51,8 +51,7 @@ function isRawNetworkError(err: unknown): boolean {
   const record = err as { code?: unknown; cause?: { code?: unknown } } | null;
   if (record === null || typeof record !== "object") return false;
   const direct = typeof record.code === "string" ? record.code : undefined;
-  const nested =
-    typeof record.cause?.code === "string" ? record.cause.code : undefined;
+  const nested = typeof record.cause?.code === "string" ? record.cause.code : undefined;
   const code = nested ?? direct;
   return code !== undefined && RETRIABLE_NETWORK_CODES.has(code);
 }
@@ -104,12 +103,8 @@ export function createNotionCLIClient(token: string): NotionCLIClient {
     return null;
   }
 
-  async function retrieveDataSource(
-    id: string,
-  ): Promise<DataSourceObjectResponse> {
-    const result = await withRetry(() =>
-      client.dataSources.retrieve({ data_source_id: id }),
-    );
+  async function retrieveDataSource(id: string): Promise<DataSourceObjectResponse> {
+    const result = await withRetry(() => client.dataSources.retrieve({ data_source_id: id }));
     if (result.object !== "data_source") {
       throw new CMSError({
         code: "cli/notion_api_failed",
@@ -132,9 +127,7 @@ export function createNotionCLIClient(token: string): NotionCLIClient {
     }
   }
 
-  async function queryAllPages(
-    id: string,
-  ): Promise<readonly PageObjectResponse[]> {
+  async function queryAllPages(id: string): Promise<readonly PageObjectResponse[]> {
     const pages: PageObjectResponse[] = [];
     let cursor: string | undefined;
     do {

@@ -67,7 +67,7 @@ const cms = createCMS({
 await cms.sync.kick();
 
 const posts = await cms.posts.list(); // ブログ記事DB 由来
-const news = await cms.news.list();   // ニュースDB 由来（別 Notion DB）
+const news = await cms.news.list(); // ニュースDB 由来（別 Notion DB）
 ```
 
 `cms.posts` / `cms.news` はそれぞれ `defineCollection` の `properties` から型推論された

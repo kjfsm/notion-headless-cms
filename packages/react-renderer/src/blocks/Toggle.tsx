@@ -2,6 +2,7 @@
 
 import type { ToggleBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { ChevronRight } from "lucide-react";
+
 import {
   Collapsible,
   CollapsibleContent,
@@ -13,18 +14,9 @@ import { NotionBlocks } from "../NotionBlocks.js";
 import { RichText } from "../rich-text/RichText.js";
 import type { BlockComponentProps } from "../types.js";
 
-export function Toggle({
-  block,
-  className,
-}: BlockComponentProps<ToggleBlockObjectResponse>) {
+export function Toggle({ block, className }: BlockComponentProps<ToggleBlockObjectResponse>) {
   return (
-    <Collapsible
-      className={cn(
-        "my-2",
-        notionBlockColorClass(block.toggle.color),
-        className,
-      )}
-    >
+    <Collapsible className={cn("my-2", notionBlockColorClass(block.toggle.color), className)}>
       <CollapsibleTrigger className="group flex items-center gap-2 text-left">
         <ChevronRight
           aria-hidden

@@ -1,7 +1,6 @@
 import { escapeHtml, sanitizeHref } from "./escape.js";
 
-const YOUTUBE_ID_RE =
-  /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
+const YOUTUBE_ID_RE = /(?:youtube\.com\/(?:watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
 const YOUTUBE_HOST_RE = /(?:^|\.)youtube\.com$|(?:^|\.)youtu\.be$/;
 
 function hostname(url: string): string {
@@ -25,9 +24,7 @@ export function renderOgpShell(
 ): string {
   const label = escapeHtml(hostname(url));
   const displayUrl = escapeHtml(url.replace(/^https?:\/\//, "").slice(0, 60));
-  const captionSection = captionHtml
-    ? `<p class="nhc-${variant}__caption">${captionHtml}</p>`
-    : "";
+  const captionSection = captionHtml ? `<p class="nhc-${variant}__caption">${captionHtml}</p>` : "";
   return (
     `<div class="nhc-${variant}-block" data-nhc-ogp-url="${escapeHtml(sanitizeHref(url))}">` +
     `<a class="nhc-${variant}" href="${escapeHtml(sanitizeHref(url))}" target="_blank" rel="noopener noreferrer">` +
@@ -95,9 +92,7 @@ export function renderEmbedIframe(
     });
   }
   const host = hostname(url);
-  const allowed = allowedEmbedHosts.some(
-    (h) => host === h || host.endsWith(`.${h}`),
-  );
+  const allowed = allowedEmbedHosts.some((h) => host === h || host.endsWith(`.${h}`));
   if (allowed) return renderIframe({ src: url });
   return null;
 }

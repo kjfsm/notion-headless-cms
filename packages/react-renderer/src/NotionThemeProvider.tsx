@@ -66,11 +66,7 @@ export function NotionThemeProvider({
     return systemPrefersDark ? "dark" : "light";
   }, [theme, systemPrefersDark]);
 
-  const classes = [
-    "notion-theme",
-    resolved === "dark" ? darkClassName : lightClassName,
-    className,
-  ]
+  const classes = ["notion-theme", resolved === "dark" ? darkClassName : lightClassName, className]
     .filter(Boolean)
     .join(" ");
 

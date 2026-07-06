@@ -98,10 +98,7 @@ export interface Env {
  * 一致すれば打ち切るため、この場合の再同期は「再検証クエリ 1 回」で済み、
  * 変更の無いページを再マテリアライズすることはない。
  */
-export function makeCms(
-  env: Env,
-  ctx: { waitUntil(p: Promise<unknown>): void },
-) {
+export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void }) {
   return createCMS({
     schema,
     notion: { token: env.NOTION_TOKEN },
@@ -118,9 +115,7 @@ export function makeCms(
  * cursor が尽きるまで kick をループする。差分が無ければ最初のチャンクで
  * `nextCursor: null` になり 1 回の軽い再検証クエリで終わる。
  */
-export async function ensureSynced(
-  cms: ReturnType<typeof makeCms>,
-): Promise<void> {
+export async function ensureSynced(cms: ReturnType<typeof makeCms>): Promise<void> {
   let state = await cms.sync.getState();
   do {
     await cms.sync.kick();
@@ -246,10 +241,7 @@ export default function Home({ loaderData }: Route.ComponentProps) {
 ```tsx
 // app/routes/post.tsx
 import { NotionRenderer } from "@notion-headless-cms/react-renderer";
-import {
-  denormalizeBlocks,
-  toPageLinkMap,
-} from "@notion-headless-cms/react-renderer/cms";
+import { denormalizeBlocks, toPageLinkMap } from "@notion-headless-cms/react-renderer/cms";
 import { useNotionRevalidate } from "@notion-headless-cms/react-renderer/router";
 import { data } from "react-router";
 import { ensureSynced, makeCms } from "../lib/cms";
@@ -291,9 +283,9 @@ export default function Post({ loaderData }: Route.ComponentProps) {
 既定トリガーは `["mount", "visibility"]`（マウント時 + タブ再フォーカス時）。
 
 ```tsx
-useNotionRevalidate();                          // 既定: mount + visibility
-useNotionRevalidate({ on: "visibility" });       // 再フォーカス時のみ
-<NotionRevalidator on={["mount", "visibility"]} />
+useNotionRevalidate(); // 既定: mount + visibility
+useNotionRevalidate({ on: "visibility" }); // 再フォーカス時のみ
+<NotionRevalidator on={["mount", "visibility"]} />;
 ```
 
 同期自体は `ensureSynced()`（loader 内で `cms.sync.kick()` をキックする）または Notion webhook

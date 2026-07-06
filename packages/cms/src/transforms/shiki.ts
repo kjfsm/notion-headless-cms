@@ -29,8 +29,7 @@ const DEFAULT_MAX_CODE_LENGTH = 20000;
 /** Notion の言語名を shiki が解釈できる名前へ正規化する。 */
 export function normalizeShikiLang(lang: string): string {
   const l = lang.trim().toLowerCase();
-  if (l === "" || l === "plain text" || l === "plain_text" || l === "plaintext")
-    return "text";
+  if (l === "" || l === "plain text" || l === "plain_text" || l === "plaintext") return "text";
   return l;
 }
 
@@ -38,9 +37,7 @@ function plainText(richText: JsonValue | undefined): string {
   if (!Array.isArray(richText)) return "";
   return richText
     .map((item) =>
-      isJsonRecord(item) && typeof item.plain_text === "string"
-        ? item.plain_text
-        : "",
+      isJsonRecord(item) && typeof item.plain_text === "string" ? item.plain_text : "",
     )
     .join("");
 }
@@ -81,9 +78,7 @@ function createDefaultHighlight(themes: {
   async function load(): Promise<Highlighter | null> {
     try {
       const shiki = await import("shiki");
-      const { createJavaScriptRegexEngine } = await import(
-        "shiki/engine/javascript"
-      );
+      const { createJavaScriptRegexEngine } = await import("shiki/engine/javascript");
       // oniguruma(wasm) ではなく JS regex エンジンを使う。Workers での wasm ロードを
       // 避けつつ CPU コストも抑えられる（precompiled grammar 対応）。
       const highlighter = await shiki.createHighlighter({
@@ -137,9 +132,7 @@ function createDefaultHighlight(themes: {
  * createCMS({ ..., transforms: [createShikiTransform()] });
  * ```
  */
-export function createShikiTransform(
-  opts?: ShikiTransformOptions,
-): TransformStage {
+export function createShikiTransform(opts?: ShikiTransformOptions): TransformStage {
   const themes = opts?.themes ?? DEFAULT_THEMES;
   const maxCodeLength = opts?.maxCodeLength ?? DEFAULT_MAX_CODE_LENGTH;
   const highlight = opts?.highlight ?? createDefaultHighlight(themes);

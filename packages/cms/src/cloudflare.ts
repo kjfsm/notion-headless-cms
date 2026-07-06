@@ -5,11 +5,8 @@
  * 不要な公開面のため。
  */
 import type { CreateCMSStoresOptions } from "./cms/create-cms.js";
+import type { KVNamespaceLike, R2BucketLike } from "./store/cloudflare-types.js";
 import { kvDocStore, r2BlobStore } from "./store/cloudflare.js";
-import type {
-  KVNamespaceLike,
-  R2BucketLike,
-} from "./store/cloudflare-types.js";
 import { memoryBlobStore, memoryDocStore } from "./store/memory.js";
 import {
   createVersionedCacheLayer,
@@ -24,10 +21,7 @@ export type {
   R2HeadResultLike,
   R2ObjectLike,
 } from "./store/cloudflare-types.js";
-export type {
-  VersionedCacheLayer,
-  VersionedCacheLike,
-} from "./store/versioned-cache.js";
+export type { VersionedCacheLayer, VersionedCacheLike } from "./store/versioned-cache.js";
 export type {
   DurableObjectNamespaceLike,
   DurableObjectStubLike,
@@ -69,9 +63,7 @@ export {
  * const cache = typeof caches === "undefined" ? undefined : caches.default;
  * createCMS({ stores: { docs, blobs, versionedCache: edgeVersionedCache(cache) } });
  */
-export function edgeVersionedCache(
-  cache?: VersionedCacheLike,
-): VersionedCacheLayer {
+export function edgeVersionedCache(cache?: VersionedCacheLike): VersionedCacheLayer {
   return createVersionedCacheLayer({ cache });
 }
 

@@ -36,6 +36,7 @@ paths:
 ### 依存方向の逆転（`cms` が上位パッケージの型を import する）
 
 違反:
+
 ```ts
 import type { SomeType } from "@notion-headless-cms/react-renderer";
 ```

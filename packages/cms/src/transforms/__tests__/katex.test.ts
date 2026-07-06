@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+
 import type { NormalizedBlock } from "../../types/entry-snapshot.js";
 import { createKatexTransform } from "../katex.js";
 
@@ -13,7 +14,7 @@ describe("createKatexTransform", () => {
     const result = await transform.transform(blocks);
 
     expect(render).toHaveBeenCalledWith("x^2", true);
-    expect((result[0]?.data as { __cachedHtml?: string }).__cachedHtml).toBe(
+    expect((result[0]!.data as { __cachedHtml?: string }).__cachedHtml).toBe(
       "<span class='katex-display'/>",
     );
   });
@@ -35,13 +36,11 @@ describe("createKatexTransform", () => {
 
     expect(render).toHaveBeenCalledWith("y", false);
     const richText = (
-      result[0]?.data as {
+      result[0]!.data as {
         rich_text: { equation: { __cachedHtml?: string } }[];
       }
     ).rich_text;
-    expect(richText[0]?.equation.__cachedHtml).toBe(
-      "<span class='katex-inline'/>",
-    );
+    expect(richText[0]?.equation.__cachedHtml).toBe("<span class='katex-inline'/>");
   });
 
   it("caption・table_row cells 等の深部にある inline equation も対象にする", async () => {
@@ -101,7 +100,7 @@ describe("createKatexTransform", () => {
       { id: "eq-1", type: "equation", data: { expression: "x^2 + y^2" } },
     ];
     const result = await transform.transform(blocks);
-    const html = (result[0]?.data as { __cachedHtml?: string }).__cachedHtml;
+    const html = (result[0]!.data as { __cachedHtml?: string }).__cachedHtml;
     expect(html).toContain("katex-display");
   });
 
@@ -110,9 +109,7 @@ describe("createKatexTransform", () => {
       throw new Error("Cannot find module 'katex'");
     });
     const transform = createKatexTransform();
-    const blocks: NormalizedBlock[] = [
-      { id: "eq-1", type: "equation", data: { expression: "x" } },
-    ];
+    const blocks: NormalizedBlock[] = [{ id: "eq-1", type: "equation", data: { expression: "x" } }];
     const result = await transform.transform(blocks);
     expect(result).toBe(blocks);
     vi.doUnmock("katex");

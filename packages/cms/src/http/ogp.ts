@@ -47,10 +47,7 @@ const BLOCKED_HOSTNAME_SUFFIXES = [".local", ".internal", ".localhost"];
 
 function isPrivateIPv4(ip: string): boolean {
   const parts = ip.split(".").map(Number);
-  if (
-    parts.length !== 4 ||
-    parts.some((p) => Number.isNaN(p) || p < 0 || p > 255)
-  ) {
+  if (parts.length !== 4 || parts.some((p) => Number.isNaN(p) || p < 0 || p > 255)) {
     return false;
   }
   const [a, b] = parts as [number, number, number, number];
@@ -81,11 +78,7 @@ function isPrivateIPv6(ip: string): boolean {
  */
 export function isUrlAllowed(url: URL): boolean {
   if (url.protocol !== "http:" && url.protocol !== "https:") return false;
-  const port = url.port
-    ? Number(url.port)
-    : url.protocol === "https:"
-      ? 443
-      : 80;
+  const port = url.port ? Number(url.port) : url.protocol === "https:" ? 443 : 80;
   if (port !== 80 && port !== 443) return false;
 
   const hostname = url.hostname.toLowerCase();
@@ -103,7 +96,7 @@ export function isUrlAllowed(url: URL): boolean {
   return true;
 }
 
-function withTimeout(ms: number): { signal: AbortSignal; cancel(): void } {
+function withTimeout(ms: number): { signal: AbortSignal; cancel: () => void } {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   return { signal: controller.signal, cancel: () => clearTimeout(timer) };
@@ -157,10 +150,7 @@ async function fetchWithGuard(
 }
 
 /** レスポンスボディを `maxBytes` で打ち切って文字列として読む(全量バッファを避ける)。 */
-async function readLimitedText(
-  response: Response,
-  maxBytes: number,
-): Promise<string> {
+async function readLimitedText(response: Response, maxBytes: number): Promise<string> {
   const reader = response.body?.getReader();
   if (!reader) return await response.text();
   const decoder = new TextDecoder();
@@ -177,10 +167,7 @@ async function readLimitedText(
 }
 
 function attrValue(tag: string, name: string): string | null {
-  const re = new RegExp(
-    `${name}\\s*=\\s*"([^"]*)"|${name}\\s*=\\s*'([^']*)'`,
-    "i",
-  );
+  const re = new RegExp(`${name}\\s*=\\s*"([^"]*)"|${name}\\s*=\\s*'([^']*)'`, "i");
   const m = tag.match(re);
   return m ? (m[1] ?? m[2] ?? null) : null;
 }
@@ -218,11 +205,7 @@ export function parseOgpHtml(html: string): OgpData {
   return data;
 }
 
-function jsonResponse(
-  body: unknown,
-  status: number,
-  cacheControl?: string,
-): Response {
+function jsonResponse(body: unknown, status: number, cacheControl?: string): Response {
   const headers = new Headers({ "content-type": "application/json" });
   if (cacheControl) headers.set("cache-control", cacheControl);
   return new Response(JSON.stringify(body), { status, headers });
@@ -282,8 +265,7 @@ export function createOgpHandler(
     const cacheKey = parsed.toString();
     if (cache) {
       const cached = await cache.get(cacheKey);
-      if (cached)
-        return jsonResponse({ ok: true, ogp: cached }, 200, cacheControl);
+      if (cached) return jsonResponse({ ok: true, ogp: cached }, 200, cacheControl);
     }
 
     const res = await fetchWithGuard(

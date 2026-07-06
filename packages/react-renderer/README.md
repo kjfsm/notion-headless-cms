@@ -97,9 +97,7 @@ import { toPageLinkMap } from "@notion-headless-cms/react-renderer/cms";
 const post = await cms.posts.find(slug);
 if (!post) return null;
 
-return (
-  <NotionRenderer blocks={blocks} pageLinks={toPageLinkMap(post.links)} />
-);
+return <NotionRenderer blocks={blocks} pageLinks={toPageLinkMap(post.links)} />;
 ```
 
 - **`pageLinks` はプレーンオブジェクト**（正規化 pageId → `{ href, title }`）なので、React Router の
@@ -150,7 +148,7 @@ import { MermaidCode } from "@notion-headless-cms/react-renderer/mermaid";
 @import "@notion-headless-cms/react-renderer/theme.css";
 
 :root {
-  --primary: #9333ea;        /* ブランドカラー（purple-600） */
+  --primary: #9333ea; /* ブランドカラー（purple-600） */
   --primary-foreground: #fff;
   --muted-foreground: #6b7280;
   --radius: 0.75rem;
@@ -165,7 +163,7 @@ import { MermaidCode } from "@notion-headless-cms/react-renderer/mermaid";
 ```tsx
 <NotionRenderer
   blocks={blocks}
-  className="mx-auto max-w-2xl"        // ルート div（.notion-renderer）へ
+  className="mx-auto max-w-2xl" // ルート div（.notion-renderer）へ
   classNames={{ paragraph: "my-4", quote: "border-primary" }}
 />
 ```
@@ -207,10 +205,7 @@ const post = await cms.posts.find(slug);
 if (!post) return null;
 
 return (
-  <NotionRenderer
-    blocks={denormalizeBlocks(post.blocks)}
-    pageLinks={toPageLinkMap(post.links)}
-  />
+  <NotionRenderer blocks={denormalizeBlocks(post.blocks)} pageLinks={toPageLinkMap(post.links)} />
 );
 ```
 
@@ -259,12 +254,12 @@ export default async function Page({ params }) {
 
 ### オプション
 
-| プロップ / オプション | 既定値 | 説明 |
-|---|---|---|
-| `on` | `["mount", "visibility"]` | 発火タイミング。`"mount"` / `"visibility"` / 配列で複数指定可（開いた時＋再フォーカス） |
-| `poll.url` | — | `POST {url}?v=` で `{ stale, version }` を返す check エンドポイント URL。省略時は `collection` / `slug`（または `item`）から `${basePath}/check/${collection}/${slug}` を導出 |
-| `poll.version` | — | サーバーへ送る現在の表示バージョン。省略時は `item.lastEditedTime` |
-| `poll.intervalMs` | — | 明示時のみ一定間隔でも check（既定は mount / 再フォーカス契機のみ） |
+| プロップ / オプション | 既定値                    | 説明                                                                                                                                                                          |
+| --------------------- | ------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `on`                  | `["mount", "visibility"]` | 発火タイミング。`"mount"` / `"visibility"` / 配列で複数指定可（開いた時＋再フォーカス）                                                                                       |
+| `poll.url`            | —                         | `POST {url}?v=` で `{ stale, version }` を返す check エンドポイント URL。省略時は `collection` / `slug`（または `item`）から `${basePath}/check/${collection}/${slug}` を導出 |
+| `poll.version`        | —                         | サーバーへ送る現在の表示バージョン。省略時は `item.lastEditedTime`                                                                                                            |
+| `poll.intervalMs`     | —                         | 明示時のみ一定間隔でも check（既定は mount / 再フォーカス契機のみ）                                                                                                           |
 
 ```tsx
 <NotionRevalidator on={["mount", "visibility"]} />

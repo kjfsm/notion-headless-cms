@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+
 import type { RealtimePayload } from "../../realtime.js";
 import type {
   DurableObjectNamespaceLike,
@@ -67,9 +68,7 @@ describe("broadcastToSockets", () => {
 
 describe("durableObjectRealtime", () => {
   it("publish は事前計算済みの tag と payload を hub DO へ POST する", async () => {
-    const fetchMock = vi
-      .fn<DurableObjectStubLike["fetch"]>()
-      .mockResolvedValue(new Response(null));
+    const fetchMock = vi.fn<DurableObjectStubLike["fetch"]>().mockResolvedValue(new Response(null));
     const idFromName = vi.fn().mockReturnValue("id-token");
     const get = vi.fn().mockReturnValue({ fetch: fetchMock });
     const namespace: DurableObjectNamespaceLike = { idFromName, get };
@@ -98,26 +97,21 @@ describe("durableObjectRealtime", () => {
       idFromName,
       get: () => ({ fetch: vi.fn().mockResolvedValue(new Response(null)) }),
     };
-    await durableObjectRealtime({ namespace, name: "hub-1" }).publish(
-      "c:posts",
-      { collection: "posts", version: "v" },
-    );
+    await durableObjectRealtime({ namespace, name: "hub-1" }).publish("c:posts", {
+      collection: "posts",
+      version: "v",
+    });
     expect(idFromName).toHaveBeenCalledWith("hub-1");
   });
 });
 
 describe("forwardRealtimeUpgrade", () => {
   it("idFromName('global') から解決した stub にリクエストを転送する", async () => {
-    const request = new Request(
-      "https://site/api/cms/realtime?collection=posts",
-      {
-        headers: { Upgrade: "websocket" },
-      },
-    );
+    const request = new Request("https://site/api/cms/realtime?collection=posts", {
+      headers: { Upgrade: "websocket" },
+    });
     const hubResponse = new Response("upgraded");
-    const fetchMock = vi
-      .fn<DurableObjectStubLike["fetch"]>()
-      .mockResolvedValue(hubResponse);
+    const fetchMock = vi.fn<DurableObjectStubLike["fetch"]>().mockResolvedValue(hubResponse);
     const idFromName = vi.fn().mockReturnValue("id-token");
     const get = vi.fn().mockReturnValue({ fetch: fetchMock });
     const namespace: DurableObjectNamespaceLike = { idFromName, get };
@@ -181,9 +175,7 @@ describe("RealtimeHubDO broadcast", () => {
       acceptWebSocket: vi.fn(),
       getWebSockets: vi.fn().mockReturnValue([]),
     };
-    const res = await new RealtimeHubDO(state).fetch(
-      new Request("https://hub/other"),
-    );
+    const res = await new RealtimeHubDO(state).fetch(new Request("https://hub/other"));
     expect(res.status).toBe(404);
   });
 });

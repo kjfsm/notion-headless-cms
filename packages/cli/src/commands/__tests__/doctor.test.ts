@@ -1,7 +1,9 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import type { CMSConfig } from "../../index.js";
 
 const loadConfigMock = vi.fn<() => Promise<CMSConfig>>();
@@ -79,9 +81,7 @@ describe("runDoctor", () => {
 
     await runDoctor({ token: "tok", silent: true, json: true });
 
-    const output = JSON.parse(
-      logSpy.mock.calls.map((c: unknown[]) => c[0]).join("\n"),
-    );
+    const output = JSON.parse(logSpy.mock.calls.map((c: unknown[]) => c[0]).join("\n"));
     expect(output.ok).toBe(true);
     expect(process.exitCode).toBeUndefined();
   });
@@ -94,17 +94,11 @@ describe("runDoctor", () => {
 
     await runDoctor({ token: "tok", silent: true, json: true });
 
-    const output = JSON.parse(
-      logSpy.mock.calls.map((c: unknown[]) => c[0]).join("\n"),
-    );
+    const output = JSON.parse(logSpy.mock.calls.map((c: unknown[]) => c[0]).join("\n"));
     expect(output.ok).toBe(false);
     expect(process.exitCode).toBe(1);
-    const bindingChecks = output.checks.filter((c: { name: string }) =>
-      c.name.endsWith("binding"),
-    );
-    expect(
-      bindingChecks.every((c: { status: string }) => c.status === "error"),
-    ).toBe(true);
+    const bindingChecks = output.checks.filter((c: { name: string }) => c.name.endsWith("binding"));
+    expect(bindingChecks.every((c: { status: string }) => c.status === "error")).toBe(true);
   });
 
   it("token 検証が例外を投げても doctor 自体は失敗せず unknown として扱う", async () => {
@@ -116,12 +110,8 @@ describe("runDoctor", () => {
 
     await runDoctor({ token: "tok", silent: true, json: true });
 
-    const output = JSON.parse(
-      logSpy.mock.calls.map((c: unknown[]) => c[0]).join("\n"),
-    );
-    const tokenCheck = output.checks.find(
-      (c: { name: string }) => c.name === "Notion token",
-    );
+    const output = JSON.parse(logSpy.mock.calls.map((c: unknown[]) => c[0]).join("\n"));
+    const tokenCheck = output.checks.find((c: { name: string }) => c.name === "Notion token");
     expect(tokenCheck.status).toBe("warn");
   });
 
@@ -148,12 +138,8 @@ describe("runDoctor", () => {
     });
 
     expect(fetchSpy).toHaveBeenCalledWith("https://example.com/stats");
-    const output = JSON.parse(
-      logSpy.mock.calls.map((c: unknown[]) => c[0]).join("\n"),
-    );
-    const failureCheck = output.checks.find(
-      (c: { name: string }) => c.name === "同期失敗",
-    );
+    const output = JSON.parse(logSpy.mock.calls.map((c: unknown[]) => c[0]).join("\n"));
+    const failureCheck = output.checks.find((c: { name: string }) => c.name === "同期失敗");
     expect(failureCheck.message).toContain("2");
   });
 
@@ -174,12 +160,8 @@ describe("runDoctor", () => {
 
     await runDoctor({ token: "tok", silent: true, json: true });
 
-    const output = JSON.parse(
-      logSpy.mock.calls.map((c: unknown[]) => c[0]).join("\n"),
-    );
-    const slugCheck = output.checks.find(
-      (c: { name: string }) => c.name === "slug 重複",
-    );
+    const output = JSON.parse(logSpy.mock.calls.map((c: unknown[]) => c[0]).join("\n"));
+    const slugCheck = output.checks.find((c: { name: string }) => c.name === "slug 重複");
     expect(slugCheck.status).toBe("error");
     expect(output.ok).toBe(false);
   });

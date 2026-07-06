@@ -83,11 +83,11 @@ export default defineConfig({
 
 ### `CollectionSourceConfig`
 
-| フィールド | 必須 | 説明 |
-|---|---|---|
-| `dbName` | (`databaseId` 未指定時) | Notion DB 名（完全一致で検索） |
-| `databaseId` | (`dbName` 未指定時) | Notion DB ID（指定時は `dbName` より優先） |
-| `fieldMappings` | – | `{ Notion プロパティ名: TS フィールド名 }` の明示マッピング |
+| フィールド      | 必須                    | 説明                                                        |
+| --------------- | ----------------------- | ----------------------------------------------------------- |
+| `dbName`        | (`databaseId` 未指定時) | Notion DB 名（完全一致で検索）                              |
+| `databaseId`    | (`dbName` 未指定時)     | Notion DB ID（指定時は `dbName` より優先）                  |
+| `fieldMappings` | –                       | `{ Notion プロパティ名: TS フィールド名 }` の明示マッピング |
 
 ## `nhc pull` — DB を introspect して雛形を出力
 
@@ -110,20 +110,20 @@ Options:
 
 ### プロパティ型のマッピング
 
-| Notion プロパティ型 | 生成される呼び出し |
-|---|---|
-| `title` | `prop.title()` |
-| `rich_text` | `prop.richText()` |
-| `select` | `prop.select([...options] as const)` |
-| `status` | `prop.status([...options] as const)` |
-| `multi_select` | `prop.multiSelect([...options] as const)` |
-| `date` | `prop.date()` |
-| `number` | `prop.number()` |
-| `checkbox` | `prop.checkbox()` |
-| `url` | `prop.url()` |
-| `formula` / `rollup` | `prop.formula("string", ...)` / `prop.rollup("string", ...)`（結果型を確認するコメント付き） |
-| `relation` / `people` / `files` / `unique_id` / `created_time` / `last_edited_by` | 対応する `prop.*()` |
-| それ以外の未対応型 | コメントアウトされた行として出力（手動対応を促す） |
+| Notion プロパティ型                                                               | 生成される呼び出し                                                                           |
+| --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `title`                                                                           | `prop.title()`                                                                               |
+| `rich_text`                                                                       | `prop.richText()`                                                                            |
+| `select`                                                                          | `prop.select([...options] as const)`                                                         |
+| `status`                                                                          | `prop.status([...options] as const)`                                                         |
+| `multi_select`                                                                    | `prop.multiSelect([...options] as const)`                                                    |
+| `date`                                                                            | `prop.date()`                                                                                |
+| `number`                                                                          | `prop.number()`                                                                              |
+| `checkbox`                                                                        | `prop.checkbox()`                                                                            |
+| `url`                                                                             | `prop.url()`                                                                                 |
+| `formula` / `rollup`                                                              | `prop.formula("string", ...)` / `prop.rollup("string", ...)`（結果型を確認するコメント付き） |
+| `relation` / `people` / `files` / `unique_id` / `created_time` / `last_edited_by` | 対応する `prop.*()`                                                                          |
+| それ以外の未対応型                                                                | コメントアウトされた行として出力（手動対応を促す）                                           |
 
 ### 識別子の自動変換と非 ASCII フォールバック
 
@@ -157,11 +157,11 @@ NOTION_TOKEN=secret_xxx npx nhc check --json
 
 `schemaModule` で指定した TS スキーマファイルを読み込み、実 Notion DB との drift を検証する。検出できる drift の種類:
 
-| `kind` | 意味 |
-|---|---|
-| `added` | Notion 側に新しいプロパティが増えた（スキーマ未定義） |
-| `removed` | スキーマにあるプロパティが Notion 側から無くなった |
-| `type_changed` | プロパティの型が変わった（例: `select` → `multi_select`） |
+| `kind`            | 意味                                                              |
+| ----------------- | ----------------------------------------------------------------- |
+| `added`           | Notion 側に新しいプロパティが増えた（スキーマ未定義）             |
+| `removed`         | スキーマにあるプロパティが Notion 側から無くなった                |
+| `type_changed`    | プロパティの型が変わった（例: `select` → `multi_select`）         |
 | `options_changed` | `select`/`status`/`multi_select` の選択肢が追加・削除・変更された |
 
 drift が 1 件でもあれば非ゼロ終了する（CI 向け）。`fieldMappings` は `nhc pull` と同じ解決順（`fieldMappings` → 自動識別子 → 実名そのまま）で照合キーを決定するため、DB 側の表示名を変えても `fieldMappings` を直すだけで追随できる。

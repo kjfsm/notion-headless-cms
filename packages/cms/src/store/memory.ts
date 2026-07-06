@@ -1,10 +1,4 @@
-import type {
-  BlobGetResult,
-  BlobHead,
-  BlobPutOptions,
-  BlobStore,
-  DocStore,
-} from "./types.js";
+import type { BlobGetResult, BlobHead, BlobPutOptions, BlobStore, DocStore } from "./types.js";
 
 /** テスト・Node 実行時向けの in-memory `DocStore`。 */
 export function memoryDocStore(): DocStore {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { extractHeadings } from "../lib/extract-headings";
 import type { NotionBlock } from "../types";
 
@@ -49,10 +50,7 @@ describe("extractHeadings", () => {
     const blocks: NotionBlock[] = [
       heading("a", "heading_1", "Top", [heading("b", "heading_2", "Inner")]),
     ];
-    expect(extractHeadings(blocks).map((h) => h.text)).toEqual([
-      "Top",
-      "Inner",
-    ]);
+    expect(extractHeadings(blocks).map((h) => h.text)).toEqual(["Top", "Inner"]);
   });
 
   it("見出しが無ければ空配列", () => {

@@ -61,6 +61,7 @@ ls .changeset/*.md 2>/dev/null | grep -v README
 ### 6. 関連 rule
 
 `.claude/rules/` のうち、影響パッケージに対応するものを列挙:
+
 - `packages/cms/**` → `cms.md` / `package-boundaries.md`
 - `packages/cms/**`（Cloudflare 関連ファイル）/ `examples/cloudflare-*/**` → `cloudflare.md`
 - `packages/cli/**` → `cli.md`
@@ -72,12 +73,13 @@ ls .changeset/*.md 2>/dev/null | grep -v README
 
 Markdown テーブル 1 枚:
 
-| パッケージ | 直接変更 | 依存伝播 | changeset | 推奨 bump | 関連 rule |
-|---|---|---|---|---|---|
-| @notion-headless-cms/cms | ✅ | — | ❌ | patch | cms.md / package-boundaries.md |
-| @notion-headless-cms/react-renderer | — | ✅ | — | — | package-boundaries.md |
+| パッケージ                          | 直接変更 | 依存伝播 | changeset | 推奨 bump | 関連 rule                      |
+| ----------------------------------- | -------- | -------- | --------- | --------- | ------------------------------ |
+| @notion-headless-cms/cms            | ✅       | —        | ❌        | patch     | cms.md / package-boundaries.md |
+| @notion-headless-cms/react-renderer | —        | ✅       | —         | —         | package-boundaries.md          |
 
 末尾に**次アクション**を 3〜5 行で提示:
+
 - `/affected` で検証
 - `/changeset-flow` で changeset 追加
 - リリース直前なら `/publish-preflight`

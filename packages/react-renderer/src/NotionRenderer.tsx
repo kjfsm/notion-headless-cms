@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+
 import { NotionContext } from "./context.js";
 import { extractHeadings } from "./lib/extract-headings.js";
 import { cn } from "./lib/utils.js";
@@ -52,7 +53,7 @@ export function NotionRenderer({
       {},
       ...(extensions ?? []).map((e) => e.getBlockComponents?.() ?? {}),
     );
-    return { ...fromExt, ...(components ?? {}) } as ComponentOverrides;
+    return { ...fromExt, ...components } as ComponentOverrides;
   }, [extensions, components]);
   const contextValue = useMemo(
     () => ({

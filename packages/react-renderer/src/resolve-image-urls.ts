@@ -36,10 +36,7 @@ export async function resolveBlockImageUrls(
   return Promise.all(blocks.map((block) => resolveBlock(block, cacheImage)));
 }
 
-async function resolveBlock(
-  block: NotionBlock,
-  cacheImage: CacheImageFn,
-): Promise<NotionBlock> {
+async function resolveBlock(block: NotionBlock, cacheImage: CacheImageFn): Promise<NotionBlock> {
   let next = await rewriteFileBlock(block, cacheImage);
   if (next.children && next.children.length > 0) {
     const children = await Promise.all(

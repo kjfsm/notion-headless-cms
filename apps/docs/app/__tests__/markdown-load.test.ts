@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { getDocEntry, listDocEntries } from "../lib/markdown/load";
 
 describe("markdown loader", () => {
@@ -24,9 +25,7 @@ describe("markdown loader", () => {
 
   it("category ごとに並び、order でソートされる", () => {
     const entries = listDocEntries("ja");
-    const hajimeni = entries.filter(
-      (e) => e.frontmatter.category === "はじめに",
-    );
+    const hajimeni = entries.filter((e) => e.frontmatter.category === "はじめに");
     const guide = entries.filter((e) => e.frontmatter.category === "ガイド");
     expect(hajimeni.length).toBeGreaterThan(0);
     expect(guide.length).toBeGreaterThan(0);

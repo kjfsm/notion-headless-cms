@@ -2,10 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback } from "react";
-import {
-  type UseNotionRevalidateOptions,
-  useRevalidateEffect,
-} from "./internal/revalidate.js";
+
+import { type UseNotionRevalidateOptions, useRevalidateEffect } from "./internal/revalidate.js";
 
 export type {
   NotionPollOptions,
@@ -21,9 +19,7 @@ export type {
  * @example
  *   useNotionRevalidate({ on: ["mount", "visibility"] });
  */
-export function useNotionRevalidate(
-  opts: UseNotionRevalidateOptions = {},
-): void {
+export function useNotionRevalidate(opts: UseNotionRevalidateOptions = {}): void {
   const router = useRouter();
   const stable = useCallback(() => {
     router.refresh();

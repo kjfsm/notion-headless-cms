@@ -17,9 +17,7 @@ export interface RateLimiter {
  */
 export function createRateLimiter(opts: RateLimiterOptions): RateLimiter {
   const now = opts.now ?? (() => Date.now());
-  const sleep =
-    opts.sleep ??
-    ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
+  const sleep = opts.sleep ?? ((ms: number) => new Promise((resolve) => setTimeout(resolve, ms)));
   const intervalMs = 1000 / opts.requestsPerSecond;
   let nextAvailableAt = 0;
   let queue: Promise<unknown> = Promise.resolve();

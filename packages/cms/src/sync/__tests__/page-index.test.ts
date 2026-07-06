@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { createIndexStore } from "../../store/index-store.js";
 import { memoryDocStore } from "../../store/memory.js";
 import { defineCollection, defineSchema } from "../../types/collection.js";
@@ -80,10 +81,7 @@ describe("buildPageIndex", () => {
       listed: true,
       meta: { id: "CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC", value: 1 },
     });
-    const pageIndex = await buildPageIndex(
-      defineSchema({ dataOnly }),
-      indexStore,
-    );
+    const pageIndex = await buildPageIndex(defineSchema({ dataOnly }), indexStore);
     expect(pageIndex["cccccccccccccccccccccccccccccccc"]).toEqual({
       collection: "dataOnly",
       slug: "d1",

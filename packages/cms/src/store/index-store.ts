@@ -17,10 +17,7 @@ export interface ListRuntimeParams {
 
 export interface IndexStore {
   findEntry(collection: string, slug: string): Promise<IndexEntry | null>;
-  listEntries(
-    collection: string,
-    params: ListRuntimeParams,
-  ): Promise<ListResult<IndexEntry>>;
+  listEntries(collection: string, params: ListRuntimeParams): Promise<ListResult<IndexEntry>>;
   /** listed 問わず全件（buildPageIndex の内部リンク解決用）。 */
   listAllEntries(collection: string): Promise<readonly IndexEntry[]>;
   /** listed 問わず全 slug（reconcile の突合用）。 */
@@ -69,10 +66,7 @@ function metaForManifestComparison(meta: JsonValue): JsonValue {
     !Array.isArray(meta) &&
     "lastEditedTime" in meta
   ) {
-    const { lastEditedTime: _lastEditedTime, ...rest } = meta as Record<
-      string,
-      JsonValue
-    >;
+    const { lastEditedTime: _lastEditedTime, ...rest } = meta as Record<string, JsonValue>;
     return rest;
   }
   return meta;
@@ -98,10 +92,7 @@ export function createIndexStore(docs: DocStore): IndexStore {
     return raw ? (JSON.parse(raw) as IndexEntry[]) : [];
   }
 
-  async function findEntry(
-    collection: string,
-    slug: string,
-  ): Promise<IndexEntry | null> {
+  async function findEntry(collection: string, slug: string): Promise<IndexEntry | null> {
     const raw = await docs.get(pointKey(collection, slug));
     return raw ? (JSON.parse(raw) as IndexEntry) : null;
   }
@@ -113,15 +104,9 @@ export function createIndexStore(docs: DocStore): IndexStore {
       const filtered = listed.filter((e) =>
         evaluateWhere(e.meta as Record<string, JsonValue>, params.where),
       );
-      const sorted = sortByMeta(
-        filtered,
-        params.sort,
-        (e) => e.meta as Record<string, JsonValue>,
-      );
+      const sorted = sortByMeta(filtered, params.sort, (e) => e.meta as Record<string, JsonValue>);
 
-      const offset = params.cursor
-        ? Math.max(0, Number.parseInt(params.cursor, 10) || 0)
-        : 0;
+      const offset = params.cursor ? Math.max(0, Number.parseInt(params.cursor, 10) || 0) : 0;
       const limit = Math.max(0, params.limit ?? DEFAULT_LIMIT);
       const page = sorted.slice(offset, offset + limit);
       const hasMore = offset + limit < sorted.length;
@@ -141,9 +126,7 @@ export function createIndexStore(docs: DocStore): IndexStore {
     },
     async upsertEntry(collection, entry, knownExisting) {
       const existing =
-        knownExisting !== undefined
-          ? knownExisting
-          : await findEntry(collection, entry.slug);
+        knownExisting !== undefined ? knownExisting : await findEntry(collection, entry.slug);
       if (existing && existing.version === entry.version) {
         return { wrote: false, writes: 0 }; // Notion 側で何も変わっていない
       }
@@ -162,9 +145,7 @@ export function createIndexStore(docs: DocStore): IndexStore {
         const manifest = await readManifest(collection);
         const idx = manifest.findIndex((e) => e.slug === entry.slug);
         const next =
-          idx === -1
-            ? [...manifest, entry]
-            : manifest.map((e, i) => (i === idx ? entry : e));
+          idx === -1 ? [...manifest, entry] : manifest.map((e, i) => (i === idx ? entry : e));
         await docs.put(manifestKey(collection), JSON.stringify(next));
         writes += 1;
       }

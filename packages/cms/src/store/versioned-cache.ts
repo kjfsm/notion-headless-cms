@@ -9,26 +9,13 @@ export interface VersionedCacheOptions {
   cache?: VersionedCacheLike;
 }
 
-function versionedKey(
-  collection: string,
-  slug: string,
-  version: string,
-): string {
+function versionedKey(collection: string, slug: string, version: string): string {
   return `https://cache.internal/entry/${collection}/${slug}@${version}`;
 }
 
 export interface VersionedCacheLayer {
-  get(
-    collection: string,
-    slug: string,
-    version: string,
-  ): Promise<Response | undefined>;
-  put(
-    collection: string,
-    slug: string,
-    version: string,
-    response: Response,
-  ): Promise<void>;
+  get(collection: string, slug: string, version: string): Promise<Response | undefined>;
+  put(collection: string, slug: string, version: string, response: Response): Promise<void>;
 }
 
 /**
@@ -37,9 +24,7 @@ export interface VersionedCacheLayer {
  * `cache` 未指定時(Cache API 無効環境)でも読者パスが KV 1 読み + R2 1 読みで
  * 成立することが前提であり、この層はそれを透過的に加速するだけ。
  */
-export function createVersionedCacheLayer(
-  opts: VersionedCacheOptions,
-): VersionedCacheLayer {
+export function createVersionedCacheLayer(opts: VersionedCacheOptions): VersionedCacheLayer {
   return {
     async get(collection, slug, version) {
       if (!opts.cache) return undefined;

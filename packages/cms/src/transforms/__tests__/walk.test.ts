@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import type { NormalizedBlock } from "../../types/entry-snapshot.js";
 import { isJsonRecord, mapBlocks, mapJsonObjects } from "../walk.js";
 
@@ -28,9 +29,7 @@ describe("mapBlocks", () => {
   });
 
   it("どのブロックも変更されなければ元の配列参照をそのまま返す", async () => {
-    const blocks: NormalizedBlock[] = [
-      { id: "a", type: "paragraph", data: {} },
-    ];
+    const blocks: NormalizedBlock[] = [{ id: "a", type: "paragraph", data: {} }];
     const result = await mapBlocks(blocks, async (block) => block);
     expect(result).toBe(blocks);
   });

@@ -1,5 +1,6 @@
 import { readdirSync } from "node:fs";
 import { join } from "node:path";
+
 import type { Config } from "@react-router/dev/config";
 
 // docs/<locale>/**/*.md を再帰列挙して slug 配列を返す。

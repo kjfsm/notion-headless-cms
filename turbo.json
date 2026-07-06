@@ -1,6 +1,6 @@
 {
   "$schema": "./node_modules/turbo/schema.json",
-  "globalDependencies": ["tsconfig.json", "biome.json", "vitest.workspace.ts"],
+  "globalDependencies": ["tsconfig.json", ".oxfmtrc.json", ".oxlintrc.json", "vitest.workspace.ts"],
   "globalEnv": ["NODE_ENV", "CI"],
   "tasks": {
     "build": {

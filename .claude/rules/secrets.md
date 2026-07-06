@@ -20,11 +20,11 @@ paths:
 
 ## 主要な環境変数
 
-| 変数 | 用途 | 例 |
-|---|---|---|
-| `NOTION_TOKEN` | Notion API キー | `ntn_xxxxxxxxxxxxx` |
-| `NOTION_DATA_SOURCE_ID` | Notion データベース ID（`data_sources.id`） | UUID |
-| `NOTION_WEBHOOK_VERIFICATION_TOKEN` | Notion webhook 署名検証シークレット（`packages/cms` の `createCMS({ webhookSecret })` に渡す慣例名。利用側が任意の env 名を選べるが、実運用の consumer（`euphoric-band-site`）はこの名前を使う） | `secret_xxxx` |
+| 変数                                | 用途                                                                                                                                                                                             | 例                  |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------- |
+| `NOTION_TOKEN`                      | Notion API キー                                                                                                                                                                                  | `ntn_xxxxxxxxxxxxx` |
+| `NOTION_DATA_SOURCE_ID`             | Notion データベース ID（`data_sources.id`）                                                                                                                                                      | UUID                |
+| `NOTION_WEBHOOK_VERIFICATION_TOKEN` | Notion webhook 署名検証シークレット（`packages/cms` の `createCMS({ webhookSecret })` に渡す慣例名。利用側が任意の env 名を選べるが、実運用の consumer（`euphoric-band-site`）はこの名前を使う） | `secret_xxxx`       |
 
 ## ランタイム別
 
@@ -52,8 +52,8 @@ paths:
 import { defineConfig, env } from "@notion-headless-cms/cli";
 
 export default defineConfig({
-	notionToken: env("NOTION_TOKEN"),
-	// env() の戻り値は string ではなく「未解決トークン」。generate 時に解決される
+  notionToken: env("NOTION_TOKEN"),
+  // env() の戻り値は string ではなく「未解決トークン」。generate 時に解決される
 });
 ```
 

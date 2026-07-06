@@ -34,10 +34,10 @@ EOF
 	exit 2
 fi
 
-# biome check でリントエラーがあればブロックする
-if ! pnpm exec biome check --no-errors-on-unmatched 2>&1; then
+# oxlint でリントエラーがあればブロックする
+if ! pnpm exec oxlint 2>&1; then
 	cat >&2 <<'EOF'
-Biome チェック失敗: リントエラーを修正してから再度コミットしてください。
+oxlint チェック失敗: リントエラーを修正してから再度コミットしてください。
 EOF
 	exit 2
 fi

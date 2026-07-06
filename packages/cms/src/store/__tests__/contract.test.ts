@@ -1,7 +1,9 @@
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+
 import { afterEach, describe } from "vitest";
+
 import {
   runBlobStoreContract,
   runBlobStoreMetadataContract,
@@ -22,9 +24,7 @@ describe("BlobStore contract: memory", () => {
 describe("DocStore contract: file", () => {
   const dirs: string[] = [];
   afterEach(async () => {
-    await Promise.all(
-      dirs.splice(0).map((d) => rm(d, { recursive: true, force: true })),
-    );
+    await Promise.all(dirs.splice(0).map((d) => rm(d, { recursive: true, force: true })));
   });
   runDocStoreContract({
     factory: async () => {
@@ -38,9 +38,7 @@ describe("DocStore contract: file", () => {
 describe("BlobStore contract: file", () => {
   const dirs: string[] = [];
   afterEach(async () => {
-    await Promise.all(
-      dirs.splice(0).map((d) => rm(d, { recursive: true, force: true })),
-    );
+    await Promise.all(dirs.splice(0).map((d) => rm(d, { recursive: true, force: true })));
   });
   runBlobStoreContract({
     factory: async () => {

@@ -12,10 +12,7 @@ export { useNotionContext } from "./context.js";
 export * as Embeds from "./embeds/index.js";
 export { NotionBlocks } from "./NotionBlocks.js";
 export { NotionRenderer } from "./NotionRenderer.js";
-export type {
-  NotionTheme,
-  NotionThemeProviderProps,
-} from "./NotionThemeProvider.js";
+export type { NotionTheme, NotionThemeProviderProps } from "./NotionThemeProvider.js";
 export { NotionThemeProvider } from "./NotionThemeProvider.js";
 export type { CacheImageFn } from "./resolve-image-urls.js";
 export { resolveBlockImageUrls } from "./resolve-image-urls.js";

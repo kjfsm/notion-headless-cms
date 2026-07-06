@@ -2,6 +2,7 @@
 
 import type { CodeBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { useEffect, useState } from "react";
+
 import { CodeCollapsibleWrapper } from "../components/code-collapsible-wrapper.js";
 import { CopyButton } from "../components/copy-button.js";
 import { Badge } from "../components/ui/badge.js";
@@ -23,9 +24,7 @@ let highlighterPromise: Promise<{
 async function loadHighlighter() {
   try {
     const shiki = await import("shiki");
-    const { createJavaScriptRegexEngine } = await import(
-      "shiki/engine/javascript"
-    );
+    const { createJavaScriptRegexEngine } = await import("shiki/engine/javascript");
     return (await shiki.createHighlighter({
       themes: ["github-light", "github-dark"],
       langs: [],
@@ -41,10 +40,7 @@ async function loadHighlighter() {
   }
 }
 
-async function highlightClientSide(
-  source: string,
-  language: string,
-): Promise<string | null> {
+async function highlightClientSide(source: string, language: string): Promise<string | null> {
   highlighterPromise ??= loadHighlighter();
   const highlighter = await highlighterPromise;
   if (!highlighter) return null;
@@ -80,9 +76,7 @@ async function highlightClientSide(
   }
 }
 
-function plainText(
-  richText: CodeBlockObjectResponse["code"]["rich_text"],
-): string {
+function plainText(richText: CodeBlockObjectResponse["code"]["rich_text"]): string {
   return richText.map((rt) => rt.plain_text).join("");
 }
 
@@ -106,13 +100,9 @@ function normalizeLanguage(lang: string): string {
  * mermaid を SVG として描画したい場合は `@notion-headless-cms/react-renderer/mermaid`
  * の `MermaidCode` を `<NotionRenderer components={{ Code: MermaidCode }} />` で差し込む。
  */
-export function Code({
-  block,
-  className,
-}: BlockComponentProps<CodeBlockObjectResponse>) {
-  const cachedHtml = (
-    block.code as CodeBlockObjectResponse["code"] & { __cachedHtml?: string }
-  ).__cachedHtml;
+export function Code({ block, className }: BlockComponentProps<CodeBlockObjectResponse>) {
+  const cachedHtml = (block.code as CodeBlockObjectResponse["code"] & { __cachedHtml?: string })
+    .__cachedHtml;
   const language = normalizeLanguage(block.code.language);
   const source = plainText(block.code.rich_text);
   const fileName = plainText(block.code.caption);
@@ -125,9 +115,13 @@ export function Code({
     // 到達可能グラフから外れ、tree-shaking で除外される。
     if (import.meta.env.SSR || cachedHtml) return;
     let cancelled = false;
-    highlightClientSide(source, language).then((html) => {
-      if (!cancelled && html) setClientHtml(html);
-    });
+    highlightClientSide(source, language)
+      .then((html) => {
+        if (!cancelled && html) setClientHtml(html);
+      })
+      .catch(() => {
+        // shiki 未インストール / ハイライト失敗時は素のコード表示にフォールバック
+      });
     return () => {
       cancelled = true;
     };
@@ -145,9 +139,7 @@ export function Code({
       <div className="flex items-center justify-between gap-2 border-b px-4 py-1.5">
         <div className="flex min-w-0 items-center gap-2">
           {fileName ? (
-            <span className="truncate font-mono text-xs text-muted-foreground">
-              {fileName}
-            </span>
+            <span className="truncate font-mono text-xs text-muted-foreground">{fileName}</span>
           ) : null}
           <Badge variant="secondary" className="font-mono text-xs">
             {language}

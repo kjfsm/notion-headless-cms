@@ -4,6 +4,7 @@ import {
   kvDocStore,
   r2BlobStore,
 } from "@notion-headless-cms/cms/cloudflare";
+
 import { schema } from "../schema";
 
 /**
@@ -11,10 +12,7 @@ import { schema } from "../schema";
  * Notion API への直列アクセスは `SyncCoordinatorDO`（`workers/sync-coordinator-do.ts`）に
  * 一元化する（`syncDelegate` 経由で転送する）。
  */
-export function makeCms(
-  env: Env,
-  ctx: { waitUntil(p: Promise<unknown>): void },
-) {
+export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void }) {
   return createCMS({
     schema,
     stores: {

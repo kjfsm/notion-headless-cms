@@ -1,14 +1,11 @@
 import { describe, expect, it } from "vitest";
+
 import { createIndexStore } from "../../store/index-store.js";
 import { memoryDocStore } from "../../store/memory.js";
 import type { IndexEntry } from "../../types/collection-index.js";
 import { listEntries } from "../list.js";
 
-function entry(
-  slug: string,
-  listed: boolean,
-  meta: Record<string, unknown> = {},
-): IndexEntry {
+function entry(slug: string, listed: boolean, meta: Record<string, unknown> = {}): IndexEntry {
   return { slug, version: "v1", listed, meta: meta as IndexEntry["meta"] };
 }
 

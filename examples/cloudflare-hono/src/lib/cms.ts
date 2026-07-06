@@ -4,6 +4,7 @@ import {
   kvDocStore,
   r2BlobStore,
 } from "@notion-headless-cms/cms/cloudflare";
+
 import { schema } from "../schema.js";
 
 export interface Env {
@@ -18,10 +19,7 @@ export interface Env {
  * ここで直接行い、Notion API への直列アクセスは `SyncCoordinatorDO`
  * （`src/lib/do.ts`）に一元化する（`syncDelegate` 経由で転送する）。
  */
-export function makeCms(
-  env: Env,
-  ctx: { waitUntil(p: Promise<unknown>): void },
-) {
+export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void }) {
   const id = env.SYNC_COORDINATOR.idFromName("global");
   const stub = env.SYNC_COORDINATOR.get(id);
   return createCMS({

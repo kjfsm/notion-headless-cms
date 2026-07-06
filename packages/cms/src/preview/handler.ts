@@ -1,10 +1,7 @@
 import type { EntrySnapshot } from "../types/entry-snapshot.js";
 import { verifyPreviewSignature } from "./signature.js";
 
-export type ReadThrough = (
-  collection: string,
-  slug: string,
-) => Promise<EntrySnapshot | null>;
+export type ReadThrough = (collection: string, slug: string) => Promise<EntrySnapshot | null>;
 
 export interface PreviewHandlerDeps {
   readonly secret: string;
@@ -36,12 +33,10 @@ export function createPreviewHandler(
     const url = new URL(request.url);
     const signature = url.searchParams.get("sig");
     const expParam = url.searchParams.get("exp");
-    if (!signature || !expParam)
-      return new Response("Not Found", { status: 404 });
+    if (!signature || !expParam) return new Response("Not Found", { status: 404 });
 
     const expiresAt = Number.parseInt(expParam, 10);
-    if (Number.isNaN(expiresAt))
-      return new Response("Not Found", { status: 404 });
+    if (Number.isNaN(expiresAt)) return new Response("Not Found", { status: 404 });
 
     const valid = await verifyPreviewSignature({
       secret: deps.secret,

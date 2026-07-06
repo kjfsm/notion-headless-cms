@@ -2,19 +2,16 @@ import type { CMSSyncDelegate } from "../cms/create-cms.js";
 import type { SyncStats } from "../query/stats.js";
 import type { SyncState } from "./coordinator.js";
 import type { DurableObjectStateLike } from "./durable-object-scheduler.js";
-import type {
-  DurableObjectNamespaceLike,
-  DurableObjectStubLike,
-} from "./durable-object-types.js";
+import type { DurableObjectNamespaceLike, DurableObjectStubLike } from "./durable-object-types.js";
 
 /** `SyncCoordinatorDO` が内部で保持すべき最小の CMS 面（`createCMS()` の戻り値の一部）。 */
 export interface SyncCoordinatorCMS {
   readonly sync: {
-    kick(): Promise<void>;
-    onWebhook(): Promise<void>;
-    reconcile(): Promise<{ removed: readonly string[] }>;
-    getState(): Promise<SyncState>;
-    stats(): Promise<SyncStats>;
+    kick: () => Promise<void>;
+    onWebhook: () => Promise<void>;
+    reconcile: () => Promise<{ removed: readonly string[] }>;
+    getState: () => Promise<SyncState>;
+    stats: () => Promise<SyncStats>;
   };
 }
 
@@ -66,10 +63,7 @@ function jsonResponse(body: unknown, status = 200): Response {
  */
 export function createSyncCoordinatorDO<Env = unknown>(
   options: SyncCoordinatorDOOptions<Env>,
-): new (
-  state: DurableObjectStateLike,
-  env: Env,
-) => SyncCoordinatorDOInstance {
+): new (state: DurableObjectStateLike, env: Env) => SyncCoordinatorDOInstance {
   // 戻り値に明示の型注釈（上）を付けることで、tsdown の isolated declarations 生成が
   // 無名クラスの構造（private field 含む）を .d.ts に展開しようとして TS4094 で
   // 失敗するのを避ける（宣言はこの注釈だけを見ればよくなる）。
@@ -147,9 +141,7 @@ export type DurableObjectSyncDelegateOptions =
   | DurableObjectSyncDelegateStubOptions
   | DurableObjectSyncDelegateNamespaceOptions;
 
-function resolveDelegateStub(
-  opts: DurableObjectSyncDelegateOptions,
-): DurableObjectStubLike {
+function resolveDelegateStub(opts: DurableObjectSyncDelegateOptions): DurableObjectStubLike {
   if ("stub" in opts) return opts.stub;
   return opts.namespace.get(opts.namespace.idFromName(opts.name ?? "global"));
 }
@@ -164,9 +156,7 @@ function resolveDelegateStub(
  * // 既存どおり stub を直接渡すことも可能
  * durableObjectSyncDelegate({ stub: ns.get(ns.idFromName("global")) });
  */
-export function durableObjectSyncDelegate(
-  opts: DurableObjectSyncDelegateOptions,
-): CMSSyncDelegate {
+export function durableObjectSyncDelegate(opts: DurableObjectSyncDelegateOptions): CMSSyncDelegate {
   const base = opts.baseUrl ?? "https://sync-coordinator";
   const stub = resolveDelegateStub(opts);
   return {

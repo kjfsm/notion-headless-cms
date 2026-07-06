@@ -30,11 +30,11 @@ Notion を更新したとき、画面を**静かに切り替える**ための最
 ```tsx
 // React Router
 import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
-<NotionRevalidator />
+<NotionRevalidator />;
 
 // Next.js App Router
 import { NotionRevalidator } from "@notion-headless-cms/react-renderer/next";
-<NotionRevalidator />
+<NotionRevalidator />;
 ```
 
 レンダーせずフック単体で使いたい場合は `useNotionRevalidate()` を呼ぶ（`NotionRevalidator` は

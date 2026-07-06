@@ -4,12 +4,8 @@ import type { IndexStore } from "../store/index-store.js";
 import type { SchemaDef } from "../types/collection.js";
 import type { JsonValue } from "../types/json-value.js";
 
-function findTitleKey(
-  properties: Record<string, { kind: string }>,
-): string | undefined {
-  return Object.entries(properties).find(
-    ([, def]) => def.kind === "title",
-  )?.[0];
+function findTitleKey(properties: Record<string, { kind: string }>): string | undefined {
+  return Object.entries(properties).find(([, def]) => def.kind === "title")?.[0];
 }
 
 /**
@@ -34,9 +30,7 @@ export async function buildPageIndex(
       const id = meta && typeof meta.id === "string" ? meta.id : null;
       if (!id) continue;
       const title =
-        titleKey && meta && typeof meta[titleKey] === "string"
-          ? (meta[titleKey] as string)
-          : null;
+        titleKey && meta && typeof meta[titleKey] === "string" ? (meta[titleKey] as string) : null;
       result[normalizePageId(id)] = { collection, slug: entry.slug, title };
     }
   }

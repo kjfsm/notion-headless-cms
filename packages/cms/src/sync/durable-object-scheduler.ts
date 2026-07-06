@@ -25,9 +25,7 @@ const STATE_KEY = "sync:state";
  * 継続処理できるようにする。ここでの `task` 保持はホットパス(同一バースト内の
  * 連続実行)の最適化であり、正しさの前提ではない。
  */
-export function createDurableObjectSyncScheduler(
-  state: DurableObjectStateLike,
-): SyncScheduler {
+export function createDurableObjectSyncScheduler(state: DurableObjectStateLike): SyncScheduler {
   return {
     async schedule(delayMs, _task) {
       await state.storage.setAlarm(Date.now() + delayMs);

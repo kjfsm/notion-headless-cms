@@ -1,7 +1,9 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import type { CMSConfig } from "../../index.js";
 
 const loadConfigMock = vi.fn<() => Promise<CMSConfig>>();
@@ -52,9 +54,9 @@ describe("runCheck", () => {
     loadConfigMock.mockResolvedValue({
       collections: {},
     } as CMSConfig);
-    await expect(
-      runCheck({ token: "tok", silent: true }),
-    ).rejects.toMatchObject({ code: "cli/config_invalid" });
+    await expect(runCheck({ token: "tok", silent: true })).rejects.toMatchObject({
+      code: "cli/config_invalid",
+    });
   });
 
   it("drift が無ければ exitCode を変更しない", async () => {
@@ -65,9 +67,7 @@ describe("runCheck", () => {
     jitiImportMock.mockResolvedValue({
       posts: { properties: { title: { kind: "title" } } },
     });
-    retrieveDataSourceMock.mockResolvedValue(
-      makeDataSource({ title: { type: "title" } }),
-    );
+    retrieveDataSourceMock.mockResolvedValue(makeDataSource({ title: { type: "title" } }));
 
     await runCheck({ token: "tok", silent: true });
 
@@ -103,9 +103,7 @@ describe("runCheck", () => {
     jitiImportMock.mockResolvedValue({
       posts: { properties: { title: { kind: "title" } } },
     });
-    retrieveDataSourceMock.mockResolvedValue(
-      makeDataSource({ title: { type: "title" } }),
-    );
+    retrieveDataSourceMock.mockResolvedValue(makeDataSource({ title: { type: "title" } }));
 
     await runCheck({ token: "tok", json: true, silent: true });
 
@@ -121,9 +119,9 @@ describe("runCheck", () => {
     } as CMSConfig);
     jitiImportMock.mockResolvedValue({});
 
-    await expect(
-      runCheck({ token: "tok", silent: true }),
-    ).rejects.toMatchObject({ code: "cli/schema_invalid" });
+    await expect(runCheck({ token: "tok", silent: true })).rejects.toMatchObject({
+      code: "cli/schema_invalid",
+    });
   });
 
   it("dbName が解決できなければ CMSError(cli/notion_api_failed) を投げる", async () => {
@@ -136,8 +134,8 @@ describe("runCheck", () => {
     });
     resolveIdMock.mockResolvedValue(null);
 
-    await expect(
-      runCheck({ token: "tok", silent: true }),
-    ).rejects.toMatchObject({ code: "cli/notion_api_failed" });
+    await expect(runCheck({ token: "tok", silent: true })).rejects.toMatchObject({
+      code: "cli/notion_api_failed",
+    });
   });
 });

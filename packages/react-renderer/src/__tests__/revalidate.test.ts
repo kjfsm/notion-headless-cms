@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { createElement, type ReactNode } from "react";
 import { SWRConfig } from "swr";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import {
   resolvePoll,
   resolveRealtime,
@@ -11,9 +12,7 @@ import {
 
 describe("resolvePoll", () => {
   it("url / version を明示した場合はそのまま返す", () => {
-    expect(
-      resolvePoll({ url: "/custom/check/posts/a", version: "v1" }),
-    ).toEqual({
+    expect(resolvePoll({ url: "/custom/check/posts/a", version: "v1" })).toEqual({
       url: "/custom/check/posts/a",
       version: "v1",
       intervalMs: undefined,
@@ -72,9 +71,9 @@ describe("resolveRealtime", () => {
   });
 
   it("collection + item から slug を導出する", () => {
-    expect(
-      resolveRealtime({ collection: "posts", item: { slug: "hello" } }),
-    ).toEqual({ path: "/api/cms/realtime?collection=posts&slug=hello" });
+    expect(resolveRealtime({ collection: "posts", item: { slug: "hello" } })).toEqual({
+      path: "/api/cms/realtime?collection=posts&slug=hello",
+    });
   });
 
   it("slug 無しは collection のみで購読する", () => {
@@ -102,26 +101,18 @@ describe("resolveRealtime", () => {
 
 describe("wsUrlFromResolved", () => {
   it("url 明示はそのまま返す", () => {
-    expect(wsUrlFromResolved({ url: "wss://x/ws" }, "https://site/a")).toBe(
-      "wss://x/ws",
-    );
+    expect(wsUrlFromResolved({ url: "wss://x/ws" }, "https://site/a")).toBe("wss://x/ws");
   });
 
   it("https の相対 path は wss:// へ", () => {
     expect(
-      wsUrlFromResolved(
-        { path: "/api/cms/realtime?collection=posts" },
-        "https://site/blog/a",
-      ),
+      wsUrlFromResolved({ path: "/api/cms/realtime?collection=posts" }, "https://site/blog/a"),
     ).toBe("wss://site/api/cms/realtime?collection=posts");
   });
 
   it("http の相対 path は ws:// へ", () => {
     expect(
-      wsUrlFromResolved(
-        { path: "/api/cms/realtime?collection=posts" },
-        "http://localhost:3000/a",
-      ),
+      wsUrlFromResolved({ path: "/api/cms/realtime?collection=posts" }, "http://localhost:3000/a"),
     ).toBe("ws://localhost:3000/api/cms/realtime?collection=posts");
   });
 });
@@ -290,9 +281,7 @@ describe("useRevalidateEffect", () => {
     act(() => {
       document.dispatchEvent(new Event("visibilitychange"));
     });
-    await waitFor(() =>
-      expect(fetchSpy.mock.calls.length).toBeGreaterThan(afterMount),
-    );
+    await waitFor(() => expect(fetchSpy.mock.calls.length).toBeGreaterThan(afterMount));
   });
 
   it("poll: intervalMs 明示時のみ定期 check が走る", async () => {

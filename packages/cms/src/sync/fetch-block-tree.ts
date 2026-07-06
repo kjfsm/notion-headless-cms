@@ -1,5 +1,6 @@
 import type { BlockObjectResponse } from "@notionhq/client";
 import { isFullBlock } from "@notionhq/client";
+
 import type { FetchedBlock } from "../pipeline/blocks.js";
 import type { RateLimiter } from "./rate-limiter.js";
 import type { RetryConfig } from "./retry.js";

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { createRateLimiter } from "../rate-limiter.js";
 
 describe("createRateLimiter", () => {

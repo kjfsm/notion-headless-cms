@@ -25,10 +25,7 @@ export interface EntryStore {
  */
 export function createEntryStore(blobs: BlobStore): EntryStore {
   return {
-    async get<Meta extends JsonValue = JsonValue>(
-      collection: string,
-      slug: string,
-    ) {
+    async get<Meta extends JsonValue = JsonValue>(collection: string, slug: string) {
       const bytes = await blobs.get(entryKey(collection, slug));
       if (!bytes) return null;
       return JSON.parse(new TextDecoder().decode(bytes)) as EntrySnapshot<Meta>;

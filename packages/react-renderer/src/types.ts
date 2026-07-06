@@ -36,12 +36,7 @@ import type {
   ToggleBlockObjectResponse,
   VideoBlockObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
-import type {
-  AnchorHTMLAttributes,
-  ComponentType,
-  ElementType,
-  ImgHTMLAttributes,
-} from "react";
+import type { AnchorHTMLAttributes, ComponentType, ElementType, ImgHTMLAttributes } from "react";
 
 export type { BlockObjectResponse };
 
@@ -82,17 +77,13 @@ export type PageLinkMap = Record<string, ResolvedPageLink>;
  * 子ブロードの描画は Context 経由の `<NotionBlocks>` が担うため、
  * renderChildren は不要になった（Context 化 #217 で廃止）。
  */
-export interface BlockComponentProps<
-  T extends BlockObjectResponse = BlockObjectResponse,
-> {
+export interface BlockComponentProps<T extends BlockObjectResponse = BlockObjectResponse> {
   block: T & { children?: NotionBlock[] };
   className?: string;
 }
 
 /** `NotionRenderer.classNames` のマップ。block.type ごとにルート要素の追加クラスを差し込める。 */
-export type BlockClassNames = Partial<
-  Record<BlockObjectResponse["type"], string>
->;
+export type BlockClassNames = Partial<Record<BlockObjectResponse["type"], string>>;
 
 /** heading_1 / heading_2 / heading_3 / heading_4 を共通で受け持つ型。 */
 export type HeadingBlockObjectResponse =
@@ -114,12 +105,8 @@ export type HeadingBlockObjectResponse =
 export interface ComponentOverrides {
   Paragraph?: ComponentType<BlockComponentProps<ParagraphBlockObjectResponse>>;
   Heading?: ComponentType<BlockComponentProps<HeadingBlockObjectResponse>>;
-  BulletedListItem?: ComponentType<
-    BlockComponentProps<BulletedListItemBlockObjectResponse>
-  >;
-  NumberedListItem?: ComponentType<
-    BlockComponentProps<NumberedListItemBlockObjectResponse>
-  >;
+  BulletedListItem?: ComponentType<BlockComponentProps<BulletedListItemBlockObjectResponse>>;
+  NumberedListItem?: ComponentType<BlockComponentProps<NumberedListItemBlockObjectResponse>>;
   ToDo?: ComponentType<BlockComponentProps<ToDoBlockObjectResponse>>;
   Toggle?: ComponentType<BlockComponentProps<ToggleBlockObjectResponse>>;
   Callout?: ComponentType<BlockComponentProps<CalloutBlockObjectResponse>>;
@@ -133,37 +120,21 @@ export interface ComponentOverrides {
   File?: ComponentType<BlockComponentProps<FileBlockObjectResponse>>;
   Pdf?: ComponentType<BlockComponentProps<PdfBlockObjectResponse>>;
   Bookmark?: ComponentType<BlockComponentProps<BookmarkBlockObjectResponse>>;
-  LinkPreview?: ComponentType<
-    BlockComponentProps<LinkPreviewBlockObjectResponse>
-  >;
-  LinkToPage?: ComponentType<
-    BlockComponentProps<LinkToPageBlockObjectResponse>
-  >;
+  LinkPreview?: ComponentType<BlockComponentProps<LinkPreviewBlockObjectResponse>>;
+  LinkToPage?: ComponentType<BlockComponentProps<LinkToPageBlockObjectResponse>>;
   ChildPage?: ComponentType<BlockComponentProps<ChildPageBlockObjectResponse>>;
-  ChildDatabase?: ComponentType<
-    BlockComponentProps<ChildDatabaseBlockObjectResponse>
-  >;
+  ChildDatabase?: ComponentType<BlockComponentProps<ChildDatabaseBlockObjectResponse>>;
   Embed?: ComponentType<BlockComponentProps<EmbedBlockObjectResponse>>;
   Table?: ComponentType<BlockComponentProps<TableBlockObjectResponse>>;
   TableRow?: ComponentType<BlockComponentProps<TableRowBlockObjectResponse>>;
-  ColumnList?: ComponentType<
-    BlockComponentProps<ColumnListBlockObjectResponse>
-  >;
+  ColumnList?: ComponentType<BlockComponentProps<ColumnListBlockObjectResponse>>;
   Column?: ComponentType<BlockComponentProps<ColumnBlockObjectResponse>>;
-  SyncedBlock?: ComponentType<
-    BlockComponentProps<SyncedBlockBlockObjectResponse>
-  >;
-  Breadcrumb?: ComponentType<
-    BlockComponentProps<BreadcrumbBlockObjectResponse>
-  >;
-  TableOfContents?: ComponentType<
-    BlockComponentProps<TableOfContentsBlockObjectResponse>
-  >;
+  SyncedBlock?: ComponentType<BlockComponentProps<SyncedBlockBlockObjectResponse>>;
+  Breadcrumb?: ComponentType<BlockComponentProps<BreadcrumbBlockObjectResponse>>;
+  TableOfContents?: ComponentType<BlockComponentProps<TableOfContentsBlockObjectResponse>>;
   Tab?: ComponentType<BlockComponentProps<TabBlockObjectResponse>>;
   Template?: ComponentType<BlockComponentProps<TemplateBlockObjectResponse>>;
-  MeetingNotes?: ComponentType<
-    BlockComponentProps<MeetingNotesBlockObjectResponse>
-  >;
+  MeetingNotes?: ComponentType<BlockComponentProps<MeetingNotesBlockObjectResponse>>;
   Unsupported?: ComponentType<BlockComponentProps>;
   /**
    * rich_text 内のインライン equation (`$...$`) を描画する slot。既定は lazy KaTeX。

@@ -3,24 +3,28 @@
   "version": "3.0.8",
   "description": "Notion ブロックを React コンポーネントとして直接描画するレンダラ。shadcn/ui + Tailwind v4 ベース。",
   "keywords": [
-    "notion",
     "headless-cms",
+    "notion",
     "react",
     "renderer",
     "shadcn",
     "tailwindcss",
     "typescript"
   ],
-  "license": "MIT",
   "homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
   "bugs": {
     "url": "https://github.com/kjfsm/notion-headless-cms/issues"
   },
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kjfsm/notion-headless-cms.git",
     "directory": "packages/react-renderer"
   },
+  "files": [
+    "dist",
+    "styles"
+  ],
   "type": "module",
   "sideEffects": false,
   "exports": {
@@ -50,12 +54,9 @@
     },
     "./theme.css": "./styles/theme.css"
   },
-  "files": [
-    "dist",
-    "styles"
-  ],
-  "engines": {
-    "node": ">=24"
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "build": "tsdown src/index.ts src/server.ts src/router.tsx src/next.tsx src/mermaid.tsx src/cms.ts --format esm --dts --sourcemap --out-dir dist",
@@ -66,9 +67,27 @@
     "attw": "attw --pack . --profile esm-only",
     "release:local": "pnpm publish --no-provenance --no-git-checks"
   },
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
+  "dependencies": {
+    "@notion-headless-cms/cms": "workspace:*",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.16.0",
+    "radix-ui": "^1.4.3",
+    "swr": "^2.3.0",
+    "tailwind-merge": "^3.6.0"
+  },
+  "devDependencies": {
+    "@notionhq/client": "catalog:",
+    "@testing-library/react": "^16.3.2",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "happy-dom": "^20.9.0",
+    "katex": "catalog:",
+    "next": "^16.2.6",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "react-router": "^7.15.1",
+    "shiki": "catalog:"
   },
   "peerDependencies": {
     "@notionhq/client": "^5.20.0",
@@ -104,26 +123,7 @@
       "optional": true
     }
   },
-  "dependencies": {
-    "@notion-headless-cms/cms": "workspace:*",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "lucide-react": "^1.16.0",
-    "radix-ui": "^1.4.3",
-    "swr": "^2.3.0",
-    "tailwind-merge": "^3.6.0"
-  },
-  "devDependencies": {
-    "@notionhq/client": "catalog:",
-    "@testing-library/react": "^16.3.2",
-    "@types/react": "catalog:",
-    "@types/react-dom": "catalog:",
-    "happy-dom": "^20.9.0",
-    "katex": "catalog:",
-    "next": "^16.2.6",
-    "react": "catalog:",
-    "react-dom": "catalog:",
-    "react-router": "^7.15.1",
-    "shiki": "catalog:"
+  "engines": {
+    "node": ">=24"
   }
 }

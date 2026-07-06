@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import {
   generateMountCodeTemplate,
   generateSchemaTemplate,
@@ -79,9 +80,7 @@ describe("generateSchemaTemplate / generateMountCodeTemplate", () => {
     });
     const indexFile = files["src/index.ts"];
     expect(indexFile).toContain('export { MyDO } from "./lib/do.js";');
-    expect(indexFile).toContain(
-      "makeCms(c.env, c.executionCtx).fetch(c.req.raw)",
-    );
+    expect(indexFile).toContain("makeCms(c.env, c.executionCtx).fetch(c.req.raw)");
     expect(indexFile).toContain("makeCms(env, ctx).scheduled()");
   });
 });

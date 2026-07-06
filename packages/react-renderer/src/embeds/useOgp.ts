@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import { useNotionContext } from "../context.js";
 import type { OgCardData } from "./OgCard.js";
 
@@ -24,11 +25,9 @@ export function useOgp(url: string | null | undefined): OgCardData | undefined {
   useEffect(() => {
     if (!ogpEndpoint || !url) return;
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
-        const res = await fetch(
-          `${ogpEndpoint}?url=${encodeURIComponent(url)}`,
-        );
+        const res = await fetch(`${ogpEndpoint}?url=${encodeURIComponent(url)}`);
         if (!res.ok) return;
         const body = (await res.json()) as OgpEndpointResponse;
         if (!cancelled && body.ok && body.ogp) setOgp(body.ogp);
