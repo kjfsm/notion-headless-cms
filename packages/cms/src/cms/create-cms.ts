@@ -28,7 +28,7 @@ import { createMultiSourceDeps } from "../sync/multi-source.js";
 import { createNodeSyncScheduler } from "../sync/node-scheduler.js";
 import type { NotionClientLike } from "../sync/notion-driver.js";
 import { createCollectionDriver } from "../sync/notion-driver.js";
-import { buildPageIndex } from "../sync/page-index.js";
+import { createMemoizedPageIndex } from "../sync/page-index.js";
 import { createRateLimiter } from "../sync/rate-limiter.js";
 import type { RetryConfig } from "../sync/retry.js";
 import type { SyncScheduler } from "../sync-scheduler.js";
@@ -284,7 +284,13 @@ export function createCMS<const S extends SchemaDef>(
   const indexStore = createIndexStore(docs, logger);
   const routes = opts.routes ?? "/api/cms";
   const imagesPath = opts.imagesPath ?? "/images";
-  const pageIndex = () => buildPageIndex(opts.schema, indexStore);
+  // buildPageIndex は全コレクションの manifest を丸ごと読み直す重い処理なので、
+  // manifest への実書き込みが無い限りキャッシュを使い回す(#11)。ドライバには
+  // 無効化を発火できる driverIndexStore を渡す(素の indexStore だと無効化が効かない)。
+  const { pageIndex, indexStore: driverIndexStore } = createMemoizedPageIndex(
+    opts.schema,
+    indexStore,
+  );
 
   let sync: CMSSyncControls;
   let onWebhookEvent: () => Promise<void> | void;
@@ -343,7 +349,7 @@ export function createCMS<const S extends SchemaDef>(
         rateLimiter,
         retry: opts.sync?.retry,
         entryStore,
-        indexStore,
+        indexStore: driverIndexStore,
         blobs,
         transforms: opts.transforms,
         imagesPath,
