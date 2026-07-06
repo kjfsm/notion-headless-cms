@@ -421,12 +421,24 @@ export function createCollectionDriver(
     );
 
     if (deps.realtime) {
-      await publishVersionUpdate(
-        deps.realtime,
-        collection,
-        slug,
-        page.last_edited_time,
-      );
+      // KV/R2 への書き込みは既に成功している。realtime push はあくまで購読者への
+      // 通知用の付加機能なので、ここで失敗しても同期そのものは失敗させない
+      // (push 失敗のたびに「成功した同期」が failures に記録されるのを防ぐ)。
+      try {
+        await publishVersionUpdate(
+          deps.realtime,
+          collection,
+          slug,
+          page.last_edited_time,
+        );
+      } catch (err) {
+        logger?.warn?.("realtime への publish に失敗しました", {
+          operation: "syncEntry",
+          collection,
+          slug,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
 
     logger?.debug?.("entry を materialize しました", {

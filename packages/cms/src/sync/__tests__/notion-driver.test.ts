@@ -309,6 +309,47 @@ describe("createCollectionDriver", () => {
     );
   });
 
+  it("syncEntry: realtime publish が失敗しても同期自体は成功として扱う", async () => {
+    const notionPage = page({ id: "p1", slug: "hello", title: "Hello World" });
+    const client = makeClient({
+      dataSources: {
+        query: vi.fn().mockResolvedValue({
+          results: [notionPage],
+          next_cursor: null,
+          has_more: false,
+        }),
+      },
+    });
+    const { entryStore, indexStore, blobs, rateLimiter } = makeDeps();
+    const publish = vi.fn().mockRejectedValue(new Error("hub down"));
+    const warn = vi.fn();
+    const driver = createCollectionDriver({
+      collection: "posts",
+      def,
+      client,
+      rateLimiter,
+      entryStore,
+      indexStore,
+      blobs,
+      realtime: { publish },
+      logger: { warn },
+    });
+
+    const { changes } = await driver.listChanged(null, 10);
+    const [change] = changes;
+    if (!change) throw new Error("change が空です");
+
+    // realtime が失敗しても syncEntry 自体は reject しない(KV/R2 書き込みは既に成功済み)。
+    await expect(driver.syncEntry(change)).resolves.toMatchObject({
+      writes: expect.any(Number),
+    });
+    expect(await entryStore.get("posts", "hello")).not.toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("publish"),
+      expect.objectContaining({ operation: "syncEntry", slug: "hello" }),
+    );
+  });
+
   it("syncEntry: chunkCache 経由で listChanged 直後は pages.retrieve を呼ばない", async () => {
     const notionPage = page({ id: "p1", slug: "hello" });
     const retrieve = vi.fn();
