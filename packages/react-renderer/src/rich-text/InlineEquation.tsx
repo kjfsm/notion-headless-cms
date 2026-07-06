@@ -22,10 +22,9 @@ export function InlineEquation({ expression, cachedHtml }: InlineEquationProps) 
   const [html, setHtml] = useState<string | null>(cachedHtml ?? null);
 
   useEffect(() => {
-    // import.meta.env.SSR は Vite が静的に置換する定数のため、この early return により
-    // 後続の katex の動的 import が SSR/Worker バンドルの到達可能グラフから外れ、
-    // tree-shaking で除外される。
-    if (import.meta.env.SSR || cachedHtml) return;
+    // typeof window で SSR を判定する(移植性のため import.meta.env.SSR を廃止)。
+    // katex の動的 import はサーバで実行されない。詳細は Code.tsx の同コメント参照。
+    if (typeof window === "undefined" || cachedHtml) return;
     let cancelled = false;
     void (async () => {
       try {

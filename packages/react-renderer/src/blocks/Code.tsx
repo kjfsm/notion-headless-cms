@@ -110,10 +110,12 @@ export function Code({ block, className }: BlockComponentProps<CodeBlockObjectRe
   const [clientHtml, setClientHtml] = useState<string | null>(null);
 
   useEffect(() => {
-    // import.meta.env.SSR は Vite が静的に置換する定数のため、この early return により
-    // 後続の highlightClientSide()（shiki の動的 import を含む）が SSR/Worker バンドルの
-    // 到達可能グラフから外れ、tree-shaking で除外される。
-    if (import.meta.env.SSR || cachedHtml) return;
+    // typeof window で SSR を判定する。useEffect は元々クライアント専用だが、
+    // shiki の動的 import(highlightClientSide)がサーバで実行されないことを明示する。
+    // 以前は import.meta.env.SSR を使っていたが、これは Vite 専用の置換定数で、
+    // Next(webpack/turbopack)や素の Node では import.meta.env が undefined になり
+    // ".SSR" アクセスで実行時 TypeError を起こすため、移植可能な判定に置き換えた。
+    if (typeof window === "undefined" || cachedHtml) return;
     let cancelled = false;
     highlightClientSide(source, language)
       .then((html) => {
