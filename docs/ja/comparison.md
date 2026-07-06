@@ -121,3 +121,4 @@ Notion をデータソースに使うライブラリは複数あるが、機能�
 - [`docs/ja/architecture.md`](./architecture.md) — 設計思想
 - [`docs/ja/quickstart.md`](./quickstart.md) — セットアップ
 - [`docs/ja/cli.md`](./cli.md) — CLI ツール（`nhc pull` / `check` / `doctor` / `sync` / `init`）
+- [`docs/ja/emdash-study.md`](./emdash-study.md) — EmDash から学ぶ改善調査
