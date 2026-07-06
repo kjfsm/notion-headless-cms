@@ -75,4 +75,61 @@ describe("Mention（page）", () => {
     expect(a?.getAttribute("href")).toBe("/posts/x");
     expect(a?.textContent).toContain("マップ由来");
   });
+
+  it("javascript: な resolvePageUrl はリンク化せずフォールバック表示する", () => {
+    const { container } = renderWith(pageMention(id, "plain"), {
+      components: {},
+      resolvePageUrl: () => "javascript:alert(1)",
+    });
+    expect(container.querySelector("a")).toBeNull();
+    expect(container.textContent).toContain("plain");
+  });
+});
+
+const linkMention = (opts: { href: string; iconUrl?: string; title?: string }): MentionItem =>
+  ({
+    type: "mention",
+    plain_text: opts.title ?? "",
+    href: null,
+    annotations: {
+      bold: false,
+      italic: false,
+      strikethrough: false,
+      underline: false,
+      code: false,
+      color: "default",
+    },
+    mention: {
+      type: "link_mention",
+      link_mention: {
+        href: opts.href,
+        icon_url: opts.iconUrl,
+        title: opts.title,
+      },
+    },
+  }) as unknown as MentionItem;
+
+describe("Mention（link_mention）のスキーム検証", () => {
+  it("正常な http(s) href はリンク化する", () => {
+    const { container } = renderWith(linkMention({ href: "https://example.com", title: "Ex" }));
+    const a = container.querySelector("a");
+    expect(a?.getAttribute("href")).toBe("https://example.com");
+  });
+
+  it("javascript: href はリンク化せず span で表示する", () => {
+    const { container } = renderWith(linkMention({ href: "javascript:alert(1)", title: "Danger" }));
+    expect(container.querySelector("a")).toBeNull();
+    expect(container.textContent).toContain("Danger");
+  });
+
+  it("javascript: な icon_url は img として描画しない", () => {
+    const { container } = renderWith(
+      linkMention({
+        href: "https://example.com",
+        iconUrl: "javascript:alert(1)",
+        title: "Ex",
+      }),
+    );
+    expect(container.querySelector("img")).toBeNull();
+  });
 });
