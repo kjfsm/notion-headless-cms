@@ -309,6 +309,47 @@ describe("createCollectionDriver", () => {
     );
   });
 
+  it("syncEntry: realtime publish が失敗しても同期自体は成功として扱う", async () => {
+    const notionPage = page({ id: "p1", slug: "hello", title: "Hello World" });
+    const client = makeClient({
+      dataSources: {
+        query: vi.fn().mockResolvedValue({
+          results: [notionPage],
+          next_cursor: null,
+          has_more: false,
+        }),
+      },
+    });
+    const { entryStore, indexStore, blobs, rateLimiter } = makeDeps();
+    const publish = vi.fn().mockRejectedValue(new Error("hub down"));
+    const warn = vi.fn();
+    const driver = createCollectionDriver({
+      collection: "posts",
+      def,
+      client,
+      rateLimiter,
+      entryStore,
+      indexStore,
+      blobs,
+      realtime: { publish },
+      logger: { warn },
+    });
+
+    const { changes } = await driver.listChanged(null, 10);
+    const [change] = changes;
+    if (!change) throw new Error("change が空です");
+
+    // realtime が失敗しても syncEntry 自体は reject しない(KV/R2 書き込みは既に成功済み)。
+    await expect(driver.syncEntry(change)).resolves.toMatchObject({
+      writes: expect.any(Number),
+    });
+    expect(await entryStore.get("posts", "hello")).not.toBeNull();
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringContaining("publish"),
+      expect.objectContaining({ operation: "syncEntry", slug: "hello" }),
+    );
+  });
+
   it("syncEntry: chunkCache 経由で listChanged 直後は pages.retrieve を呼ばない", async () => {
     const notionPage = page({ id: "p1", slug: "hello" });
     const retrieve = vi.fn();
@@ -763,6 +804,69 @@ describe("createCollectionDriver", () => {
     );
   });
 
+  it("画像 fetch が retryOn 対象外のステータス(404)を返すと保存せず throw する", async () => {
+    fetchSpy.mockResolvedValue(new Response("not found", { status: 404 }));
+    const notionPage = page({ id: "p1", slug: "x" });
+    const client = makeClient({
+      dataSources: {
+        query: vi.fn().mockResolvedValue({
+          results: [notionPage],
+          next_cursor: null,
+          has_more: false,
+        }),
+      },
+      blocks: {
+        children: {
+          list: vi.fn().mockResolvedValue({
+            results: [
+              {
+                object: "block",
+                id: "img1",
+                type: "image",
+                has_children: false,
+                image: {
+                  type: "external",
+                  external: { url: "https://example.com/a.png" },
+                  caption: [],
+                },
+              },
+            ],
+            next_cursor: null,
+            has_more: false,
+          }),
+        },
+      },
+    });
+    const { entryStore, indexStore, blobs, rateLimiter } = makeDeps();
+    const driver = createCollectionDriver({
+      collection: "posts",
+      def,
+      client,
+      rateLimiter,
+      entryStore,
+      indexStore,
+      blobs,
+      retry: { retryOn: [429, 502, 503], maxRetries: 2, baseDelayMs: 1 },
+    });
+
+    const { changes } = await driver.listChanged(null, 10);
+    const [change] = changes;
+    if (!change) throw new Error("change が空です");
+    await expect(driver.syncEntry(change)).rejects.toSatisfy(
+      (err: unknown) => isCMSError(err) && err.is("sync/image_fetch_failed"),
+    );
+
+    // 失敗レスポンスの本文を画像として保存していないこと(以後 head がヒットして
+    // 固定化するのを防ぐ)。
+    const { imageCacheKeySource, sha256Hex } = await import(
+      "../../pipeline/images.js"
+    );
+    const hash = await sha256Hex(
+      imageCacheKeySource("https://example.com/a.png"),
+    );
+    expect(await blobs.head(`image/${hash}`)).toBeNull();
+  });
+
   it("listAllSlugs は accessible なページの slug のみ返す", async () => {
     const client = makeClient({
       dataSources: {
@@ -877,6 +981,7 @@ describe("createCollectionDriver", () => {
       });
       const client = makeClient({ dataSources: { query } });
       const { entryStore, indexStore, blobs, rateLimiter } = makeDeps();
+      const warn = vi.fn();
       const driver = createCollectionDriver({
         collection: "posts",
         def,
@@ -885,6 +990,7 @@ describe("createCollectionDriver", () => {
         entryStore,
         indexStore,
         blobs,
+        logger: { warn },
       });
 
       const snapshot = await driver.retrieveBySlug("hello");
@@ -899,6 +1005,11 @@ describe("createCollectionDriver", () => {
       // 副作用として materialize 済み(以後の find は index/R2 のキャッシュヒットになる)。
       expect(await entryStore.get("posts", "hello")).not.toBeNull();
       expect(await indexStore.findEntry("posts", "hello")).not.toBeNull();
+      // 読者パスでの Notion 書き込みが発生したことを運用者が検知できるよう警告する。
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("coldStart"),
+        expect.objectContaining({ operation: "retrieveBySlug", slug: "hello" }),
+      );
     });
 
     it("一致するページが無ければ null を返す", async () => {

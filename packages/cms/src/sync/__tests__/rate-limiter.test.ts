@@ -45,6 +45,41 @@ describe("createRateLimiter", () => {
     expect(waited).toBe(false);
   });
 
+  it("遅いタスクが後続の発行間隔計算をブロックしない(真の並行実行)", async () => {
+    let clock = 0;
+    const limiter = createRateLimiter({
+      requestsPerSecond: 3,
+      now: () => clock,
+      sleep: async (ms) => {
+        clock += ms;
+      },
+    });
+
+    let resolveSlow: (() => void) | undefined;
+    const slowGate = new Promise<void>((resolve) => {
+      resolveSlow = resolve;
+    });
+    const finished: number[] = [];
+
+    const first = limiter.schedule(async () => {
+      await slowGate; // 1件目はここで長時間止まる
+      finished.push(1);
+    });
+    const second = limiter.schedule(async () => {
+      finished.push(2);
+    });
+
+    // 1件目が slowGate で止まったままでも、2件目は自身の発行間隔待ちさえ
+    // 過ぎれば完了する(同時実行1に落ちていれば second はここで解決しない)。
+    await second;
+    expect(finished).toEqual([2]);
+    expect(finished).not.toContain(1);
+
+    resolveSlow?.();
+    await first;
+    expect(finished).toEqual(expect.arrayContaining([1, 2]));
+  });
+
   it("タスクの失敗はキューを壊さず、次のタスクは実行される", async () => {
     const limiter = createRateLimiter({ requestsPerSecond: 100 });
     const first = limiter.schedule(async () => {

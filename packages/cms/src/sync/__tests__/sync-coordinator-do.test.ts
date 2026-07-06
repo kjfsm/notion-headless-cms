@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+import { isCMSError } from "../../errors.js";
 import type {
   DurableObjectNamespaceLike,
   DurableObjectStubLike,
@@ -112,7 +113,7 @@ describe("createSyncCoordinatorDO", () => {
     expect(await res.json()).toEqual({ ok: false, error: "notion down" });
   });
 
-  it("alarm() は sync.kick を呼ぶ(DO エビクト後の再構築を想定し createCMS を都度呼ぶ)", async () => {
+  it("alarm() はコンストラクタで構築済みの CMS を使って sync.kick を呼ぶ(createCMS は再度呼ばない)", async () => {
     const cms = makeFakeCMS();
     const createCMSFn = vi.fn().mockReturnValue(cms);
     const DO = createSyncCoordinatorDO({ createCMS: createCMSFn });
@@ -173,6 +174,36 @@ describe("durableObjectSyncDelegate", () => {
     );
     const delegate = durableObjectSyncDelegate({ stub });
     expect(await delegate.stats()).toEqual(stats);
+  });
+
+  it("DO が非 OK を返したら握りつぶさず CMSError を投げる", async () => {
+    const stub = makeStub(
+      async () =>
+        new Response(
+          JSON.stringify({ ok: false, error: "sync failed inside DO" }),
+          { status: 500 },
+        ),
+    );
+    const delegate = durableObjectSyncDelegate({ stub });
+
+    await expect(delegate.kick()).rejects.toSatisfy(
+      (err: unknown) =>
+        isCMSError(err) &&
+        err.is("sync/durable_object_request_failed") &&
+        err.message.includes("sync failed inside DO"),
+    );
+    await expect(delegate.reconcile()).rejects.toSatisfy(
+      (err: unknown) =>
+        isCMSError(err) && err.is("sync/durable_object_request_failed"),
+    );
+    await expect(delegate.getState()).rejects.toSatisfy(
+      (err: unknown) =>
+        isCMSError(err) && err.is("sync/durable_object_request_failed"),
+    );
+    await expect(delegate.stats()).rejects.toSatisfy(
+      (err: unknown) =>
+        isCMSError(err) && err.is("sync/durable_object_request_failed"),
+    );
   });
 
   function makeNamespace(stub: DurableObjectStubLike) {

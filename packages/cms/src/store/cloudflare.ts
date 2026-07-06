@@ -7,7 +7,10 @@ import type {
   DocStore,
 } from "./types.js";
 
-/** KV を `DocStore` として使う(コレクション index 用)。 */
+/**
+ * KV を `DocStore` として使う(コレクション index 用)。KV は結果整合(`types.ts` の
+ * `DocStore` コメント参照)なため、書き込み直後の読み取りが古い値を返す場合がある。
+ */
 export function kvDocStore(namespace: KVNamespaceLike): DocStore {
   return {
     async get(key) {

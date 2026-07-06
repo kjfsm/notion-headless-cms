@@ -30,18 +30,33 @@ export interface SyncState {
   readonly cursor: string | null;
   readonly lastSyncAt: string | null;
   readonly lastReconcileAt: string | null;
+  /** 直近の失敗（最大 `MAX_FAILURES` 件のリングバッファ。成功時にクリアはされない）。 */
   readonly failures: readonly SyncFailure[];
   /** 当日ぶんの KV write 累計。旧フォーマットの state には無いため任意。 */
   readonly writeBudget?: WriteBudgetState | null;
 }
 
-const EMPTY_STATE: SyncState = {
+/** `SyncState` 未設定時の既定値。`query/stats.ts` の `getSyncStats` とも共有する。 */
+export const EMPTY_STATE: SyncState = {
   cursor: null,
   lastSyncAt: null,
   lastReconcileAt: null,
   failures: [],
   writeBudget: null,
 };
+
+/**
+ * `SyncState.failures` に保持する件数の上限。無制限に追記すると成功時にクリアする
+ * 経路が無いため state が単調増大してしまう。直近 N 件のリングバッファとして扱う。
+ */
+const MAX_FAILURES = 20;
+
+function appendFailure(
+  failures: readonly SyncFailure[],
+  entry: SyncFailure,
+): readonly SyncFailure[] {
+  return [...failures, entry].slice(-MAX_FAILURES);
+}
 
 export interface SyncCoordinatorDeps {
   /**
@@ -83,6 +98,17 @@ function toJsonState(state: SyncState): Record<string, JsonValue> {
 }
 
 /**
+ * `SyncScheduler.getState()` の生データ(`Record<string, JsonValue> | null`)を
+ * `SyncState` に変換する。`coordinator.ts`(`getState()`)と `query/stats.ts`
+ * (`getSyncStats`)の両方で同じフォールバック処理が必要なため共有する。
+ */
+export function parseSyncState(
+  raw: Record<string, JsonValue> | null,
+): SyncState {
+  return raw ? (raw as unknown as SyncState) : EMPTY_STATE;
+}
+
+/**
  * すべての Notion API アクセスを直列化する同期エンジンの中核ロジック(#441)。
  * Cloudflare 実装(DO + Alarm)/ Node 実装のどちらからも `SyncScheduler` 経由で
  * 使えるよう、ランタイム中立に実装する。
@@ -97,6 +123,10 @@ function toJsonState(state: SyncState): Record<string, JsonValue> {
  * - `runChunk` は再入防止ガード付き。実行中に webhook 等から再度呼ばれた場合は
  *   完了後にもう一度実行することで取りこぼしを防ぐ(同時実行による index-store への
  *   非アトミックな read-modify-write の競合を避ける)
+ * - `reconcile()` も `runChunk` と同じ直列化キュー(`queue`)に乗せて実行する。
+ *   どちらも index-store への read-modify-write を伴うため、素朴に並行実行すると
+ *   古い state を基点に両者が書き戻し合い、片方の変更が消える(lost update)。
+ *   `queue` はこの 2 つの操作の実行区間そのものを直列化することで競合を防ぐ。
  */
 export class SyncCoordinatorCore {
   private readonly chunkSize: number;
@@ -107,6 +137,8 @@ export class SyncCoordinatorCore {
   private readonly now: () => string;
   private running = false;
   private rerunRequested = false;
+  /** `runChunk`/`reconcile` の実行区間を直列化するキュー。 */
+  private queue: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly scheduler: SyncScheduler,
@@ -146,8 +178,7 @@ export class SyncCoordinatorCore {
   }
 
   async getState(): Promise<SyncState> {
-    const raw = await this.scheduler.getState();
-    return raw ? (raw as unknown as SyncState) : EMPTY_STATE;
+    return parseSyncState(await this.scheduler.getState());
   }
 
   private async setState(state: SyncState): Promise<void> {
@@ -174,6 +205,11 @@ export class SyncCoordinatorCore {
    * 復元されない点に注意。
    */
   async reconcile(): Promise<{ removed: readonly string[] }> {
+    // `runChunk` の実行区間と直列化するため、実行中のジョブがあればその完了を待ってから始める。
+    return this.runExclusive(() => this.reconcileOnce());
+  }
+
+  private async reconcileOnce(): Promise<{ removed: readonly string[] }> {
     const [allSlugs, indexedSlugs] = await Promise.all([
       this.deps.listAllSlugs(),
       this.deps.listIndexedSlugs(),
@@ -201,11 +237,25 @@ export class SyncCoordinatorCore {
     try {
       do {
         this.rerunRequested = false;
-        await this.runChunkOnce();
+        // `reconcile()` の実行区間と直列化するため、実際の処理はキューに乗せて実行する。
+        await this.runExclusive(() => this.runChunkOnce());
       } while (this.rerunRequested);
     } finally {
       this.running = false;
     }
+  }
+
+  /**
+   * `runChunk`/`reconcile` の実行区間そのものを直列化する。`queue` に繋ぐことで、
+   * 先行するジョブ(どちらの種類でも)が完了するまで `fn` の開始を遅らせる。
+   */
+  private runExclusive<T>(fn: () => Promise<T>): Promise<T> {
+    const result = this.queue.then(fn, fn);
+    this.queue = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
   }
 
   private async runChunkOnce(): Promise<void> {
@@ -226,17 +276,18 @@ export class SyncCoordinatorCore {
       });
       await this.setState({
         ...state,
-        failures: [
-          ...state.failures,
-          { slug: "(listChanged)", message, at: this.now() },
-        ],
+        failures: appendFailure(state.failures, {
+          slug: "(listChanged)",
+          message,
+          at: this.now(),
+        }),
       });
       // Notion クエリ自体の失敗は fail-soft: 諦めずに次チャンクを再スケジュールする。
       await this.scheduler.schedule(this.chunkDelayMs, () => this.runChunk());
       return;
     }
 
-    const failures = [...state.failures];
+    let failures = state.failures;
     let writes = 0;
 
     for (const change of changes) {
@@ -250,7 +301,11 @@ export class SyncCoordinatorCore {
           slug: change.slug,
           error: message,
         });
-        failures.push({ slug: change.slug, message, at: this.now() });
+        failures = appendFailure(failures, {
+          slug: change.slug,
+          message,
+          at: this.now(),
+        });
       }
     }
 

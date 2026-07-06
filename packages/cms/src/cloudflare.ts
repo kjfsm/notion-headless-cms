@@ -100,6 +100,12 @@ export function cloudflareStores(bindings: {
   return {
     docs: bindings.docs ? kvDocStore(bindings.docs) : memoryDocStore(),
     blobs: bindings.blobs ? r2BlobStore(bindings.blobs) : memoryBlobStore(),
-    versionedCache: createVersionedCacheLayer({ cache: bindings.cache }),
+    // cache 未指定なら versionedCache 自体を渡さない。`createVersionedCacheLayer`
+    // は cache 無しでも no-op レイヤーを返すが、それでも find() 側の
+    // `if (deps.versionedCache)` 分岐は真になり、実効ゼロの Response 生成
+    // (`new Response(JSON.stringify(...))`)等が読者パスに乗ってしまうため。
+    versionedCache: bindings.cache
+      ? createVersionedCacheLayer({ cache: bindings.cache })
+      : undefined,
   };
 }

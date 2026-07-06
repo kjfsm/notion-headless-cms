@@ -234,6 +234,40 @@ describe("createCMS", () => {
     expect(filtered.items.map((i) => i.slug)).toEqual(["a"]);
   });
 
+  it("list() に不正な形状の params(JS 呼び出し等)が渡っても crash せず無視してフォールバックする", async () => {
+    const client = makeFakeClient({
+      "ds-posts": [
+        notionPage({
+          id: "p1",
+          dataSourceId: "ds-posts",
+          slug: "a",
+          title: "A",
+          status: "published",
+        }),
+      ],
+    });
+    const cms = createCMS({
+      schema,
+      notion: { client },
+      stores: makeStores(),
+      scheduler: createNodeSyncScheduler(),
+    });
+    await cms.sync.kick();
+
+    // TS の型は list(params?: ListParams<...>) だが、JS から直接呼ばれたり
+    // as any で渡された場合、実行時には任意の形状が来うる。
+    const malformed = {
+      where: "not-an-object",
+      sort: [{ by: 123, direction: "sideways" }, { by: "title" }],
+      cursor: 42,
+      limit: "10",
+    } as never;
+
+    const result = await cms.posts.list(malformed);
+    // 不正なフィールドは無視され、全件(未フィルタ・既定 limit)が返る。
+    expect(result.items.map((i) => i.slug)).toEqual(["a"]);
+  });
+
   it("予約されたコレクション名は CMSError(schema/reserved_collection_name) を投げる", () => {
     const badSchema = defineSchema({
       sync: defineCollection({

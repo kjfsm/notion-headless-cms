@@ -18,6 +18,7 @@ export type BuiltInCMSErrorCode =
   | "sync/slug_missing"
   | "sync/image_fetch_failed"
   | "sync/unknown_collection"
+  | "sync/durable_object_request_failed"
   | "cli/config_invalid"
   | "cli/notion_api_failed"
   | "cli/schema_invalid"

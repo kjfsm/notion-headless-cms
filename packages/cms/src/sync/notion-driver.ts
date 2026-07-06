@@ -328,6 +328,16 @@ export function createCollectionDriver(
       }
       return r;
     }, retryCfg);
+    if (!res.ok) {
+      // retryOn に無いステータス(404/403/500等)。エラー本文を画像として保存すると
+      // 以後 blobs.head がヒットして二度と再取得されず、壊れた画像が固定化するため、
+      // ここで確実に throw する。
+      throw new CMSError({
+        code: "sync/image_fetch_failed",
+        message: `画像の取得に失敗しました(${res.status}): ${ref.url}`,
+        context: { operation: "resolveImage", collection },
+      });
+    }
     const bytes = new Uint8Array(await res.arrayBuffer());
     const contentType = res.headers.get("content-type") ?? undefined;
     const dims = parseImageDimensions(bytes);
@@ -411,12 +421,24 @@ export function createCollectionDriver(
     );
 
     if (deps.realtime) {
-      await publishVersionUpdate(
-        deps.realtime,
-        collection,
-        slug,
-        page.last_edited_time,
-      );
+      // KV/R2 への書き込みは既に成功している。realtime push はあくまで購読者への
+      // 通知用の付加機能なので、ここで失敗しても同期そのものは失敗させない
+      // (push 失敗のたびに「成功した同期」が failures に記録されるのを防ぐ)。
+      try {
+        await publishVersionUpdate(
+          deps.realtime,
+          collection,
+          slug,
+          page.last_edited_time,
+        );
+      } catch (err) {
+        logger?.warn?.("realtime への publish に失敗しました", {
+          operation: "syncEntry",
+          collection,
+          slug,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
 
     logger?.debug?.("entry を materialize しました", {
@@ -561,6 +583,18 @@ export function createCollectionDriver(
       const rawSlug = slugOf(def, page);
       if (def.slug && !rawSlug) return null;
       const resolvedSlug = rawSlug ?? page.id;
+
+      // coldStart フォールバック経由の呼び出し(create-cms.ts の `coldStart`/`coldStartFetch`)。
+      // 読者リクエスト処理中に Notion API 呼び出し + KV/R2 書き込みが発生し、かつ
+      // SyncCoordinator の直列化キューを経由しないため、運用者が検知できるよう警告する。
+      logger?.warn?.(
+        "coldStart フォールバックにより読者リクエスト経路で Notion への同期書き込みが発生しました",
+        {
+          operation: "retrieveBySlug",
+          collection,
+          slug: resolvedSlug,
+        },
+      );
 
       const { snapshot } = await materializeAccessiblePage(
         page,
