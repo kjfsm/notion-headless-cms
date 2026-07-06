@@ -2,7 +2,7 @@ import {
   createCMS,
   createNodeSyncScheduler,
   memoryBlobStore,
-  memoryDocStore,
+  memoryIndexStore,
 } from "@notion-headless-cms/cms";
 
 import { schema } from "../schema.js";
@@ -15,7 +15,7 @@ if (!token) {
 export const cms = createCMS({
   schema,
   notion: { token },
-  stores: { docs: memoryDocStore(), blobs: memoryBlobStore() },
+  stores: { index: memoryIndexStore(), blobs: memoryBlobStore() },
   scheduler: createNodeSyncScheduler(),
   routes: "/api/cms",
 });

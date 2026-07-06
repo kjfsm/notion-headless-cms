@@ -85,9 +85,9 @@ wrangler secret put NOTION_DATA_SOURCE_ID
 ### 共通の事前準備
 
 ```bash
-# KV（ドキュメントキャッシュ用）— 出力された id を該当 example の wrangler.toml の
-# [[kv_namespaces]].id に貼り付ける
-wrangler kv namespace create DOC_CACHE
+# D1（ドキュメントインデックス用）— 出力された database_id を該当 example の wrangler.toml の
+# [[d1_databases]].database_id に貼り付ける
+wrangler d1 create <example-name>
 
 # R2（画像キャッシュ用）
 wrangler r2 bucket create nhc-example-cache

@@ -2,7 +2,7 @@ import {
   createCMS,
   createNodeSyncScheduler,
   memoryBlobStore,
-  memoryDocStore,
+  memoryIndexStore,
 } from "@notion-headless-cms/cms";
 
 import { schema } from "@/app/schema";
@@ -10,8 +10,8 @@ import { schema } from "@/app/schema";
 /**
  * Vercel の serverless/edge 関数はインスタンス間でメモリを共有しないため、
  * in-memory store は永続しない（コールドスタートのたびに再同期が必要）。
- * KV/R2 相当の永続ストレージを使う場合は Vercel KV/Blob 向けの DocStore/BlobStore
- * 実装に差し替えること（Cloudflare 版は examples/cloudflare-* を参照）。
+ * D1/R2 相当の永続ストレージを使う場合は libSQL(Turso)/Vercel Blob 向けの
+ * IndexStore/BlobStore 実装に差し替えること（Cloudflare 版は examples/cloudflare-* を参照）。
  */
 type Cms = ReturnType<typeof createCMS<typeof schema>>;
 
@@ -28,7 +28,7 @@ export function getCms(): Cms {
     instance = createCMS({
       schema,
       notion: { token: process.env.NOTION_TOKEN ?? "" },
-      stores: { docs: memoryDocStore(), blobs: memoryBlobStore() },
+      stores: { index: memoryIndexStore(), blobs: memoryBlobStore() },
       scheduler: createNodeSyncScheduler(),
       webhookSecret: process.env.REVALIDATE_SECRET,
     });

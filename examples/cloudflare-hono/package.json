@@ -15,7 +15,9 @@
   },
   "dependencies": {
     "@notion-headless-cms/cms": "workspace:*",
-    "hono": "catalog:"
+    "@notion-headless-cms/sql": "workspace:*",
+    "hono": "catalog:",
+    "kysely-d1": "^0.4.0"
   },
   "devDependencies": {
     "@playwright/test": "catalog:",

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createIndexStore } from "../../store/index-store.js";
-import { memoryDocStore } from "../../store/memory.js";
+import { memoryIndexStore } from "../../store/index-store.js";
 import type { IndexEntry } from "../../types/collection-index.js";
 import { listEntries } from "../list.js";
 
@@ -11,7 +10,7 @@ function entry(slug: string, listed: boolean, meta: Record<string, unknown> = {}
 
 describe("listEntries", () => {
   it("listed: false の entry(限定公開)は list から除外される", async () => {
-    const store = createIndexStore(memoryDocStore());
+    const store = memoryIndexStore();
     await store.upsertEntry("posts", entry("a", true));
     await store.upsertEntry("posts", entry("b", false));
     const result = await listEntries(store, "posts", {});
@@ -19,7 +18,7 @@ describe("listEntries", () => {
   });
 
   it("where で絞り込める", async () => {
-    const store = createIndexStore(memoryDocStore());
+    const store = memoryIndexStore();
     await store.upsertEntry("posts", entry("a", true, { status: "published" }));
     await store.upsertEntry("posts", entry("b", true, { status: "review" }));
     const result = await listEntries(store, "posts", {
@@ -29,7 +28,7 @@ describe("listEntries", () => {
   });
 
   it("sort で並べ替えられる", async () => {
-    const store = createIndexStore(memoryDocStore());
+    const store = memoryIndexStore();
     await store.upsertEntry("posts", entry("a", true, { order: 2 }));
     await store.upsertEntry("posts", entry("b", true, { order: 1 }));
     const result = await listEntries(store, "posts", {
@@ -39,7 +38,7 @@ describe("listEntries", () => {
   });
 
   it("cursor ページネーションが動く", async () => {
-    const store = createIndexStore(memoryDocStore());
+    const store = memoryIndexStore();
     for (let i = 0; i < 5; i++) {
       await store.upsertEntry("posts", entry(`slug-${i}`, true, { order: i }));
     }
@@ -69,7 +68,7 @@ describe("listEntries", () => {
   });
 
   it("limit に負数を渡しても 0 件クランプで安全に扱う(cursor 同様の符号サニタイズ)", async () => {
-    const store = createIndexStore(memoryDocStore());
+    const store = memoryIndexStore();
     await store.upsertEntry("posts", entry("a", true));
     const result = await listEntries(store, "posts", { limit: -5 });
     expect(result.items).toEqual([]);
@@ -77,7 +76,7 @@ describe("listEntries", () => {
   });
 
   it("空コレクションは空配列を返す", async () => {
-    const store = createIndexStore(memoryDocStore());
+    const store = memoryIndexStore();
     const result = await listEntries(store, "posts", {});
     expect(result).toEqual({
       items: [],
@@ -88,7 +87,7 @@ describe("listEntries", () => {
   });
 
   it("total は where 適用後・ページング前の件数を返す(ページャ UI の件数表示用)", async () => {
-    const store = createIndexStore(memoryDocStore());
+    const store = memoryIndexStore();
     for (let i = 0; i < 5; i++) {
       await store.upsertEntry(
         "posts",

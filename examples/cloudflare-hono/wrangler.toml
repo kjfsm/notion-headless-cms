@@ -13,9 +13,10 @@ command = "pnpm build"
 [secrets]
 required = ["NOTION_TOKEN"]
 
-[[kv_namespaces]]
-binding = "DOC_CACHE"
-id = "d949487218794cbe8e8d3cdaee119790"
+[[d1_databases]]
+binding = "DB"
+database_name = "nhc-example-cloudflare-hono"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
 
 [[r2_buckets]]
 binding = "IMG_BUCKET"
@@ -34,4 +35,4 @@ new_sqlite_classes = ["SyncCoordinatorDO"]
 
 # シークレットは wrangler secret put で設定する
 # wrangler secret put NOTION_TOKEN
-# KV / R2 バインディングは wrangler kv namespace create / wrangler r2 bucket create で作成する
+# D1 / R2 バインディングは wrangler d1 create / wrangler r2 bucket create で作成する

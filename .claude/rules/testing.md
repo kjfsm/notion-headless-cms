@@ -1,5 +1,5 @@
 ---
-description: vitest によるテスト執筆パターン（KV/R2 fake / fakeTimers / fetch モック / CMSError 検証）
+description: vitest によるテスト執筆パターン（IndexStore/R2 fake / fakeTimers / fetch モック / CMSError 検証）
 paths:
   - "packages/**/__tests__/**"
   - "packages/**/*.test.ts"
@@ -21,33 +21,22 @@ pnpm --filter @notion-headless-cms/cms test  # 個別
 pnpm exec vitest --watch                     # watch
 ```
 
-## パターン 1: KV/R2 fake（`Map` ベース）
+## パターン 1: IndexStore/R2 fake
 
-`packages/cms/src/store/__tests__/cloudflare.test.ts` を参考。`KVNamespaceLike`/`R2BucketLike` の構造型を満たす fake:
+`packages/cms/src/store/__tests__/contract.test.ts`（`memoryIndexStore`/`fileIndexStore`）・
+`packages/sql/src/__tests__/contract.test.ts`（`sqliteIndexStore`/`libsqlIndexStore`）を参考。
+`store/contract.ts` の `runIndexStoreContract`/`runBlobStoreContract` にファクトリを渡せば、
+実装間で共通のテストを再利用できる:
 
 ```ts
-function fakeKvNamespace(): KVNamespaceLike {
-  const store = new Map<string, string>();
-  return {
-    async get(key) {
-      return store.get(key) ?? null;
-    },
-    async put(key, value) {
-      store.set(key, value);
-    },
-    async delete(key) {
-      store.delete(key);
-    },
-    async list(opts) {
-      const prefix = opts?.prefix ?? "";
-      const keys = [...store.keys()].filter((k) => k.startsWith(prefix)).map((name) => ({ name }));
-      return { keys, list_complete: true };
-    },
-  };
-}
+import { runIndexStoreContract } from "@notion-headless-cms/cms/testing";
+
+describe("IndexStore contract: memory", () => {
+  runIndexStoreContract({ factory: () => memoryIndexStore() });
+});
 ```
 
-`store/contract.ts` の `runDocStoreContract`/`runBlobStoreContract` に fake を渡せば、実装間で共通のテストを再利用できる。
+R2 の構造型（`R2BucketLike`）を満たす fake は `packages/cms/src/store/__tests__/cloudflare.test.ts` を参考。
 
 ## パターン 2: fetch モック
 

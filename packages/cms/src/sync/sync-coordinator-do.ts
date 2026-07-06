@@ -59,7 +59,7 @@ function jsonResponse(body: unknown, status = 200): Response {
  *     createCMS({
  *       schema,
  *       notion: { token: env.NOTION_TOKEN },
- *       stores: { docs: kvDocStore(env.DOC_INDEX), blobs: r2BlobStore(env.ENTRY_BUCKET) },
+ *       stores: { index: d1IndexStore(env.DB, schema), blobs: r2BlobStore(env.ENTRY_BUCKET) },
  *       scheduler: createDurableObjectSyncScheduler(state),
  *     }),
  * });

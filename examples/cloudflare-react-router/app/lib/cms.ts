@@ -1,16 +1,17 @@
 import { createCMS, createNodeSyncScheduler } from "@notion-headless-cms/cms";
-import { kvDocStore, r2BlobStore } from "@notion-headless-cms/cms/cloudflare";
+import { r2BlobStore } from "@notion-headless-cms/cms/cloudflare";
+import { d1IndexStore } from "@notion-headless-cms/sql/d1";
 
 import { schema } from "../schema.js";
 
 export interface Env {
   readonly NOTION_TOKEN: string;
-  readonly DOC_CACHE: KVNamespace;
+  readonly DB: D1Database;
   readonly IMG_BUCKET: R2Bucket;
 }
 
 /**
- * KV/R2 は永続化されるが、同期カーソル自体は Worker isolate 内の
+ * D1/R2 は永続化されるが、同期カーソル自体は Worker isolate 内の
  * `createNodeSyncScheduler()`（setTimeout ベース、Workers ランタイムでも動く）に
  * 保持するため isolate が入れ替わると失われる。差分クエリは既存 version と
  * 一致すれば打ち切るため、この場合の再同期は「再検証クエリ 1 回」で済み、
@@ -21,7 +22,7 @@ export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void })
     schema,
     notion: { token: env.NOTION_TOKEN },
     stores: {
-      docs: kvDocStore(env.DOC_CACHE),
+      index: d1IndexStore(env.DB, schema),
       blobs: r2BlobStore(env.IMG_BUCKET),
     },
     scheduler: createNodeSyncScheduler(),

@@ -1,17 +1,14 @@
 import type { DurableObjectStateLike } from "@notion-headless-cms/cms";
 import { createCMS, createDurableObjectSyncScheduler } from "@notion-headless-cms/cms";
-import {
-  createSyncCoordinatorDO,
-  kvDocStore,
-  r2BlobStore,
-} from "@notion-headless-cms/cms/cloudflare";
+import { createSyncCoordinatorDO, r2BlobStore } from "@notion-headless-cms/cms/cloudflare";
+import { d1IndexStore } from "@notion-headless-cms/sql/d1";
 
 import { schema } from "../app/schema";
 
 /**
  * Notion API アクセスを直列化する同期コーディネータ。実際に Notion 同期を実行する
  * のはこのインスタンスだけで、reader 側の `getCMS()` は `syncDelegate` 経由でこの
- * DO に委譲する（KV/R2 の読み取りのみ、Notion へは一切アクセスしない）。
+ * DO に委譲する（D1/R2 の読み取りのみ、Notion へは一切アクセスしない）。
  */
 export const SyncCoordinatorDO = createSyncCoordinatorDO<Env>({
   createCMS: (state: DurableObjectStateLike, env: Env) =>
@@ -19,7 +16,7 @@ export const SyncCoordinatorDO = createSyncCoordinatorDO<Env>({
       schema,
       notion: { token: env.NOTION_TOKEN },
       stores: {
-        docs: kvDocStore(env.DOC_CACHE),
+        index: d1IndexStore(env.DB, schema),
         blobs: r2BlobStore(env.IMG_BUCKET),
       },
       scheduler: createDurableObjectSyncScheduler(state),

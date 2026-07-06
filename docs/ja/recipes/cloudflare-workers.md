@@ -1,13 +1,13 @@
 ---
 title: Cloudflare Workers
-description: Workers + R2 + KV + Durable Object の構成
+description: Workers + R2 + D1 + Durable Object の構成
 category: レシピ
 order: 3
 ---
 
-# Cloudflare Workers + R2 + KV レシピ
+# Cloudflare Workers + R2 + D1 レシピ
 
-Notion アクセス（同期）を Durable Object に一元化し、読者用の stateless Worker は KV/R2 を
+Notion アクセス（同期）を Durable Object に一元化し、読者用の stateless Worker は D1/R2 を
 読むだけにする「完全マテリアライズド」構成。読者リクエスト処理中は Notion API を一切呼ばない
 （`@notion-headless-cms/cms` の北極星）。完全に動く実装は
 [`examples/cloudflare-hono/`](../../../examples/cloudflare-hono/) にある。
@@ -18,9 +18,13 @@ DO を使わずシンプルに始めたい場合は Worker isolate 内スケジ�
 ## インストール
 
 ```bash
-pnpm add @notion-headless-cms/cms @notionhq/client
-pnpm add -D @notion-headless-cms/cli
+pnpm add @notion-headless-cms/cms @notion-headless-cms/sql @notionhq/client
+pnpm add -D @notion-headless-cms/cli kysely-d1
 ```
+
+`@notion-headless-cms/sql` は D1/SQLite/libSQL 向けの `IndexStore` 実装（Kysely）を提供する
+別パッケージ（`cms` 本体はゼロ依存原則のため Kysely を持たない）。`./d1` サブパスの利用には
+peer 依存の `kysely-d1` が必要。
 
 ## スキーマ定義
 
@@ -54,16 +58,17 @@ main = "src/index.ts"
 compatibility_date = "2026-04-22"
 compatibility_flags = ["nodejs_compat"]
 
-[[kv_namespaces]]
-binding = "DOC_CACHE"
-id = "xxxxxxxxxxxxxxxxxxxx"
+[[d1_databases]]
+binding = "DB"
+database_name = "my-app"
+database_id = "xxxxxxxxxxxxxxxxxxxx"
 
 [[r2_buckets]]
 binding = "IMG_BUCKET"
 bucket_name = "my-app-cache"
 
 # Notion アクセスを直列化する同期エンジン（SyncCoordinatorDO）。
-# 読者リクエストは KV/R2 を読むだけで、Notion API 呼び出しは DO に一元化する。
+# 読者リクエストは D1/R2 を読むだけで、Notion API 呼び出しは DO に一元化する。
 [[durable_objects.bindings]]
 name = "SYNC_COORDINATOR"
 class_name = "SyncCoordinatorDO"
@@ -79,22 +84,19 @@ wrangler secret put NOTION_TOKEN
 
 ## 読者用 Worker インスタンス
 
-読者用の stateless Worker は KV/R2 の読み取り（`find`/`list`）だけを行い、Notion API への
+読者用の stateless Worker は D1/R2 の読み取り（`find`/`list`/`search`）だけを行い、Notion API への
 直列アクセスは DO に一元化する（`syncDelegate` 経由で転送する）。
 
 ```ts
 // src/lib/cms.ts
 import { createCMS } from "@notion-headless-cms/cms";
-import {
-  durableObjectSyncDelegate,
-  kvDocStore,
-  r2BlobStore,
-} from "@notion-headless-cms/cms/cloudflare";
+import { durableObjectSyncDelegate, r2BlobStore } from "@notion-headless-cms/cms/cloudflare";
+import { d1IndexStore } from "@notion-headless-cms/sql/d1";
 import { schema } from "../schema.js";
 
 export interface Env {
   readonly NOTION_TOKEN: string;
-  readonly DOC_CACHE: KVNamespace;
+  readonly DB: D1Database;
   readonly IMG_BUCKET: R2Bucket;
   readonly SYNC_COORDINATOR: DurableObjectNamespace;
 }
@@ -103,7 +105,7 @@ export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void })
   return createCMS({
     schema,
     stores: {
-      docs: kvDocStore(env.DOC_CACHE),
+      index: d1IndexStore(env.DB, schema),
       blobs: r2BlobStore(env.IMG_BUCKET),
     },
     syncDelegate: durableObjectSyncDelegate({ namespace: env.SYNC_COORDINATOR }),
@@ -118,11 +120,8 @@ export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void })
 // src/lib/do.ts
 import type { DurableObjectStateLike } from "@notion-headless-cms/cms";
 import { createCMS, createDurableObjectSyncScheduler } from "@notion-headless-cms/cms";
-import {
-  createSyncCoordinatorDO,
-  kvDocStore,
-  r2BlobStore,
-} from "@notion-headless-cms/cms/cloudflare";
+import { createSyncCoordinatorDO, r2BlobStore } from "@notion-headless-cms/cms/cloudflare";
+import { d1IndexStore } from "@notion-headless-cms/sql/d1";
 import { schema } from "../schema.js";
 import type { Env } from "./cms.js";
 
@@ -136,7 +135,7 @@ export const SyncCoordinatorDO = createSyncCoordinatorDO<Env>({
       schema,
       notion: { token: env.NOTION_TOKEN },
       stores: {
-        docs: kvDocStore(env.DOC_CACHE),
+        index: d1IndexStore(env.DB, schema),
         blobs: r2BlobStore(env.IMG_BUCKET),
       },
       scheduler: createDurableObjectSyncScheduler(state),
@@ -295,7 +294,7 @@ URL を `{imagesPath}/{hash}`（既定 `/images/{hash}`）へ焼き込む。読�
 createCMS({
   schema,
   notion: { token: env.NOTION_TOKEN },
-  stores: { docs: kvDocStore(env.DOC_CACHE), blobs: r2BlobStore(env.IMG_BUCKET) },
+  stores: { index: d1IndexStore(env.DB, schema), blobs: r2BlobStore(env.IMG_BUCKET) },
   scheduler: createDurableObjectSyncScheduler(state),
   imagesPath: "/api/cms/images", // 読者側 routes("/api/cms") + imagesPath("/images" 既定) と一致させる
 });
@@ -303,7 +302,7 @@ createCMS({
 
 ## キャッシュなしで動かす（ローカル開発）
 
-`.dev.vars` に `NOTION_TOKEN` だけ書けば `wrangler dev` で動く。KV/R2 binding が無くても
+`.dev.vars` に `NOTION_TOKEN` だけ書けば `wrangler dev` で動く。D1/R2 binding が無くても
 `stores` を省略すれば in-memory ストアにフォールバックし、例外にはならない（永続化はされない）。
 
 ```

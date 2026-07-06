@@ -27,11 +27,12 @@ required = ["NOTION_TOKEN"]
 # 詳細は `apps/docs/README.md` の「Cloudflare Workers Builds セットアップ」を参照。
 # (ローカル `vite build` 経由では [build] セクションは無視されるため、ここには書かない。)
 
-# KV namespace は v3 移行に伴い必須になった。デプロイ前に実際の namespace を作成し、
-# id を差し替えること: wrangler kv namespace create DOC_CACHE
-[[kv_namespaces]]
-binding = "DOC_CACHE"
-id = "REPLACE_WITH_REAL_KV_NAMESPACE_ID"
+# D1 database は v3 移行に伴い必須になった。デプロイ前に実際の database を作成し、
+# database_id を差し替えること: wrangler d1 create nhc-docs-site
+[[d1_databases]]
+binding = "DB"
+database_name = "nhc-docs-site"
+database_id = "REPLACE_WITH_REAL_D1_DATABASE_ID"
 
 [[r2_buckets]]
 binding = "IMG_BUCKET"
@@ -51,4 +52,4 @@ new_sqlite_classes = ["SyncCoordinatorDO"]
 # シークレットは Cloudflare ダッシュボード (Workers > Settings > Variables and Secrets) から登録する:
 # - NOTION_TOKEN
 # - NOTION_WEBHOOK_SECRET  # POST /api/cms/webhook を有効化する場合のみ
-# KV / R2 バインディングは wrangler kv namespace create / wrangler r2 bucket create で作成する
+# D1 / R2 バインディングは wrangler d1 create / wrangler r2 bucket create で作成する

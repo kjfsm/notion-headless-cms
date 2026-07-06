@@ -2,7 +2,7 @@ import path from "node:path";
 
 import type { CollectionDef } from "@notion-headless-cms/cms";
 import { CMSError, createCMS, defineSchema } from "@notion-headless-cms/cms";
-import { fileBlobStore, fileDocStore } from "@notion-headless-cms/cms/node";
+import { fileBlobStore, fileIndexStore } from "@notion-headless-cms/cms/node";
 
 import { loadConfig } from "../config-loader.js";
 import { runSyncCommand } from "../sync-command.js";
@@ -66,7 +66,7 @@ export async function runSync(opts: SyncOptions): Promise<void> {
   const cms = createCMS({
     schema: defineSchema(collections),
     notion: { token },
-    stores: { docs: fileDocStore(cacheDir), blobs: fileBlobStore(cacheDir) },
+    stores: { index: fileIndexStore(cacheDir), blobs: fileBlobStore(cacheDir) },
   });
 
   const result = await runSyncCommand(cms.sync, (state) => {

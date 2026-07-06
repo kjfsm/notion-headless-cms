@@ -10,23 +10,25 @@
 ```
 @notion-headless-cms/cms（Notion アクセス・同期・ストレージ・HTTP 配信を1パッケージに統合）
   ├─ react-renderer（BlockObjectResponse → React、shadcn/ui + Tailwind v4）
-  └─ cli（introspect・スキーマ雛形生成・drift 検証・診断ツール = nhc）
+  ├─ cli（introspect・スキーマ雛形生成・drift 検証・診断ツール = nhc）
+  └─ sql（D1/SQLite/libSQL 向け IndexStore 実装。Kysely + FTS5 全文検索）
 ```
 
 すべて `@notion-headless-cms/` スコープ。`cms` が唯一の現行アーキテクチャで、他の
-workspace パッケージへの依存を持たない独立パッケージ（`react-renderer`/`cli` はいずれも
+workspace パッケージへの依存を持たない独立パッケージ（`react-renderer`/`cli`/`sql` はいずれも
 `cms` にのみ依存する）。実運用での消費例: `euphoric-band-site`・`notion-portfolio-worker`
 （Cloudflare Workers + Durable Objects で完全マテリアライズド配信）。
 
-- **`createCMS` が作るもの**: KV/R2 上に構築されるマテリアライズドなコンテンツレプリカ。
-  読み取り（`find`/`list`）は KV/R2 の参照だけで完結し、**リクエスト処理中に Notion API を一切呼ばない**。
+- **`createCMS` が作るもの**: D1（index）/R2（entry 本体・画像）上に構築されるマテリアライズドな
+  コンテンツレプリカ。読み取り（`find`/`list`/`search`）は D1/R2 の参照だけで完結し、
+  **リクエスト処理中に Notion API を一切呼ばない**。
   Notion との同期はリクエスト経路から切り離され、`notion`（トークン/クライアント）+ `scheduler` を
   渡してこのインスタンス自身に同期させるか、`syncDelegate` で外部（Durable Object 等）に丸ごと委譲する
 - **サブパスエクスポート**:
-  - `.`（本体）— `createCMS` / `defineCollection` / `defineSchema` / `prop` などランタイム非依存の中核
+  - `.`（本体）— `createCMS` / `defineCollection` / `defineSchema` / `prop` / `memoryIndexStore` などランタイム非依存の中核
   - `./html` — React を使わない利用者向けの HTML レンダラ（`renderBlocksToHtml` 等）
-  - `./cloudflare` — Cloudflare 固有実装（KV/R2 ストア、Durable Object 由来の sync delegate・DO クラスファクトリ、WebSocket realtime hub）。詳細: `.claude/rules/cloudflare.md`
-  - `./node` — Node 専用ストア（`node:fs` に依存するため本体から分離）
+  - `./cloudflare` — Cloudflare 固有実装（R2 ストア、Durable Object 由来の sync delegate・DO クラスファクトリ、WebSocket realtime hub）。index 用ストア（D1）は `@notion-headless-cms/sql/d1` が別途提供する。詳細: `.claude/rules/cloudflare.md`
+  - `./node` — Node 専用ストア（`fileIndexStore`。`node:fs` に依存するため本体から分離）
   - `./testing` — vitest 前提のストア契約テストユーティリティ（本体に vitest をバンドルしないため分離）
 - **核心設計アイデア**:
   - `defineCollection`/`defineSchema` による TypeScript ファーストのスキーマ定義（codegen ではなく直接 TS で書き、育てる運用）
@@ -34,12 +36,14 @@ workspace パッケージへの依存を持たない独立パッケージ（`rea
   - 画像・内部リンク・プロパティの変換は**同期時**に行い、読み取り時は素の JSON を返すだけにする（読み取り経路を外部呼び出しゼロに保つため）
 - **`react-renderer` の位置づけ**: `cms` の正規化ブロックを React コンポーネントとして描画する共有インフラ。`/cms` サブパス（`denormalizeBlocks`/`toPageLinkMap`）が `cms` の `NormalizedBlock`/`EntrySnapshot.links` を react-renderer の内部形式へ橋渡しする
 - **`cli`（`nhc`）の位置づけ**: `nhc init`（雛形一式生成）/ `nhc pull`（スキーマ雛形の introspect 生成）/ `nhc check`（drift 検証、CI 向け）/ `nhc doctor`（binding・token・同期状態の診断）/ `nhc sync`（ローカル同期）を提供する補助 CLI
+- **`sql` の位置づけ**: `cms` はゼロ依存原則のため Kysely を持てない。D1/SQLite/libSQL 向けの
+  `IndexStore` 実装（per-collection 実カラム + FTS5 全文検索）を `sql → cms` の依存方向で分離提供する
 
 詳細な API 面・モジュール構成は `.claude/rules/cms.md`、設計の「なぜ」は `docs/ja/architecture.md` を参照。
 
 ### 核心設計原則
 
-- **構造型による抽象化**: `R2BucketLike`/`KVNamespaceLike` など、型だけ定義してランタイムパッケージへの直接依存を排除（テスト容易性向上）
+- **構造型による抽象化**: `R2BucketLike` など、型だけ定義してランタイムパッケージへの直接依存を排除（テスト容易性向上）
 - **`internal/` は非公開**: `packages/*/src/internal/**` を他パッケージから import 禁止。公開したければ `src/index.ts` で re-export する（詳細: `.claude/rules/package-boundaries.md`）
 
 ### コードスタイル要点
@@ -61,7 +65,7 @@ workspace パッケージへの依存を持たない独立パッケージ（`rea
 
 ### テスト
 
-vitest、coverage 閾値 70%。モックパターン（KV/R2 fake / fetch / fakeTimers / CMSError 検証）は `.claude/rules/testing.md` を参照。
+vitest、coverage 閾値 70%。モックパターン（R2 fake / fetch / fakeTimers / CMSError 検証、`runIndexStoreContract`/`runBlobStoreContract`）は `.claude/rules/testing.md` を参照。
 
 ## 詳細ドキュメントの場所
 

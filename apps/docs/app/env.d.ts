@@ -7,8 +7,8 @@ declare global {
       NOTION_TOKEN: string;
       /** Notion Webhook 署名検証用シークレット。webhook を有効化する場合のみ設定。 */
       NOTION_WEBHOOK_SECRET?: string;
-      /** ドキュメント / ページ キャッシュ用 KV namespace。 */
-      DOC_CACHE: KVNamespace;
+      /** ドキュメント / ページ インデックス用 D1 database。 */
+      DB: D1Database;
       /** Notion API アクセスを直列化する同期コーディネータ DO。 */
       SYNC_COORDINATOR: DurableObjectNamespace;
     }
@@ -16,7 +16,7 @@ declare global {
   interface Env {
     NOTION_TOKEN: string;
     NOTION_WEBHOOK_SECRET?: string;
-    DOC_CACHE: KVNamespace;
+    DB: D1Database;
     SYNC_COORDINATOR: DurableObjectNamespace;
   }
 }

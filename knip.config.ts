@@ -42,6 +42,11 @@ export default {
       // vitest は ./testing サブパスから使う optional peerDep
       ignoreDependencies: ["vitest"],
     },
+    "packages/sql": {
+      // package.json の exports サブパス (./, ./d1, ./sqlite, ./libsql)
+      entry: ["src/index.ts", "src/d1.ts", "src/sqlite.ts", "src/libsql.ts"],
+      project: ["src/**/*.ts"],
+    },
     "packages/*": {
       entry: ["src/index.ts"],
       project: ["src/**/*.ts"],

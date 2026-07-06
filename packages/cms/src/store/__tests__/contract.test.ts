@@ -7,13 +7,14 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   runBlobStoreContract,
   runBlobStoreMetadataContract,
-  runDocStoreContract,
+  runIndexStoreContract,
 } from "../contract.js";
-import { memoryBlobStore, memoryDocStore } from "../memory.js";
-import { fileBlobStore, fileDocStore } from "../node-file.js";
+import { memoryIndexStore } from "../index-store.js";
+import { memoryBlobStore } from "../memory.js";
+import { fileBlobStore, fileIndexStore } from "../node-file.js";
 
-describe("DocStore contract: memory", () => {
-  runDocStoreContract({ factory: () => memoryDocStore() });
+describe("IndexStore contract: memory", () => {
+  runIndexStoreContract({ factory: () => memoryIndexStore() });
 });
 
 describe("BlobStore contract: memory", () => {
@@ -42,16 +43,16 @@ describe("BlobStore contract: memory", () => {
   });
 });
 
-describe("DocStore contract: file", () => {
+describe("IndexStore contract: file", () => {
   const dirs: string[] = [];
   afterEach(async () => {
     await Promise.all(dirs.splice(0).map((d) => rm(d, { recursive: true, force: true })));
   });
-  runDocStoreContract({
+  runIndexStoreContract({
     factory: async () => {
-      const dir = await mkdtemp(join(tmpdir(), "v3-doc-"));
+      const dir = await mkdtemp(join(tmpdir(), "v3-index-"));
       dirs.push(dir);
-      return fileDocStore(dir);
+      return fileIndexStore(dir);
     },
   });
 });

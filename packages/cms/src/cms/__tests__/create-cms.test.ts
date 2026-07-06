@@ -1,7 +1,8 @@
-import type { PageObjectResponse } from "@notionhq/client";
+import type { BlockObjectResponse, PageObjectResponse } from "@notionhq/client";
 import { describe, expect, expectTypeOf, it, vi } from "vitest";
 
-import { memoryBlobStore, memoryDocStore } from "../../store/memory.js";
+import { memoryIndexStore } from "../../store/index-store.js";
+import { memoryBlobStore } from "../../store/memory.js";
 import { createNodeSyncScheduler } from "../../sync/node-scheduler.js";
 import type { NotionClientLike } from "../../sync/notion-driver.js";
 import { defineCollection, defineSchema } from "../../types/collection.js";
@@ -80,7 +81,7 @@ function makeFakeClient(
 }
 
 function makeStores() {
-  return { docs: memoryDocStore(), blobs: memoryBlobStore() };
+  return { index: memoryIndexStore(), blobs: memoryBlobStore() };
 }
 
 describe("createCMS", () => {
@@ -231,6 +232,68 @@ describe("createCMS", () => {
       where: { status: { equals: "published" } },
     });
     expect(filtered.items.map((i) => i.slug)).toEqual(["a"]);
+  });
+
+  it("search が同期時に抽出した本文平文を索引にヒットさせる", async () => {
+    function pageBlock(id: string, text: string): BlockObjectResponse {
+      return {
+        object: "block",
+        id,
+        type: "paragraph",
+        has_children: false,
+        paragraph: { rich_text: richText(text) },
+      } as unknown as BlockObjectResponse;
+    }
+    const client: NotionClientLike = {
+      dataSources: {
+        query: vi.fn(async ({ data_source_id }) => ({
+          results:
+            data_source_id === "ds-posts"
+              ? [
+                  notionPage({
+                    id: "p1",
+                    dataSourceId: "ds-posts",
+                    slug: "a",
+                    title: "A",
+                    status: "published",
+                  }),
+                  notionPage({
+                    id: "p2",
+                    dataSourceId: "ds-posts",
+                    slug: "b",
+                    title: "B",
+                    status: "published",
+                  }),
+                ]
+              : [],
+          next_cursor: null,
+          has_more: false,
+        })),
+      },
+      pages: { retrieve: vi.fn().mockRejectedValue(new Error("not found")) },
+      blocks: {
+        children: {
+          list: vi.fn(async ({ block_id }) => ({
+            results:
+              block_id === "p1"
+                ? [pageBlock("b1", "Notion をヘッドレス CMS として使う")]
+                : [pageBlock("b2", "全く関係の無い内容")],
+            next_cursor: null,
+            has_more: false,
+          })),
+        },
+      },
+    };
+    const cms = createCMS({
+      schema,
+      notion: { client },
+      stores: makeStores(),
+      scheduler: createNodeSyncScheduler(),
+    });
+    await cms.sync.kick();
+
+    const result = await cms.posts.search("ヘッドレス");
+    expect(result.items.map((i) => i.slug)).toEqual(["a"]);
   });
 
   it("list() に不正な形状の params(JS 呼び出し等)が渡っても crash せず無視してフォールバックする", async () => {
@@ -585,17 +648,12 @@ describe("createCMS", () => {
     const stores = makeStores();
     // find/list が読めることを確認するため、事前にストアへ直接書き込んでおく
     // (syncDelegate 使用時はローカルの SyncCoordinatorCore を持たないため kick() 経由の同期はできない)。
-    await stores.docs.put(
-      "list-index:posts",
-      JSON.stringify([
-        {
-          slug: "hello",
-          version: "v1",
-          listed: true,
-          meta: { title: "Hello" },
-        },
-      ]),
-    );
+    await stores.index.upsertEntry("posts", {
+      slug: "hello",
+      version: "v1",
+      listed: true,
+      meta: { title: "Hello" },
+    });
 
     const delegate = {
       kick: vi.fn().mockResolvedValue(undefined),

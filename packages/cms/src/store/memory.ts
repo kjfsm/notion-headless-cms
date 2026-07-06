@@ -1,20 +1,4 @@
-import type { BlobGetResult, BlobHead, BlobPutOptions, BlobStore, DocStore } from "./types.js";
-
-/** テスト・Node 実行時向けの in-memory `DocStore`。 */
-export function memoryDocStore(): DocStore {
-  const map = new Map<string, string>();
-  return {
-    async get(key) {
-      return map.get(key) ?? null;
-    },
-    async put(key, value) {
-      map.set(key, value);
-    },
-    async delete(key) {
-      map.delete(key);
-    },
-  };
-}
+import type { BlobGetResult, BlobHead, BlobPutOptions, BlobStore } from "./types.js";
 
 /** テスト・Node 実行時向けの in-memory `BlobStore`。 */
 export function memoryBlobStore(): BlobStore {

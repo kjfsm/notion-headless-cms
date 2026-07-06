@@ -1,18 +1,3 @@
-/**
- * コレクション index の読み書き（KV 想定）。構造型なので `@cloudflare/workers-types`
- * に実依存しない（v2 の `KVNamespaceLike` パターンを継承）。
- *
- * Cloudflare KV はグローバルに結果整合（最大 60 秒程度の伝播遅延がありうる）で、
- * `BlobStore`(R2)のような read-after-write 強整合ではない。同一リージョンからの
- * 直後の読み取りは新しい値が見えることが多いが、それを前提にした実装をしないこと
- * （`find()` の versioned cache キーが古い version を指し続ける等の形で顕在化しうる）。
- */
-export interface DocStore {
-  get(key: string): Promise<string | null>;
-  put(key: string, value: string): Promise<void>;
-  delete(key: string): Promise<void>;
-}
-
 export interface BlobPutOptions {
   readonly contentType?: string;
   /** 本体を読まずに head だけで参照したい付加情報（画像寸法等）。実装が対応する場合のみ永続化される。 */
