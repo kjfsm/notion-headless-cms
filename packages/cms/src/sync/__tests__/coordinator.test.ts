@@ -197,6 +197,32 @@ describe("SyncCoordinatorCore", () => {
     expect(callCount).toBe(2);
   });
 
+  it("failures は無限に増え続けず直近 N 件のリングバッファに収まる", async () => {
+    const deps: SyncCoordinatorDeps = {
+      listChanged: async () => ({
+        changes: [change("broken")],
+        nextCursor: null,
+      }),
+      listAllSlugs: async () => [],
+      listIndexedSlugs: async () => [],
+      syncEntry: async () => {
+        throw new Error("sync failed");
+      },
+      removeEntry: async () => ({ writes: 0 }),
+      chunkSize: 1,
+    };
+    const scheduler = createNodeSyncScheduler();
+    const coordinator = new SyncCoordinatorCore(scheduler, deps);
+
+    // 上限(20件)を超える回数だけ失敗させる。
+    for (let i = 0; i < 25; i++) {
+      await coordinator.kick();
+    }
+
+    const state = await coordinator.getState();
+    expect(state.failures.length).toBeLessThanOrEqual(20);
+  });
+
   it("reconcile と runChunk が並行に呼ばれても state の read-modify-write が競合しない(直列化)", async () => {
     let resolveSync: (() => void) | undefined;
     const gate = new Promise<void>((resolve) => {
@@ -213,7 +239,10 @@ describe("SyncCoordinatorCore", () => {
       removeEntry: async () => ({ writes: 5 }),
       now: () => "2026-07-05T00:00:00.000Z",
     };
-    const coordinator = new SyncCoordinatorCore(createNodeSyncScheduler(), deps);
+    const coordinator = new SyncCoordinatorCore(
+      createNodeSyncScheduler(),
+      deps,
+    );
 
     const kickPromise = coordinator.kick(); // syncEntry の gate 待ちで setState 未実行のまま止まる
     await Promise.resolve();

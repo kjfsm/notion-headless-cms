@@ -30,6 +30,7 @@ export interface SyncState {
   readonly cursor: string | null;
   readonly lastSyncAt: string | null;
   readonly lastReconcileAt: string | null;
+  /** 直近の失敗（最大 `MAX_FAILURES` 件のリングバッファ。成功時にクリアはされない）。 */
   readonly failures: readonly SyncFailure[];
   /** 当日ぶんの KV write 累計。旧フォーマットの state には無いため任意。 */
   readonly writeBudget?: WriteBudgetState | null;
@@ -42,6 +43,19 @@ const EMPTY_STATE: SyncState = {
   failures: [],
   writeBudget: null,
 };
+
+/**
+ * `SyncState.failures` に保持する件数の上限。無制限に追記すると成功時にクリアする
+ * 経路が無いため state が単調増大してしまう。直近 N 件のリングバッファとして扱う。
+ */
+const MAX_FAILURES = 20;
+
+function appendFailure(
+  failures: readonly SyncFailure[],
+  entry: SyncFailure,
+): readonly SyncFailure[] {
+  return [...failures, entry].slice(-MAX_FAILURES);
+}
 
 export interface SyncCoordinatorDeps {
   /**
@@ -251,17 +265,18 @@ export class SyncCoordinatorCore {
       });
       await this.setState({
         ...state,
-        failures: [
-          ...state.failures,
-          { slug: "(listChanged)", message, at: this.now() },
-        ],
+        failures: appendFailure(state.failures, {
+          slug: "(listChanged)",
+          message,
+          at: this.now(),
+        }),
       });
       // Notion クエリ自体の失敗は fail-soft: 諦めずに次チャンクを再スケジュールする。
       await this.scheduler.schedule(this.chunkDelayMs, () => this.runChunk());
       return;
     }
 
-    const failures = [...state.failures];
+    let failures = state.failures;
     let writes = 0;
 
     for (const change of changes) {
@@ -275,7 +290,11 @@ export class SyncCoordinatorCore {
           slug: change.slug,
           error: message,
         });
-        failures.push({ slug: change.slug, message, at: this.now() });
+        failures = appendFailure(failures, {
+          slug: change.slug,
+          message,
+          at: this.now(),
+        });
       }
     }
 

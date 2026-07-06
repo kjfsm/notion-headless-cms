@@ -16,6 +16,7 @@ const EMPTY_STATE: SyncState = {
 export interface SyncStats {
   readonly lastSyncAt: string | null;
   readonly lastReconcileAt: string | null;
+  /** 保持中の失敗件数（`coordinator.ts` の `MAX_FAILURES` で上限が掛かるリングバッファのサイズ）。 */
   readonly failureCount: number;
   readonly recentFailures: readonly SyncFailure[];
   /** 当日ぶんの KV write 累計（無料枠の予算監視用）。未同期なら null。 */
