@@ -1,10 +1,7 @@
 import type { DurableObjectStateLike } from "@notion-headless-cms/cms";
 import { createCMS, createDurableObjectSyncScheduler } from "@notion-headless-cms/cms";
-import {
-  createSyncCoordinatorDO,
-  kvDocStore,
-  r2BlobStore,
-} from "@notion-headless-cms/cms/cloudflare";
+import { createSyncCoordinatorDO, r2BlobStore } from "@notion-headless-cms/cms/cloudflare";
+import { d1IndexStore } from "@notion-headless-cms/sql/d1";
 
 import { schema } from "../schema.js";
 import type { Env } from "./cms.js";
@@ -23,7 +20,7 @@ export const SyncCoordinatorDO = createSyncCoordinatorDO<Env>({
       schema,
       notion: { token: env.NOTION_TOKEN },
       stores: {
-        docs: kvDocStore(env.DOC_CACHE),
+        index: d1IndexStore(env.DB, schema),
         blobs: r2BlobStore(env.IMG_BUCKET),
       },
       scheduler: createDurableObjectSyncScheduler(state),

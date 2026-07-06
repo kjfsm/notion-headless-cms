@@ -5,7 +5,7 @@ import { runDoctorChecks } from "../doctor.js";
 
 function healthyInput(): DoctorInput {
   return {
-    bindings: { kv: true, r2: true, durableObject: true },
+    bindings: { d1: true, r2: true, durableObject: true },
     webhookSecretConfigured: true,
     tokenValid: true,
     syncStats: { lastSyncAt: "2026-01-01T00:00:00.000Z", failureCount: 0 },
@@ -20,10 +20,10 @@ describe("runDoctorChecks", () => {
     expect(report.checks.every((c) => c.status !== "error")).toBe(true);
   });
 
-  it("KV/R2/DO binding が無ければそれぞれ error として報告する", () => {
+  it("D1/R2/DO binding が無ければそれぞれ error として報告する", () => {
     const report = runDoctorChecks({
       ...healthyInput(),
-      bindings: { kv: false, r2: false, durableObject: false },
+      bindings: { d1: false, r2: false, durableObject: false },
     });
     expect(report.ok).toBe(false);
     expect(report.checks.filter((c) => c.status === "error")).toHaveLength(3);

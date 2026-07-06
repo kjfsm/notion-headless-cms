@@ -2,7 +2,7 @@
 
 `notion-headless-cms` 公式ドキュメントサイト。**dogfooding として本ライブラリ自身**で構築されている。
 
-- `/` ・ `/:slug` … Notion 固定ページDB から `@notion-headless-cms/cms`（v3、完全マテリアライズド方式）経由で配信（ランディング + about / showcase / privacy 等）。Notion API は `SyncCoordinatorDO` のみが叩き、reader は KV/R2 を読むだけ
+- `/` ・ `/:slug` … Notion 固定ページDB から `@notion-headless-cms/cms`（v3、完全マテリアライズド方式）経由で配信（ランディング + about / showcase / privacy 等）。Notion API は `SyncCoordinatorDO` のみが叩き、reader は D1/R2 を読むだけ
 - `/docs` ・ `/docs/*` … リポジトリ直下 `docs/ja/**/*.md` を直接静的レンダリング（unified + remark + rehype-shiki）
 - `/api/cms/*` … `cms.fetch()` が画像プロキシ・OGP・Webhook (`POST /api/cms/webhook`) をまとめて mount
 
@@ -21,7 +21,7 @@ $EDITOR apps/docs/.dev.vars
 # 3. ワークスペースをビルド（packages/*）
 pnpm build
 
-# 4. dev server 起動（KV/R2/DO は @cloudflare/vite-plugin がローカルでシミュレートする）
+# 4. dev server 起動（D1/R2/DO は @cloudflare/vite-plugin がローカルでシミュレートする）
 pnpm --filter @notion-headless-cms/docs dev
 ```
 
@@ -60,11 +60,11 @@ Notion DB のプロパティを変更した場合は `app/schema.ts` を手動�
 
 4. **バインディング**（ダッシュボードの "Bindings"、もしくは `wrangler.toml`）
 
-   | バインディング     | 種別           | 値                                                                                                                                                   |
-   | ------------------ | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-   | `IMG_BUCKET`       | R2             | `nhc-docs-site-cache`（事前作成: `wrangler r2 bucket create nhc-docs-site-cache`）                                                                   |
-   | `DOC_CACHE`        | KV             | `wrangler kv namespace create DOC_CACHE` で作成した namespace ID を `wrangler.toml` に記入（`wrangler.toml` に必須バインディングとして既に宣言済み） |
-   | `SYNC_COORDINATOR` | Durable Object | `SyncCoordinatorDO`（`wrangler.toml` に宣言済み、追加設定不要）                                                                                      |
+   | バインディング     | 種別           | 値                                                                                                                                            |
+   | ------------------ | -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `IMG_BUCKET`       | R2             | `nhc-docs-site-cache`（事前作成: `wrangler r2 bucket create nhc-docs-site-cache`）                                                            |
+   | `DB`               | D1             | `wrangler d1 create nhc-docs-site` で作成した database ID を `wrangler.toml` に記入（`wrangler.toml` に必須バインディングとして既に宣言済み） |
+   | `SYNC_COORDINATOR` | Durable Object | `SyncCoordinatorDO`（`wrangler.toml` に宣言済み、追加設定不要）                                                                               |
 
 5. **ブランチ設定**
    - Production branch: `main`

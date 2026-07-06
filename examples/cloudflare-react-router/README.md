@@ -1,6 +1,6 @@
 # cloudflare-react-router
 
-React Router v7（Framework mode）+ Cloudflare Workers + R2 + KV で Notion を
+React Router v7（Framework mode）+ Cloudflare Workers + R2 + D1 で Notion を
 ヘッドレス CMS として使う最小フルスタック例。loader で取得した正規化ブロックを
 `react-renderer` で React として描画し、`useNotionRevalidate` で更新を静かに反映する。
 
@@ -47,15 +47,15 @@ CMS の生成は `app/lib/cms.ts` の `makeCms(env, ctx)` に集約。`workers/a
 再同期は「軽い再検証クエリ 1 回」で済む（`app/lib/cms.ts` の `ensureSynced()` が
 `cms.sync.kick()` を cursor が尽きるまでループし、各 loader の先頭で呼ばれる）。
 
-KV（`DOC_CACHE`）/R2（`IMG_BUCKET`）はマテリアライズ済みエントリの永続ストアで、
-`find`/`list` はここだけを読む（Notion API は同期時のみ叩く）。
+D1（`DB`）/R2（`IMG_BUCKET`）はマテリアライズ済みエントリの永続ストアで、
+`find`/`list`/`search` はここだけを読む（Notion API は同期時のみ叩く）。
 
 ## 表示の更新
 
 `useNotionRevalidate()`（`@notion-headless-cms/react-renderer/router`）を引数なしで
 呼ぶと、mount 時と再フォーカス（visibilitychange）時に `useRevalidator()` で loader を
 再走させる。裏で `ensureSynced()` が同期を進めているため、再フォーカス時には最新の
-KV/R2 スナップショットが返る。
+D1/R2 スナップショットが返る。
 
 WebSocket によるリアルタイム push（Durable Object 経由）は行わない。必要であれば
 `examples/cloudflare-hono` の `SyncCoordinatorDO`/`RealtimeHubDO` 構成を参照。
@@ -73,8 +73,8 @@ WebSocket によるリアルタイム push（Durable Object 経由）は行わ�
 ## デプロイ（Cloudflare）
 
 ```bash
-# KV（ドキュメントキャッシュ）と R2（画像）を作成し、wrangler.toml の id / bucket_name を更新
-wrangler kv namespace create DOC_CACHE
+# D1（ドキュメントインデックス）と R2（画像）を作成し、wrangler.toml の database_id / bucket_name を更新
+wrangler d1 create nhc-example-cloudflare-react-router
 wrangler r2 bucket create nhc-example-cache
 wrangler r2 bucket create nhc-example-cache-preview
 

@@ -1,16 +1,16 @@
 export interface InitScaffoldOptions {
   readonly projectName: string;
-  readonly kvBinding?: string;
+  readonly d1Binding?: string;
   readonly r2Binding?: string;
   readonly doClassName?: string;
   readonly doBindingName?: string;
 }
 
 /**
- * `nhc init` の wrangler 設定雛形(KV / R2 / DO binding・`new_sqlite_classes`・cron)。
+ * `nhc init` の wrangler 設定雛形(D1 / R2 / DO binding・`new_sqlite_classes`・cron)。
  */
 export function generateWranglerToml(opts: InitScaffoldOptions): string {
-  const kv = opts.kvBinding ?? "DOC_INDEX";
+  const d1 = opts.d1Binding ?? "DB";
   const r2 = opts.r2Binding ?? "ENTRY_BUCKET";
   const doClass = opts.doClassName ?? "SyncCoordinatorDO";
   const doBinding = opts.doBindingName ?? "SYNC_COORDINATOR";
@@ -19,8 +19,8 @@ export function generateWranglerToml(opts: InitScaffoldOptions): string {
 main = "src/index.ts"
 compatibility_date = "2026-01-01"
 
-kv_namespaces = [
-  { binding = "${kv}", id = "REPLACE_WITH_KV_NAMESPACE_ID" }
+d1_databases = [
+  { binding = "${d1}", database_name = "${opts.projectName}", database_id = "REPLACE_WITH_D1_DATABASE_ID" }
 ]
 
 r2_buckets = [
@@ -46,7 +46,7 @@ crons = ["0 * * * *"]
  * `generateWranglerToml` の binding 名で再現する。相対パス → ファイル内容のマップを返す。
  */
 export function generateMountCodeTemplate(opts: InitScaffoldOptions): Record<string, string> {
-  const kv = opts.kvBinding ?? "DOC_INDEX";
+  const d1 = opts.d1Binding ?? "DB";
   const r2 = opts.r2Binding ?? "ENTRY_BUCKET";
   const doClass = opts.doClassName ?? "SyncCoordinatorDO";
   const doBinding = opts.doBindingName ?? "SYNC_COORDINATOR";
@@ -56,11 +56,8 @@ import {
   createCMS,
   createDurableObjectSyncScheduler,
 } from "@notion-headless-cms/cms";
-import {
-  createSyncCoordinatorDO,
-  kvDocStore,
-  r2BlobStore,
-} from "@notion-headless-cms/cms/cloudflare";
+import { r2BlobStore, createSyncCoordinatorDO } from "@notion-headless-cms/cms/cloudflare";
+import { d1IndexStore } from "@notion-headless-cms/sql/d1";
 import { schema } from "../schema.js";
 import type { Env } from "./cms.js";
 
@@ -78,7 +75,7 @@ export const ${doClass} = createSyncCoordinatorDO<Env>({
       schema,
       notion: { token: env.NOTION_TOKEN },
       stores: {
-        docs: kvDocStore(env.${kv}),
+        index: d1IndexStore(env.${d1}, schema),
         blobs: r2BlobStore(env.${r2}),
       },
       scheduler: createDurableObjectSyncScheduler(state),
@@ -87,22 +84,19 @@ export const ${doClass} = createSyncCoordinatorDO<Env>({
 `;
 
   const cmsFile = `import { createCMS } from "@notion-headless-cms/cms";
-import {
-  durableObjectSyncDelegate,
-  kvDocStore,
-  r2BlobStore,
-} from "@notion-headless-cms/cms/cloudflare";
+import { durableObjectSyncDelegate, r2BlobStore } from "@notion-headless-cms/cms/cloudflare";
+import { d1IndexStore } from "@notion-headless-cms/sql/d1";
 import { schema } from "../schema.js";
 
 export interface Env {
   readonly NOTION_TOKEN: string;
-  readonly ${kv}: KVNamespace;
+  readonly ${d1}: D1Database;
   readonly ${r2}: R2Bucket;
   readonly ${doBinding}: DurableObjectNamespace;
 }
 
 /**
- * 読者用の stateless Worker 側インスタンス。KV/R2 の読み取り(find/list)は
+ * 読者用の stateless Worker 側インスタンス。D1/R2 の読み取り(find/list/search)は
  * ここで直接行い、Notion API への直列アクセスは ${doClass}(src/lib/do.ts)に
  * 一元化する(syncDelegate 経由で転送する)。
  */
@@ -115,7 +109,7 @@ export function makeCms(
   return createCMS({
     schema,
     stores: {
-      docs: kvDocStore(env.${kv}),
+      index: d1IndexStore(env.${d1}, schema),
       blobs: r2BlobStore(env.${r2}),
     },
     syncDelegate: durableObjectSyncDelegate({ stub }),

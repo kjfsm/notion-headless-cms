@@ -1,19 +1,9 @@
 /**
- * KVNamespace / R2Bucket の最小構造型(v2 `packages/cache/src/types.ts` の方式を継承)。
- * `@cloudflare/workers-types` に実依存しない — 実 `KVNamespace`/`R2Bucket` はどちらも
- * 構造的にこれらを満たすので、Workers の `env.XXX` をそのまま渡せる。
+ * R2Bucket の最小構造型(v2 `packages/cache/src/types.ts` の方式を継承)。
+ * `@cloudflare/workers-types` に実依存しない — 実 `R2Bucket` は構造的にこれを満たすので、
+ * Workers の `env.XXX` をそのまま渡せる。KV 由来の構造型(`KVNamespaceLike`)は D1 移行に伴い
+ * 廃止 — index 用ストレージは `@notion-headless-cms/sql` の D1/SQLite/libSQL 実装を使う。
  */
-export interface KVNamespaceLike {
-  get(key: string, type: "text"): Promise<string | null>;
-  put(key: string, value: string): Promise<void>;
-  delete(key: string): Promise<void>;
-  list(opts?: { prefix?: string; cursor?: string }): Promise<{
-    keys: { name: string }[];
-    list_complete: boolean;
-    cursor?: string;
-  }>;
-}
-
 export interface R2ObjectLike {
   arrayBuffer(): Promise<ArrayBuffer>;
   httpMetadata?: { contentType?: string };

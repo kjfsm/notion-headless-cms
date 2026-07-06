@@ -19,7 +19,8 @@ CLAUDE.md と `.claude/rules/` は**事実**を述べる。ここではその**�
 Notion API
   └─ @notion-headless-cms/cms（Notion アクセス・同期・ストレージ・HTTP 配信を1パッケージに統合。ゼロ依存）
        ├─ @notion-headless-cms/react-renderer（BlockObjectResponse→React、shadcn/ui + Tailwind v4）
-       └─ @notion-headless-cms/cli（nhc pull/check/doctor/sync/init）
+       ├─ @notion-headless-cms/cli（nhc pull/check/doctor/sync/init）
+       └─ @notion-headless-cms/sql（D1/SQLite/libSQL 向け IndexStore 実装。Kysely + FTS5 全文検索）
 ```
 
 #### なぜこの形か
@@ -33,7 +34,7 @@ Notion API
 Cloudflare Workers（特に無料プラン）は 1 リクエストあたりの subrequest 数・CPU 時間に厳しい
 上限がある。アクセスの都度 Notion API と突合して鮮度を確認する設計だと、この予算がリクエスト
 ごとの Notion API 呼び出し有無に左右され、予測が難しい。そこで同期を完全に読者リクエストの外へ
-追い出し、`find()`/`list()` を KV/R2 の参照だけに限定することで、読者 Worker のリクエスト処理に
+追い出し、`find()`/`list()` を D1/R2 の参照だけに限定することで、読者 Worker のリクエスト処理に
 「固定でハードな」subrequest/CPU 予算を持たせられるようにしている。
 
 ### なぜ同期を Durable Object（`syncDelegate`）に委譲できるようにしたのか
@@ -42,7 +43,7 @@ Cloudflare Workers（特に無料プラン）は 1 リクエストあたりの s
 レート制限（3 req/sec）を isolate 数だけ奪い合うレースになり、429 が増えるだけで得るものがない。
 `syncDelegate`（`durableObjectSyncDelegate`）を使うと、Notion への直列アクセスを単一の Durable
 Object インスタンスに一元化でき、レート制限をアプリ全体で 1 箇所のリミッタ（`rate-limiter.ts`）
-だけで守れる。読者側 Worker は同期そのものには関与せず、KV/R2 の読み取りに専念できる。
+だけで守れる。読者側 Worker は同期そのものには関与せず、D1/R2 の読み取りに専念できる。
 
 同じ理由で、webhook 通知そのものも 1 件届くたびに同期するのではなく `debounceMs`（既定
 3000ms）でまとめる。編集中は 1 ページに対して短時間に複数の webhook が届くことがあり、都度
@@ -61,22 +62,26 @@ consumer の定型配線を薄くするヘルパーを `@notion-headless-cms/cms
   リクエスト（`/api/cms/realtime`）を `RealtimeHubDO` へ転送する（publish 側と `name` を揃える）
 - `edgeVersionedCache(cache)`: `createVersionedCacheLayer({ cache })` の糖衣
 - `readerReadOnly()`: 同期しない読み取り専用の `CMSSyncDelegate`（DO を持たないプレビュー/読者専用
-  Worker が、本番 DO の同期済み KV/R2 を読むだけの構成で使う）
+  Worker が、本番 DO の同期済み D1/R2 を読むだけの構成で使う）
 
-### なぜ `DocStore`/`BlobStore` を構造型インターフェースにしているのか
+### なぜ `IndexStore`/`BlobStore` を構造型インターフェースにしているのか
 
-`store/cloudflare-types.ts` の `KVNamespaceLike`/`R2BucketLike` は `@cloudflare/workers-types` を
-実依存に入れない構造型として定義している。理由:
+`store/cloudflare-types.ts` の `R2BucketLike` は `@cloudflare/workers-types` を実依存に入れない
+構造型として定義している。理由:
 
 - `@notion-headless-cms/cms` の本体（`/cloudflare` サブパス以外）を Node.js のテストで動かせる
-- 将来 `KVNamespace`/`R2Bucket` の型が変わっても、必要な最小メソッドだけ互換を保てば良い
-- 利用側は Workers の `env.XXX`（実 `KVNamespace`/`R2Bucket`）をそのまま渡せる（構造的サブタイプ）
+- 将来 `R2Bucket` の型が変わっても、必要な最小メソッドだけ互換を保てば良い
+- 利用側は Workers の `env.XXX`（実 `R2Bucket`）をそのまま渡せる（構造的サブタイプ）
 
-`store/cloudflare.ts` の `kvDocStore()`/`r2BlobStore()` がこの構造型を、`store/types.ts` の
-`DocStore`（KV 想定・index 用）/`BlobStore`（R2 想定・entry 本体と画像バイナリ用）という
-ランタイム中立の抽象へ橋渡しする。両者を分けているのは TTL の違いではなく（cms は同期済みの
-複製をそのまま永続化するだけで、SWR のようなキャッシュ失効の概念を持たない）、KV の点キー
-get/put と R2 のバイナリ get/head/put という**ストレージ特性の違い**に対応するため。
+`store/cloudflare.ts` の `r2BlobStore()` がこの構造型を、`store/types.ts` の `BlobStore`（R2
+想定・entry 本体と画像バイナリ用）というランタイム中立の抽象へ橋渡しする。index 側
+（`find`/`list`/`search` が読む集合）は `store/index-store.ts` の `IndexStore` インタフェースで
+抽象化しており、`cms` 自体はゼロ依存原則のため SQL 実装を持たない。KV の点キー get/put では
+`where`/`sort`/全文検索といった構造化クエリを表現できないため、永続化・スケール・全文検索が
+要る場合は D1/SQLite/libSQL 向けの Kysely 実装（`@notion-headless-cms/sql`）を `IndexStore` として
+渡す設計にしている。`BlobStore` を分けているのは TTL の違いではなく（cms は同期済みの複製を
+そのまま永続化するだけで、SWR のようなキャッシュ失効の概念を持たない）、index の構造化クエリと
+R2 のバイナリ get/head/put という**ストレージ特性の違い**に対応するため。
 
 ### なぜ画像・内部リンク・プロパティの変換を読み取り時ではなく同期時に行うのか
 
@@ -104,7 +109,7 @@ data に埋め込む（react-renderer 等が CLS ゼロ化に使う）。
 Notion API には変更通知 API が無く、「何が変わったか」を能動的に教えてくれる購読の仕組みは
 無い。`last_edited_time` は ISO-8601 で単調増加するため、`listChanged`（`sync/notion-driver.ts`）
 は `last_edited_time` 降順でクエリし、保存済み index の `version`（= 直近の `last_edited_time`）
-と一致した時点で差分終了とみなす、という単純な比較だけで差分検知できる。この値はそのまま KV
+と一致した時点で差分終了とみなす、という単純な比較だけで差分検知できる。この値はそのまま
 index の `version` として保存され、`find()` の versioned cache キー（`store/versioned-cache.ts`）
 にもそのまま使い回される。
 
@@ -112,7 +117,7 @@ index の `version` として保存され、`find()` の versioned cache キー�
 
 Notion の webhook 通知は配送保証が無く、遅延・欠落があり得る。webhook だけに頼ると、
 編集内容が反映されるまでの時間に不確実性が残る。`realtime.ts`（`publishVersionUpdate`）は
-同期完了時に version 同梱でクライアントへ即時 push することで、KV への伝播を待たずに
+同期完了時に version 同梱でクライアントへ即時 push することで、index への伝播を待たずに
 「新しい version がある」ことを知らせる。同時に、push 自体も取りこぼされ得る（購読していない
 タイミングでの更新など）ため、マウント時・タブ復帰時の revalidate という別経路も併用する。
 webhook 駆動同期・realtime push・mount/visibility revalidate の 3 つは互いの弱点を補い合う、

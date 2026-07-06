@@ -2,10 +2,7 @@ import type { RuntimeSortInput } from "../query/where.js";
 import { evaluateWhere, sortByMeta } from "../query/where.js";
 import type { IndexEntry } from "../types/collection-index.js";
 import type { JsonValue } from "../types/json-value.js";
-import type { Logger } from "../types/logger.js";
 import type { ListResult } from "../types/query.js";
-import { deepEqualJson } from "./deep-equal-json.js";
-import type { DocStore } from "./types.js";
 
 const DEFAULT_LIMIT = 20;
 
@@ -16,6 +13,16 @@ export interface ListRuntimeParams {
   readonly limit?: number;
 }
 
+/** `upsertEntry` に渡す入力。全文検索用のプレーンテキストを任意で同梱する。 */
+export type IndexUpsertInput = IndexEntry & { readonly searchText?: string };
+
+export interface IndexWriteResult {
+  /** 1 回でも書き込みが発生したか。 */
+  readonly wrote: boolean;
+  /** 発行した書き込み操作数（予算計測・コスト見積り用。実装依存）。 */
+  readonly writes: number;
+}
+
 export interface IndexStore {
   findEntry(collection: string, slug: string): Promise<IndexEntry | null>;
   listEntries(collection: string, params: ListRuntimeParams): Promise<ListResult<IndexEntry>>;
@@ -23,159 +30,113 @@ export interface IndexStore {
   listAllEntries(collection: string): Promise<readonly IndexEntry[]>;
   /** listed 問わず全 slug（reconcile の突合用）。 */
   listSlugs(collection: string): Promise<readonly string[]>;
+  /** `searchText`（`upsertEntry` で渡した本文平文）に対する全文検索。`where`/`sort`/`cursor`/`limit` も併用できる。 */
+  search(
+    collection: string,
+    query: string,
+    params: ListRuntimeParams,
+  ): Promise<ListResult<IndexEntry>>;
   /**
    * 該当 slug の entry を追加/更新する。差分が無ければ書き込みをスキップする。
    * `knownExisting` に呼び出し側が直前に読んだ現行値（存在しなければ null）を渡すと
-   * 点キーの再読み込みを省略できる（省略時 = undefined は内部で読み直す）。
-   *
-   * `writes` は実際に発行した KV 書き込み操作数（0=スキップ / 1=点キーのみ /
-   * 2=点キー+マニフェスト）。無料枠（1日1000 write）の予算計測に使う。
+   * 再読み込みを省略できる（省略時 = undefined は内部で読み直す）。
    */
   upsertEntry(
     collection: string,
-    entry: IndexEntry,
+    entry: IndexUpsertInput,
     knownExisting?: IndexEntry | null,
   ): Promise<IndexWriteResult>;
   removeEntry(collection: string, slug: string): Promise<IndexWriteResult>;
 }
 
-export interface IndexWriteResult {
-  /** 1 回でも KV 書き込みが発生したか。 */
-  readonly wrote: boolean;
-  /** 発行した KV 書き込み操作数（delete も 1 回として数える）。 */
-  readonly writes: number;
+interface StoredRecord {
+  readonly entry: IndexEntry;
+  readonly searchText?: string;
 }
 
-function pointKey(collection: string, slug: string): string {
-  return `entry-index:${collection}:${slug}`;
-}
-
-function manifestKey(collection: string): string {
-  return `list-index:${collection}`;
-}
-
-/**
- * notion-driver.ts の `syncEntry` は meta に `lastEditedTime`(= version と同じ値)を
- * 必ず含める。これを含めたまま比較すると、version が変わるたび(= 内容編集のたび)に
- * 必ず meta も不一致になり、マニフェスト書き込みスキップが機能しなくなる。version は
- * 別途比較済みなので、ここでは lastEditedTime を除いた meta 同士を比較する。
- */
-function metaForManifestComparison(meta: JsonValue): JsonValue {
-  if (
-    meta !== null &&
-    typeof meta === "object" &&
-    !Array.isArray(meta) &&
-    "lastEditedTime" in meta
-  ) {
-    const { lastEditedTime: _lastEditedTime, ...rest } = meta as Record<string, JsonValue>;
-    return rest;
-  }
-  return meta;
+function paginate(items: readonly IndexEntry[], params: ListRuntimeParams): ListResult<IndexEntry> {
+  const offset = params.cursor ? Math.max(0, Number.parseInt(params.cursor, 10) || 0) : 0;
+  const limit = Math.max(0, params.limit ?? DEFAULT_LIMIT);
+  const page = items.slice(offset, offset + limit);
+  const hasMore = offset + limit < items.length;
+  return {
+    items: page,
+    nextCursor: hasMore ? String(offset + limit) : null,
+    hasMore,
+    total: items.length,
+  };
 }
 
 /**
- * KV(想定)上のコレクション index 読み書き。2 種類のキーに分離する:
- *
- * - 点読みキー(`entry-index:{collection}:{slug}`): `find()` 用。version が変わる
- *   たび(= Notion 側で何か変更があるたび)に必ず書く。`versionedCache` が version を
- *   キャッシュキーに使うため、これが古いと find() が古いコンテンツを返し続ける。
- * - 一覧マニフェストキー(`list-index:{collection}`): `list()`/`listAllEntries()`/
- *   `listSlugs()` 用。コレクション全件を 1 キーに JSON 配列で持つ。`listed`/`meta` が
- *   実際に変わった時だけ書く(本文ブロックだけの編集は version は進むが meta/listed は
- *   変わらないことがほとんどのため、ここをスキップして KV 書き込み予算を節約する)。
- *
- * 同一コレクションへの並行書き込みは `SyncCoordinatorCore`(`runChunk()`/`reconcile()`
- * とも同じキューで直列化される)が変更を 1 件ずつ順次処理するため発生しない
- * (マニフェストの read-modify-write レースは無い)。ただし点キーとマニフェストは
- * 別々の書き込みのため、部分失敗や KV の伝播遅延によって両者が食い違う(orphan)
- * ケース自体は残る。ここでは検知した不整合を警告ログに出すのみで、自己修復は行わない。
+ * ゼロバインディング環境（KV/R2/D1 いずれも無い）向けの in-memory `IndexStore`。
+ * Workers 等 SQLite が使えないランタイムのフォールバックとしても使う。
+ * プロセス内 `Map` のみで完結するため、プロセス再起動・cold start のたびに消える
+ * （永続化・スケールを要する用途は `@notion-headless-cms/sql` の D1/SQLite/libSQL 実装を使う）。
  */
-export function createIndexStore(docs: DocStore, logger?: Logger): IndexStore {
-  async function readManifest(collection: string): Promise<IndexEntry[]> {
-    const raw = await docs.get(manifestKey(collection));
-    return raw ? (JSON.parse(raw) as IndexEntry[]) : [];
+export function memoryIndexStore(): IndexStore {
+  const collections = new Map<string, Map<string, StoredRecord>>();
+
+  function collectionMap(collection: string): Map<string, StoredRecord> {
+    let map = collections.get(collection);
+    if (!map) {
+      map = new Map();
+      collections.set(collection, map);
+    }
+    return map;
   }
 
-  async function findEntry(collection: string, slug: string): Promise<IndexEntry | null> {
-    const raw = await docs.get(pointKey(collection, slug));
-    return raw ? (JSON.parse(raw) as IndexEntry) : null;
+  function filterAndSort(entries: readonly IndexEntry[], params: ListRuntimeParams): IndexEntry[] {
+    const filtered = entries.filter((e) =>
+      evaluateWhere(e.meta as Record<string, JsonValue>, params.where),
+    );
+    return sortByMeta(filtered, params.sort, (e) => e.meta as Record<string, JsonValue>);
   }
 
   return {
-    findEntry,
+    async findEntry(collection, slug) {
+      return collectionMap(collection).get(slug)?.entry ?? null;
+    },
+
     async listEntries(collection, params) {
-      const listed = (await readManifest(collection)).filter((e) => e.listed);
-      const filtered = listed.filter((e) =>
-        evaluateWhere(e.meta as Record<string, JsonValue>, params.where),
-      );
-      const sorted = sortByMeta(filtered, params.sort, (e) => e.meta as Record<string, JsonValue>);
-
-      const offset = params.cursor ? Math.max(0, Number.parseInt(params.cursor, 10) || 0) : 0;
-      const limit = Math.max(0, params.limit ?? DEFAULT_LIMIT);
-      const page = sorted.slice(offset, offset + limit);
-      const hasMore = offset + limit < sorted.length;
-
-      return {
-        items: page,
-        nextCursor: hasMore ? String(offset + limit) : null,
-        hasMore,
-        total: sorted.length,
-      };
+      const listed = [...collectionMap(collection).values()]
+        .map((r) => r.entry)
+        .filter((e) => e.listed);
+      return paginate(filterAndSort(listed, params), params);
     },
+
     async listAllEntries(collection) {
-      return readManifest(collection);
+      return [...collectionMap(collection).values()].map((r) => r.entry);
     },
+
     async listSlugs(collection) {
-      return (await readManifest(collection)).map((e) => e.slug);
+      return [...collectionMap(collection).keys()];
     },
+
+    async search(collection, query, params) {
+      const q = query.toLowerCase();
+      const matched = [...collectionMap(collection).values()]
+        .filter((r) => r.entry.listed && r.searchText?.toLowerCase().includes(q))
+        .map((r) => r.entry);
+      return paginate(filterAndSort(matched, params), params);
+    },
+
     async upsertEntry(collection, entry, knownExisting) {
+      const map = collectionMap(collection);
       const existing =
-        knownExisting !== undefined ? knownExisting : await findEntry(collection, entry.slug);
+        knownExisting !== undefined ? knownExisting : (map.get(entry.slug)?.entry ?? null);
       if (existing && existing.version === entry.version) {
         return { wrote: false, writes: 0 }; // Notion 側で何も変わっていない
       }
-
-      await docs.put(pointKey(collection, entry.slug), JSON.stringify(entry));
-      let writes = 1;
-
-      const manifestChanged =
-        !existing ||
-        existing.listed !== entry.listed ||
-        !deepEqualJson(
-          metaForManifestComparison(existing.meta),
-          metaForManifestComparison(entry.meta),
-        );
-      if (manifestChanged) {
-        const manifest = await readManifest(collection);
-        const idx = manifest.findIndex((e) => e.slug === entry.slug);
-        const next =
-          idx === -1 ? [...manifest, entry] : manifest.map((e, i) => (i === idx ? entry : e));
-        await docs.put(manifestKey(collection), JSON.stringify(next));
-        writes += 1;
-      }
-      return { wrote: true, writes };
+      const { searchText, ...indexEntry } = entry;
+      map.set(entry.slug, { entry: indexEntry, searchText });
+      return { wrote: true, writes: 1 };
     },
+
     async removeEntry(collection, slug) {
-      const existing = await findEntry(collection, slug);
-      if (!existing) {
-        // 点キーは既に無い。部分失敗や KV 伝播遅延でマニフェストにだけ slug が
-        // 残っている(orphan)可能性があるため検知して警告する(自己修復はしない)。
-        const manifest = await readManifest(collection);
-        if (manifest.some((e) => e.slug === slug)) {
-          logger?.warn?.(
-            "index の点キーとマニフェストが不整合です(マニフェストに orphan エントリ)",
-            { operation: "removeEntry", collection, slug },
-          );
-        }
-        return { wrote: false, writes: 0 };
-      }
-      await docs.delete(pointKey(collection, slug));
-      const manifest = await readManifest(collection);
-      await docs.put(
-        manifestKey(collection),
-        JSON.stringify(manifest.filter((e) => e.slug !== slug)),
-      );
-      return { wrote: true, writes: 2 };
+      const map = collectionMap(collection);
+      if (!map.has(slug)) return { wrote: false, writes: 0 };
+      map.delete(slug);
+      return { wrote: true, writes: 1 };
     },
   };
 }

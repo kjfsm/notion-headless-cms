@@ -19,7 +19,9 @@
   "dependencies": {
     "@notion-headless-cms/cms": "workspace:*",
     "@notion-headless-cms/react-renderer": "workspace:*",
+    "@notion-headless-cms/sql": "workspace:*",
     "katex": "catalog:",
+    "kysely-d1": "^0.4.0",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-router": "^7.15.1",

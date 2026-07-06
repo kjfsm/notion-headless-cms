@@ -16,9 +16,10 @@ order: 1
 ## アーキテクチャの前提
 
 `@notion-headless-cms/cms` は **読者リクエスト処理中に Notion API を一切呼ばない**。
-`find()`/`list()` は KV（index）/R2（entry 本体・画像）のマテリアライズドレプリカを読むだけで完結し、
-Notion との同期は webhook 駆動の非同期処理として別に走る。KV/R2 が無い環境（ローカル・お試し）では
-in-memory ストアに自動フォールバックするため、まずは Notion トークンだけで動かせる。
+`find()`/`list()`/`search()` は index（D1/SQLite/libSQL 等）/R2（entry 本体・画像）の
+マテリアライズドレプリカを読むだけで完結し、Notion との同期は webhook 駆動の非同期処理として
+別に走る。D1/R2 が無い環境（ローカル・お試し）では in-memory ストアに自動フォールバックするため、
+まずは Notion トークンだけで動かせる。
 
 ## インストール
 
@@ -62,7 +63,7 @@ npx nhc check  # スキーマと実 DB の drift を検証（CI 向け）
 
 `nhc pull`/`nhc init` が生成するファイルは既存ファイルを上書きしない。生成後は自分のコードとして育てていく運用で、以降 Notion 側でプロパティを追加・変更したら `schema.ts` を直接編集する。
 
-## 最小構成（Node・KV/R2 無し）
+## 最小構成（Node・D1/R2 無し）
 
 ```ts
 import { createCMS } from "@notion-headless-cms/cms";
@@ -87,20 +88,17 @@ if (post) {
 }
 ```
 
-`stores`（KV/R2）を省略すると in-memory ストアにフォールバックする。永続化やエッジ配信が必要になったら `stores: { docs, blobs }` を渡すだけでよい。
+`stores`（index/blobs）を省略すると in-memory ストアにフォールバックする。永続化やエッジ配信が必要になったら `stores: { index, blobs }` を渡すだけでよい。
 
 ## Cloudflare Workers の場合
 
-Workers + KV + R2 + Durable Objects で「読者用の stateless Worker」と「同期を直列化する Durable Object」を分離するのが既定の構成。`nhc init` はこの構成一式（`wrangler.toml`・`src/schema.ts`・Hono マウントコード）をそのまま生成する。
+Workers + D1 + R2 + Durable Objects で「読者用の stateless Worker」と「同期を直列化する Durable Object」を分離するのが既定の構成。`nhc init` はこの構成一式（`wrangler.toml`・`src/schema.ts`・Hono マウントコード）をそのまま生成する。index ストアは `@notion-headless-cms/sql/d1` の `d1IndexStore(env.DB, schema)`（`wrangler.toml` の `[[d1_databases]]` binding）を使う。
 
 ```ts
 // workers/sync-coordinator-do.ts（Notion 同期を担う DO）
 import { createCMS, createDurableObjectSyncScheduler } from "@notion-headless-cms/cms";
-import {
-  createSyncCoordinatorDO,
-  kvDocStore,
-  r2BlobStore,
-} from "@notion-headless-cms/cms/cloudflare";
+import { createSyncCoordinatorDO, r2BlobStore } from "@notion-headless-cms/cms/cloudflare";
+import { d1IndexStore } from "@notion-headless-cms/sql/d1";
 import { schema } from "../src/schema";
 
 export const SyncCoordinatorDO = createSyncCoordinatorDO<Env>({
@@ -109,7 +107,7 @@ export const SyncCoordinatorDO = createSyncCoordinatorDO<Env>({
       schema,
       notion: { token: env.NOTION_TOKEN },
       stores: {
-        docs: kvDocStore(env.DOC_INDEX),
+        index: d1IndexStore(env.DB, schema),
         blobs: r2BlobStore(env.ENTRY_BUCKET),
       },
       scheduler: createDurableObjectSyncScheduler(state),
@@ -118,20 +116,17 @@ export const SyncCoordinatorDO = createSyncCoordinatorDO<Env>({
 ```
 
 ```ts
-// workers/cms.ts（読者用 stateless Worker。KV/R2 読み取りのみ）
+// workers/cms.ts（読者用 stateless Worker。D1/R2 読み取りのみ）
 import { createCMS } from "@notion-headless-cms/cms";
-import {
-  durableObjectSyncDelegate,
-  kvDocStore,
-  r2BlobStore,
-} from "@notion-headless-cms/cms/cloudflare";
+import { durableObjectSyncDelegate, r2BlobStore } from "@notion-headless-cms/cms/cloudflare";
+import { d1IndexStore } from "@notion-headless-cms/sql/d1";
 import { schema } from "../src/schema";
 
 export function getCMS(env: Env) {
   return createCMS({
     schema,
     stores: {
-      docs: kvDocStore(env.DOC_INDEX),
+      index: d1IndexStore(env.DB, schema),
       blobs: r2BlobStore(env.ENTRY_BUCKET),
     },
     syncDelegate: durableObjectSyncDelegate({ namespace: env.SYNC_COORDINATOR }),

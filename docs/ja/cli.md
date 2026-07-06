@@ -45,7 +45,7 @@ Options:
 
 既存ファイルは上書きしない（生成物の所有権はユーザーに移る）。同じ理由で `nhc init` を再実行しても、書き換え済みのファイルは壊れない。作り直したい場合のみ `--force` を付ける。
 
-生成される `wrangler.toml` には KV namespace（既定 binding 名 `DOC_INDEX`）・R2 bucket（`ENTRY_BUCKET`）・Durable Object（`SyncCoordinatorDO` / binding `SYNC_COORDINATOR`）・日次 cron trigger が一通り雛形として入る。`REPLACE_WITH_...` になっている ID / bucket 名を実際の値に差し替える。
+生成される `wrangler.toml` には D1 database（既定 binding 名 `DB`）・R2 bucket（`ENTRY_BUCKET`）・Durable Object（`SyncCoordinatorDO` / binding `SYNC_COORDINATOR`）・日次 cron trigger が一通り雛形として入る。生成コードは `@notion-headless-cms/sql/d1` の `d1IndexStore(env.DB, schema)` を index ストアとして使う。`REPLACE_WITH_...` になっている ID / bucket 名を実際の値に差し替える。
 
 生成される `src/schema.ts` は最小の `posts` コレクション 1 つだけを持つ雛形。`dataSourceId` は `REPLACE_WITH_DATA_SOURCE_ID` のプレースホルダになっているため、対象 DB を用意してから `nhc pull` で実プロパティに合わせて仕上げるか、手で `dataSourceId` を書き換える。
 
@@ -198,7 +198,7 @@ Options:
 
 チェック項目:
 
-- **KV binding** / **R2 binding** / **Durable Object binding** — `wrangler.toml` に必要な binding が揃っているか（欠けていれば `error`）
+- **D1 binding** / **R2 binding** / **Durable Object binding** — `wrangler.toml` に必要な binding が揃っているか（欠けていれば `error`）
 - **Webhook secret** — 未設定なら `warn`（反映が差分ポーリング頼みになり遅延するため）
 - **Notion token** — `--stats-url` 等から到達できる場合に有効性を検証。検証できない場合は `warn`
 - **同期失敗** — 直近の同期失敗件数（`--stats-url` の同期統計から取得。1 件以上で `warn`）
@@ -212,7 +212,7 @@ Options:
 npx nhc sync
 ```
 
-`schemaModule` の全コレクションをローカルファイルストア（`cacheDir`）へ同期する。動作確認・初回の疎通確認のための経路で、KV/R2 への実書き込みは行わない。CLI プロセス内で `cursor` が尽きるまで同期をループ実行し、完了してからプロセスを終了する（Worker 側の chunked sync のような自己継続待ちはしない）。
+`schemaModule` の全コレクションをローカルファイルストア（`cacheDir`）へ同期する。動作確認・初回の疎通確認のための経路で、D1/R2 への実書き込みは行わない。CLI プロセス内で `cursor` が尽きるまで同期をループ実行し、完了してからプロセスを終了する（Worker 側の chunked sync のような自己継続待ちはしない）。
 
 ```
 Options:

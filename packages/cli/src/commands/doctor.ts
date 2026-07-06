@@ -33,7 +33,7 @@ export interface DoctorOptions {
 }
 
 interface WranglerBindings {
-  readonly kv: boolean;
+  readonly d1: boolean;
   readonly r2: boolean;
   readonly durableObject: boolean;
 }
@@ -51,7 +51,7 @@ function stripTomlComments(text: string): string {
 }
 
 /**
- * wrangler.toml のテキストを見て KV/R2/DO の binding 宣言有無を静的にチェックする。
+ * wrangler.toml のテキストを見て D1/R2/DO の binding 宣言有無を静的にチェックする。
  * 実際のバインディング疎通(ランタイム)ではなく設定ファイル上の宣言確認に留める
  * (`doctor.ts` の remediation メッセージが想定する対処 = wrangler.toml への追記)。
  */
@@ -60,11 +60,11 @@ async function detectWranglerBindings(wranglerPath: string): Promise<WranglerBin
   try {
     text = await fs.readFile(wranglerPath, "utf-8");
   } catch {
-    return { kv: false, r2: false, durableObject: false };
+    return { d1: false, r2: false, durableObject: false };
   }
   text = stripTomlComments(text);
   return {
-    kv: /kv_namespaces\s*=/.test(text),
+    d1: /d1_databases\s*=/.test(text),
     r2: /r2_buckets\s*=/.test(text),
     durableObject: /\[\[durable_objects\.bindings]]/.test(text),
   };

@@ -1,6 +1,6 @@
 ---
 title: React Router (Cloudflare Workers)
-description: React Router v7 + Workers + R2 + KV で Notion を React として描画する
+description: React Router v7 + Workers + R2 + D1 で Notion を React として描画する
 category: レシピ
 order: 3
 ---
@@ -14,7 +14,7 @@ React として描画する構成。完全に動く実装は
 
 このレシピのゴール:
 
-- loader で `cms.posts.find()` / `cms.posts.list()` を呼ぶ（KV/R2 を読むだけ、Notion API は呼ばない）
+- loader で `cms.posts.find()` / `cms.posts.list()` を呼ぶ（D1/R2 を読むだけ、Notion API は呼ばない）
 - `post.blocks` を `denormalizeBlocks()` で変換し `<NotionRenderer>` に渡す
 - Notion 更新を `useNotionRevalidate()` で静かに画面反映する
 - 画像プロキシ・OGP・Webhook を `cms.fetch()` 1 つで配信する
@@ -26,8 +26,8 @@ React として描画する構成。完全に動く実装は
 ## インストール
 
 ```bash
-pnpm add @notion-headless-cms/cms @notion-headless-cms/react-renderer @notionhq/client
-pnpm add -D @notion-headless-cms/cli
+pnpm add @notion-headless-cms/cms @notion-headless-cms/react-renderer @notion-headless-cms/sql @notionhq/client
+pnpm add -D @notion-headless-cms/cli kysely-d1
 ```
 
 ## スキーマ定義
@@ -63,9 +63,10 @@ compatibility_date = "2026-04-22"
 compatibility_flags = ["nodejs_compat"]
 assets = { directory = "./build/client" }
 
-[[kv_namespaces]]
-binding = "DOC_CACHE"
-id = "xxxxxxxxxxxxxxxxxxxx"
+[[d1_databases]]
+binding = "DB"
+database_name = "my-app"
+database_id = "xxxxxxxxxxxxxxxxxxxx"
 
 [[r2_buckets]]
 binding = "IMG_BUCKET"
@@ -82,17 +83,18 @@ wrangler secret put NOTION_TOKEN   # 本番
 ```ts
 // app/lib/cms.ts
 import { createCMS, createNodeSyncScheduler } from "@notion-headless-cms/cms";
-import { kvDocStore, r2BlobStore } from "@notion-headless-cms/cms/cloudflare";
+import { r2BlobStore } from "@notion-headless-cms/cms/cloudflare";
+import { d1IndexStore } from "@notion-headless-cms/sql/d1";
 import { schema } from "../schema.js";
 
 export interface Env {
   readonly NOTION_TOKEN: string;
-  readonly DOC_CACHE: KVNamespace;
+  readonly DB: D1Database;
   readonly IMG_BUCKET: R2Bucket;
 }
 
 /**
- * KV/R2 は永続化されるが、同期カーソル自体は Worker isolate 内の
+ * D1/R2 は永続化されるが、同期カーソル自体は Worker isolate 内の
  * `createNodeSyncScheduler()`（setTimeout ベース、Workers ランタイムでも動く）に
  * 保持するため isolate が入れ替わると失われる。差分クエリは既存 version と
  * 一致すれば打ち切るため、この場合の再同期は「再検証クエリ 1 回」で済み、
@@ -103,7 +105,7 @@ export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void })
     schema,
     notion: { token: env.NOTION_TOKEN },
     stores: {
-      docs: kvDocStore(env.DOC_CACHE),
+      index: d1IndexStore(env.DB, schema),
       blobs: r2BlobStore(env.IMG_BUCKET),
     },
     scheduler: createNodeSyncScheduler(),

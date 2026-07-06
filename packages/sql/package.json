@@ -1,0 +1,100 @@
+{
+  "name": "@notion-headless-cms/sql",
+  "version": "0.1.0",
+  "description": "@notion-headless-cms/cms 向け D1/SQLite/libSQL(Kysely) IndexStore 実装 — 全文検索(FTS5)対応",
+  "keywords": [
+    "cms",
+    "d1",
+    "headless-cms",
+    "kysely",
+    "notion",
+    "sql",
+    "typescript"
+  ],
+  "homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
+  "bugs": {
+    "url": "https://github.com/kjfsm/notion-headless-cms/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kjfsm/notion-headless-cms.git",
+    "directory": "packages/sql"
+  },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.mts",
+      "import": "./dist/index.mjs"
+    },
+    "./d1": {
+      "types": "./dist/d1.d.mts",
+      "import": "./dist/d1.mjs"
+    },
+    "./sqlite": {
+      "types": "./dist/sqlite.d.mts",
+      "import": "./dist/sqlite.mjs"
+    },
+    "./libsql": {
+      "types": "./dist/libsql.d.mts",
+      "import": "./dist/libsql.mjs"
+    }
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
+  "scripts": {
+    "build": "tsdown src/index.ts src/d1.ts src/sqlite.ts src/libsql.ts --format esm --dts --sourcemap --out-dir dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.reporter=lcov --coverage.reporter=text",
+    "publint": "publint --strict",
+    "attw": "attw --pack . --profile esm-only",
+    "release:local": "pnpm publish --no-provenance --no-git-checks"
+  },
+  "dependencies": {
+    "@notion-headless-cms/cms": "workspace:*",
+    "kysely": "catalog:"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260615.1",
+    "@libsql/kysely-libsql": "^0.4.1",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "catalog:",
+    "better-sqlite3": "^12.4.1",
+    "kysely-d1": "^0.4.0",
+    "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "@cloudflare/workers-types": "^4",
+    "@libsql/kysely-libsql": "^0.4.0",
+    "better-sqlite3": ">=11",
+    "kysely-d1": "^0.4.0",
+    "vitest": "^4"
+  },
+  "peerDependenciesMeta": {
+    "@cloudflare/workers-types": {
+      "optional": true
+    },
+    "@libsql/kysely-libsql": {
+      "optional": true
+    },
+    "better-sqlite3": {
+      "optional": true
+    },
+    "kysely-d1": {
+      "optional": true
+    },
+    "vitest": {
+      "optional": true
+    }
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}

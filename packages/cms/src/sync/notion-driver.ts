@@ -15,6 +15,7 @@ import { publishVersionUpdate } from "../realtime.js";
 import type { EntryStore } from "../store/entry-store.js";
 import type { IndexStore } from "../store/index-store.js";
 import type { BlobStore } from "../store/types.js";
+import { extractPlainText } from "../transforms/plain-text.js";
 import type { IndexEntry } from "../types/collection-index.js";
 import type { CollectionDef } from "../types/collection.js";
 import type { EntrySnapshot, ImageMapEntry } from "../types/entry-snapshot.js";
@@ -379,6 +380,7 @@ export function createCollectionDriver(deps: CollectionDriverDeps): CollectionDr
         version: page.last_edited_time,
         listed: isListed(def, status),
         meta,
+        searchText: extractPlainText(transformed),
       },
       knownExisting,
     );

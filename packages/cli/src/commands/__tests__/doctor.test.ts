@@ -30,7 +30,7 @@ const { runDoctor } = await import("../doctor.js");
 
 const WRANGLER_TOML = `
 name = "example"
-kv_namespaces = [{ binding = "DOC_INDEX", id = "abc" }]
+d1_databases = [{ binding = "DB", database_name = "example", database_id = "abc" }]
 r2_buckets = [{ binding = "ENTRY_BUCKET", bucket_name = "abc" }]
 
 [[durable_objects.bindings]]
@@ -89,7 +89,7 @@ describe("runDoctor", () => {
   it("コメントアウトされた binding 宣言は「宣言あり」と誤検出しない", async () => {
     const commentedOutToml = `
 name = "example"
-# kv_namespaces = [{ binding = "DOC_INDEX", id = "abc" }]
+# d1_databases = [{ binding = "DB", database_name = "example", database_id = "abc" }]
   # r2_buckets = [{ binding = "ENTRY_BUCKET", bucket_name = "abc" }]
 
 # [[durable_objects.bindings]]

@@ -17,7 +17,9 @@
   },
   "dependencies": {
     "@notion-headless-cms/cms": "workspace:*",
-    "astro": "^6.3.4"
+    "@notion-headless-cms/sql": "workspace:*",
+    "astro": "^6.3.4",
+    "kysely-d1": "^0.4.0"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",

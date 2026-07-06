@@ -71,6 +71,7 @@ export function createMemoizedPageIndex(
     listEntries: (collection, params) => indexStore.listEntries(collection, params),
     listAllEntries: (collection) => indexStore.listAllEntries(collection),
     listSlugs: (collection) => indexStore.listSlugs(collection),
+    search: (collection, query, params) => indexStore.search(collection, query, params),
     async upsertEntry(collection, entry, knownExisting) {
       const result = await indexStore.upsertEntry(collection, entry, knownExisting);
       if (result.wrote) invalidate();

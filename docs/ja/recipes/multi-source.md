@@ -105,6 +105,6 @@ export const schema = defineSchema({ posts, news, siteTexts });
 
 ## 関連ドキュメント
 
-- [Cloudflare Workers + R2 + KV](./cloudflare-workers.md)
+- [Cloudflare Workers + R2 + D1](./cloudflare-workers.md)
 - [Node.js スクリプト](./nodejs-script.md)
 - [CMS メソッド一覧](../api/cms-methods.md)

@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { isCMSError } from "../../errors.js";
 import { createEntryStore } from "../../store/entry-store.js";
-import { createIndexStore } from "../../store/index-store.js";
-import { memoryBlobStore, memoryDocStore } from "../../store/memory.js";
+import { memoryIndexStore } from "../../store/index-store.js";
+import { memoryBlobStore } from "../../store/memory.js";
 import { defineCollection } from "../../types/collection.js";
 import { prop } from "../../types/property.js";
 import type { NotionClientLike } from "../notion-driver.js";
@@ -73,10 +73,9 @@ function makeClient(overrides: Partial<NotionClientLike> = {}): NotionClientLike
 }
 
 function makeDeps() {
-  const docs = memoryDocStore();
   const blobs = memoryBlobStore();
   const entryStore = createEntryStore(blobs);
-  const indexStore = createIndexStore(docs);
+  const indexStore = memoryIndexStore();
   const rateLimiter = createRateLimiter({ requestsPerSecond: 1000 });
   return { entryStore, indexStore, blobs, rateLimiter };
 }
@@ -550,7 +549,7 @@ describe("createCollectionDriver", () => {
     expect(snapshot?.images[hash]).toMatchObject({ contentType: "image/png" });
   });
 
-  it("listChanged→syncEntry の経路で index 点キーを二重読みしない(KV read 節約)", async () => {
+  it("listChanged→syncEntry の経路で index を二重読みしない(indexStore read 節約)", async () => {
     const notionPage = page({ id: "p1", slug: "hello" });
     const client = makeClient({
       dataSources: {
@@ -561,30 +560,28 @@ describe("createCollectionDriver", () => {
         }),
       },
     });
-    const docs = memoryDocStore();
-    const readKeys: string[] = [];
-    const originalGet = docs.get.bind(docs);
-    docs.get = async (key) => {
-      readKeys.push(key);
-      return originalGet(key);
-    };
     const blobs = memoryBlobStore();
+    const indexStore = memoryIndexStore();
+    const findEntrySpy = vi.spyOn(indexStore, "findEntry");
     const driver = createCollectionDriver({
       collection: "posts",
       def,
       client,
       rateLimiter: createRateLimiter({ requestsPerSecond: 1000 }),
       entryStore: createEntryStore(blobs),
-      indexStore: createIndexStore(docs),
+      indexStore,
       blobs,
     });
 
     const { changes } = await driver.listChanged(null, 10);
     const [change] = changes;
     if (!change) throw new Error("change が空です");
+    findEntrySpy.mockClear(); // listChanged 自体の呼び出し回数は本テストの対象外
     await driver.syncEntry(change);
 
-    expect(readKeys.filter((k) => k === "entry-index:posts:hello")).toHaveLength(1);
+    // syncEntry は listChanged が読んだ chunkIndexCache を再利用するため、
+    // upsertEntry 内部での再読み込み(findEntry)は発生しない。
+    expect(findEntrySpy).not.toHaveBeenCalled();
   });
 
   it("画像 put 時に寸法を customMetadata へ保存し、以降の同期は本体を再取得しない", async () => {

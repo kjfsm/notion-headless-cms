@@ -1,23 +1,5 @@
-import type { KVNamespaceLike, R2BucketLike } from "./cloudflare-types.js";
-import type { BlobGetResult, BlobHead, BlobPutOptions, BlobStore, DocStore } from "./types.js";
-
-/**
- * KV を `DocStore` として使う(コレクション index 用)。KV は結果整合(`types.ts` の
- * `DocStore` コメント参照)なため、書き込み直後の読み取りが古い値を返す場合がある。
- */
-export function kvDocStore(namespace: KVNamespaceLike): DocStore {
-  return {
-    async get(key) {
-      return namespace.get(key, "text");
-    },
-    async put(key, value) {
-      await namespace.put(key, value);
-    },
-    async delete(key) {
-      await namespace.delete(key);
-    },
-  };
-}
+import type { R2BucketLike } from "./cloudflare-types.js";
+import type { BlobGetResult, BlobHead, BlobPutOptions, BlobStore } from "./types.js";
 
 /** R2 を `BlobStore` として使う(entry 本体・画像用)。read-after-write 強整合を前提にする。 */
 export function r2BlobStore(bucket: R2BucketLike): BlobStore {

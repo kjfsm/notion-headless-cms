@@ -11,11 +11,12 @@ paths:
 ```
 @notion-headless-cms/cms（Notion アクセス・同期・ストレージ・HTTP 配信を1パッケージに統合）
   ├─ @notion-headless-cms/react-renderer（BlockObjectResponse→React、shadcn/ui + Tailwind v4）
-  └─ @notion-headless-cms/cli（nhc pull/check/doctor/sync/init）
+  ├─ @notion-headless-cms/cli（nhc pull/check/doctor/sync/init）
+  └─ @notion-headless-cms/sql（D1/SQLite/libSQL 向け IndexStore 実装。Kysely）
 ```
 
 - `packages/cms` は他の workspace パッケージに依存しない独立パッケージ（`dependencies` にワークスペース内パッケージを持たない。peerDependencies は `@notionhq/client` / `katex` / `shiki` / `vitest` のみ）。詳細: `.claude/rules/cms.md`
-- `react-renderer` / `cli` はいずれも `@notion-headless-cms/cms`（`workspace:*`）にのみ依存する
+- `react-renderer` / `cli` / `sql` はいずれも `@notion-headless-cms/cms`（`workspace:*`）にのみ依存する（`sql` は Kysely・dialect ドライバを追加で持つが、それらは `cms` に伝播しない）
 
 ## 重要なルール
 

@@ -17,8 +17,9 @@ export interface InitOptions {
 }
 
 const NEXT_STEPS = [
-  "依存を追加: pnpm add @notion-headless-cms/cms hono",
-  "wrangler.toml の KV namespace ID / R2 bucket 名 (REPLACE_WITH_...) を実際の値に差し替える",
+  "依存を追加: pnpm add @notion-headless-cms/cms @notion-headless-cms/sql hono",
+  "wrangler d1 create <name> で D1 データベースを作成し、wrangler.toml の database_id (REPLACE_WITH_...) を差し替える",
+  "wrangler.toml の R2 bucket 名 (REPLACE_WITH_...) を実際の値に差し替える",
   "NOTION_TOKEN を .dev.vars に設定する (wrangler dev が自動読込)",
   "src/schema.ts の dataSourceId (REPLACE_WITH_DATA_SOURCE_ID) を実際の data source ID に差し替える",
   "nhc.config.ts の collections.posts.dbName を編集する (nhc pull/nhc check で使う)",

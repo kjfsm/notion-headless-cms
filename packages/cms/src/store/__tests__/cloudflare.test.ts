@@ -1,32 +1,8 @@
 import { describe } from "vitest";
 
-import type { KVNamespaceLike, R2BucketLike, R2ObjectLike } from "../cloudflare-types.js";
-import { kvDocStore, r2BlobStore } from "../cloudflare.js";
-import {
-  runBlobStoreContract,
-  runBlobStoreMetadataContract,
-  runDocStoreContract,
-} from "../contract.js";
-
-function fakeKvNamespace(): KVNamespaceLike {
-  const store = new Map<string, string>();
-  return {
-    async get(key) {
-      return store.get(key) ?? null;
-    },
-    async put(key, value) {
-      store.set(key, value);
-    },
-    async delete(key) {
-      store.delete(key);
-    },
-    async list(opts) {
-      const prefix = opts?.prefix ?? "";
-      const keys = [...store.keys()].filter((k) => k.startsWith(prefix)).map((name) => ({ name }));
-      return { keys, list_complete: true };
-    },
-  };
-}
+import type { R2BucketLike, R2ObjectLike } from "../cloudflare-types.js";
+import { r2BlobStore } from "../cloudflare.js";
+import { runBlobStoreContract, runBlobStoreMetadataContract } from "../contract.js";
 
 function fakeR2Bucket(): R2BucketLike {
   const store = new Map<
@@ -70,10 +46,6 @@ function fakeR2Bucket(): R2BucketLike {
     },
   };
 }
-
-describe("DocStore contract: KV (fake)", () => {
-  runDocStoreContract({ factory: () => kvDocStore(fakeKvNamespace()) });
-});
 
 describe("BlobStore contract: R2 (fake)", () => {
   runBlobStoreContract({ factory: () => r2BlobStore(fakeR2Bucket()) });

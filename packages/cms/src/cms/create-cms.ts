@@ -12,13 +12,15 @@ import type { ColdStartFetch } from "../query/find.js";
 import { findEntry } from "../query/find.js";
 import type { ListRuntimeParams } from "../query/list.js";
 import { listEntries } from "../query/list.js";
+import { searchEntries } from "../query/search.js";
 import type { SyncStats } from "../query/stats.js";
 import { getSyncStats } from "../query/stats.js";
 import type { RealtimeAdapter } from "../realtime.js";
 import { createEntryStore } from "../store/entry-store.js";
-import { createIndexStore } from "../store/index-store.js";
-import { memoryBlobStore, memoryDocStore } from "../store/memory.js";
-import type { BlobStore, DocStore } from "../store/types.js";
+import type { IndexStore } from "../store/index-store.js";
+import { memoryIndexStore } from "../store/index-store.js";
+import { memoryBlobStore } from "../store/memory.js";
+import type { BlobStore } from "../store/types.js";
 import type { VersionedCacheLayer } from "../store/versioned-cache.js";
 import type { SyncScheduler } from "../sync-scheduler.js";
 import type { SyncState } from "../sync/coordinator.js";
@@ -47,8 +49,12 @@ export interface CreateCMSNotionOptions {
 }
 
 export interface CreateCMSStoresOptions {
-  /** index 用ストア。省略時は in-memory（`memoryDocStore()`）にフォールバックする。 */
-  readonly docs?: DocStore;
+  /**
+   * コレクション index ストア。省略時は in-memory（`memoryIndexStore()`）にフォールバックする。
+   * 永続化・スケール・全文検索が要る場合は `@notion-headless-cms/sql` の
+   * `d1IndexStore`/`sqliteIndexStore`/`libsqlIndexStore` を渡す。
+   */
+  readonly index?: IndexStore;
   /** entry 本体・画像用ストア。省略時は in-memory（`memoryBlobStore()`）にフォールバックする。 */
   readonly blobs?: BlobStore;
   readonly versionedCache?: VersionedCacheLayer;
@@ -161,6 +167,11 @@ export interface CollectionHandle<C extends CollectionDef> {
    */
   find: (slug: string) => Promise<CollectionEntrySnapshot<C> | null>;
   list: (params?: ListParams<C["properties"]>) => Promise<ListResult<CollectionIndexEntry<C>>>;
+  /** `upsertEntry` に渡した `searchText`（本文平文）への全文検索。`where`/`sort`/`cursor`/`limit` も併用できる。 */
+  search: (
+    query: string,
+    params?: ListParams<C["properties"]>,
+  ) => Promise<ListResult<CollectionIndexEntry<C>>>;
 }
 
 type CollectionHandles<C extends CollectionMap> = {
@@ -249,15 +260,15 @@ function toRuntimeListParams(params: unknown): ListRuntimeParams {
  * const cms = createCMS({
  *   schema,
  *   notion: { token: env.NOTION_TOKEN },
- *   stores: { docs: kvDocStore(env.DOC_INDEX), blobs: r2BlobStore(env.ENTRY_BUCKET) },
+ *   stores: { index: d1IndexStore(env.DB, schema), blobs: r2BlobStore(env.ENTRY_BUCKET) },
  *   scheduler,
  *   transforms: [createShikiTransform(), createKatexTransform()],
  * });
  * const post = await cms.posts.find(slug); // EntrySnapshot<InferEntry<...>> | null
  * ```
  *
- * `stores`/`scheduler` は省略でき、その場合は in-memory ストア（`memoryDocStore()`/
- * `memoryBlobStore()`）と `createNodeSyncScheduler()` にフォールバックする。KV/R2/DO が
+ * `stores`/`scheduler` は省略でき、その場合は in-memory ストア（`memoryIndexStore()`/
+ * `memoryBlobStore()`）と `createNodeSyncScheduler()` にフォールバックする。D1/R2/DO が
  * 無い環境でも最低限動作し（cold start ごとに Notion から再同期・永続なし）、バインディングを
  * 足すと永続化・高速化される。
  *
@@ -290,12 +301,11 @@ export function createCMS<const S extends SchemaDef>(opts: CreateCMSOptions<S>):
     }
   }
 
-  const docs = opts.stores?.docs ?? memoryDocStore();
+  const indexStore = opts.stores?.index ?? memoryIndexStore();
   const blobs = opts.stores?.blobs ?? memoryBlobStore();
   const versionedCache = opts.stores?.versionedCache;
   const logger = createLeveledLogger(opts.logger, opts.logLevel);
   const entryStore = createEntryStore(blobs);
-  const indexStore = createIndexStore(docs, logger);
   const routes = opts.routes ?? "/api/cms";
   const imagesPath = opts.imagesPath ?? "/images";
   // buildPageIndex は全コレクションの manifest を丸ごと読み直す重い処理なので、
@@ -409,6 +419,7 @@ export function createCMS<const S extends SchemaDef>(opts: CreateCMSOptions<S>):
     {
       find: (slug: string) => Promise<unknown>;
       list: (params?: unknown) => Promise<ListResult<IndexEntry>>;
+      search: (query: string, params?: unknown) => Promise<ListResult<IndexEntry>>;
     }
   > = {};
   for (const collection of collectionKeys) {
@@ -428,6 +439,9 @@ export function createCMS<const S extends SchemaDef>(opts: CreateCMSOptions<S>):
       },
       async list(params?: unknown) {
         return listEntries(indexStore, collection, toRuntimeListParams(params));
+      },
+      async search(query: string, params?: unknown) {
+        return searchEntries(indexStore, collection, query, toRuntimeListParams(params));
       },
     };
   }

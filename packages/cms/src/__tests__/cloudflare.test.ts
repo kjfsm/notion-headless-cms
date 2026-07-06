@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 
 import { cloudflareStores, edgeVersionedCache } from "../cloudflare.js";
-import type { KVNamespaceLike } from "../store/cloudflare-types.js";
 import type { VersionedCacheLike } from "../store/versioned-cache.js";
 
 function makeFakeCache(): VersionedCacheLike {
@@ -35,47 +34,9 @@ describe("edgeVersionedCache", () => {
   });
 });
 
-function makeFakeKv(): { kv: Map<string, string>; namespace: KVNamespaceLike } {
-  const kv = new Map<string, string>();
-  return {
-    kv,
-    namespace: {
-      async get(key) {
-        return kv.get(key) ?? null;
-      },
-      async put(key, value) {
-        kv.set(key, value);
-      },
-      async delete(key) {
-        kv.delete(key);
-      },
-      async list() {
-        return { keys: [], list_complete: true };
-      },
-    },
-  };
-}
-
 describe("cloudflareStores", () => {
-  it("バインディングがある slot は KV/R2 ストア、無い slot はメモリにフォールバックする", async () => {
-    const { kv, namespace } = makeFakeKv();
-
-    const stores = cloudflareStores({ docs: namespace });
-
-    // docs は渡した KV バインディングへ書き込まれる
-    await stores.docs?.put("k", "v");
-    expect(kv.get("k")).toBe("v");
-
-    // blobs は省略したのでメモリ BlobStore（バインディング無しで読み書きできる）
-    await stores.blobs?.put("img", new Uint8Array([1, 2, 3]));
-    expect(await stores.blobs?.get("img")).toEqual(new Uint8Array([1, 2, 3]));
-  });
-
-  it("docs/blobs 未指定でもメモリストアで動作する（bindingless）", async () => {
+  it("blobs 未指定でもメモリストアで動作する（bindingless）", async () => {
     const stores = cloudflareStores({});
-
-    await stores.docs?.put("k", "v");
-    expect(await stores.docs?.get("k")).toBe("v");
 
     await stores.blobs?.put("b", new Uint8Array([9]));
     expect(await stores.blobs?.get("b")).toEqual(new Uint8Array([9]));

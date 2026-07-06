@@ -1,6 +1,6 @@
 export interface DoctorInput {
   readonly bindings: {
-    readonly kv: boolean;
+    readonly d1: boolean;
     readonly r2: boolean;
     readonly durableObject: boolean;
   };
@@ -39,17 +39,17 @@ export function runDoctorChecks(input: DoctorInput): DoctorReport {
   const checks: DoctorCheck[] = [];
 
   checks.push(
-    input.bindings.kv
+    input.bindings.d1
       ? {
-          name: "KV binding",
+          name: "D1 binding",
           status: "ok",
-          message: "KV namespace が bind されています",
+          message: "D1 database が bind されています",
         }
       : {
-          name: "KV binding",
+          name: "D1 binding",
           status: "error",
-          message: "KV namespace が見つかりません",
-          remediation: "wrangler.toml に index 用 KV namespace の binding を追加してください",
+          message: "D1 database が見つかりません",
+          remediation: "wrangler.toml に index 用 D1 database の binding を追加してください",
         },
   );
 

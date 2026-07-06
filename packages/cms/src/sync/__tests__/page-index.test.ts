@@ -1,8 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { IndexStore } from "../../store/index-store.js";
-import { createIndexStore } from "../../store/index-store.js";
-import { memoryDocStore } from "../../store/memory.js";
+import { memoryIndexStore } from "../../store/index-store.js";
 import { defineCollection, defineSchema } from "../../types/collection.js";
 import { prop } from "../../types/property.js";
 import { buildPageIndex, createMemoizedPageIndex } from "../page-index.js";
@@ -23,8 +22,7 @@ const schema = defineSchema({ posts, news });
 
 describe("buildPageIndex", () => {
   it("各コレクションの title 型プロパティを検出して title を組み立てる", async () => {
-    const docs = memoryDocStore();
-    const indexStore = createIndexStore(docs);
+    const indexStore = memoryIndexStore();
     await indexStore.upsertEntry("posts", {
       slug: "hello",
       version: "v1",
@@ -56,8 +54,7 @@ describe("buildPageIndex", () => {
   });
 
   it("id が meta に無いエントリはスキップする", async () => {
-    const docs = memoryDocStore();
-    const indexStore = createIndexStore(docs);
+    const indexStore = memoryIndexStore();
     await indexStore.upsertEntry("posts", {
       slug: "no-id",
       version: "v1",
@@ -74,8 +71,7 @@ describe("buildPageIndex", () => {
       slug: "slug",
       properties: { slug: prop.richText(), value: prop.number() },
     });
-    const docs = memoryDocStore();
-    const indexStore = createIndexStore(docs);
+    const indexStore = memoryIndexStore();
     await indexStore.upsertEntry("dataOnly", {
       slug: "d1",
       version: "v1",
@@ -91,8 +87,7 @@ describe("buildPageIndex", () => {
   });
 
   it("index が空のコレクションは何も追加しない", async () => {
-    const docs = memoryDocStore();
-    const indexStore = createIndexStore(docs);
+    const indexStore = memoryIndexStore();
     const pageIndex = await buildPageIndex(schema, indexStore);
     expect(pageIndex).toEqual({});
   });
@@ -105,8 +100,7 @@ describe("createMemoizedPageIndex", () => {
   }
 
   it("manifest への書き込みが無い限り buildPageIndex を再実行しない", async () => {
-    const docs = memoryDocStore();
-    const indexStore = createIndexStore(docs);
+    const indexStore = memoryIndexStore();
     await indexStore.upsertEntry("posts", {
       slug: "hello",
       version: "v1",
@@ -125,8 +119,7 @@ describe("createMemoizedPageIndex", () => {
   });
 
   it("driverIndexStore 経由の書き込み(wrote:true)があればキャッシュを無効化する", async () => {
-    const docs = memoryDocStore();
-    const indexStore = createIndexStore(docs);
+    const indexStore = memoryIndexStore();
     const listAllEntries = spyListAllEntries(indexStore);
     const { pageIndex, indexStore: driverIndexStore } = createMemoizedPageIndex(schema, indexStore);
 
@@ -152,8 +145,7 @@ describe("createMemoizedPageIndex", () => {
   });
 
   it("差分が無い書き込み(wrote:false)はキャッシュを無効化しない", async () => {
-    const docs = memoryDocStore();
-    const indexStore = createIndexStore(docs);
+    const indexStore = memoryIndexStore();
     const entry = {
       slug: "hello",
       version: "v1",

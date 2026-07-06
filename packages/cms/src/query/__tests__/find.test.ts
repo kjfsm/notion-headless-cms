@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { createEntryStore } from "../../store/entry-store.js";
-import { createIndexStore } from "../../store/index-store.js";
-import { memoryBlobStore, memoryDocStore } from "../../store/memory.js";
+import { memoryIndexStore } from "../../store/index-store.js";
+import { memoryBlobStore } from "../../store/memory.js";
 import type { VersionedCacheLike } from "../../store/versioned-cache.js";
 import { createVersionedCacheLayer } from "../../store/versioned-cache.js";
 import type { EntrySnapshot } from "../../types/entry-snapshot.js";
@@ -23,7 +23,7 @@ function snapshot(overrides: Partial<EntrySnapshot> = {}): EntrySnapshot<{ title
 
 describe("findEntry", () => {
   it("index にあり R2 にも entry があれば返す(キャッシュヒット時は Notion API を一切呼ばない)", async () => {
-    const indexStore = createIndexStore(memoryDocStore());
+    const indexStore = memoryIndexStore();
     const entryStore = createEntryStore(memoryBlobStore());
     await indexStore.upsertEntry("posts", {
       slug: "hello",
@@ -45,7 +45,7 @@ describe("findEntry", () => {
   });
 
   it("index に無ければ coldStartFetch にフォールバックする(コールドスタート)", async () => {
-    const indexStore = createIndexStore(memoryDocStore());
+    const indexStore = memoryIndexStore();
     const entryStore = createEntryStore(memoryBlobStore());
     const coldStartFetch = vi.fn().mockResolvedValue(snapshot());
 
@@ -55,14 +55,14 @@ describe("findEntry", () => {
   });
 
   it("coldStartFetch が無い場合、未マテリアライズなら null を返す", async () => {
-    const indexStore = createIndexStore(memoryDocStore());
+    const indexStore = memoryIndexStore();
     const entryStore = createEntryStore(memoryBlobStore());
     const result = await findEntry({ entryStore, indexStore }, "posts", "hello");
     expect(result).toBeNull();
   });
 
   it("index にあるが R2 に entry が無い不整合を検知して警告する", async () => {
-    const indexStore = createIndexStore(memoryDocStore());
+    const indexStore = memoryIndexStore();
     const entryStore = createEntryStore(memoryBlobStore());
     await indexStore.upsertEntry("posts", {
       slug: "hello",
@@ -87,7 +87,7 @@ describe("findEntry", () => {
   });
 
   it("versioned cache にヒットすればそこから返す(R2 を読まない)", async () => {
-    const indexStore = createIndexStore(memoryDocStore());
+    const indexStore = memoryIndexStore();
     const entryStore = createEntryStore(memoryBlobStore());
     await indexStore.upsertEntry("posts", {
       slug: "hello",
@@ -118,7 +118,7 @@ describe("findEntry", () => {
   });
 
   it("戻り値は JSON.stringify / structuredClone ラウンドトリップ可能", async () => {
-    const indexStore = createIndexStore(memoryDocStore());
+    const indexStore = memoryIndexStore();
     const entryStore = createEntryStore(memoryBlobStore());
     await indexStore.upsertEntry("posts", {
       slug: "hello",

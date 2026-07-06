@@ -39,21 +39,28 @@ Cloudflare 対応はランタイム専用のファクトリではなく、`@noti
 
 ### @notion-headless-cms/cms/cloudflare（サブパス）
 
-`packages/cms/src/cloudflare.ts` に実装がある。
+`packages/cms/src/cloudflare.ts` に実装がある。index 用ストア（D1）はここには無い
+（`cms` はゼロ依存原則のため Kysely 実装を持てない。`@notion-headless-cms/sql/d1` を参照）。
 
-- `kvDocStore(namespace)` / `r2BlobStore(bucket)` — KV をドキュメントインデックス、R2 をエントリ本体・画像バイナリのストアとして返す（`createCMS({ stores: { docs, blobs } })` に渡す）
-- `KVNamespaceLike` / `R2BucketLike` / `R2ObjectLike` — 構造型。`@cloudflare/workers-types` に実依存しない
+- `r2BlobStore(bucket)` — R2 をエントリ本体・画像バイナリのストアとして返す（`createCMS({ stores: { blobs } })` に渡す）
+- `cloudflareStores({ blobs, cache })` — R2/Cache API バインディングから `blobs`/`versionedCache` を組み立てるヘルパー（`index` は含まない。`d1IndexStore` と併せて渡す）
+- `R2BucketLike` / `R2ObjectLike` — 構造型。`@cloudflare/workers-types` に実依存しない
 - `createSyncCoordinatorDO({ createCMS })` — Notion アクセスを直列化する同期エンジンを Durable Object として export するファクトリ。DO は `POST /kick` `/webhook` `/reconcile`・`GET /state` `/stats` の内部エンドポイントと `alarm()` を持つ
 - `durableObjectSyncDelegate({ stub })` — 読者用 stateless Worker 側の `createCMS({ syncDelegate })` に渡す、DO stub への転送実装（`createSyncCoordinatorDO` が作る DO クラスと対になる）
 - `RealtimeHubDO` / `durableObjectRealtime(...)` / `broadcastToSockets` / `parseSubscribeChannel` — WebSocket 購読者へ同期完了イベントを push する realtime hub 用 Durable Object 実装
 - `DurableObjectNamespaceLike` / `DurableObjectStubLike` / `HibernatableWebSocketLike` / `RealtimeDurableObjectStateLike` — これらも構造型
 - 実例: `examples/cloudflare-hono/src/lib/cms.ts`（読者側 Worker）と `src/lib/do.ts`（`SyncCoordinatorDO`）
 
+### @notion-headless-cms/sql/d1（index ストア）
+
+- `d1IndexStore(database, schema)` — D1 を index ストアとして返す（`createCMS({ stores: { index } } )` に渡す）。詳細: `.claude/rules/cms.md` の「ストレージ」節
+- Kysely + `kysely-d1`（コミュニティ dialect）実装。D1 は対話型トランザクション非対応（SyncCoordinator の単一直列キューが前提のため実害なし）
+
 ### examples/cloudflare-\*
 
 - `cloudflare-astro` / `cloudflare-hono` / `cloudflare-react-router`
 - `.dev.vars` で `NOTION_TOKEN` を設定（git 管理外）
-- `wrangler.toml` に R2 バケットと KV namespace を binding
+- `wrangler.toml` に R2 バケットと D1 database を binding
 
 ## エラーコード
 
