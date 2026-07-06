@@ -68,9 +68,6 @@ describe("cloudflareStores", () => {
     // blobs は省略したのでメモリ BlobStore（バインディング無しで読み書きできる）
     await stores.blobs?.put("img", new Uint8Array([1, 2, 3]));
     expect(await stores.blobs?.get("img")).toEqual(new Uint8Array([1, 2, 3]));
-
-    // versionedCache は常に結線される（cache 未指定なら no-op layer）
-    expect(stores.versionedCache).toBeDefined();
   });
 
   it("docs/blobs 未指定でもメモリストアで動作する（bindingless）", async () => {
@@ -81,5 +78,25 @@ describe("cloudflareStores", () => {
 
     await stores.blobs?.put("b", new Uint8Array([9]));
     expect(await stores.blobs?.get("b")).toEqual(new Uint8Array([9]));
+  });
+
+  it("cache 未指定なら versionedCache は結線しない(find() 側の no-op 分岐コストを避ける)", () => {
+    const stores = cloudflareStores({});
+    expect(stores.versionedCache).toBeUndefined();
+  });
+
+  it("cache 指定時は versionedCache を結線する", async () => {
+    const cache = makeFakeCache();
+    const stores = cloudflareStores({ cache });
+    expect(stores.versionedCache).toBeDefined();
+
+    await stores.versionedCache?.put(
+      "posts",
+      "hello",
+      "v1",
+      new Response("cached"),
+    );
+    const hit = await stores.versionedCache?.get("posts", "hello", "v1");
+    expect(await hit?.text()).toBe("cached");
   });
 });
