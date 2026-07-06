@@ -65,7 +65,7 @@ Claude Code 経由で Notion / Cloudflare / ライブラリドキュメントを
 # Notion MCP — DB スキーマ確認・ブロック取得のデバッグに使う
 claude mcp add notion --env NOTION_TOKEN=<your_token> -- npx -y @notionhq/notion-mcp-server
 
-# Cloudflare Docs MCP — Workers/R2/KV の最新仕様参照
+# Cloudflare Docs MCP — Workers/R2/D1 の最新仕様参照
 claude mcp add --transport http cloudflare-docs https://docs.mcp.cloudflare.com/mcp
 
 # Context7 — unified/remark/rehype/zod 等の最新ドキュメント参照
@@ -156,7 +156,8 @@ cp .dev.vars.example .dev.vars 2>/dev/null || true
 # .dev.vars に NOTION_TOKEN を記述（.gitignore 済み）
 echo 'NOTION_TOKEN = "ntn_xxxxxxxxxxxx"' > .dev.vars
 
-# R2 バケットをローカル作成（任意、デプロイ時に必須）
+# D1 database / R2 バケットをローカル作成（任意、デプロイ時に必須）
+npx wrangler d1 create nhc-example-cloudflare-hono
 npx wrangler r2 bucket create nhc-example-cache
 
 # Workers 型定義生成

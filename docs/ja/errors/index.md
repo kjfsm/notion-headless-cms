@@ -65,19 +65,19 @@ try {
 
 ## store/
 
-KV/R2 への REST 経由アクセス（`nhc sync` の warm 経路など、`@notion-headless-cms/cms/cloudflare` の `restKvNamespace`/`restR2Bucket`）で発生する。
+R2 への REST 経由アクセス（`nhc sync` の warm 経路など、`@notion-headless-cms/cms/cloudflare` の `restR2Bucket`）で発生する。
 
 ### store/rest_request_failed
 
-**原因**: Cloudflare REST API 経由の KV/R2 の GET/PUT/DELETE/LIST リクエストが失敗（認証エラー・レート制限・ネットワーク等）。
+**原因**: Cloudflare REST API 経由の R2 の GET/PUT/DELETE/LIST リクエストが失敗（認証エラー・レート制限・ネットワーク等）。
 
-**対処**: `accountId` / `apiToken` / `namespaceId`（KV）・`bucketName`（R2）が正しいか、トークンに該当リソースへの権限があるかを確認する。
+**対処**: `accountId` / `apiToken` / `bucketName`（R2）が正しいか、トークンに該当リソースへの権限があるかを確認する。
 
 ### store/rest_env_missing
 
-**原因**: REST 経由アクセスに必要な環境変数が未設定。`readRestEnv()` が期待するのは `CLOUDFLARE_ACCOUNT_ID` / `KV_NAMESPACE_ID` / `R2_BUCKET_NAME` / `CLOUDFLARE_API_TOKEN` の 4 つ。
+**原因**: REST 経由アクセスに必要な環境変数が未設定。`readRestEnv()` が期待するのは `CLOUDFLARE_ACCOUNT_ID` / `R2_BUCKET_NAME` / `CLOUDFLARE_API_TOKEN` の 3 つ。
 
-**対処**: 上記 4 変数を設定するか、`readRestEnv(env)` に明示的なオブジェクトを渡す。
+**対処**: 上記 3 変数を設定するか、`readRestEnv(env)` に明示的なオブジェクトを渡す。
 
 ---
 

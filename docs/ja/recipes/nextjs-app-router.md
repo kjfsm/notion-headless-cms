@@ -57,15 +57,16 @@ import {
   createCMS,
   createNodeSyncScheduler,
   memoryBlobStore,
-  memoryDocStore,
+  memoryIndexStore,
 } from "@notion-headless-cms/cms";
 import { schema } from "@/app/schema";
 
 /**
  * Vercel の serverless/edge 関数はインスタンス間でメモリを共有しないため、
  * in-memory store は永続しない（コールドスタートのたびに再同期が必要）。
- * KV/R2 相当の永続ストレージを使いたい場合は Vercel KV/Blob 向けの
- * DocStore/BlobStore 実装に差し替える（`custom-cache.md` 参照）。
+ * 永続ストレージが要る場合は libSQL/Turso 向けの `@notion-headless-cms/sql`
+ * の `libsqlIndexStore` や、Vercel Blob 向けの `BlobStore` 実装に差し替える
+ * （`custom-cache.md` 参照）。
  */
 type Cms = ReturnType<typeof createCMS<typeof schema>>;
 
@@ -82,7 +83,7 @@ export function getCms(): Cms {
     instance = createCMS({
       schema,
       notion: { token: process.env.NOTION_TOKEN ?? "" },
-      stores: { docs: memoryDocStore(), blobs: memoryBlobStore() },
+      stores: { index: memoryIndexStore(), blobs: memoryBlobStore() },
       scheduler: createNodeSyncScheduler(),
       webhookSecret: process.env.REVALIDATE_SECRET,
     });
@@ -248,6 +249,6 @@ REVALIDATE_SECRET=your-secret-here
 ## 関連
 
 - 動作する完全な例: [`examples/vercel-nextjs/`](../../../examples/vercel-nextjs/)
-- Cloudflare Workers（KV/R2/DO で永続化する構成）: [`cloudflare-workers.md`](./cloudflare-workers.md)
+- Cloudflare Workers（D1/R2/DO で永続化する構成）: [`cloudflare-workers.md`](./cloudflare-workers.md)
 - レンダラの選び方: [`../choosing-a-renderer.md`](../choosing-a-renderer.md)
 - CMS メソッド一覧: [`../api/cms-methods.md`](../api/cms-methods.md)

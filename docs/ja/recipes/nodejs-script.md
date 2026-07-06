@@ -52,7 +52,7 @@ import { createCMS } from "@notion-headless-cms/cms";
 import { schema } from "./schema.js";
 
 // stores/scheduler を省略すると in-memory ストア + Node スケジューラにフォールバックする
-// （KV/R2/DO バインディング無しで動く最小構成）。
+// （D1/R2/DO バインディング無しで動く最小構成）。
 const cms = createCMS({
   schema,
   notion: { token: process.env.NOTION_TOKEN ?? "" },
@@ -97,25 +97,29 @@ if (post) {
 
 デフォルトの in-memory ストアはプロセス終了とともに消える。CI ローカルキャッシュや
 オフライン開発など、実行のたびに全件再取得したくない場合は `./node` サブパスの
-`fileDocStore`/`fileBlobStore` をディスク上のディレクトリに割り当てる。
+`fileIndexStore`/`fileBlobStore` をディスク上のディレクトリに割り当てる。
 
 ```ts
 import { createCMS } from "@notion-headless-cms/cms";
-import { fileBlobStore, fileDocStore } from "@notion-headless-cms/cms/node";
+import { fileBlobStore, fileIndexStore } from "@notion-headless-cms/cms/node";
 import { schema } from "./schema.js";
 
 const cms = createCMS({
   schema,
   notion: { token: process.env.NOTION_TOKEN ?? "" },
   stores: {
-    docs: fileDocStore(".nhc-cache/docs"),
+    index: fileIndexStore(".nhc-cache/index"),
     blobs: fileBlobStore(".nhc-cache/blobs"),
   },
 });
 ```
 
+`fileIndexStore` は `memoryIndexStore` と同じ in-memory 実装を JSON ファイルへ永続化したもので、
+native 依存を持たない。永続化・スケール・全文検索が要る場合は `@notion-headless-cms/sql` の
+`sqliteIndexStore`/`libsqlIndexStore`（Node ランタイム向け）を検討する。
+
 同じ用途の CLI ラッパーとして `nhc sync --cache-dir .nhc-cache` もある（`nhc.config.ts` の
-`schemaModule` を読んで同じ経路を CLI から叩くだけで、KV/R2 への実書き込みは行わない）。
+`schemaModule` を読んで同じ経路を CLI から叩くだけで、D1/R2 への実書き込みは行わない）。
 
 ## HTTP サーバーに発展させる場合
 
@@ -128,5 +132,5 @@ Hono 例を Node ランタイム向けに読み替えたもの、実例は
 
 - 動作する完全な例: [`examples/minimal-node/`](../../../examples/minimal-node/)
 - Node + HTTP サーバー: [`examples/node-hono/`](../../../examples/node-hono/)
-- Cloudflare Workers + R2 + KV: [`cloudflare-workers.md`](./cloudflare-workers.md)
+- Cloudflare Workers + R2 + D1: [`cloudflare-workers.md`](./cloudflare-workers.md)
 - CMS メソッド一覧: [`../api/cms-methods.md`](../api/cms-methods.md)

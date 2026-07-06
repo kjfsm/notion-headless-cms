@@ -12,7 +12,7 @@ v2 にあった `@notion-headless-cms/testing` の `createFixtureClient()` / `fa
 「CMS 全体を丸ごと差し替えるフィクスチャ」は存在しない。代わりに 2 つの現実的なテスト戦略がある。
 
 1. **`notion.client` にフェイクの Notion クライアントを渡し、in-memory ストアで `createCMS` を丸ごと動かす**（統合テスト向け）
-2. **自作の `DocStore`/`BlobStore` 実装を `./testing` サブパスの契約テストで検証する**（カスタムストレージ向け、[`custom-cache.md`](./custom-cache.md) 参照）
+2. **自作の `IndexStore`/`BlobStore` 実装を `./testing` サブパスの契約テストで検証する**（カスタムストレージ向け、[`custom-cache.md`](./custom-cache.md) 参照）
 
 ## 1. フェイク Notion クライアント + in-memory ストアで `createCMS` を検証する
 
@@ -29,7 +29,7 @@ import {
   defineCollection,
   defineSchema,
   memoryBlobStore,
-  memoryDocStore,
+  memoryIndexStore,
   prop,
 } from "@notion-headless-cms/cms";
 import type { NotionClientLike } from "@notion-headless-cms/cms";
@@ -99,7 +99,7 @@ describe("posts", () => {
           notionPage({ id: "2", slug: "draft", title: "Draft", status: "draft" }),
         ]),
       },
-      stores: { docs: memoryDocStore(), blobs: memoryBlobStore() },
+      stores: { index: memoryIndexStore(), blobs: memoryBlobStore() },
       scheduler: createNodeSyncScheduler(),
     });
 
@@ -119,7 +119,7 @@ describe("posts", () => {
 });
 ```
 
-`stores` を省略すると in-memory（`memoryDocStore()`/`memoryBlobStore()`）にフォールバックするため、
+`stores` を省略すると in-memory（`memoryIndexStore()`/`memoryBlobStore()`）にフォールバックするため、
 明示しなくても同じ結果になる。ただし複数テストで状態を共有したくない場合はテストごとに
 `createCMS()` を呼び直す（in-memory ストアはインスタンスごとに独立している）。
 
@@ -143,34 +143,36 @@ describe("画像プロキシ", () => {
 Webhook のテストは `X-Notion-Signature` の HMAC-SHA256 署名を自前で計算して付与するか、
 `verification_token` を含む素の JSON ボディ（署名不要）でハンドシェイクだけを検証する。
 
-## 3. 自作 `DocStore`/`BlobStore` を契約テストで検証する
+## 3. 自作 `IndexStore`/`BlobStore` を契約テストで検証する
 
 Redis / S3 など独自ストレージに差し替えた場合は、`@notion-headless-cms/cms/testing`
 （`vitest` 依存の専用エントリ。汎用 `.` エントリからは import しない設計）の
-`runDocStoreContract()` / `runBlobStoreContract()` に自分の実装ファクトリを渡すだけで、
-memory/file/Cloudflare 実装と同じ挙動を保証できる。
+`runIndexStoreContract()` / `runBlobStoreContract()` に自分の実装ファクトリを渡すだけで、
+memory/file/D1/SQLite/libSQL/Cloudflare 実装と同じ挙動を保証できる。
 
 ```ts
 import { describe } from "vitest";
-import { runDocStoreContract } from "@notion-headless-cms/cms/testing";
-import { redisDocStore } from "../redis-doc-store.js";
+import { runIndexStoreContract } from "@notion-headless-cms/cms/testing";
+import { redisIndexStore } from "../redis-index-store.js";
 
-describe("redisDocStore", () => {
-  runDocStoreContract({
-    factory: () => redisDocStore(testRedisClient),
+describe("redisIndexStore", () => {
+  runIndexStoreContract({
+    factory: () => redisIndexStore(testRedisClient),
   });
 });
 ```
 
-詳細な実装例は [`custom-cache.md`](./custom-cache.md) を参照。
+詳細な実装例は [`custom-cache.md`](./custom-cache.md) を参照。`@notion-headless-cms/sql` の
+`sqliteIndexStore`/`libsqlIndexStore`（`:memory:`）に対しても同じ契約テストが走っている
+（`packages/sql/src/__tests__/contract.test.ts`）。
 
 ## CI で何をモックして何をモックしないか
 
-| レイヤ                       | テスト戦略                                                                        |
-| ---------------------------- | --------------------------------------------------------------------------------- |
-| Notion API (`notion.client`) | **必ずフェイク**。実 token を使うテストは CI でスキップする                       |
-| `DocStore`/`BlobStore`       | 独自実装は契約テスト（上記 2）、それ以外は `memoryDocStore()`/`memoryBlobStore()` |
-| `cms.fetch()` のルーティング | `Request`/`Response` を直接組み立てて assertion する                              |
+| レイヤ                       | テスト戦略                                                                          |
+| ---------------------------- | ----------------------------------------------------------------------------------- |
+| Notion API (`notion.client`) | **必ずフェイク**。実 token を使うテストは CI でスキップする                         |
+| `IndexStore`/`BlobStore`     | 独自実装は契約テスト（上記 3）、それ以外は `memoryIndexStore()`/`memoryBlobStore()` |
+| `cms.fetch()` のルーティング | `Request`/`Response` を直接組み立てて assertion する                                |
 
 実 Notion API を叩く E2E テストが必要な場合は `examples/*` ディレクトリを参照し、CI 上では
 `NOTION_TOKEN` が無い環境を前提に skip する（`examples/*/e2e/*.spec.ts` が Playwright での実例）。

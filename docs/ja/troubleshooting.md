@@ -71,7 +71,7 @@ Notion API は 1 秒あたり 3 リクエスト程度のハード制限があり
 
 ---
 
-## Cloudflare KV / R2 binding 不整合 (`cache/io_failed`)
+## Cloudflare D1 / R2 binding 不整合 (`cache/io_failed`)
 
 ### 症状
 
@@ -80,9 +80,9 @@ Notion API は 1 秒あたり 3 リクエスト程度のハード制限があり
 
 ### 対処
 
-1. `wrangler.toml` の `kv_namespaces` と `r2_buckets` の binding 名を確認
-   (既定: `DOC_CACHE`, `IMG_BUCKET`)
-2. `kvCache({ namespace: env.DOC_CACHE })` / `r2Cache({ bucket: env.IMG_BUCKET })` に渡す
+1. `wrangler.toml` の `d1_databases` と `r2_buckets` の binding 名を確認
+   (既定: `DB`, `IMG_BUCKET`)
+2. `d1IndexStore(env.DB, schema)` / `r2BlobStore(env.IMG_BUCKET)` に渡す
    `env` が、wrangler が注入する `env` と同一オブジェクトか確認
 3. ローカル開発では `wrangler dev` (miniflare 経由) で binding が解決される。`pnpm dev`
    で素の Node を使うと binding は undefined のまま
