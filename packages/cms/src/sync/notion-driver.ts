@@ -562,6 +562,18 @@ export function createCollectionDriver(
       if (def.slug && !rawSlug) return null;
       const resolvedSlug = rawSlug ?? page.id;
 
+      // coldStart フォールバック経由の呼び出し(create-cms.ts の `coldStart`/`coldStartFetch`)。
+      // 読者リクエスト処理中に Notion API 呼び出し + KV/R2 書き込みが発生し、かつ
+      // SyncCoordinator の直列化キューを経由しないため、運用者が検知できるよう警告する。
+      logger?.warn?.(
+        "coldStart フォールバックにより読者リクエスト経路で Notion への同期書き込みが発生しました",
+        {
+          operation: "retrieveBySlug",
+          collection,
+          slug: resolvedSlug,
+        },
+      );
+
       const { snapshot } = await materializeAccessiblePage(
         page,
         resolvedSlug,

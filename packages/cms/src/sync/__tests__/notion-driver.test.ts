@@ -877,6 +877,7 @@ describe("createCollectionDriver", () => {
       });
       const client = makeClient({ dataSources: { query } });
       const { entryStore, indexStore, blobs, rateLimiter } = makeDeps();
+      const warn = vi.fn();
       const driver = createCollectionDriver({
         collection: "posts",
         def,
@@ -885,6 +886,7 @@ describe("createCollectionDriver", () => {
         entryStore,
         indexStore,
         blobs,
+        logger: { warn },
       });
 
       const snapshot = await driver.retrieveBySlug("hello");
@@ -899,6 +901,11 @@ describe("createCollectionDriver", () => {
       // 副作用として materialize 済み(以後の find は index/R2 のキャッシュヒットになる)。
       expect(await entryStore.get("posts", "hello")).not.toBeNull();
       expect(await indexStore.findEntry("posts", "hello")).not.toBeNull();
+      // 読者パスでの Notion 書き込みが発生したことを運用者が検知できるよう警告する。
+      expect(warn).toHaveBeenCalledWith(
+        expect.stringContaining("coldStart"),
+        expect.objectContaining({ operation: "retrieveBySlug", slug: "hello" }),
+      );
     });
 
     it("一致するページが無ければ null を返す", async () => {
