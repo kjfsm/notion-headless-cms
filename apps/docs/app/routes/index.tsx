@@ -67,7 +67,7 @@ export default function Index({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
-      <article className="mx-auto prose max-w-3xl max-w-none px-6 py-16 prose-neutral prose-headings:font-bold prose-headings:tracking-tighter prose-a:text-purple-600 prose-a:no-underline hover:prose-a:underline prose-code:text-purple-600">
+      <article className="mx-auto prose max-w-3xl px-6 py-16 prose-neutral prose-headings:font-bold prose-headings:tracking-tighter prose-a:text-purple-600 prose-a:no-underline hover:prose-a:underline prose-code:text-purple-600">
         <NotionRenderer blocks={blocks} pageLinks={pageLinks} />
       </article>
     </main>

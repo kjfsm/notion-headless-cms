@@ -37,7 +37,14 @@ export interface SchemaDrift {
 }
 
 function optionNames(options: readonly { name: string }[]): string[] {
-  return options.map((o) => o.name).sort();
+  return options.map((o) => o.name).sort(compareStrings);
+}
+
+// options は generic bound の readonly string[] で渡ってくるため、型チェッカーが
+// 要素型を string と断定できず sort() の compare 引数省略が警告される。既定の
+// 文字列比較(UTF-16 code unit 順)と同じ挙動の compare を明示して警告を解消する。
+function compareStrings(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 /**
@@ -80,7 +87,7 @@ export function diffSchema(
 
     if (expected.kind === "status" && notionProp.type === "status") {
       const live = optionNames(notionProp.status.options);
-      const declared = [...(expected.options ?? [])].sort();
+      const declared = [...(expected.options ?? [])].sort(compareStrings);
       if (JSON.stringify(live) !== JSON.stringify(declared)) {
         changes.push({
           key,
@@ -90,7 +97,7 @@ export function diffSchema(
       }
     } else if (expected.kind === "select" && notionProp.type === "select") {
       const live = optionNames(notionProp.select.options);
-      const declared = [...(expected.options ?? [])].sort();
+      const declared = [...(expected.options ?? [])].sort(compareStrings);
       if (declared.length > 0 && JSON.stringify(live) !== JSON.stringify(declared)) {
         changes.push({
           key,
@@ -100,7 +107,7 @@ export function diffSchema(
       }
     } else if (expected.kind === "multiSelect" && notionProp.type === "multi_select") {
       const live = optionNames(notionProp.multi_select.options);
-      const declared = [...(expected.options ?? [])].sort();
+      const declared = [...(expected.options ?? [])].sort(compareStrings);
       if (declared.length > 0 && JSON.stringify(live) !== JSON.stringify(declared)) {
         changes.push({
           key,
