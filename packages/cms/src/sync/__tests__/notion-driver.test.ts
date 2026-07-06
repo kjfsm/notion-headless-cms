@@ -763,6 +763,69 @@ describe("createCollectionDriver", () => {
     );
   });
 
+  it("画像 fetch が retryOn 対象外のステータス(404)を返すと保存せず throw する", async () => {
+    fetchSpy.mockResolvedValue(new Response("not found", { status: 404 }));
+    const notionPage = page({ id: "p1", slug: "x" });
+    const client = makeClient({
+      dataSources: {
+        query: vi.fn().mockResolvedValue({
+          results: [notionPage],
+          next_cursor: null,
+          has_more: false,
+        }),
+      },
+      blocks: {
+        children: {
+          list: vi.fn().mockResolvedValue({
+            results: [
+              {
+                object: "block",
+                id: "img1",
+                type: "image",
+                has_children: false,
+                image: {
+                  type: "external",
+                  external: { url: "https://example.com/a.png" },
+                  caption: [],
+                },
+              },
+            ],
+            next_cursor: null,
+            has_more: false,
+          }),
+        },
+      },
+    });
+    const { entryStore, indexStore, blobs, rateLimiter } = makeDeps();
+    const driver = createCollectionDriver({
+      collection: "posts",
+      def,
+      client,
+      rateLimiter,
+      entryStore,
+      indexStore,
+      blobs,
+      retry: { retryOn: [429, 502, 503], maxRetries: 2, baseDelayMs: 1 },
+    });
+
+    const { changes } = await driver.listChanged(null, 10);
+    const [change] = changes;
+    if (!change) throw new Error("change が空です");
+    await expect(driver.syncEntry(change)).rejects.toSatisfy(
+      (err: unknown) => isCMSError(err) && err.is("sync/image_fetch_failed"),
+    );
+
+    // 失敗レスポンスの本文を画像として保存していないこと(以後 head がヒットして
+    // 固定化するのを防ぐ)。
+    const { imageCacheKeySource, sha256Hex } = await import(
+      "../../pipeline/images.js"
+    );
+    const hash = await sha256Hex(
+      imageCacheKeySource("https://example.com/a.png"),
+    );
+    expect(await blobs.head(`image/${hash}`)).toBeNull();
+  });
+
   it("listAllSlugs は accessible なページの slug のみ返す", async () => {
     const client = makeClient({
       dataSources: {

@@ -328,6 +328,16 @@ export function createCollectionDriver(
       }
       return r;
     }, retryCfg);
+    if (!res.ok) {
+      // retryOn に無いステータス(404/403/500等)。エラー本文を画像として保存すると
+      // 以後 blobs.head がヒットして二度と再取得されず、壊れた画像が固定化するため、
+      // ここで確実に throw する。
+      throw new CMSError({
+        code: "sync/image_fetch_failed",
+        message: `画像の取得に失敗しました(${res.status}): ${ref.url}`,
+        context: { operation: "resolveImage", collection },
+      });
+    }
     const bytes = new Uint8Array(await res.arrayBuffer());
     const contentType = res.headers.get("content-type") ?? undefined;
     const dims = parseImageDimensions(bytes);
