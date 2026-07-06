@@ -81,4 +81,6 @@ export interface ListResult<Item> {
   readonly items: readonly Item[];
   readonly nextCursor: string | null;
   readonly hasMore: boolean;
+  /** `where` 適用後・ページング前の総件数(ページャ UI の件数表示用)。 */
+  readonly total: number;
 }

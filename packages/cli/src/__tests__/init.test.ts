@@ -115,4 +115,102 @@ describe("runInit", () => {
     expect(logged).toContain("examples/cloudflare-react-router");
     logSpy.mockRestore();
   });
+
+  describe("template: cloudflare-v3", () => {
+    it("nhc.config.ts に v3.schemaModule/v3.collections を含める", async () => {
+      const originalCwd = process.cwd();
+      process.chdir(tmpDir);
+      try {
+        await runInit({ template: "cloudflare-v3" });
+        const content = await fs.readFile(
+          path.join(tmpDir, "nhc.config.ts"),
+          "utf-8",
+        );
+        expect(content).toContain('schemaModule: "src/schema.ts"');
+        expect(content).toContain("v3:");
+      } finally {
+        process.chdir(originalCwd);
+      }
+    });
+
+    it("wrangler.toml・src/schema.ts・Hono マウントコード一式を生成する", async () => {
+      const originalCwd = process.cwd();
+      process.chdir(tmpDir);
+      try {
+        await runInit({ template: "cloudflare-v3", silent: true });
+
+        const wrangler = await fs.readFile(
+          path.join(tmpDir, "wrangler.toml"),
+          "utf-8",
+        );
+        expect(wrangler).toContain('name = "');
+
+        const schema = await fs.readFile(
+          path.join(tmpDir, "src/schema.ts"),
+          "utf-8",
+        );
+        expect(schema).toContain("defineSchema");
+
+        const doFile = await fs.readFile(
+          path.join(tmpDir, "src/lib/do.ts"),
+          "utf-8",
+        );
+        expect(doFile).toContain("createSyncCoordinatorDO");
+        expect(doFile).not.toContain("not implemented");
+
+        const cmsFile = await fs.readFile(
+          path.join(tmpDir, "src/lib/cms.ts"),
+          "utf-8",
+        );
+        expect(cmsFile).toContain("durableObjectSyncDelegate");
+
+        const indexFile = await fs.readFile(
+          path.join(tmpDir, "src/index.ts"),
+          "utf-8",
+        );
+        expect(indexFile).toContain("makeCms");
+      } finally {
+        process.chdir(originalCwd);
+      }
+    });
+
+    it("既存の追加ファイル(wrangler.toml 等)は --force でも上書きしない(生成物の所有権はユーザー)", async () => {
+      const originalCwd = process.cwd();
+      process.chdir(tmpDir);
+      try {
+        await fs.writeFile(
+          path.join(tmpDir, "wrangler.toml"),
+          "# user edited\n",
+          "utf-8",
+        );
+
+        await runInit({ template: "cloudflare-v3", force: true, silent: true });
+
+        const wrangler = await fs.readFile(
+          path.join(tmpDir, "wrangler.toml"),
+          "utf-8",
+        );
+        expect(wrangler).toBe("# user edited\n");
+      } finally {
+        process.chdir(originalCwd);
+      }
+    });
+
+    it("nhc.config.ts が既に存在すると --force 無しではエラーになる", async () => {
+      const originalCwd = process.cwd();
+      process.chdir(tmpDir);
+      try {
+        await fs.writeFile(
+          path.join(tmpDir, "nhc.config.ts"),
+          "existing",
+          "utf-8",
+        );
+        await expect(runInit({ template: "cloudflare-v3" })).rejects.toThrow(
+          "--force",
+        );
+      } finally {
+        process.chdir(originalCwd);
+      }
+    });
+  });
 });

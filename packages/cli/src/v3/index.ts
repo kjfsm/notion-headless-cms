@@ -15,5 +15,8 @@ export {
 } from "./init.js";
 export type { PullOptions } from "./pull.js";
 export { generateCollectionScaffold } from "./pull.js";
-export type { SyncCommandResult } from "./sync-command.js";
+export type {
+  SyncCommandCoordinator,
+  SyncCommandResult,
+} from "./sync-command.js";
 export { runSyncCommand } from "./sync-command.js";

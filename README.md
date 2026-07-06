@@ -59,6 +59,10 @@ npx nhc generate
 3 グループに分かれる：**`notion`（取得元: schema / token / 公開ポリシー）**、
 **`render`（出力先: content / OGP）**、**`cache`（キャッシュ戦略）**。
 
+> ⚠️ `@notion-headless-cms/cms`（後述の「完全マテリアライズド方式で動かす (v3)」節）にも
+> 同名の `createCMS` が存在するが、引数・戻り値ともに**別物**（互換性なし）。
+> import 元のパッケージ名を必ず確認すること。
+
 ```ts
 // src/lib/cms.ts
 import { createCMS } from "@notion-headless-cms/client";
@@ -313,6 +317,9 @@ export async function GET(
 上記の `client`（v2）は「アクセス時に Notion と突合する SWR キャッシュ」型。それとは別に、
 `@notion-headless-cms/cms`（v3）という**独立した**パッケージがもう一つのアーキテクチャを提供する:
 Notion との同期をリクエスト経路から完全に切り離し、KV/R2 上にコンテンツをマテリアライズしておく方式。
+
+> ⚠️ こちらの `createCMS`（`@notion-headless-cms/cms`）は v2 (`@notion-headless-cms/client`) の
+> `createCMS` と**名前が同じだが引数・戻り値は別物**。import 元（パッケージ名）で必ず区別すること。
 
 | パッケージ | 役割 |
 |---|---|

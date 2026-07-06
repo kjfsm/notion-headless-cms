@@ -1,8 +1,17 @@
-import type { SyncCoordinatorCore, SyncState } from "@notion-headless-cms/cms";
+import type { SyncState } from "@notion-headless-cms/cms";
 
 export interface SyncCommandResult {
   readonly ok: boolean;
   readonly state: SyncState;
+}
+
+/**
+ * `runSyncCommand` が必要とする最小限の構造型。`SyncCoordinatorCore` はもちろん、
+ * `createCMS()` が返す `sync`(`CMSSyncControls`)もこの形を満たす。
+ */
+export interface SyncCommandCoordinator {
+  kick(): Promise<void>;
+  getState(): Promise<SyncState>;
 }
 
 /**
@@ -12,7 +21,7 @@ export interface SyncCommandResult {
  * 直接ループ呼び出しする(Worker 内の chunked sync とは異なる、CLI 向けの完了待ち方式)。
  */
 export async function runSyncCommand(
-  coordinator: SyncCoordinatorCore,
+  coordinator: SyncCommandCoordinator,
   onProgress?: (state: SyncState) => void,
 ): Promise<SyncCommandResult> {
   let state = await coordinator.getState();

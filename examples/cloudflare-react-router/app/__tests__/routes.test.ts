@@ -72,6 +72,7 @@ describe("home loader()", () => {
       ],
       nextCursor: null,
       hasMore: false,
+      total: 1,
     });
     const result = await homeLoader({ context: fakeContext } as never);
     expect(

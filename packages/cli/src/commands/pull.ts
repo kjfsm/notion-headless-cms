@@ -3,13 +3,14 @@ import path from "node:path";
 import { CMSError } from "@notion-headless-cms/core";
 import { loadConfig } from "../config-loader.js";
 import { fileExists } from "../fs-utils.js";
-import {
-  createNotionCLIClient,
-  type NotionCLIClient,
-} from "../notion-client.js";
+import { createNotionCLIClient } from "../notion-client.js";
 import { generateCollectionScaffold } from "../v3/pull.js";
-import type { Reporter } from "./shared.js";
-import { loadEnvFile, makeReporter, resolveToken } from "./shared.js";
+import {
+  loadEnvFile,
+  makeReporter,
+  resolveDataSourceId,
+  resolveToken,
+} from "./shared.js";
 
 export interface PullOptions {
   config?: string;
@@ -19,36 +20,6 @@ export interface PullOptions {
   silent?: boolean;
   verbose?: boolean;
   debug?: boolean;
-}
-
-async function resolveDataSourceId(
-  name: string,
-  source: { databaseId?: string; dbName?: string },
-  client: NotionCLIClient,
-  reporter: Reporter,
-): Promise<string> {
-  if (source.databaseId) return source.databaseId;
-  if (!source.dbName) {
-    throw new CMSError({
-      code: "cli/config_invalid",
-      message: `[${name}] v3.collections["${name}"] に databaseId または dbName のいずれかを指定してください。`,
-      context: { operation: "runPull", collection: name },
-    });
-  }
-  reporter.debug(`[${name}] dbName "${source.dbName}" を検索中...`);
-  const found = await client.resolveId(source.dbName);
-  if (!found) {
-    throw new CMSError({
-      code: "cli/notion_api_failed",
-      message: `[${name}] データベース "${source.dbName}" と完全一致する DB が見つかりませんでした。`,
-      context: {
-        operation: "runPull",
-        collection: name,
-        dbName: source.dbName,
-      },
-    });
-  }
-  return found;
 }
 
 /**
@@ -95,6 +66,7 @@ export async function runPull(opts: PullOptions): Promise<void> {
       source,
       notionClient,
       reporter,
+      "runPull",
     );
     const dataSource = await notionClient.retrieveDataSource(dataSourceId);
     const code = generateCollectionScaffold(dataSource, {

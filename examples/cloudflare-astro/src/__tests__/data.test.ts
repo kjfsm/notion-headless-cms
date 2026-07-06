@@ -53,6 +53,7 @@ describe("getPosts()", () => {
       ],
       nextCursor: null,
       hasMore: false,
+      total: 1,
     });
     const result = await getPosts(cms as never);
     expect(cms.sync.kick).toHaveBeenCalledTimes(1);

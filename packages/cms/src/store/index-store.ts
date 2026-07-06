@@ -130,6 +130,7 @@ export function createIndexStore(docs: DocStore): IndexStore {
         items: page,
         nextCursor: hasMore ? String(offset + limit) : null,
         hasMore,
+        total: sorted.length,
       };
     },
     async listAllEntries(collection) {

@@ -19,7 +19,7 @@ import type { IndexStore } from "../store/index-store.js";
 import type { BlobStore } from "../store/types.js";
 import type { CollectionDef } from "../types/collection.js";
 import type { IndexEntry } from "../types/collection-index.js";
-import type { ImageMapEntry } from "../types/entry-snapshot.js";
+import type { EntrySnapshot, ImageMapEntry } from "../types/entry-snapshot.js";
 import type { JsonValue } from "../types/json-value.js";
 import type { Logger } from "../types/logger.js";
 import type { EntryChange, SyncWriteResult } from "./coordinator.js";
@@ -49,6 +49,8 @@ export interface NotionClientLike {
       }>;
       page_size?: number;
       start_cursor?: string;
+      // biome-ignore lint/suspicious/noExplicitAny: Notion API の filter オブジェクトはプロパティ種別ごとに形状が異なるため型消去する。
+      filter?: any;
     }): Promise<DataSourceQueryResult>;
   };
   pages: {
@@ -100,6 +102,13 @@ export interface CollectionDriver {
   listIndexedSlugs(): Promise<readonly string[]>;
   syncEntry(change: EntryChange): Promise<SyncWriteResult>;
   removeEntry(slug: string): Promise<SyncWriteResult>;
+  /**
+   * コールドスタート用: index に無い slug を Notion へ直接問い合わせ、見つかれば
+   * `syncEntry` と同じ手順でマテリアライズして返す(#442 の read-through フォールバック)。
+   * 見つからない・非公開・フィルタ構築不能(slug プロパティが title/richText/select/status
+   * 以外)の場合は null。以後の `find()` は通常どおり index/R2 のキャッシュヒットになる。
+   */
+  retrieveBySlug(slug: string): Promise<EntrySnapshot | null>;
 }
 
 function slugOf(
@@ -118,6 +127,36 @@ function slugOf(
     raw as Parameters<typeof mapPropertyValue>[1],
   );
   return typeof value === "string" && value.length > 0 ? value : null;
+}
+
+/**
+ * `def.slug` プロパティに対する Notion filter を組み立てる。title/richText/select/status
+ * 以外の kind(コールドスタートで slug に使われることが実質無い formula 等)は
+ * フィルタ構築不能として null を返し、呼び出し側は素直にコールドスタートを諦める。
+ */
+function buildSlugFilter(
+  // biome-ignore lint/suspicious/noExplicitAny: 型消去された CollectionDef を受け取る。
+  def: CollectionDef<any>,
+  slug: string,
+  // biome-ignore lint/suspicious/noExplicitAny: Notion API の filter オブジェクトはプロパティ種別ごとに形状が異なるため型消去する。
+): any | null {
+  if (!def.slug) return null;
+  const slugKey = def.slug as string;
+  const propDef = def.properties[slugKey];
+  if (!propDef) return null;
+  const property = propDef.notion ?? slugKey;
+  switch (propDef.kind) {
+    case "title":
+      return { property, title: { equals: slug } };
+    case "richText":
+      return { property, rich_text: { equals: slug } };
+    case "select":
+      return { property, select: { equals: slug } };
+    case "status":
+      return { property, status: { equals: slug } };
+    default:
+      return null;
+  }
 }
 
 function statusOf(
@@ -310,6 +349,86 @@ export function createCollectionDriver(
     };
   }
 
+  /**
+   * アクセス可能と判定済みの page を materialize して永続化する。`syncEntry` と
+   * `retrieveBySlug`(コールドスタート)の共通部分。
+   */
+  async function materializeAccessiblePage(
+    page: PageObjectResponse,
+    slug: string,
+    status: string | null,
+    knownExisting: IndexEntry | null | undefined,
+  ): Promise<{ snapshot: EntrySnapshot; writes: number }> {
+    const fetchedBlocks = await fetchBlockTree(client, page.id, {
+      rateLimiter,
+      retry: effectiveRetry,
+    });
+    const normalized = normalizeBlockTree(fetchedBlocks);
+    const imageRefs = await extractImageRefs(normalized);
+    const images: Record<string, ImageMapEntry> = {};
+    for (const ref of imageRefs) {
+      images[ref.hash] = await resolveImage(ref);
+    }
+    const withImages = await resolveImageUrls(normalized, images, imagesPath);
+    const transformed = await runTransformStages(
+      withImages,
+      deps.transforms ?? [],
+    );
+
+    const mappedProps = mapProperties(
+      def.properties,
+      page.properties,
+    ) as Record<string, JsonValue>;
+    const meta: Record<string, JsonValue> = {
+      id: normalizePageId(page.id),
+      slug,
+      lastEditedTime: page.last_edited_time,
+      ...mappedProps,
+    };
+
+    const pageIndex = (await deps.pageIndex?.()) ?? {};
+    const links = resolvePageLinks(transformed, pageIndex);
+
+    const snapshot: EntrySnapshot = {
+      collection,
+      slug,
+      version: page.last_edited_time,
+      meta,
+      blocks: transformed,
+      images,
+      links,
+    };
+    await deps.entryStore.put(snapshot);
+    const upserted = await deps.indexStore.upsertEntry(
+      collection,
+      {
+        slug,
+        version: page.last_edited_time,
+        listed: isListed(def, status),
+        meta,
+      },
+      knownExisting,
+    );
+
+    if (deps.realtime) {
+      await publishVersionUpdate(
+        deps.realtime,
+        collection,
+        slug,
+        page.last_edited_time,
+      );
+    }
+
+    logger?.debug?.("entry を materialize しました", {
+      operation: "syncEntry",
+      collection,
+      slug,
+      pageId: page.id,
+    });
+
+    return { snapshot, writes: upserted.writes };
+  }
+
   return {
     async listChanged(notionCursor, limit) {
       const res = await queryDataSource({
@@ -402,81 +521,54 @@ export function createCollectionDriver(
       }
       const slug = rawSlug ?? page.id;
 
-      const fetchedBlocks = await fetchBlockTree(client, page.id, {
-        rateLimiter,
-        retry: effectiveRetry,
-      });
-      const normalized = normalizeBlockTree(fetchedBlocks);
-      const imageRefs = await extractImageRefs(normalized);
-      const images: Record<string, ImageMapEntry> = {};
-      for (const ref of imageRefs) {
-        images[ref.hash] = await resolveImage(ref);
-      }
-      const withImages = await resolveImageUrls(normalized, images, imagesPath);
-      const transformed = await runTransformStages(
-        withImages,
-        deps.transforms ?? [],
-      );
-
-      const mappedProps = mapProperties(
-        def.properties,
-        page.properties,
-      ) as Record<string, JsonValue>;
-      const meta: Record<string, JsonValue> = {
-        id: normalizePageId(page.id),
+      const { writes } = await materializeAccessiblePage(
+        page,
         slug,
-        lastEditedTime: page.last_edited_time,
-        ...mappedProps,
-      };
-
-      const pageIndex = (await deps.pageIndex?.()) ?? {};
-      const links = resolvePageLinks(transformed, pageIndex);
-
-      await deps.entryStore.put({
-        collection,
-        slug,
-        version: page.last_edited_time,
-        meta,
-        blocks: transformed,
-        images,
-        links,
-      });
-      const upserted = await deps.indexStore.upsertEntry(
-        collection,
-        {
-          slug,
-          version: page.last_edited_time,
-          listed: isListed(def, status),
-          meta,
-        },
+        status,
         chunkIndexCache.has(slug)
           ? (chunkIndexCache.get(slug) ?? null)
           : undefined,
       );
-
-      if (deps.realtime) {
-        await publishVersionUpdate(
-          deps.realtime,
-          collection,
-          slug,
-          page.last_edited_time,
-        );
-      }
-
-      logger?.debug?.("entry を materialize しました", {
-        operation: "syncEntry",
-        collection,
-        slug,
-        pageId: page.id,
-      });
-
-      return { writes: upserted.writes };
+      return { writes };
     },
 
     async removeEntry(slug) {
       await deps.entryStore.delete(collection, slug);
       const removed = await deps.indexStore.removeEntry(collection, slug);
       return { writes: removed.writes };
+    },
+
+    async retrieveBySlug(slug) {
+      let page: PageObjectResponse | null;
+      if (!def.slug) {
+        // slug 未設定のコレクションは page id でアドレスされるため、slug 引数を
+        // そのまま page id として直接取得する。
+        page = await retrieveByPageIdFallback(slug);
+      } else {
+        const filter = buildSlugFilter(def, slug);
+        if (!filter) return null;
+        try {
+          const res = await queryDataSource({ filter, page_size: 1 });
+          page = res.results.find(isFullPage) ?? null;
+        } catch {
+          return null;
+        }
+      }
+      if (!page) return null;
+
+      const status = statusOf(def, page);
+      if (!isAccessible(def, status)) return null;
+      const rawSlug = slugOf(def, page);
+      if (def.slug && !rawSlug) return null;
+      const resolvedSlug = rawSlug ?? page.id;
+
+      const { snapshot } = await materializeAccessiblePage(
+        page,
+        resolvedSlug,
+        status,
+        undefined,
+      );
+      return snapshot;
     },
   };
 }

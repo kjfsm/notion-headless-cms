@@ -57,6 +57,7 @@ describe("GET /posts", () => {
       ],
       nextCursor: null,
       hasMore: false,
+      total: 1,
     });
     const res = await app.request("/posts", {}, fakeEnv, fakeCtx);
     expect(res.status).toBe(200);

@@ -6,6 +6,8 @@ export default defineWorkspace([
   "packages/cache",
   "packages/notion-orm",
   "packages/notion-source",
+  "packages/fetch-blocks",
+  "packages/fetch-markdown",
   "packages/block-html",
   "packages/notion-katex",
   "packages/notion-shiki",

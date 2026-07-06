@@ -142,6 +142,61 @@ describe("createCMS", () => {
     expect(client.dataSources.query).not.toHaveBeenCalled();
   });
 
+  it("coldStart: true を指定すると、kick 前でも find が Notion を直接読んでマテリアライズする(#442)", async () => {
+    const client = makeFakeClient({
+      "ds-posts": [
+        notionPage({
+          id: "p1",
+          dataSourceId: "ds-posts",
+          slug: "hello",
+          title: "Hello",
+          status: "published",
+        }),
+      ],
+    });
+    const cms = createCMS({
+      schema,
+      notion: { client },
+      stores: makeStores(),
+      scheduler: createNodeSyncScheduler(),
+      coldStart: true,
+    });
+
+    // sync.kick() を一切呼ばず、初回 find だけでマテリアライズされる。
+    const post = await cms.posts.find("hello");
+    expect(post?.slug).toBe("hello");
+    expect(post?.meta.title).toBe("Hello");
+    expect(client.dataSources.query).toHaveBeenCalledTimes(1);
+
+    // 一度マテリアライズされれば以後は index/R2 のキャッシュヒットで Notion を呼ばない。
+    const cached = await cms.posts.find("hello");
+    expect(cached?.slug).toBe("hello");
+    expect(client.dataSources.query).toHaveBeenCalledTimes(1);
+  });
+
+  it("coldStart 省略時(既定 false)は kick 前の find が null を返す(Notion を呼ばない)", async () => {
+    const client = makeFakeClient({
+      "ds-posts": [
+        notionPage({
+          id: "p1",
+          dataSourceId: "ds-posts",
+          slug: "hello",
+          title: "Hello",
+          status: "published",
+        }),
+      ],
+    });
+    const cms = createCMS({
+      schema,
+      notion: { client },
+      stores: makeStores(),
+      scheduler: createNodeSyncScheduler(),
+    });
+
+    expect(await cms.posts.find("hello")).toBeNull();
+    expect(client.dataSources.query).not.toHaveBeenCalled();
+  });
+
   it("list の where/sort が型付きで動く", async () => {
     const client = makeFakeClient({
       "ds-posts": [

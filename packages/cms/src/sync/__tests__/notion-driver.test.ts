@@ -862,4 +862,140 @@ describe("createCollectionDriver", () => {
       code: "sync/notion_query_failed",
     });
   });
+
+  describe("retrieveBySlug(コールドスタート #442)", () => {
+    it("slug プロパティを filter でクエリし、見つかれば materialize して返す", async () => {
+      const notionPage = page({
+        id: "p1",
+        slug: "hello",
+        title: "Hello World",
+      });
+      const query = vi.fn().mockResolvedValue({
+        results: [notionPage],
+        next_cursor: null,
+        has_more: false,
+      });
+      const client = makeClient({ dataSources: { query } });
+      const { entryStore, indexStore, blobs, rateLimiter } = makeDeps();
+      const driver = createCollectionDriver({
+        collection: "posts",
+        def,
+        client,
+        rateLimiter,
+        entryStore,
+        indexStore,
+        blobs,
+      });
+
+      const snapshot = await driver.retrieveBySlug("hello");
+      expect(snapshot?.slug).toBe("hello");
+      expect(snapshot?.meta).toMatchObject({ title: "Hello World" });
+      // filter が slug の実プロパティ名で組み立てられている。
+      expect(query).toHaveBeenCalledWith(
+        expect.objectContaining({
+          filter: { property: "slug", rich_text: { equals: "hello" } },
+        }),
+      );
+      // 副作用として materialize 済み(以後の find は index/R2 のキャッシュヒットになる)。
+      expect(await entryStore.get("posts", "hello")).not.toBeNull();
+      expect(await indexStore.findEntry("posts", "hello")).not.toBeNull();
+    });
+
+    it("一致するページが無ければ null を返す", async () => {
+      const client = makeClient({
+        dataSources: {
+          query: vi.fn().mockResolvedValue({
+            results: [],
+            next_cursor: null,
+            has_more: false,
+          }),
+        },
+      });
+      const { entryStore, indexStore, blobs, rateLimiter } = makeDeps();
+      const driver = createCollectionDriver({
+        collection: "posts",
+        def,
+        client,
+        rateLimiter,
+        entryStore,
+        indexStore,
+        blobs,
+      });
+      expect(await driver.retrieveBySlug("missing")).toBeNull();
+    });
+
+    it("見つかったページが accessible 外なら null を返し materialize しない", async () => {
+      const notionPage = page({ id: "p1", slug: "hello", status: "draft" });
+      const draftOnlyDef = defineCollection({
+        dataSourceId: "ds-posts",
+        slug: "slug",
+        properties: {
+          title: prop.title(),
+          slug: prop.richText(),
+          status: prop.status(["draft", "published"] as const),
+        },
+        statusProperty: "status",
+        published: ["published"],
+        accessible: ["published"],
+      });
+      const client = makeClient({
+        dataSources: {
+          query: vi.fn().mockResolvedValue({
+            results: [notionPage],
+            next_cursor: null,
+            has_more: false,
+          }),
+        },
+      });
+      const { entryStore, indexStore, blobs, rateLimiter } = makeDeps();
+      const driver = createCollectionDriver({
+        collection: "posts",
+        def: draftOnlyDef,
+        client,
+        rateLimiter,
+        entryStore,
+        indexStore,
+        blobs,
+      });
+      expect(await driver.retrieveBySlug("hello")).toBeNull();
+      expect(await entryStore.get("posts", "hello")).toBeNull();
+    });
+
+    it("slug 未設定コレクションは slug 引数を page id として pages.retrieve する", async () => {
+      const dataDef = defineCollection({
+        dataSourceId: "ds-texts",
+        properties: {
+          key: prop.title("名前"),
+          text: prop.richText("テキスト"),
+        },
+      });
+      const notionPage = {
+        object: "page",
+        id: "page-abc",
+        url: "https://notion.so/page-abc",
+        last_edited_time: "2026-01-01T00:00:00.000Z",
+        properties: {
+          名前: { type: "title", title: richText("サブタイトル") },
+          テキスト: { type: "rich_text", rich_text: richText("最高のバンド") },
+        },
+      };
+      const retrieve = vi.fn().mockResolvedValue(notionPage);
+      const client = makeClient({ pages: { retrieve } });
+      const { entryStore, indexStore, blobs, rateLimiter } = makeDeps();
+      const driver = createCollectionDriver({
+        collection: "siteTexts",
+        def: dataDef,
+        client,
+        rateLimiter,
+        entryStore,
+        indexStore,
+        blobs,
+      });
+
+      const snapshot = await driver.retrieveBySlug("page-abc");
+      expect(snapshot?.slug).toBe("page-abc");
+      expect(retrieve).toHaveBeenCalledWith({ page_id: "page-abc" });
+      expect(client.dataSources.query).not.toHaveBeenCalled();
+    });
+  });
 });
