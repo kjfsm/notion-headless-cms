@@ -1,4 +1,5 @@
 import type { CMSSyncDelegate } from "../cms/create-cms.js";
+import { CMSError } from "../errors.js";
 import type { SyncStats } from "../query/stats.js";
 import type { SyncState } from "./coordinator.js";
 import type { DurableObjectStateLike } from "./durable-object-scheduler.js";
@@ -164,6 +165,28 @@ function resolveDelegateStub(
  * // 既存どおり stub を直接渡すことも可能
  * durableObjectSyncDelegate({ stub: ns.get(ns.idFromName("global")) });
  */
+/**
+ * DO からのレスポンスが非 OK なら、`fetch()`(`sync-coordinator-do.ts` の
+ * `SyncCoordinatorDO#fetch`)が返した `{ ok: false, error }` ボディのメッセージを
+ * 使って `CMSError` を投げる。ここでステータスを見ずに `res.json()` の中身だけ
+ * 使うと、DO 側が 500 を返していても呼び出し元が成功と誤認してしまう。
+ */
+async function assertOk(res: Response, operation: string): Promise<void> {
+  if (res.ok) return;
+  let message = `${res.status} ${res.statusText}`;
+  try {
+    const body = (await res.json()) as { error?: string };
+    if (body.error) message = body.error;
+  } catch {
+    // JSON でないボディはそのまま status/statusText を使う。
+  }
+  throw new CMSError({
+    code: "sync/durable_object_request_failed",
+    message: `SyncCoordinatorDO へのリクエストに失敗しました: ${message}`,
+    context: { operation },
+  });
+}
+
 export function durableObjectSyncDelegate(
   opts: DurableObjectSyncDelegateOptions,
 ): CMSSyncDelegate {
@@ -171,23 +194,28 @@ export function durableObjectSyncDelegate(
   const stub = resolveDelegateStub(opts);
   return {
     async kick() {
-      await stub.fetch(`${base}/kick`, { method: "POST" });
+      const res = await stub.fetch(`${base}/kick`, { method: "POST" });
+      await assertOk(res, "kick");
     },
     async onWebhook() {
-      await stub.fetch(`${base}/webhook`, { method: "POST" });
+      const res = await stub.fetch(`${base}/webhook`, { method: "POST" });
+      await assertOk(res, "onWebhook");
     },
     async reconcile() {
       const res = await stub.fetch(`${base}/reconcile`, { method: "POST" });
+      await assertOk(res, "reconcile");
       const body = (await res.json()) as { removed?: readonly string[] };
       return { removed: body.removed ?? [] };
     },
     async getState() {
       const res = await stub.fetch(`${base}/state`);
+      await assertOk(res, "getState");
       const body = (await res.json()) as { state?: SyncState | null };
       return body.state ?? null;
     },
     async stats() {
       const res = await stub.fetch(`${base}/stats`);
+      await assertOk(res, "stats");
       const body = (await res.json()) as { stats: SyncStats };
       return body.stats;
     },
