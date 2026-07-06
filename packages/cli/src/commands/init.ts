@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+
 import { CMSError } from "@notion-headless-cms/cms";
+
 import { fileExists } from "../fs-utils.js";
 import {
   generateMountCodeTemplate,
@@ -53,10 +55,7 @@ export default defineConfig({
  * `nhc pull` と同様、既存ファイルは上書きしない(生成物の所有権はユーザーに移る)。
  */
 export async function runInit(opts: InitOptions): Promise<void> {
-  const configPath = path.resolve(
-    process.cwd(),
-    opts.output ?? "nhc.config.ts",
-  );
+  const configPath = path.resolve(process.cwd(), opts.output ?? "nhc.config.ts");
   if (!opts.force && (await fileExists(configPath))) {
     throw new CMSError({
       code: "cli/init_failed",
@@ -88,9 +87,7 @@ export async function runInit(opts: InitOptions): Promise<void> {
 
   if (!opts.silent) {
     console.log(`✓ ${configPath} を作成しました。`);
-    console.log(
-      `✓ 追加ファイルを生成: ${written} 件 / 既存のためスキップ: ${skipped} 件`,
-    );
+    console.log(`✓ 追加ファイルを生成: ${written} 件 / 既存のためスキップ: ${skipped} 件`);
     console.log("");
     console.log("次のステップ:");
     NEXT_STEPS.forEach((step, i) => {

@@ -1,5 +1,6 @@
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+
 import { NotionRenderer } from "../NotionRenderer.js";
 import type { NotionBlock } from "../types.js";
 
@@ -22,11 +23,7 @@ function richText(text: string) {
   ];
 }
 
-function numbered(
-  id: string,
-  text: string,
-  children?: NotionBlock[],
-): NotionBlock {
+function numbered(id: string, text: string, children?: NotionBlock[]): NotionBlock {
   return {
     object: "block",
     id,
@@ -37,11 +34,7 @@ function numbered(
   } as unknown as NotionBlock;
 }
 
-function callout(
-  id: string,
-  text: string,
-  children?: NotionBlock[],
-): NotionBlock {
+function callout(id: string, text: string, children?: NotionBlock[]): NotionBlock {
   return {
     object: "block",
     id,

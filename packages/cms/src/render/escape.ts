@@ -26,11 +26,7 @@ export function sanitizeHref(url: string): string {
   const normalized = url.replace(WHITESPACE_RE, "");
   if (normalized === "") return "#";
   if (normalized.startsWith("//")) return url;
-  if (
-    normalized.startsWith("/") ||
-    normalized.startsWith("#") ||
-    normalized.startsWith("?")
-  ) {
+  if (normalized.startsWith("/") || normalized.startsWith("#") || normalized.startsWith("?")) {
     return url;
   }
   return SAFE_URL_SCHEME_RE.test(normalized) ? url : "#";

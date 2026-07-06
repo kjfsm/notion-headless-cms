@@ -1,9 +1,6 @@
 import type { PageObjectResponse } from "@notionhq/client";
-import type {
-  PropDef,
-  PropertyMap,
-  UnsupportedValue,
-} from "../types/property.js";
+
+import type { PropDef, PropertyMap, UnsupportedValue } from "../types/property.js";
 
 /** Notion API が返すページプロパティの生の値（判別可能ユニオン）。 */
 export type RawNotionProperty = PageObjectResponse["properties"][string];
@@ -12,11 +9,7 @@ export type RawNotionProperty = PageObjectResponse["properties"][string];
  * `people` / `last_edited_by` に入る値は person/bot/group など複数の判別可能ユニオン。
  * `name`/`avatar_url` を持たないバリアント(group 等)もあるため、構造的に緩く読む。
  */
-function personFromUser(user: {
-  id: string;
-  name?: string | null;
-  avatar_url?: string | null;
-}): {
+function personFromUser(user: { id: string; name?: string | null; avatar_url?: string | null }): {
   id: string;
   name: string | null;
   avatarUrl: string | null;
@@ -46,25 +39,17 @@ export function mapPropertyValue(
   if (!raw) return unsupported(raw);
   switch (kind) {
     case "title":
-      return raw.type === "title"
-        ? raw.title.map((t) => t.plain_text).join("")
-        : unsupported(raw);
+      return raw.type === "title" ? raw.title.map((t) => t.plain_text).join("") : unsupported(raw);
     case "richText":
       return raw.type === "rich_text"
         ? raw.rich_text.map((t) => t.plain_text).join("")
         : unsupported(raw);
     case "select":
-      return raw.type === "select"
-        ? (raw.select?.name ?? null)
-        : unsupported(raw);
+      return raw.type === "select" ? (raw.select?.name ?? null) : unsupported(raw);
     case "status":
-      return raw.type === "status"
-        ? (raw.status?.name ?? "")
-        : unsupported(raw);
+      return raw.type === "status" ? (raw.status?.name ?? "") : unsupported(raw);
     case "multiSelect":
-      return raw.type === "multi_select"
-        ? raw.multi_select.map((o) => o.name)
-        : unsupported(raw);
+      return raw.type === "multi_select" ? raw.multi_select.map((o) => o.name) : unsupported(raw);
     case "date":
       return raw.type === "date" ? (raw.date?.start ?? null) : unsupported(raw);
     case "number":
@@ -100,23 +85,14 @@ export function mapPropertyValue(
           return unsupported(raw.rollup);
       }
     case "relation":
-      return raw.type === "relation"
-        ? raw.relation.map((r) => r.id)
-        : unsupported(raw);
+      return raw.type === "relation" ? raw.relation.map((r) => r.id) : unsupported(raw);
     case "people":
-      return raw.type === "people"
-        ? raw.people.map((p) => personFromUser(p))
-        : unsupported(raw);
+      return raw.type === "people" ? raw.people.map((p) => personFromUser(p)) : unsupported(raw);
     case "files":
       return raw.type === "files"
         ? raw.files.map((f) => ({
             name: f.name,
-            url:
-              f.type === "file"
-                ? f.file.url
-                : f.type === "external"
-                  ? f.external.url
-                  : "",
+            url: f.type === "file" ? f.file.url : f.type === "external" ? f.external.url : "",
           }))
         : unsupported(raw);
     case "uniqueId":
@@ -126,9 +102,7 @@ export function mapPropertyValue(
     case "createdTime":
       return raw.type === "created_time" ? raw.created_time : unsupported(raw);
     case "lastEditedBy":
-      return raw.type === "last_edited_by"
-        ? personFromUser(raw.last_edited_by)
-        : unsupported(raw);
+      return raw.type === "last_edited_by" ? personFromUser(raw.last_edited_by) : unsupported(raw);
     default:
       return unsupported(raw);
   }
@@ -145,9 +119,7 @@ function mapRollupArrayItem(item: {
     case "checkbox":
       return (item.checkbox as boolean) ?? false;
     case "rich_text":
-      return ((item.rich_text as { plain_text: string }[]) ?? [])
-        .map((t) => t.plain_text)
-        .join("");
+      return ((item.rich_text as { plain_text: string }[]) ?? []).map((t) => t.plain_text).join("");
     default:
       return null;
   }
@@ -165,10 +137,7 @@ export function mapProperties<P extends PropertyMap>(
   for (const key of Object.keys(properties) as (keyof P)[]) {
     const def = properties[key];
     if (!def) continue;
-    result[key] = mapPropertyValue(
-      def.kind,
-      raw[def.notion ?? (key as string)],
-    );
+    result[key] = mapPropertyValue(def.kind, raw[def.notion ?? (key as string)]);
   }
   return result;
 }

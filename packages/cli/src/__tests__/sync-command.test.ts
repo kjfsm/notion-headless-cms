@@ -1,9 +1,7 @@
-import type {
-  SyncCoordinatorDeps,
-  SyncScheduler,
-} from "@notion-headless-cms/cms";
+import type { SyncCoordinatorDeps, SyncScheduler } from "@notion-headless-cms/cms";
 import { SyncCoordinatorCore } from "@notion-headless-cms/cms";
 import { describe, expect, it } from "vitest";
+
 import { runSyncCommand } from "../sync-command.js";
 
 function makeMemoryScheduler(): SyncScheduler {
@@ -37,8 +35,7 @@ describe("runSyncCommand", () => {
     };
     const synced: string[] = [];
     const deps: SyncCoordinatorDeps = {
-      listChanged: async (cursor) =>
-        pages[cursor ?? "root"] ?? { changes: [], nextCursor: null },
+      listChanged: async (cursor) => pages[cursor ?? "root"] ?? { changes: [], nextCursor: null },
       listAllSlugs: async () => [],
       listIndexedSlugs: async () => [],
       syncEntry: async (c) => {
@@ -86,8 +83,7 @@ describe("runSyncCommand", () => {
       p1: { changes: [], nextCursor: null },
     };
     const deps: SyncCoordinatorDeps = {
-      listChanged: async (cursor) =>
-        pages[cursor ?? "root"] ?? { changes: [], nextCursor: null },
+      listChanged: async (cursor) => pages[cursor ?? "root"] ?? { changes: [], nextCursor: null },
       listAllSlugs: async () => [],
       listIndexedSlugs: async () => [],
       syncEntry: async () => ({ writes: 0 }),

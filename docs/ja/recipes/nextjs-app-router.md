@@ -144,10 +144,7 @@ export default async function HomePage() {
 ```tsx
 // app/posts/[slug]/page.tsx
 import { NotionRenderer } from "@notion-headless-cms/react-renderer";
-import {
-  denormalizeBlocks,
-  toPageLinkMap,
-} from "@notion-headless-cms/react-renderer/cms";
+import { denormalizeBlocks, toPageLinkMap } from "@notion-headless-cms/react-renderer/cms";
 import { NotionRevalidator } from "@notion-headless-cms/react-renderer/next";
 import { notFound } from "next/navigation";
 import { ensureSynced } from "@/app/lib/cms";
@@ -164,11 +161,7 @@ export async function generateStaticParams() {
   }
 }
 
-export default async function PostPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const cms = await ensureSynced();
   const post = await cms.posts.find(slug);

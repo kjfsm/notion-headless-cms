@@ -1,11 +1,6 @@
-import {
-  BookOpen,
-  ChevronRight,
-  FileText,
-  FlaskConical,
-  Layers,
-} from "lucide-react";
+import { BookOpen, ChevronRight, FileText, FlaskConical, Layers } from "lucide-react";
 import { NavLink } from "react-router";
+
 import { cn } from "../../lib/utils";
 
 export interface SidebarDocEntry {
@@ -50,20 +45,18 @@ export function DocsSidebar({ docs, locale, currentSlug }: DocsSidebarProps) {
   ];
 
   return (
-    <aside className="w-64 shrink-0 border-r border-gray-100 bg-white px-4 py-8 overflow-y-auto">
+    <aside className="w-64 shrink-0 overflow-y-auto border-r border-gray-100 bg-white px-4 py-8">
       {orderedSections.map((section, sectionIndex) => {
         const items = grouped.get(section) ?? [];
         if (items.length === 0) return null;
         const SectionIcon = SECTION_ICONS[section] ?? FileText;
         return (
           <div key={section}>
-            {sectionIndex > 0 && (
-              <div className="my-6 border-t border-gray-100" />
-            )}
+            {sectionIndex > 0 && <div className="my-6 border-t border-gray-100" />}
 
             <div className="mb-2 flex items-center gap-2 px-2 py-1">
-              <SectionIcon className="size-3.5 text-purple-400 shrink-0" />
-              <h3 className="text-xs font-mono uppercase tracking-widest text-purple-500">
+              <SectionIcon className="size-3.5 shrink-0 text-purple-400" />
+              <h3 className="font-mono text-xs tracking-widest text-purple-500 uppercase">
                 {section}
               </h3>
             </div>
@@ -92,9 +85,7 @@ export function DocsSidebar({ docs, locale, currentSlug }: DocsSidebarProps) {
                       <ChevronRight
                         className={cn(
                           "size-3 shrink-0",
-                          isActive
-                            ? "text-purple-500"
-                            : "text-gray-300 group-hover:text-gray-500",
+                          isActive ? "text-purple-500" : "text-gray-300 group-hover:text-gray-500",
                         )}
                       />
                       <span className="flex-1 truncate">{doc.title}</span>

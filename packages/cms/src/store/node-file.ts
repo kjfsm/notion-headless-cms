@@ -1,12 +1,7 @@
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import type {
-  BlobGetResult,
-  BlobHead,
-  BlobPutOptions,
-  BlobStore,
-  DocStore,
-} from "./types.js";
+
+import type { BlobGetResult, BlobHead, BlobPutOptions, BlobStore, DocStore } from "./types.js";
 
 function keyToPath(root: string, key: string): string {
   // encodeURIComponent は `:` `/` を可逆的に区別してエスケープする。

@@ -1,5 +1,6 @@
 import type { PageObjectResponse } from "@notionhq/client";
 import { describe, expect, it } from "vitest";
+
 import { prop } from "../../types/property.js";
 import type { FetchedBlock } from "../blocks.js";
 import { normalizeBlockTree } from "../blocks.js";

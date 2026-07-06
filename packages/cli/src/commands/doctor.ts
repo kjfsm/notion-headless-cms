@@ -1,7 +1,9 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+
 import type { PropertyMap } from "@notion-headless-cms/cms";
 import { mapPropertyValue } from "@notion-headless-cms/cms";
+
 import { loadConfig } from "../config-loader.js";
 import type { DoctorInput } from "../doctor.js";
 import { runDoctorChecks } from "../doctor.js";
@@ -53,9 +55,7 @@ function stripTomlComments(text: string): string {
  * 実際のバインディング疎通(ランタイム)ではなく設定ファイル上の宣言確認に留める
  * (`doctor.ts` の remediation メッセージが想定する対処 = wrangler.toml への追記)。
  */
-async function detectWranglerBindings(
-  wranglerPath: string,
-): Promise<WranglerBindings> {
+async function detectWranglerBindings(wranglerPath: string): Promise<WranglerBindings> {
   let text: string;
   try {
     text = await fs.readFile(wranglerPath, "utf-8");
@@ -85,17 +85,12 @@ async function collectSlugs(
   const schemaModulePath = path.resolve(process.cwd(), config.schemaModule);
   const { createJiti } = await import("jiti");
   const jiti = createJiti(import.meta.url);
-  const schemaModule =
-    await jiti.import<Record<string, unknown>>(schemaModulePath);
+  const schemaModule = await jiti.import<Record<string, unknown>>(schemaModulePath);
 
   const collected: { collection: string; slug: string }[] = [];
   for (const [name, source] of Object.entries(config.collections)) {
     const exported = schemaModule[name];
-    if (
-      !exported ||
-      typeof exported !== "object" ||
-      !("properties" in exported)
-    ) {
+    if (!exported || typeof exported !== "object" || !("properties" in exported)) {
       reporter.debug(
         `[${name}] スキーマモジュールに export が見つからないため slug 重複チェックをスキップします`,
       );
@@ -120,10 +115,7 @@ async function collectSlugs(
     const pages = await notionClient.queryAllPages(dataSourceId);
     for (const page of pages) {
       const raw = (page.properties as Record<string, unknown>)[notionName];
-      const value = mapPropertyValue(
-        propDef.kind,
-        raw as Parameters<typeof mapPropertyValue>[1],
-      );
+      const value = mapPropertyValue(propDef.kind, raw as Parameters<typeof mapPropertyValue>[1]);
       if (typeof value === "string" && value.length > 0) {
         collected.push({ collection: name, slug: value });
       }
@@ -143,23 +135,15 @@ export async function runDoctor(opts: DoctorOptions): Promise<void> {
   const reporter = makeReporter(opts);
   await loadEnvFile(opts.envFile, reporter);
 
-  const configPath = path.resolve(
-    process.cwd(),
-    opts.config ?? "nhc.config.ts",
-  );
+  const configPath = path.resolve(process.cwd(), opts.config ?? "nhc.config.ts");
   const config = await loadConfig(configPath);
   const token = resolveToken(opts.token, config.notionToken, "runDoctor");
   const notionClient = createNotionCLIClient(token);
 
-  const wranglerPath = path.resolve(
-    process.cwd(),
-    opts.wranglerConfig ?? "wrangler.toml",
-  );
+  const wranglerPath = path.resolve(process.cwd(), opts.wranglerConfig ?? "wrangler.toml");
   const bindings = await detectWranglerBindings(wranglerPath);
 
-  const webhookSecretConfigured = Boolean(
-    process.env.NOTION_WEBHOOK_VERIFICATION_TOKEN,
-  );
+  const webhookSecretConfigured = Boolean(process.env.NOTION_WEBHOOK_VERIFICATION_TOKEN);
 
   let tokenValid: boolean | "unknown" = "unknown";
   try {
@@ -207,9 +191,7 @@ export async function runDoctor(opts: DoctorOptions): Promise<void> {
     console.log(JSON.stringify(report, null, 2));
   } else {
     for (const check of report.checks) {
-      reporter.info(
-        `${STATUS_ICON[check.status]} [${check.name}] ${check.message}`,
-      );
+      reporter.info(`${STATUS_ICON[check.status]} [${check.name}] ${check.message}`);
       if (check.remediation) reporter.info(`    → ${check.remediation}`);
     }
     reporter.info(report.ok ? "\n総合判定: OK" : "\n総合判定: 要対応");

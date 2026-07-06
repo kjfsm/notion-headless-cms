@@ -8,8 +8,8 @@
 /* バンドサイト準拠の Inter ベース。font-sans 系ユーティリティが Inter を解決するようにする */
 @theme {
   --font-sans:
-    "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji",
-    "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    "Inter", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol", "Noto Color Emoji";
 }
 
 /* theme.css の neutral 既定をバンドカラー（purple 系）へ上書きする。

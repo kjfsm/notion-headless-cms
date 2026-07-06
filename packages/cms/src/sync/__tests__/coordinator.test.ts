@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import type { EntryChange, SyncCoordinatorDeps } from "../coordinator.js";
 import { SyncCoordinatorCore } from "../coordinator.js";
 import { createNodeSyncScheduler } from "../node-scheduler.js";
@@ -12,18 +13,14 @@ describe("SyncCoordinatorCore", () => {
   afterEach(() => vi.useRealTimers());
 
   it("chunkSize 単位で問い合わせ、nextCursor がある限り自己継続する", async () => {
-    const pages: Record<
-      string,
-      { changes: EntryChange[]; nextCursor: string | null }
-    > = {
+    const pages: Record<string, { changes: EntryChange[]; nextCursor: string | null }> = {
       root: { changes: [change("a"), change("b")], nextCursor: "p1" },
       p1: { changes: [change("c"), change("d")], nextCursor: "p2" },
       p2: { changes: [change("e")], nextCursor: null },
     };
     const synced: string[] = [];
     const deps: SyncCoordinatorDeps = {
-      listChanged: async (cursor) =>
-        pages[cursor ?? "root"] ?? { changes: [], nextCursor: null },
+      listChanged: async (cursor) => pages[cursor ?? "root"] ?? { changes: [], nextCursor: null },
       listAllSlugs: async () => [],
       listIndexedSlugs: async () => [],
       syncEntry: async (c) => {
@@ -239,10 +236,7 @@ describe("SyncCoordinatorCore", () => {
       removeEntry: async () => ({ writes: 5 }),
       now: () => "2026-07-05T00:00:00.000Z",
     };
-    const coordinator = new SyncCoordinatorCore(
-      createNodeSyncScheduler(),
-      deps,
-    );
+    const coordinator = new SyncCoordinatorCore(createNodeSyncScheduler(), deps);
 
     const kickPromise = coordinator.kick(); // syncEntry の gate 待ちで setState 未実行のまま止まる
     await Promise.resolve();
@@ -288,10 +282,7 @@ describe("SyncCoordinatorCore", () => {
         chunkSize: 10,
         now: () => "2026-07-05T10:00:00.000Z",
       };
-      const coordinator = new SyncCoordinatorCore(
-        createNodeSyncScheduler(),
-        deps,
-      );
+      const coordinator = new SyncCoordinatorCore(createNodeSyncScheduler(), deps);
 
       await coordinator.kick();
       const state = await coordinator.getState();
@@ -307,10 +298,7 @@ describe("SyncCoordinatorCore", () => {
         removeEntry: async () => ({ writes: 2 }),
         now: () => "2026-07-05T03:00:00.000Z",
       };
-      const coordinator = new SyncCoordinatorCore(
-        createNodeSyncScheduler(),
-        deps,
-      );
+      const coordinator = new SyncCoordinatorCore(createNodeSyncScheduler(), deps);
 
       await coordinator.reconcile();
       const state = await coordinator.getState();
@@ -327,10 +315,7 @@ describe("SyncCoordinatorCore", () => {
         removeEntry: async () => ({ writes: 0 }),
         now: () => today,
       };
-      const coordinator = new SyncCoordinatorCore(
-        createNodeSyncScheduler(),
-        deps,
-      );
+      const coordinator = new SyncCoordinatorCore(createNodeSyncScheduler(), deps);
 
       await coordinator.kick();
       expect((await coordinator.getState()).writeBudget).toEqual({
@@ -359,10 +344,7 @@ describe("SyncCoordinatorCore", () => {
         now: () => "2026-07-05T10:00:00.000Z",
         logger: { warn },
       };
-      const coordinator = new SyncCoordinatorCore(
-        createNodeSyncScheduler(),
-        deps,
-      );
+      const coordinator = new SyncCoordinatorCore(createNodeSyncScheduler(), deps);
 
       await coordinator.kick(); // 5 → 閾値 8 未満、warn 無し
       expect(warn).not.toHaveBeenCalled();

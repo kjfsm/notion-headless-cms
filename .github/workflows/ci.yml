@@ -24,6 +24,9 @@ jobs:
           node-version: "24.x"
           cache: "pnpm"
       - run: pnpm install --frozen-lockfile --prefer-offline
+      # oxlint の typeAware は workspace パッケージ(@notion-headless-cms/cms 等)の
+      # 型解決に dist/*.d.ts を要求する。build 前は any 扱いになり誤検出が出る。
+      - run: pnpm build
       # React Router v7 の app/routes/*.tsx は `./+types/*` 仮想モジュールを参照する。
       # `react-router typegen` を回しておかないと knip がこれを未解決 import として検出して落ちる。
       - run: pnpm --filter @notion-headless-cms/docs exec react-router typegen

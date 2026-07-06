@@ -3,21 +3,24 @@
   "version": "3.0.7",
   "description": "notion-headless-cms v3 — マテリアライズドコンテンツレプリカ + 非同期同期。読者リクエスト中に Notion API を呼ばない",
   "keywords": [
-    "notion",
-    "headless-cms",
     "cms",
+    "headless-cms",
+    "notion",
     "typescript"
   ],
-  "license": "MIT",
   "homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
   "bugs": {
     "url": "https://github.com/kjfsm/notion-headless-cms/issues"
   },
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kjfsm/notion-headless-cms.git",
     "directory": "packages/cms"
   },
+  "files": [
+    "dist"
+  ],
   "type": "module",
   "sideEffects": false,
   "exports": {
@@ -42,11 +45,9 @@
       "import": "./dist/testing.mjs"
     }
   },
-  "files": [
-    "dist"
-  ],
-  "engines": {
-    "node": ">=24"
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "build": "tsdown src/index.ts src/html.ts src/cloudflare.ts src/node.ts src/testing.ts --format esm --dts --sourcemap --out-dir dist --external vitest",
@@ -57,9 +58,12 @@
     "attw": "attw --pack . --profile esm-only",
     "release:local": "pnpm publish --no-provenance --no-git-checks"
   },
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
+  "devDependencies": {
+    "@notionhq/client": "catalog:",
+    "@types/node": "catalog:",
+    "katex": "catalog:",
+    "shiki": "catalog:",
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "@notionhq/client": "^5.20.0",
@@ -78,11 +82,7 @@
       "optional": true
     }
   },
-  "devDependencies": {
-    "@notionhq/client": "catalog:",
-    "@types/node": "catalog:",
-    "katex": "catalog:",
-    "shiki": "catalog:",
-    "vitest": "catalog:"
+  "engines": {
+    "node": ">=24"
   }
 }

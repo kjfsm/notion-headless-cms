@@ -1,4 +1,5 @@
 import type { PropertyMap } from "@notion-headless-cms/cms";
+
 import { assignIdentifiers } from "./identifier.js";
 import type { DataSourceObjectResponse } from "./notion-client.js";
 
@@ -22,11 +23,7 @@ const NOTION_TYPE_FOR_KIND: Record<string, string> = {
   lastEditedBy: "last_edited_by",
 };
 
-export type DriftKind =
-  | "added"
-  | "removed"
-  | "type_changed"
-  | "options_changed";
+export type DriftKind = "added" | "removed" | "type_changed" | "options_changed";
 
 export interface PropertyDrift {
   readonly key: string;
@@ -40,7 +37,14 @@ export interface SchemaDrift {
 }
 
 function optionNames(options: readonly { name: string }[]): string[] {
-  return [...options.map((o) => o.name)].sort();
+  return options.map((o) => o.name).sort(compareStrings);
+}
+
+// options は generic bound の readonly string[] で渡ってくるため、型チェッカーが
+// 要素型を string と断定できず sort() の compare 引数省略が警告される。既定の
+// 文字列比較(UTF-16 code unit 順)と同じ挙動の compare を明示して警告を解消する。
+function compareStrings(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
 }
 
 /**
@@ -59,8 +63,7 @@ export function diffSchema(
   const identifiers = assignIdentifiers(dataSource.properties);
 
   for (const [name, notionProp] of Object.entries(dataSource.properties)) {
-    const key =
-      fieldMappings[name] ?? identifiers.get(name)?.identifier ?? name;
+    const key = fieldMappings[name] ?? identifiers.get(name)?.identifier ?? name;
     const expected = properties[key];
     if (!expected) {
       changes.push({
@@ -84,7 +87,7 @@ export function diffSchema(
 
     if (expected.kind === "status" && notionProp.type === "status") {
       const live = optionNames(notionProp.status.options);
-      const declared = [...(expected.options ?? [])].sort();
+      const declared = [...(expected.options ?? [])].sort(compareStrings);
       if (JSON.stringify(live) !== JSON.stringify(declared)) {
         changes.push({
           key,
@@ -94,27 +97,18 @@ export function diffSchema(
       }
     } else if (expected.kind === "select" && notionProp.type === "select") {
       const live = optionNames(notionProp.select.options);
-      const declared = [...(expected.options ?? [])].sort();
-      if (
-        declared.length > 0 &&
-        JSON.stringify(live) !== JSON.stringify(declared)
-      ) {
+      const declared = [...(expected.options ?? [])].sort(compareStrings);
+      if (declared.length > 0 && JSON.stringify(live) !== JSON.stringify(declared)) {
         changes.push({
           key,
           kind: "options_changed",
           detail: `select の選択肢が変わっています(現在: ${live.join(", ")})`,
         });
       }
-    } else if (
-      expected.kind === "multiSelect" &&
-      notionProp.type === "multi_select"
-    ) {
+    } else if (expected.kind === "multiSelect" && notionProp.type === "multi_select") {
       const live = optionNames(notionProp.multi_select.options);
-      const declared = [...(expected.options ?? [])].sort();
-      if (
-        declared.length > 0 &&
-        JSON.stringify(live) !== JSON.stringify(declared)
-      ) {
+      const declared = [...(expected.options ?? [])].sort(compareStrings);
+      if (declared.length > 0 && JSON.stringify(live) !== JSON.stringify(declared)) {
         changes.push({
           key,
           kind: "options_changed",

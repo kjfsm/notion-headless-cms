@@ -16,9 +16,5 @@ export default defineConfig({
   environments: {
     ssr: { build: { outDir: "build/server" } },
   },
-  plugins: [
-    cloudflare({ viteEnvironment: { name: "ssr" } }),
-    reactRouter(),
-    tailwindcss(),
-  ],
+  plugins: [cloudflare({ viteEnvironment: { name: "ssr" } }), reactRouter(), tailwindcss()],
 });

@@ -6,7 +6,6 @@
     "url": "git+https://github.com/kjfsm/notion-headless-cms.git"
   },
   "type": "module",
-  "packageManager": "pnpm@10.33.0",
   "scripts": {
     "build": "turbo run build --filter=\"./packages/*\"",
     "build:examples": "turbo run build --filter=\"./examples/*\"",
@@ -27,8 +26,10 @@
     "dev:vercel-nextjs": "pnpm --filter example-vercel-nextjs dev",
     "dev:node-express": "pnpm --filter example-node-express dev",
     "dev:node-hono": "pnpm --filter example-node-hono dev",
-    "format": "biome check --write",
-    "lint": "biome ci",
+    "lint": "oxlint && eslint .",
+    "lint:fix": "oxlint --fix && eslint . --fix",
+    "format": "oxfmt .",
+    "format:check": "oxfmt --check .",
     "knip": "knip",
     "lint:boundary": "node scripts/check-internal-boundary.mjs",
     "size": "size-limit",
@@ -41,17 +42,25 @@
   },
   "devDependencies": {
     "@arethetypeswrong/cli": "^0.18.3",
-    "@biomejs/biome": "2.5.0",
     "@changesets/cli": "^2.31.0",
     "@size-limit/preset-small-lib": "^12.1.0",
+    "@typescript-eslint/parser": "^8.62.1",
     "@vitest/coverage-v8": "^4.1.8",
+    "eslint": "^10.6.0",
+    "eslint-plugin-oxlint": "^1.72.0",
+    "eslint-plugin-tailwindcss": "^4.0.6",
     "knip": "^6.16.1",
+    "oxfmt": "^0.57.0",
+    "oxlint": "^1.72.0",
+    "oxlint-tsgolint": "^0.24.0",
     "publint": "^0.3.21",
     "shadcn": "^4.11.0",
     "size-limit": "^12.1.0",
+    "tailwindcss": "catalog:",
     "tsdown": "^0.22.2",
     "turbo": "^2.9.18",
     "typescript": "catalog:",
     "vitest": "catalog:"
-  }
+  },
+  "packageManager": "pnpm@10.33.0"
 }

@@ -1,13 +1,11 @@
 import type { DurableObjectStateLike } from "@notion-headless-cms/cms";
-import {
-  createCMS,
-  createDurableObjectSyncScheduler,
-} from "@notion-headless-cms/cms";
+import { createCMS, createDurableObjectSyncScheduler } from "@notion-headless-cms/cms";
 import {
   createSyncCoordinatorDO,
   kvDocStore,
   r2BlobStore,
 } from "@notion-headless-cms/cms/cloudflare";
+
 import { schema } from "../app/schema";
 
 /**

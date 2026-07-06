@@ -1,8 +1,6 @@
 import type { PageObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
-export const basePage = (
-  overrides: Partial<PageObjectResponse> = {},
-): PageObjectResponse =>
+export const basePage = (overrides: Partial<PageObjectResponse> = {}): PageObjectResponse =>
   asPage({
     object: "page",
     id: "page-id",

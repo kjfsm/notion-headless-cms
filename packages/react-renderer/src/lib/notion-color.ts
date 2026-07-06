@@ -24,8 +24,7 @@ const BG: Record<string, string> = {
   red_background: "bg-red-100",
 };
 
-const isDefault = (c: NotionColor | undefined): boolean =>
-  !c || c === "default";
+const isDefault = (c: NotionColor | undefined): boolean => !c || c === "default";
 
 /** rich_text の annotation 用。inline span の class を返す。背景時は rounded + 横 padding を付ける。 */
 export function notionInlineColorClass(color: NotionColor | undefined): string {

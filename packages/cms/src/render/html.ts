@@ -77,10 +77,7 @@ function renderEquationBlock(data: Record<string, JsonValue>): string {
   return `<div class="nhc-equation">$$${escapeHtml(expression)}$$</div>`;
 }
 
-function renderTable(
-  data: Record<string, JsonValue>,
-  childrenHtml: string,
-): string {
+function renderTable(data: Record<string, JsonValue>, childrenHtml: string): string {
   const cls = ["nhc-table"];
   if (data.has_column_header) cls.push("nhc-table--col-header");
   if (data.has_row_header) cls.push("nhc-table--row-header");
@@ -89,19 +86,13 @@ function renderTable(
 
 function renderTableRow(data: Record<string, JsonValue>): string {
   const cells = Array.isArray(data.cells) ? data.cells : [];
-  const tds = cells
-    .map((cell) => `<td>${renderRichText(cell as JsonValue)}</td>`)
-    .join("");
+  const tds = cells.map((cell) => `<td>${renderRichText(cell as JsonValue)}</td>`).join("");
   return `<tr>${tds}</tr>`;
 }
 
-function renderColumn(
-  data: Record<string, JsonValue>,
-  childrenHtml: string,
-): string {
+function renderColumn(data: Record<string, JsonValue>, childrenHtml: string): string {
   const width = data.width_ratio;
-  const style =
-    typeof width === "number" ? ` style="flex:${width.toFixed(4)}"` : "";
+  const style = typeof width === "number" ? ` style="flex:${width.toFixed(4)}"` : "";
   return `<div class="nhc-column"${style}>${childrenHtml}</div>`;
 }
 
@@ -136,12 +127,8 @@ function renderLinkToPage(
   );
 }
 
-function renderChildRef(
-  data: Record<string, JsonValue>,
-  variant: "page" | "database",
-): string {
-  const title =
-    typeof data.title === "string" && data.title ? data.title : "Untitled";
+function renderChildRef(data: Record<string, JsonValue>, variant: "page" | "database"): string {
+  const title = typeof data.title === "string" && data.title ? data.title : "Untitled";
   const icon = variant === "page" ? "📄" : "🗄️";
   return (
     `<a class="nhc-child-${variant}" href="#">` +
@@ -159,9 +146,7 @@ function renderMediaBlock(
   const url = extractFileUrl(data);
   if (!url) return "";
   const captionHtml = renderRichText(data.caption);
-  const caption = captionHtml
-    ? `<p class="nhc-${kind}__caption">${captionHtml}</p>`
-    : "";
+  const caption = captionHtml ? `<p class="nhc-${kind}__caption">${captionHtml}</p>` : "";
 
   if (kind === "audio") {
     return `<div class="nhc-audio-block"><audio class="nhc-audio" src="${escapeHtml(sanitizeHref(url))}" controls></audio>${caption}</div>`;
@@ -177,8 +162,7 @@ function renderMediaBlock(
     );
   }
   if (kind === "pdf") {
-    const iframe =
-      renderEmbedIframe(url, allowedEmbedHosts) ?? renderOgpShell(url, "embed");
+    const iframe = renderEmbedIframe(url, allowedEmbedHosts) ?? renderOgpShell(url, "embed");
     return `<div class="nhc-pdf">${iframe}${caption}</div>`;
   }
   // video
@@ -186,8 +170,7 @@ function renderMediaBlock(
     return `<div class="nhc-video"><video class="nhc-video__player" src="${escapeHtml(sanitizeHref(url))}" controls></video>${caption}</div>`;
   }
   if (data.type === "external") {
-    const iframe =
-      renderEmbedIframe(url, allowedEmbedHosts) ?? renderOgpShell(url, "embed");
+    const iframe = renderEmbedIframe(url, allowedEmbedHosts) ?? renderOgpShell(url, "embed");
     return `<div class="nhc-video">${iframe}${caption}</div>`;
   }
   return `<div class="nhc-video"><video class="nhc-video__player" src="${escapeHtml(sanitizeHref(url))}" controls></video>${caption}</div>`;
@@ -197,14 +180,9 @@ function renderMediaBlock(
  * 正規化 block 1 件を HTML に変換する(children は再帰的に展開済みとして連結)。
  * 未対応ブロック種別は子要素だけを描画するフォールバックにする(何も失わない)。
  */
-export function renderBlockToHtml(
-  block: NormalizedBlock,
-  opts?: RenderHtmlOptions,
-): string {
+export function renderBlockToHtml(block: NormalizedBlock, opts?: RenderHtmlOptions): string {
   const data = block.data as Record<string, JsonValue>;
-  const childrenHtml = block.children
-    ? renderBlocksToHtml(block.children, opts)
-    : "";
+  const childrenHtml = block.children ? renderBlocksToHtml(block.children, opts) : "";
   const allowedEmbedHosts = opts?.allowedEmbedHosts ?? [];
 
   switch (block.type) {
@@ -269,18 +247,13 @@ export function renderBlockToHtml(
         renderRichText(data.caption),
       );
     case "link_preview":
-      return renderOgpShell(
-        typeof data.url === "string" ? data.url : "",
-        "link_preview",
-      );
+      return renderOgpShell(typeof data.url === "string" ? data.url : "", "link_preview");
     case "embed": {
       const url = typeof data.url === "string" ? data.url : "";
       const caption = renderRichText(data.caption);
       const iframe = renderEmbedIframe(url, allowedEmbedHosts);
       if (iframe) {
-        const captionHtml = caption
-          ? `<p class="nhc-embed__caption">${caption}</p>`
-          : "";
+        const captionHtml = caption ? `<p class="nhc-embed__caption">${caption}</p>` : "";
         return `<div class="nhc-embed">${iframe}${captionHtml}</div>`;
       }
       return renderOgpShell(url, "embed", caption);
@@ -317,10 +290,7 @@ export function renderBlocksToHtml(
       i++;
       continue;
     }
-    if (
-      block.type === "bulleted_list_item" ||
-      block.type === "numbered_list_item"
-    ) {
+    if (block.type === "bulleted_list_item" || block.type === "numbered_list_item") {
       const tag = block.type === "bulleted_list_item" ? "ul" : "ol";
       let group = "";
       while (i < blocks.length && blocks[i]?.type === block.type) {

@@ -1,9 +1,5 @@
 import { CMSError } from "../errors.js";
-import type {
-  KVNamespaceLike,
-  R2BucketLike,
-  R2ObjectLike,
-} from "./cloudflare-types.js";
+import type { KVNamespaceLike, R2BucketLike, R2ObjectLike } from "./cloudflare-types.js";
 
 /**
  * CI / ローカルから Cloudflare REST API で KV/R2 に書き込むドライバ
@@ -131,8 +127,7 @@ export function restR2Bucket(opts: RestR2Options): R2BucketLike {
       };
     },
     async put(key: string, value: ArrayBuffer | Uint8Array, putOpts) {
-      const contentType =
-        putOpts?.httpMetadata?.contentType ?? "application/octet-stream";
+      const contentType = putOpts?.httpMetadata?.contentType ?? "application/octet-stream";
       const res = await fetch(`${base}/${encodeURIComponent(key)}`, {
         method: "PUT",
         headers: { ...auth, "content-type": contentType },
@@ -170,9 +165,7 @@ export function restR2Bucket(opts: RestR2Options): R2BucketLike {
  *
  * 期待する環境変数: `CLOUDFLARE_ACCOUNT_ID` / `KV_NAMESPACE_ID` / `R2_BUCKET_NAME` / `CLOUDFLARE_API_TOKEN`
  */
-export function readRestEnv(
-  env: Record<string, string | undefined> = defaultProcessEnv(),
-): {
+export function readRestEnv(env: Record<string, string | undefined> = defaultProcessEnv()): {
   accountId: string;
   namespaceId: string;
   bucketName: string;
@@ -204,8 +197,6 @@ export function readRestEnv(
 }
 
 function defaultProcessEnv(): Record<string, string | undefined> {
-  const proc = (
-    globalThis as { process?: { env?: Record<string, string | undefined> } }
-  ).process;
+  const proc = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process;
   return proc?.env ?? {};
 }

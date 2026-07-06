@@ -65,11 +65,11 @@ codegen ではなく直接編集して育てる運用（`nhc pull` は雛形を�
 
 ```ts
 interface CollectionConfig<P extends PropertyMap, StatusKey> {
-  readonly dataSourceId: string;      // Notion の data_source_id
-  readonly slug?: keyof P;            // 省略時は Notion page id でアドレスする
-  readonly properties: P;             // prop.* で定義したプロパティマップ
+  readonly dataSourceId: string; // Notion の data_source_id
+  readonly slug?: keyof P; // 省略時は Notion page id でアドレスする
+  readonly properties: P; // prop.* で定義したプロパティマップ
   readonly statusProperty?: StatusKey; // published/accessible を使うなら必須
-  readonly published?: readonly string[];  // list() の既定絞り込み対象の値
+  readonly published?: readonly string[]; // list() の既定絞り込み対象の値
   readonly accessible?: readonly string[]; // find() を許可する値（省略時は published と同じ）
 }
 ```
@@ -117,10 +117,10 @@ KV index で version/存在確認 → R2 から `EntrySnapshot` を読んで返�
 ```ts
 const post = await cms.posts.find("hello-world");
 if (post) {
-  post.meta;    // InferEntry<Post>（title/status/publishedAt... + id/slug/lastEditedTime）
-  post.blocks;  // readonly NormalizedBlock[]（画像 URL・内部リンクとも解決済み）
-  post.images;  // ハッシュ → 画像メタデータ（width/height/contentType）
-  post.links;   // 正規化 pageId → 内部リンク解決結果（href/title）
+  post.meta; // InferEntry<Post>（title/status/publishedAt... + id/slug/lastEditedTime）
+  post.blocks; // readonly NormalizedBlock[]（画像 URL・内部リンクとも解決済み）
+  post.images; // ハッシュ → 画像メタデータ（width/height/contentType）
+  post.links; // 正規化 pageId → 内部リンク解決結果（href/title）
   post.version; // lastEditedTime と同値
 }
 ```
@@ -137,7 +137,7 @@ if (post) {
 
 ```ts
 interface ListParams<P> {
-  where?: WhereInput<P>;    // プロパティ型ごとの演算子（例: { status: { equals: "公開済み" } }）
+  where?: WhereInput<P>; // プロパティ型ごとの演算子（例: { status: { equals: "公開済み" } }）
   sort?: readonly { by: keyof P; direction: "asc" | "desc" }[];
   cursor?: string;
   limit?: number;
@@ -163,29 +163,29 @@ const { items, nextCursor, hasMore, total } = await cms.posts.list({
 
 ## `createCMS(opts)` オプション
 
-| オプション | 役割 |
-|---|---|
-| `schema` | `defineSchema(collections)` の戻り値 |
-| `stores.docs` | コレクション index 用 `DocStore`。省略時は in-memory（`memoryDocStore()`） |
-| `stores.blobs` | entry 本体・画像用 `BlobStore`。省略時は in-memory（`memoryBlobStore()`） |
-| `stores.versionedCache` | `find()` の結果を version キーでキャッシュする任意層（`edgeVersionedCache()` 等） |
-| `notion.client` / `notion.token` | ローカルで同期する場合の Notion クライアント（`syncDelegate` 未指定時は必須） |
-| `scheduler` | ローカル同期のスケジューラ。省略時は `createNodeSyncScheduler()` にフォールバック |
-| `syncDelegate` | 同期制御を外部（Durable Object 等）に丸ごと委譲する差し替え口。指定時は `notion`/`scheduler` 不要 |
-| `coldStartFetch` / `coldStart` | 未マテリアライズなエントリを 1 回だけブロッキング取得するフォールバック（既定無効） |
-| `transforms` | shiki/katex 等の事前レンダー拡張（同期時に blocks へ焼き込む） |
-| `routes` | HTTP ハンドラのマウントパス（既定 `/api/cms`） |
-| `imagesPath` | 画像 URL を焼き込む prefix（既定 `/images`。`routes` と結合して配信される） |
-| `webhookSecret` | Notion webhook の `X-Notion-Signature` 検証シークレット |
-| `sync.chunkSize` / `chunkDelayMs` / `debounceMs` | 1 サイクルの処理量・チャンク間隔・webhook debounce |
-| `sync.requestsPerSecond` | 全コレクション共有の Notion API レート上限（既定 3） |
-| `sync.dailyWriteBudget` / `writeBudgetWarnRatio` | KV write の日次ソフト上限と警告閾値（既定 1000 / 0.8） |
-| `ogp` | OGP エンドポイントの設定。`false` で無効化 |
-| `realtime` | 同期完了時に version 同梱で push する `RealtimeAdapter` |
-| `onVerificationToken` | webhook サブスク登録時の `verification_token` 受信コールバック |
-| `onRealtimeUpgrade` / `onPreview` | WebSocket アップグレード・署名付きプレビューの委譲先 |
-| `waitUntil` | レスポンス送信後もバックグラウンド処理を完走させるフック（Workers の `ctx.waitUntil`） |
-| `logger` / `logLevel` | 同期・配信経路の構造化ログ出力先と下限レベル |
+| オプション                                       | 役割                                                                                              |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------- |
+| `schema`                                         | `defineSchema(collections)` の戻り値                                                              |
+| `stores.docs`                                    | コレクション index 用 `DocStore`。省略時は in-memory（`memoryDocStore()`）                        |
+| `stores.blobs`                                   | entry 本体・画像用 `BlobStore`。省略時は in-memory（`memoryBlobStore()`）                         |
+| `stores.versionedCache`                          | `find()` の結果を version キーでキャッシュする任意層（`edgeVersionedCache()` 等）                 |
+| `notion.client` / `notion.token`                 | ローカルで同期する場合の Notion クライアント（`syncDelegate` 未指定時は必須）                     |
+| `scheduler`                                      | ローカル同期のスケジューラ。省略時は `createNodeSyncScheduler()` にフォールバック                 |
+| `syncDelegate`                                   | 同期制御を外部（Durable Object 等）に丸ごと委譲する差し替え口。指定時は `notion`/`scheduler` 不要 |
+| `coldStartFetch` / `coldStart`                   | 未マテリアライズなエントリを 1 回だけブロッキング取得するフォールバック（既定無効）               |
+| `transforms`                                     | shiki/katex 等の事前レンダー拡張（同期時に blocks へ焼き込む）                                    |
+| `routes`                                         | HTTP ハンドラのマウントパス（既定 `/api/cms`）                                                    |
+| `imagesPath`                                     | 画像 URL を焼き込む prefix（既定 `/images`。`routes` と結合して配信される）                       |
+| `webhookSecret`                                  | Notion webhook の `X-Notion-Signature` 検証シークレット                                           |
+| `sync.chunkSize` / `chunkDelayMs` / `debounceMs` | 1 サイクルの処理量・チャンク間隔・webhook debounce                                                |
+| `sync.requestsPerSecond`                         | 全コレクション共有の Notion API レート上限（既定 3）                                              |
+| `sync.dailyWriteBudget` / `writeBudgetWarnRatio` | KV write の日次ソフト上限と警告閾値（既定 1000 / 0.8）                                            |
+| `ogp`                                            | OGP エンドポイントの設定。`false` で無効化                                                        |
+| `realtime`                                       | 同期完了時に version 同梱で push する `RealtimeAdapter`                                           |
+| `onVerificationToken`                            | webhook サブスク登録時の `verification_token` 受信コールバック                                    |
+| `onRealtimeUpgrade` / `onPreview`                | WebSocket アップグレード・署名付きプレビューの委譲先                                              |
+| `waitUntil`                                      | レスポンス送信後もバックグラウンド処理を完走させるフック（Workers の `ctx.waitUntil`）            |
+| `logger` / `logLevel`                            | 同期・配信経路の構造化ログ出力先と下限レベル                                                      |
 
 `createCMS()` が返す `CMS<S>` は、コレクションごとの `{ find, list }` ハンドルに加えて
 `sync`（`kick`/`onWebhook`/`reconcile`/`getState`/`stats`）・`fetch(request)`・`scheduled()`
@@ -194,13 +194,13 @@ const { items, nextCursor, hasMore, total } = await cms.posts.list({
 
 ## 同期制御（`cms.sync`）
 
-| メソッド | 説明 |
-|---|---|
-| `kick()` | 1 チャンク（既定 2 entry・コレクション横断の総量）分だけ差分同期する。`getState().cursor` が `null` になるまで手動で回せば全件同期になる |
-| `onWebhook()` | webhook 受信時に呼ぶ。debounce（既定 3 秒）してから `kick()` 相当を実行する |
-| `reconcile()` | 全件突合し、Notion 側で削除されたページを検知して削除する。`{ removed: string[] }` を返す。Cron Trigger からの定期実行を想定 |
-| `getState()` | `{ cursor, lastSyncAt, lastReconcileAt, failures, writeBudget }` を返す |
-| `stats()` | `{ lastSyncAt, lastReconcileAt, failureCount, recentFailures, writeBudget }` を返す（`nhc doctor` 等の観測用） |
+| メソッド      | 説明                                                                                                                                     |
+| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `kick()`      | 1 チャンク（既定 2 entry・コレクション横断の総量）分だけ差分同期する。`getState().cursor` が `null` になるまで手動で回せば全件同期になる |
+| `onWebhook()` | webhook 受信時に呼ぶ。debounce（既定 3 秒）してから `kick()` 相当を実行する                                                              |
+| `reconcile()` | 全件突合し、Notion 側で削除されたページを検知して削除する。`{ removed: string[] }` を返す。Cron Trigger からの定期実行を想定             |
+| `getState()`  | `{ cursor, lastSyncAt, lastReconcileAt, failures, writeBudget }` を返す                                                                  |
+| `stats()`     | `{ lastSyncAt, lastReconcileAt, failureCount, recentFailures, writeBudget }` を返す（`nhc doctor` 等の観測用）                           |
 
 Durable Object に同期を委譲する場合は `createSyncCoordinatorDO()` / `durableObjectSyncDelegate()`
 （`@notion-headless-cms/cms/cloudflare`）を使う。詳細は
@@ -210,13 +210,13 @@ Durable Object に同期を委譲する場合は `createSyncCoordinatorDO()` / `
 
 `routes`（既定 `/api/cms`）以下に以下をマウントする。
 
-| ルート | 説明 |
-|---|---|
-| `GET {routes}/images/:hash` | 画像プロキシ（同期時に R2 へ永続保存したバイナリを配信。1 年 immutable キャッシュ） |
-| `GET {routes}/realtime` | WebSocket アップグレード（`onRealtimeUpgrade` 未設定なら 404） |
-| `{routes}/preview/*` | 署名付きプレビュー（`onPreview` 未設定なら 404。下書きも Notion 直読みで表示） |
-| `GET {routes}/ogp?url=...` | bookmark/embed/link_preview の OGP メタデータ取得（`ogp: false` で無効化） |
-| `POST {routes}/webhook` | Notion webhook 受信。`verification_token` の echo・`X-Notion-Signature` 検証・`sync.onWebhook()` 呼び出しをまとめて処理する |
+| ルート                      | 説明                                                                                                                        |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `GET {routes}/images/:hash` | 画像プロキシ（同期時に R2 へ永続保存したバイナリを配信。1 年 immutable キャッシュ）                                         |
+| `GET {routes}/realtime`     | WebSocket アップグレード（`onRealtimeUpgrade` 未設定なら 404）                                                              |
+| `{routes}/preview/*`        | 署名付きプレビュー（`onPreview` 未設定なら 404。下書きも Notion 直読みで表示）                                              |
+| `GET {routes}/ogp?url=...`  | bookmark/embed/link_preview の OGP メタデータ取得（`ogp: false` で無効化）                                                  |
+| `POST {routes}/webhook`     | Notion webhook 受信。`verification_token` の echo・`X-Notion-Signature` 検証・`sync.onWebhook()` 呼び出しをまとめて処理する |
 
 `GET {routes}/images/:hash` と `GET {routes}/ogp` 以外は POST 主体。`cms.fetch()` を
 1 つマウントすれば画像配信・OGP・webhook・realtime・preview のすべてが賄える
@@ -234,7 +234,9 @@ try {
 } catch (err) {
   matchCMSError(err, {
     "sync/notion_query_failed": (e) => console.error("Notion 取得失敗:", e.message),
-    _: (e) => { throw e; },
+    _: (e) => {
+      throw e;
+    },
   });
 }
 ```
@@ -252,13 +254,13 @@ try {
 
 ## サブパスエクスポート
 
-| サブパス | 内容 |
-|---|---|
-| `@notion-headless-cms/cms` | `createCMS`/`defineCollection`/`defineSchema`/`prop`/`CMSError` など全公開 API |
-| `@notion-headless-cms/cms/html` | `renderBlocksToHtml`/`renderBlockToHtml`/`renderRichText`（React 不要の HTML レンダラ） |
+| サブパス                              | 内容                                                                                                                                              |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@notion-headless-cms/cms`            | `createCMS`/`defineCollection`/`defineSchema`/`prop`/`CMSError` など全公開 API                                                                    |
+| `@notion-headless-cms/cms/html`       | `renderBlocksToHtml`/`renderBlockToHtml`/`renderRichText`（React 不要の HTML レンダラ）                                                           |
 | `@notion-headless-cms/cms/cloudflare` | `kvDocStore`/`r2BlobStore`/`createSyncCoordinatorDO`/`durableObjectSyncDelegate`/`RealtimeHubDO`/`cloudflareStores` 等（Cloudflare Workers 向け） |
-| `@notion-headless-cms/cms/node` | `fileDocStore`/`fileBlobStore`（Node ランタイム専用、`node:fs` に依存） |
-| `@notion-headless-cms/cms/testing` | `runDocStoreContract`/`runBlobStoreContract`（`vitest` に依存するテスト専用エントリ） |
+| `@notion-headless-cms/cms/node`       | `fileDocStore`/`fileBlobStore`（Node ランタイム専用、`node:fs` に依存）                                                                           |
+| `@notion-headless-cms/cms/testing`    | `runDocStoreContract`/`runBlobStoreContract`（`vitest` に依存するテスト専用エントリ）                                                             |
 
 `.` エントリは Workers 等 `node:fs` の無いランタイムにもバンドルされるため、Node 専用 API
 （`./node`）や `vitest` 依存（`./testing`）は分離されている。

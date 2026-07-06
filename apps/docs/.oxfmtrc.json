@@ -1,0 +1,8 @@
+{
+  "$schema": "../../node_modules/oxfmt/configuration_schema.json",
+  "ignorePatterns": ["worker-configuration.d.ts"],
+  "sortImports": true,
+  "sortTailwindcss": {
+    "stylesheet": "./app/app.css"
+  }
+}

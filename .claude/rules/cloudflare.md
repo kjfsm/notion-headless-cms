@@ -18,13 +18,13 @@ paths:
 
 ## コマンド
 
-| コマンド | 目的 |
-|---|---|
-| `npx wrangler dev` | ローカル開発 |
-| `npx wrangler deploy` | デプロイ |
-| `npx wrangler types` | `worker-configuration.d.ts` 生成 |
-| `npx wrangler secret put <NAME>` | シークレット登録 |
-| `npx wrangler r2 bucket create <NAME>` | R2 バケット作成 |
+| コマンド                               | 目的                             |
+| -------------------------------------- | -------------------------------- |
+| `npx wrangler dev`                     | ローカル開発                     |
+| `npx wrangler deploy`                  | デプロイ                         |
+| `npx wrangler types`                   | `worker-configuration.d.ts` 生成 |
+| `npx wrangler secret put <NAME>`       | シークレット登録                 |
+| `npx wrangler r2 bucket create <NAME>` | R2 バケット作成                  |
 
 `wrangler.toml` / `wrangler.jsonc` の bindings を変えたら **必ず `wrangler types`** を実行。
 
@@ -49,7 +49,7 @@ Cloudflare 対応はランタイム専用のファクトリではなく、`@noti
 - `DurableObjectNamespaceLike` / `DurableObjectStubLike` / `HibernatableWebSocketLike` / `RealtimeDurableObjectStateLike` — これらも構造型
 - 実例: `examples/cloudflare-hono/src/lib/cms.ts`（読者側 Worker）と `src/lib/do.ts`（`SyncCoordinatorDO`）
 
-### examples/cloudflare-*
+### examples/cloudflare-\*
 
 - `cloudflare-astro` / `cloudflare-hono` / `cloudflare-react-router`
 - `.dev.vars` で `NOTION_TOKEN` を設定（git 管理外）

@@ -1,10 +1,8 @@
 import { NotionRenderer } from "@notion-headless-cms/react-renderer";
-import {
-  denormalizeBlocks,
-  toPageLinkMap,
-} from "@notion-headless-cms/react-renderer/cms";
+import { denormalizeBlocks, toPageLinkMap } from "@notion-headless-cms/react-renderer/cms";
 import { NotionRevalidator } from "@notion-headless-cms/react-renderer/router";
 import { Link, redirect } from "react-router";
+
 import { makeCms } from "../lib/cms";
 import { remapPageLinks } from "../lib/cms-helpers";
 import type { Route } from "./+types/index";
@@ -41,11 +39,11 @@ export default function Index({ loaderData }: Route.ComponentProps) {
       {/* バンドサイトと同じ放射状グラデのヒーロー。clamp() で見出しを流体スケーリング */}
       <section className="bg-[radial-gradient(ellipse_at_top,#f3e8ff_0%,#fff_60%)]">
         <div className="mx-auto max-w-5xl px-6 pt-24 pb-16 text-center">
-          <p className="mb-4 font-mono text-xs uppercase tracking-widest text-purple-500">
+          <p className="mb-4 font-mono text-xs tracking-widest text-purple-500 uppercase">
             Notion → Cloudflare → React Router
           </p>
           <h1
-            className="font-black tracking-tighter leading-none text-gray-900"
+            className="leading-none font-black tracking-tighter text-gray-900"
             style={{ fontSize: "clamp(2.75rem, 9vw, 7rem)" }}
           >
             {item.name ?? "NOTION-HEADLESS-CMS"}
@@ -69,7 +67,7 @@ export default function Index({ loaderData }: Route.ComponentProps) {
         </div>
       </section>
 
-      <article className="mx-auto max-w-3xl px-6 py-16 prose prose-neutral max-w-none prose-headings:tracking-tighter prose-headings:font-bold prose-a:text-purple-600 prose-a:no-underline hover:prose-a:underline prose-code:text-purple-600">
+      <article className="mx-auto prose max-w-3xl px-6 py-16 prose-neutral prose-headings:font-bold prose-headings:tracking-tighter prose-a:text-purple-600 prose-a:no-underline hover:prose-a:underline prose-code:text-purple-600">
         <NotionRenderer blocks={blocks} pageLinks={pageLinks} />
       </article>
     </main>

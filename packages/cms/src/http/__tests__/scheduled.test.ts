@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+
 import type { SyncCoordinatorCore } from "../../sync/coordinator.js";
 import { createScheduledHandler } from "../scheduled.js";
 

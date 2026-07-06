@@ -1,8 +1,5 @@
 /** HMAC-SHA256 を hex で返す(v2 `packages/core/src/handler.ts` を移植)。 */
-export async function hmacSha256Hex(
-  secret: string,
-  message: string,
-): Promise<string> {
+export async function hmacSha256Hex(secret: string, message: string): Promise<string> {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
     "raw",

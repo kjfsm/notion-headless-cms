@@ -1,5 +1,6 @@
 import { NotionRevalidator } from "@notion-headless-cms/react-renderer/next";
 import Link from "next/link";
+
 import { ensureSynced } from "@/app/lib/cms";
 
 export const revalidate = 300;
@@ -36,9 +37,7 @@ export default async function HomePage() {
               >
                 <strong className="text-lg font-semibold">{post.slug}</strong>
                 {meta.publishedAt && (
-                  <time className="block text-sm text-gray-500 mt-1">
-                    {meta.publishedAt}
-                  </time>
+                  <time className="block text-sm text-gray-500 mt-1">{meta.publishedAt}</time>
                 )}
               </Link>
             </li>

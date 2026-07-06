@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import { isCMSError } from "../../errors.js";
 import { createEntryStore } from "../../store/entry-store.js";
 import { createIndexStore } from "../../store/index-store.js";
@@ -46,9 +47,7 @@ function page(opts: {
   };
 }
 
-function makeClient(
-  overrides: Partial<NotionClientLike> = {},
-): NotionClientLike {
+function makeClient(overrides: Partial<NotionClientLike> = {}): NotionClientLike {
   return {
     dataSources: {
       query: vi.fn().mockResolvedValue({
@@ -137,9 +136,7 @@ describe("createCollectionDriver", () => {
     });
 
     const result = await driver.listChanged(null, 10);
-    expect(result.changes).toEqual([
-      { slug: "a", lastEditedTime: "2026-02-01T00:00:00Z" },
-    ]);
+    expect(result.changes).toEqual([{ slug: "a", lastEditedTime: "2026-02-01T00:00:00Z" }]);
     expect(result.nextCursor).toBeNull();
   });
 
@@ -251,9 +248,7 @@ describe("createCollectionDriver", () => {
     });
 
     const { changes } = await driver.listChanged(null, 10);
-    expect(changes).toEqual([
-      { slug: "hello", lastEditedTime: "2026-01-01T00:00:00.000Z" },
-    ]);
+    expect(changes).toEqual([{ slug: "hello", lastEditedTime: "2026-01-01T00:00:00.000Z" }]);
     const [change] = changes;
     if (!change) throw new Error("change が空です");
     await driver.syncEntry(change);
@@ -404,11 +399,7 @@ describe("createCollectionDriver", () => {
       client: {
         ...client,
         pages: {
-          retrieve: vi
-            .fn()
-            .mockResolvedValue(
-              page({ id: "old", slug: "old", status: "archived" }),
-            ),
+          retrieve: vi.fn().mockResolvedValue(page({ id: "old", slug: "old", status: "archived" })),
         },
       },
       rateLimiter,
@@ -439,9 +430,9 @@ describe("createCollectionDriver", () => {
       blobs,
     });
 
-    await expect(
-      driver.syncEntry({ slug: "p1", lastEditedTime: "v1" }),
-    ).rejects.toMatchObject({ code: "sync/slug_missing" });
+    await expect(driver.syncEntry({ slug: "p1", lastEditedTime: "v1" })).rejects.toMatchObject({
+      code: "sync/slug_missing",
+    });
   });
 
   it("slug 未設定コレクションは page id をキーに materialize する", async () => {
@@ -484,9 +475,7 @@ describe("createCollectionDriver", () => {
 
     const { changes } = await driver.listChanged(null, 10);
     // slug プロパティが無いため page id をキーにする。
-    expect(changes).toEqual([
-      { slug: "page-abc", lastEditedTime: "2026-01-01T00:00:00.000Z" },
-    ]);
+    expect(changes).toEqual([{ slug: "page-abc", lastEditedTime: "2026-01-01T00:00:00.000Z" }]);
     const [change] = changes;
     if (!change) throw new Error("change が空です");
     await driver.syncEntry(change);
@@ -536,12 +525,8 @@ describe("createCollectionDriver", () => {
     });
     const { entryStore, indexStore, blobs, rateLimiter } = makeDeps();
     // 事前に該当ハッシュを R2 相当ストアへ put しておく(重複回避対象)。
-    const { imageCacheKeySource, sha256Hex } = await import(
-      "../../pipeline/images.js"
-    );
-    const hash = await sha256Hex(
-      imageCacheKeySource("https://example.com/a.png"),
-    );
+    const { imageCacheKeySource, sha256Hex } = await import("../../pipeline/images.js");
+    const hash = await sha256Hex(imageCacheKeySource("https://example.com/a.png"));
     await blobs.put(`image/${hash}`, new Uint8Array([9, 9, 9]), {
       contentType: "image/png",
     });
@@ -599,9 +584,7 @@ describe("createCollectionDriver", () => {
     if (!change) throw new Error("change が空です");
     await driver.syncEntry(change);
 
-    expect(
-      readKeys.filter((k) => k === "entry-index:posts:hello"),
-    ).toHaveLength(1);
+    expect(readKeys.filter((k) => k === "entry-index:posts:hello")).toHaveLength(1);
   });
 
   it("画像 put 時に寸法を customMetadata へ保存し、以降の同期は本体を再取得しない", async () => {
@@ -665,12 +648,8 @@ describe("createCollectionDriver", () => {
     await driver.syncEntry(firstChange);
     expect(fetchSpy).toHaveBeenCalledTimes(1);
 
-    const { imageCacheKeySource, sha256Hex } = await import(
-      "../../pipeline/images.js"
-    );
-    const hash = await sha256Hex(
-      imageCacheKeySource("https://example.com/a.png"),
-    );
+    const { imageCacheKeySource, sha256Hex } = await import("../../pipeline/images.js");
+    const hash = await sha256Hex(imageCacheKeySource("https://example.com/a.png"));
     const head = await blobs.head(`image/${hash}`);
     expect(head?.customMetadata).toHaveProperty("width");
 
@@ -742,12 +721,8 @@ describe("createCollectionDriver", () => {
     await driver.syncEntry(change);
 
     expect(fetchSpy).toHaveBeenCalledTimes(2);
-    const { imageCacheKeySource, sha256Hex } = await import(
-      "../../pipeline/images.js"
-    );
-    const hash = await sha256Hex(
-      imageCacheKeySource("https://example.com/a.png"),
-    );
+    const { imageCacheKeySource, sha256Hex } = await import("../../pipeline/images.js");
+    const hash = await sha256Hex(imageCacheKeySource("https://example.com/a.png"));
     expect(await blobs.head(`image/${hash}`)).not.toBeNull();
   });
 
@@ -858,12 +833,8 @@ describe("createCollectionDriver", () => {
 
     // 失敗レスポンスの本文を画像として保存していないこと(以後 head がヒットして
     // 固定化するのを防ぐ)。
-    const { imageCacheKeySource, sha256Hex } = await import(
-      "../../pipeline/images.js"
-    );
-    const hash = await sha256Hex(
-      imageCacheKeySource("https://example.com/a.png"),
-    );
+    const { imageCacheKeySource, sha256Hex } = await import("../../pipeline/images.js");
+    const hash = await sha256Hex(imageCacheKeySource("https://example.com/a.png"));
     expect(await blobs.head(`image/${hash}`)).toBeNull();
   });
 

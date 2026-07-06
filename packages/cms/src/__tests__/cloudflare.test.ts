@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { cloudflareStores, edgeVersionedCache } from "../cloudflare.js";
 import type { KVNamespaceLike } from "../store/cloudflare-types.js";
 import type { VersionedCacheLike } from "../store/versioned-cache.js";
@@ -90,12 +91,7 @@ describe("cloudflareStores", () => {
     const stores = cloudflareStores({ cache });
     expect(stores.versionedCache).toBeDefined();
 
-    await stores.versionedCache?.put(
-      "posts",
-      "hello",
-      "v1",
-      new Response("cached"),
-    );
+    await stores.versionedCache?.put("posts", "hello", "v1", new Response("cached"));
     const hit = await stores.versionedCache?.get("posts", "hello", "v1");
     expect(await hit?.text()).toBe("cached");
   });

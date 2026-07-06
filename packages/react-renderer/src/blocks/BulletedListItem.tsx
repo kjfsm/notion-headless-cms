@@ -1,6 +1,7 @@
 "use client";
 
 import type { BulletedListItemBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+
 import { notionBlockColorClass } from "../lib/notion-color.js";
 import { cn } from "../lib/utils.js";
 import { NotionBlocks } from "../NotionBlocks.js";
@@ -13,11 +14,7 @@ export function BulletedListItem({
 }: BlockComponentProps<BulletedListItemBlockObjectResponse>) {
   return (
     <li
-      className={cn(
-        "leading-7",
-        notionBlockColorClass(block.bulleted_list_item.color),
-        className,
-      )}
+      className={cn("leading-7", notionBlockColorClass(block.bulleted_list_item.color), className)}
     >
       <RichText value={block.bulleted_list_item.rich_text} />
       {block.children ? (

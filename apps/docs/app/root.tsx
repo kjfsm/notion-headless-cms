@@ -1,5 +1,7 @@
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from "react-router";
+
 import { Header } from "./components/layout/Header";
+
 import "./app.css";
 
 // バンドサイトと揃えた Inter（可変ウェイト 100–900）。font-sans が Inter を解決する。
@@ -25,7 +27,7 @@ export default function App() {
         <Meta />
         <Links />
       </head>
-      <body className="bg-white text-gray-900 font-sans antialiased">
+      <body className="bg-white font-sans text-gray-900 antialiased">
         <Header />
         <Outlet />
         <ScrollRestoration />

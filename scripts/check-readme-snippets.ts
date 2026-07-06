@@ -8,8 +8,7 @@ import * as path from "node:path";
 const readme = fs.readFileSync("README.md", "utf-8");
 
 // README から import 文を抽出して、対象パッケージのシンボルを確認する
-const importRegex =
-  /import\s+\{([^}]+)\}\s+from\s+"(@notion-headless-cms\/[^"]+)"/g;
+const importRegex = /import\s+\{([^}]+)\}\s+from\s+"(@notion-headless-cms\/[^"]+)"/g;
 
 let failed = false;
 const checked: string[] = [];
@@ -27,9 +26,7 @@ for (const match of readme.matchAll(importRegex)) {
   const pkgDirName = pkg.replace("@notion-headless-cms/", "");
   const pkgPath = path.join("packages", pkgDirName);
   if (!fs.existsSync(pkgPath)) {
-    console.error(
-      `✗ パッケージ ${pkg} が workspace に見つかりません (${pkgPath})`,
-    );
+    console.error(`✗ パッケージ ${pkg} が workspace に見つかりません (${pkgPath})`);
     failed = true;
   }
 }

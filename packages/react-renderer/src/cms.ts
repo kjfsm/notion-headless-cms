@@ -1,4 +1,5 @@
 import type { NormalizedBlock, ResolvedLink } from "@notion-headless-cms/cms";
+
 import type { NotionBlock, PageLinkMap } from "./types.js";
 
 /**
@@ -21,18 +22,14 @@ import type { NotionBlock, PageLinkMap } from "./types.js";
  * );
  * ```
  */
-export function denormalizeBlocks(
-  blocks: readonly NormalizedBlock[],
-): NotionBlock[] {
+export function denormalizeBlocks(blocks: readonly NormalizedBlock[]): NotionBlock[] {
   return blocks.map(denormalizeBlock);
 }
 
 const DUMMY_USER = { object: "user", id: "" } as const;
 
 function denormalizeBlock(block: NormalizedBlock): NotionBlock {
-  const children = block.children
-    ? denormalizeBlocks(block.children)
-    : undefined;
+  const children = block.children ? denormalizeBlocks(block.children) : undefined;
   const reconstructed = {
     object: "block",
     id: block.id,
@@ -55,9 +52,7 @@ function denormalizeBlock(block: NormalizedBlock): NotionBlock {
  * `EntrySnapshot.links`(正規化 pageId → 解決済みリンク)を、
  * `NotionRenderer` の `pageLinks` プロップにそのまま渡せる形へ変換する。
  */
-export function toPageLinkMap(
-  links: Readonly<Record<string, ResolvedLink>>,
-): PageLinkMap {
+export function toPageLinkMap(links: Readonly<Record<string, ResolvedLink>>): PageLinkMap {
   const result: PageLinkMap = {};
   for (const [pageId, link] of Object.entries(links)) {
     result[pageId] = { href: link.href, title: link.title ?? undefined };

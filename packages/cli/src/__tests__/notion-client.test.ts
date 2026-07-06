@@ -17,10 +17,7 @@ let capturedClientOptions: { auth?: string; fetch?: NotionFetch } | undefined;
 // `as unknown as typeof import("@notionhq/client")` で公式モジュール shape との
 // 互換性を最低限ながら型レベルで担保し、export 漏れに気付けるようにする
 vi.mock("@notionhq/client", async () => {
-  const actual =
-    await vi.importActual<typeof import("@notionhq/client")>(
-      "@notionhq/client",
-    );
+  const actual = await vi.importActual<typeof import("@notionhq/client")>("@notionhq/client");
   return {
     ...actual,
     Client: class {
@@ -132,7 +129,9 @@ describe("createNotionCLIClient.retrieveDataSource", () => {
     retrieveMock.mockResolvedValue({ object: "page", id: "p1" });
 
     const client = createNotionCLIClient("test-token");
-    await expect(client.retrieveDataSource("p1")).rejects.toThrow();
+    await expect(client.retrieveDataSource("p1")).rejects.toThrow(
+      "ID p1 のデータソースが見つかりませんでした。",
+    );
   });
 });
 
@@ -149,14 +148,14 @@ describe("createNotionCLIClient: リトライロジック", () => {
 
   it("rate_limited (429) でリトライし MAX_RETRIES 回後にエラーをスローする", async () => {
     const { createNotionCLIClient } = await import("../notion-client.js");
-    searchMock.mockRejectedValue(
-      makeAPIError(APIErrorCode.RateLimited, 429, "rate limited"),
-    );
+    searchMock.mockRejectedValue(makeAPIError(APIErrorCode.RateLimited, 429, "rate limited"));
 
     const client = createNotionCLIClient("test-token");
-    // rejects ハンドラを先にアタッチしてから timers を進める（unhandled rejection 防止）
+    // rejects ハンドラを先にアタッチしてから timers を進める（unhandled rejection 防止）。
+    // この await は意図的に後段へ遅延させるため vitest/valid-expect の指摘を無効化する。
     const promise = client.resolveId("DB");
-    const rejectCheck = expect(promise).rejects.toThrow();
+    // oxlint-disable-next-line vitest/valid-expect
+    const rejectCheck = expect(promise).rejects.toThrow("rate limited");
     await vi.runAllTimersAsync();
     await rejectCheck;
     expect(searchMock).toHaveBeenCalledTimes(5);
@@ -165,9 +164,7 @@ describe("createNotionCLIClient: リトライロジック", () => {
   it("internal_server_error (502 相当) でリトライして成功する", async () => {
     const { createNotionCLIClient } = await import("../notion-client.js");
     searchMock
-      .mockRejectedValueOnce(
-        makeAPIError(APIErrorCode.InternalServerError, 502, "bad gateway"),
-      )
+      .mockRejectedValueOnce(makeAPIError(APIErrorCode.InternalServerError, 502, "bad gateway"))
       .mockResolvedValue({ results: [] });
 
     const client = createNotionCLIClient("test-token");
@@ -206,9 +203,7 @@ describe("createNotionCLIClient: リトライロジック", () => {
   it("ECONNRESET コードでリトライする", async () => {
     const { createNotionCLIClient } = await import("../notion-client.js");
     searchMock
-      .mockRejectedValueOnce(
-        Object.assign(new Error("connection reset"), { code: "ECONNRESET" }),
-      )
+      .mockRejectedValueOnce(Object.assign(new Error("connection reset"), { code: "ECONNRESET" }))
       .mockResolvedValue({ results: [] });
 
     const client = createNotionCLIClient("test-token");
@@ -221,9 +216,7 @@ describe("createNotionCLIClient: リトライロジック", () => {
   it("cause.code を持つネストエラー（ETIMEDOUT）でリトライする", async () => {
     const { createNotionCLIClient } = await import("../notion-client.js");
     searchMock
-      .mockRejectedValueOnce(
-        Object.assign(new Error("outer"), { cause: { code: "ETIMEDOUT" } }),
-      )
+      .mockRejectedValueOnce(Object.assign(new Error("outer"), { cause: { code: "ETIMEDOUT" } }))
       .mockResolvedValue({ results: [] });
 
     const client = createNotionCLIClient("test-token");
@@ -235,12 +228,10 @@ describe("createNotionCLIClient: リトライロジック", () => {
 
   it("リトライ不可能なエラー（object_not_found）はすぐにスローする", async () => {
     const { createNotionCLIClient } = await import("../notion-client.js");
-    searchMock.mockRejectedValue(
-      makeAPIError(APIErrorCode.ObjectNotFound, 404, "not found"),
-    );
+    searchMock.mockRejectedValue(makeAPIError(APIErrorCode.ObjectNotFound, 404, "not found"));
 
     const client = createNotionCLIClient("test-token");
-    await expect(client.resolveId("DB")).rejects.toThrow();
+    await expect(client.resolveId("DB")).rejects.toThrow("not found");
     expect(searchMock).toHaveBeenCalledTimes(1);
   });
 
@@ -249,11 +240,7 @@ describe("createNotionCLIClient: リトライロジック", () => {
     const ds = makeDataSource("ds-2", "Retried DB");
     retrieveMock
       .mockRejectedValueOnce(
-        makeAPIError(
-          APIErrorCode.ServiceUnavailable,
-          503,
-          "service unavailable",
-        ),
+        makeAPIError(APIErrorCode.ServiceUnavailable, 503, "service unavailable"),
       )
       .mockResolvedValue(ds);
 

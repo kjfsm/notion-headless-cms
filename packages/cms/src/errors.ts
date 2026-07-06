@@ -65,10 +65,7 @@ export function isCMSError(error: unknown): error is CMSError {
   return error instanceof CMSError;
 }
 
-export function isCMSErrorInNamespace(
-  error: unknown,
-  namespace: string,
-): error is CMSError {
+export function isCMSErrorInNamespace(error: unknown, namespace: string): error is CMSError {
   return isCMSError(error) && error.code.startsWith(namespace);
 }
 
@@ -88,7 +85,6 @@ export function matchCMSError<R>(
     return handlers._?.(error);
   }
   const handler =
-    handlers[error.code as CMSErrorCode] ??
-    (handlers._ as CMSErrorHandler<R> | undefined);
+    handlers[error.code as CMSErrorCode] ?? (handlers._ as CMSErrorHandler<R> | undefined);
   return handler?.(error);
 }

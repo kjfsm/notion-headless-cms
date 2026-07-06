@@ -1,6 +1,7 @@
 import type { RichTextItemResponse } from "@notionhq/client";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+
 import { NotionContext } from "../context";
 import { Mention } from "../rich-text/Mention";
 

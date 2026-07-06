@@ -1,11 +1,5 @@
 import type { KVNamespaceLike, R2BucketLike } from "./cloudflare-types.js";
-import type {
-  BlobGetResult,
-  BlobHead,
-  BlobPutOptions,
-  BlobStore,
-  DocStore,
-} from "./types.js";
+import type { BlobGetResult, BlobHead, BlobPutOptions, BlobStore, DocStore } from "./types.js";
 
 /**
  * KV を `DocStore` として使う(コレクション index 用)。KV は結果整合(`types.ts` の
@@ -47,12 +41,8 @@ export function r2BlobStore(bucket: R2BucketLike): BlobStore {
         value,
         opts?.contentType || opts?.customMetadata
           ? {
-              httpMetadata: opts.contentType
-                ? { contentType: opts.contentType }
-                : undefined,
-              customMetadata: opts.customMetadata
-                ? { ...opts.customMetadata }
-                : undefined,
+              httpMetadata: opts.contentType ? { contentType: opts.contentType } : undefined,
+              customMetadata: opts.customMetadata ? { ...opts.customMetadata } : undefined,
             }
           : undefined,
       );

@@ -1,11 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
+
 import { resolveBlockImageUrls } from "../resolve-image-urls";
 import type { NotionBlock } from "../types";
 
-function makeImage(
-  url: string,
-  type: "file" | "external" = "file",
-): NotionBlock {
+function makeImage(url: string, type: "file" | "external" = "file"): NotionBlock {
   return {
     object: "block",
     id: "img-1",
@@ -73,22 +71,15 @@ describe("resolveBlockImageUrls", () => {
     ];
     const result = await resolveBlockImageUrls(blocks, cacheImage);
     expect(cacheImage).toHaveBeenCalledTimes(4);
-    for (const [i, key] of (
-      ["video", "audio", "file", "pdf"] as const
-    ).entries()) {
-      const out = result[i] as unknown as Record<
-        string,
-        { file?: { url: string } }
-      >;
+    for (const [i, key] of (["video", "audio", "file", "pdf"] as const).entries()) {
+      const out = result[i] as unknown as Record<string, { file?: { url: string } }>;
       expect(out[key]?.file?.url).toMatch(/^\/api\/images\/h-/);
     }
   });
 
   it("video の external 型は書き換えない", async () => {
     const cacheImage = vi.fn(async (url: string) => `proxied:${url}`);
-    const blocks = [
-      makeFile("video", "https://www.youtube.com/watch?v=abc", "external"),
-    ];
+    const blocks = [makeFile("video", "https://www.youtube.com/watch?v=abc", "external")];
     const result = await resolveBlockImageUrls(blocks, cacheImage);
     expect(cacheImage).not.toHaveBeenCalled();
     expect(result[0]).toBe(blocks[0]);
@@ -110,9 +101,7 @@ describe("resolveBlockImageUrls", () => {
     const childOut = (result[0]?.children?.[0] ?? null) as unknown as {
       image: { file?: { url: string } };
     };
-    expect(childOut.image.file?.url).toBe(
-      "proxied:https://notion.so/child.png",
-    );
+    expect(childOut.image.file?.url).toBe("proxied:https://notion.so/child.png");
   });
 
   it("入力ツリーを破壊しない", async () => {

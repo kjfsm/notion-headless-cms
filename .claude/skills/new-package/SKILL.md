@@ -39,8 +39,8 @@ mkdir -p packages/<name>/src/__tests__
 
 ```ts
 export default defineWorkspace([
-	// ...
-	"packages/<name>",
+  // ...
+  "packages/<name>",
 ]);
 ```
 
@@ -75,11 +75,11 @@ pnpm changeset
 
 テンプレート内の `<name>` を置換してから保存する。
 
-| 変数 | 例 |
-|---|---|
-| `<name>` | `cache-redis` |
+| 変数            | 例                                            |
+| --------------- | --------------------------------------------- |
+| `<name>`        | `cache-redis`                                 |
 | `<description>` | `Redis cache adapter for notion-headless-cms` |
-| `<keyword>` | `redis` |
+| `<keyword>`     | `redis`                                       |
 
 ## 参考
 

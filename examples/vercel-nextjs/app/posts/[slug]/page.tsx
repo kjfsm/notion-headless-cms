@@ -1,10 +1,8 @@
 import { NotionRenderer } from "@notion-headless-cms/react-renderer";
-import {
-  denormalizeBlocks,
-  toPageLinkMap,
-} from "@notion-headless-cms/react-renderer/cms";
+import { denormalizeBlocks, toPageLinkMap } from "@notion-headless-cms/react-renderer/cms";
 import { NotionRevalidator } from "@notion-headless-cms/react-renderer/next";
 import { notFound } from "next/navigation";
+
 import { ensureSynced } from "@/app/lib/cms";
 
 export const revalidate = 300;
@@ -19,11 +17,7 @@ export async function generateStaticParams() {
   }
 }
 
-export default async function PostPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
+export default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
   const cms = await ensureSynced();
   const post = await cms.posts.find(slug);
@@ -34,9 +28,7 @@ export default async function PostPage({
       <NotionRevalidator />
       <h1 className="text-3xl font-bold mb-4">{post.slug}</h1>
       {post.meta.publishedAt && (
-        <time className="block text-sm text-gray-500 mb-8">
-          {post.meta.publishedAt}
-        </time>
+        <time className="block text-sm text-gray-500 mb-8">{post.meta.publishedAt}</time>
       )}
       <NotionRenderer
         blocks={denormalizeBlocks(post.blocks)}

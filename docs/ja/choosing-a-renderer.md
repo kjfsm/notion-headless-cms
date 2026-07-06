@@ -42,6 +42,7 @@ bookmark / embed / link_preview は OGP 情報を持たない素の「シェル�
 を明示した場合のみ iframe 直埋め込みになり、それ以外はシェルにフォールバックする。
 
 **適した用途**:
+
 - Hono/Express などの JSON API・RSS フィード・メール本文
 - React を使わないシンプルな SSR
 - バンドルサイズを絞りたい場合
@@ -98,6 +99,7 @@ bookmark / embed / link_preview の OGP カードはクライアント側フェ�
 利用側で `katex/dist/katex.min.css` を読み込む。
 
 **適した用途**:
+
 - Next.js / React Router など React ベースのフレームワーク
 - Notion のブロック構造をそのまま React で制御したい
 - shadcn/ui のデザインシステムと統合したい
@@ -106,14 +108,14 @@ bookmark / embed / link_preview の OGP カードはクライアント側フェ�
 
 ## まとめ
 
-| | `cms/html` | `react-renderer` |
-|---|:---:|:---:|
-| React 不要 | ✅ | ❌ |
-| 追加インストール | 不要（`cms` に同梱） | 必要 |
+|                                           |         `cms/html`         |                  `react-renderer`                  |
+| ----------------------------------------- | :------------------------: | :------------------------------------------------: |
+| React 不要                                |             ✅             |                         ❌                         |
+| 追加インストール                          |    不要（`cms` に同梱）    |                        必要                        |
 | OGP カード（bookmark/embed/link_preview） | シェルのみ（OGP 取得なし） | ✅（`ogpEndpoint` 指定時、クライアント側フェッチ） |
-| shadcn/ui コンポーネント | ❌ | ✅ |
-| SSR / Workers 対応 | ✅ | ✅（RSC 可） |
-| バンドルサイズ（目安） | 小 | 中〜大 |
+| shadcn/ui コンポーネント                  |             ❌             |                         ✅                         |
+| SSR / Workers 対応                        |             ✅             |                    ✅（RSC 可）                    |
+| バンドルサイズ（目安）                    |             小             |                       中〜大                       |
 
 両者は排他的ではない。React アプリで `react-renderer` を使い、同じデータから RSS フィードや
 メール本文だけ `cms/html` の `renderBlocksToHtml()` で組み立てる、という組み合わせも可能。

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import type { NormalizedBlock } from "../../types/entry-snapshot.js";
 import type { JsonValue } from "../../types/json-value.js";
 import { renderBlocksToHtml, renderRichText } from "../html.js";
@@ -20,9 +21,7 @@ describe("renderRichText", () => {
   });
 
   it("bold/italic/code/strikethrough/underline を入れ子にする", () => {
-    const html = renderRichText([
-      richText("hi", { bold: true, italic: true, code: true }),
-    ]);
+    const html = renderRichText([richText("hi", { bold: true, italic: true, code: true })]);
     expect(html).toBe("<em><strong><code>hi</code></strong></em>");
   });
 
@@ -43,9 +42,9 @@ describe("renderRichText", () => {
   });
 
   it("href のタブ/改行を挟んだ javascript: スキームも弾く", () => {
-    expect(
-      renderRichText([richText("link", {}, "java\nscript:alert(1)")]),
-    ).toBe('<a href="#">link</a>');
+    expect(renderRichText([richText("link", {}, "java\nscript:alert(1)")])).toBe(
+      '<a href="#">link</a>',
+    );
   });
 });
 
@@ -72,9 +71,7 @@ describe("renderBlocksToHtml", () => {
       },
       { id: "p1", type: "paragraph", data: { rich_text: [richText("after")] } },
     ];
-    expect(renderBlocksToHtml(blocks)).toBe(
-      "<ul><li>a</li><li>b</li></ul><p>after</p>",
-    );
+    expect(renderBlocksToHtml(blocks)).toBe("<ul><li>a</li><li>b</li></ul><p>after</p>");
   });
 
   it("numbered_list_item は <ol> にまとめる", () => {
@@ -106,9 +103,7 @@ describe("renderBlocksToHtml", () => {
         data: { rich_text: [richText("b")] },
       },
     ];
-    expect(renderBlocksToHtml(blocks)).toBe(
-      "<ul><li>a</li></ul><ol><li>b</li></ol>",
-    );
+    expect(renderBlocksToHtml(blocks)).toBe("<ul><li>a</li></ul><ol><li>b</li></ol>");
   });
 
   it("code ブロックは language クラス付きの pre/code になる", () => {
@@ -125,9 +120,7 @@ describe("renderBlocksToHtml", () => {
   });
 
   it("divider は <hr /> になる", () => {
-    expect(renderBlocksToHtml([{ id: "d1", type: "divider", data: {} }])).toBe(
-      "<hr />",
-    );
+    expect(renderBlocksToHtml([{ id: "d1", type: "divider", data: {} }])).toBe("<hr />");
   });
 
   it("to_do は checked 状態を反映する", () => {
@@ -190,9 +183,7 @@ describe("renderBlocksToHtml", () => {
       },
     ];
     const html = renderBlocksToHtml(blocks);
-    expect(html).toBe(
-      "<details><summary>more</summary><p>inside</p></details>",
-    );
+    expect(html).toBe("<details><summary>more</summary><p>inside</p></details>");
   });
 
   it("未対応ブロックは子要素だけ描画する(何も失わない)", () => {
@@ -229,12 +220,8 @@ describe("renderBlocksToHtml", () => {
   });
 
   it("equation ブロックは __cachedHtml が無ければ $$...$$ フォールバックにする", () => {
-    const blocks: NormalizedBlock[] = [
-      { id: "e1", type: "equation", data: { expression: "x^2" } },
-    ];
-    expect(renderBlocksToHtml(blocks)).toBe(
-      '<div class="nhc-equation">$$x^2$$</div>',
-    );
+    const blocks: NormalizedBlock[] = [{ id: "e1", type: "equation", data: { expression: "x^2" } }];
+    expect(renderBlocksToHtml(blocks)).toBe('<div class="nhc-equation">$$x^2$$</div>');
   });
 
   it("equation ブロックの __cachedHtml があればそれを優先描画する", () => {
@@ -264,9 +251,7 @@ describe("renderBlocksToHtml", () => {
         },
       },
     ];
-    expect(renderBlocksToHtml(blocks)).toBe(
-      '<p><span class="nhc-equation-inline">$y$</span></p>',
-    );
+    expect(renderBlocksToHtml(blocks)).toBe('<p><span class="nhc-equation-inline">$y$</span></p>');
   });
 
   it("inline equation の __cachedHtml があればそれを優先描画する", () => {
@@ -346,9 +331,7 @@ describe("renderBlocksToHtml", () => {
         id: "s1",
         type: "synced_block",
         data: { synced_from: null },
-        children: [
-          { id: "p1", type: "paragraph", data: { rich_text: [richText("x")] } },
-        ],
+        children: [{ id: "p1", type: "paragraph", data: { rich_text: [richText("x")] } }],
       },
     ];
     expect(renderBlocksToHtml(blocks)).toBe(

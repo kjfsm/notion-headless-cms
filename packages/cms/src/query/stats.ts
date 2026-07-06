@@ -1,6 +1,6 @@
+import type { SyncScheduler } from "../sync-scheduler.js";
 import type { SyncFailure, WriteBudgetState } from "../sync/coordinator.js";
 import { parseSyncState } from "../sync/coordinator.js";
-import type { SyncScheduler } from "../sync-scheduler.js";
 
 export interface SyncStats {
   readonly lastSyncAt: string | null;
@@ -15,9 +15,7 @@ export interface SyncStats {
 /**
  * 同期状態の観測面。読者 API から参照可能にし、doctor コマンド(#446)の材料にする。
  */
-export async function getSyncStats(
-  scheduler: SyncScheduler,
-): Promise<SyncStats> {
+export async function getSyncStats(scheduler: SyncScheduler): Promise<SyncStats> {
   const state = parseSyncState(await scheduler.getState());
   return {
     lastSyncAt: state.lastSyncAt,

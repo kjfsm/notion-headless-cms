@@ -4,8 +4,4 @@
  */
 export { renderEmbedIframe, renderOgpShell } from "./render/embeds.js";
 export type { RenderHtmlOptions } from "./render/html.js";
-export {
-  renderBlocksToHtml,
-  renderBlockToHtml,
-  renderRichText,
-} from "./render/html.js";
+export { renderBlocksToHtml, renderBlockToHtml, renderRichText } from "./render/html.js";

@@ -1,16 +1,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+
 import { CMSError } from "@notion-headless-cms/cms";
+
 import { loadConfig } from "../config-loader.js";
 import { fileExists } from "../fs-utils.js";
 import { createNotionCLIClient } from "../notion-client.js";
 import { generateCollectionScaffold } from "../pull.js";
-import {
-  loadEnvFile,
-  makeReporter,
-  resolveDataSourceId,
-  resolveToken,
-} from "./shared.js";
+import { loadEnvFile, makeReporter, resolveDataSourceId, resolveToken } from "./shared.js";
 
 export interface PullOptions {
   config?: string;
@@ -31,10 +28,7 @@ export async function runPull(opts: PullOptions): Promise<void> {
   const reporter = makeReporter(opts);
   await loadEnvFile(opts.envFile, reporter);
 
-  const configPath = path.resolve(
-    process.cwd(),
-    opts.config ?? "nhc.config.ts",
-  );
+  const configPath = path.resolve(process.cwd(), opts.config ?? "nhc.config.ts");
   reporter.info(`設定ファイルを読み込み中: ${configPath}`);
   const config = await loadConfig(configPath);
 
@@ -60,13 +54,7 @@ export async function runPull(opts: PullOptions): Promise<void> {
   let generated = 0;
   let skipped = 0;
   for (const [name, source] of entries) {
-    const dataSourceId = await resolveDataSourceId(
-      name,
-      source,
-      notionClient,
-      reporter,
-      "runPull",
-    );
+    const dataSourceId = await resolveDataSourceId(name, source, notionClient, reporter, "runPull");
     const dataSource = await notionClient.retrieveDataSource(dataSourceId);
     const code = generateCollectionScaffold(dataSource, {
       collectionName: name,
@@ -76,9 +64,7 @@ export async function runPull(opts: PullOptions): Promise<void> {
 
     const outputPath = path.join(scaffoldDir, `${name}.ts`);
     if (await fileExists(outputPath)) {
-      reporter.info(
-        `  skip [${name}]: ${outputPath} は既に存在します（上書きしません）`,
-      );
+      reporter.info(`  skip [${name}]: ${outputPath} は既に存在します（上書きしません）`);
       skipped++;
       continue;
     }

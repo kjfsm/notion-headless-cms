@@ -1,13 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
 import { getPost, getPosts } from "../lib/data.js";
 
 const PARAGRAPH_BLOCK = {
   id: "b1",
   type: "paragraph",
   data: {
-    rich_text: [
-      { type: "text", plain_text: "内容", annotations: {}, href: null },
-    ],
+    rich_text: [{ type: "text", plain_text: "内容", annotations: {}, href: null }],
   },
 };
 

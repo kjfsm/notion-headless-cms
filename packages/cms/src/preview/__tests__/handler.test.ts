@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+
 import type { EntrySnapshot } from "../../types/entry-snapshot.js";
 import { createPreviewHandler } from "../handler.js";
 import { createPreviewUrl } from "../signature.js";
@@ -27,15 +28,12 @@ describe("createPreviewHandler", () => {
       now: () => now,
     });
 
-    const url = await createPreviewUrl(
-      "https://x/api/cms/preview/posts/hello",
-      {
-        secret: SECRET,
-        collection: "posts",
-        slug: "hello",
-        now,
-      },
-    );
+    const url = await createPreviewUrl("https://x/api/cms/preview/posts/hello", {
+      secret: SECRET,
+      collection: "posts",
+      slug: "hello",
+      now,
+    });
     const res = await handler(new Request(url), "posts/hello");
     expect(res.status).toBe(200);
     expect(res.headers.get("cache-control")).toBe("no-store");
@@ -46,10 +44,7 @@ describe("createPreviewHandler", () => {
   it("sig/exp が無ければ 404", async () => {
     const readThrough = vi.fn();
     const handler = createPreviewHandler({ secret: SECRET, readThrough });
-    const res = await handler(
-      new Request("https://x/api/cms/preview/posts/hello"),
-      "posts/hello",
-    );
+    const res = await handler(new Request("https://x/api/cms/preview/posts/hello"), "posts/hello");
     expect(res.status).toBe(404);
     expect(readThrough).not.toHaveBeenCalled();
   });
@@ -58,9 +53,7 @@ describe("createPreviewHandler", () => {
     const readThrough = vi.fn();
     const handler = createPreviewHandler({ secret: SECRET, readThrough });
     const res = await handler(
-      new Request(
-        "https://x/api/cms/preview/posts/hello?sig=bogus&exp=9999999999999",
-      ),
+      new Request("https://x/api/cms/preview/posts/hello?sig=bogus&exp=9999999999999"),
       "posts/hello",
     );
     expect(res.status).toBe(404);
@@ -75,15 +68,12 @@ describe("createPreviewHandler", () => {
       readThrough,
       now: () => now,
     });
-    const url = await createPreviewUrl(
-      "https://x/api/cms/preview/posts/missing",
-      {
-        secret: SECRET,
-        collection: "posts",
-        slug: "missing",
-        now,
-      },
-    );
+    const url = await createPreviewUrl("https://x/api/cms/preview/posts/missing", {
+      secret: SECRET,
+      collection: "posts",
+      slug: "missing",
+      now,
+    });
     const res = await handler(new Request(url), "posts/missing");
     expect(res.status).toBe(404);
   });
@@ -96,15 +86,12 @@ describe("createPreviewHandler", () => {
       readThrough,
       now: () => now,
     });
-    const url = await createPreviewUrl(
-      "https://x/api/cms/preview/posts/hello",
-      {
-        secret: SECRET,
-        collection: "posts",
-        slug: "hello",
-        now,
-      },
-    );
+    const url = await createPreviewUrl("https://x/api/cms/preview/posts/hello", {
+      secret: SECRET,
+      collection: "posts",
+      slug: "hello",
+      now,
+    });
     await handler(new Request(url), "posts/hello");
     // readThrough 経由のみでデータを取得しており、他の I/O 手段(store 等)は
     // 一切依存関係として渡していない(型シグネチャ上、渡しようがない設計)。

@@ -2,13 +2,10 @@
 
 import type { BlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import type { ComponentType } from "react";
+
 import * as Defaults from "./blocks/index.js";
 import { useNotionContext } from "./context.js";
-import type {
-  BlockComponentProps,
-  ComponentOverrides,
-  NotionBlock,
-} from "./types.js";
+import type { BlockComponentProps, ComponentOverrides, NotionBlock } from "./types.js";
 
 /** {@link BlockSwitch} の props。`block` 1 個を Context 経由で対応コンポーネントに振り分ける。 */
 export interface BlockSwitchProps {
@@ -82,9 +79,5 @@ function pickComponent(block: NotionBlock, o?: ComponentOverrides): unknown {
     unsupported: o?.Unsupported ?? Defaults.Unsupported,
   } satisfies Record<BlockObjectResponse["type"], unknown>;
   // 型より新しいランタイム値 (lib 未追従の Notion 新 block type) は Unsupported に倒す
-  return (
-    (map as Record<string, unknown>)[block.type] ??
-    o?.Unsupported ??
-    Defaults.Unsupported
-  );
+  return (map as Record<string, unknown>)[block.type] ?? o?.Unsupported ?? Defaults.Unsupported;
 }

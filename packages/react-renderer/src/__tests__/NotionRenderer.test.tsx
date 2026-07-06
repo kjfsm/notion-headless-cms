@@ -1,6 +1,7 @@
 import type { ParagraphBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
+
 import { NotionBlocks } from "../NotionBlocks.js";
 import { NotionRenderer } from "../NotionRenderer.js";
 import type { BlockComponentProps, NotionBlock } from "../types.js";
@@ -88,11 +89,7 @@ const codeBlock = (
     },
   }) as unknown as NotionBlock;
 
-const para = (
-  id: string,
-  text: string,
-  children?: NotionBlock[],
-): NotionBlock =>
+const para = (id: string, text: string, children?: NotionBlock[]): NotionBlock =>
   ({
     object: "block",
     id,
@@ -175,9 +172,7 @@ const callout = (id: string, text: string, emoji = "💡"): NotionBlock =>
     },
   }) as unknown as NotionBlock;
 
-function CustomParagraph({
-  block,
-}: BlockComponentProps<ParagraphBlockObjectResponse>) {
+function CustomParagraph({ block }: BlockComponentProps<ParagraphBlockObjectResponse>) {
   return (
     <>
       <p data-testid="custom">{block.paragraph.rich_text[0]?.plain_text}</p>
@@ -188,9 +183,7 @@ function CustomParagraph({
 
 describe("NotionRenderer", () => {
   it("paragraph を描画する", () => {
-    const { container } = render(
-      <NotionRenderer blocks={[para("p1", "hello")]} />,
-    );
+    const { container } = render(<NotionRenderer blocks={[para("p1", "hello")]} />);
     expect(container.textContent).toContain("hello");
   });
 
@@ -205,9 +198,7 @@ describe("NotionRenderer", () => {
 
   it("段落を間に挟むと ul は分割される", () => {
     const { container } = render(
-      <NotionRenderer
-        blocks={[bullet("a", "one"), para("p", "x"), bullet("b", "two")]}
-      />,
+      <NotionRenderer blocks={[bullet("a", "one"), para("p", "x"), bullet("b", "two")]} />,
     );
     expect(container.querySelectorAll("ul")).toHaveLength(2);
   });
@@ -224,9 +215,7 @@ describe("NotionRenderer", () => {
   });
 
   it("デフォルトの Equation は SSR では原文を <pre> で出す", () => {
-    const { container } = render(
-      <NotionRenderer blocks={[equation("e1", "E = mc^2")]} />,
-    );
+    const { container } = render(<NotionRenderer blocks={[equation("e1", "E = mc^2")]} />);
     expect(container.textContent).toContain("E = mc^2");
   });
 
@@ -234,10 +223,7 @@ describe("NotionRenderer", () => {
     it("resolveImageUrl を渡すと Image ブロックの src が変換される", () => {
       const block = imageBlock("img1", "https://notion.so/original.png");
       const { container } = render(
-        <NotionRenderer
-          blocks={[block]}
-          resolveImageUrl={() => "/proxy/image.png"}
-        />,
+        <NotionRenderer blocks={[block]} resolveImageUrl={() => "/proxy/image.png"} />,
       );
       const img = container.querySelector("img");
       expect(img?.getAttribute("src")).toBe("/proxy/image.png");
@@ -246,10 +232,7 @@ describe("NotionRenderer", () => {
     it("resolvePageUrl を渡すと LinkToPage の href が変換される", () => {
       const block = linkToPageBlock("ltp1", "page-id-abc");
       const { container } = render(
-        <NotionRenderer
-          blocks={[block]}
-          resolvePageUrl={(id) => `/pages/${id}`}
-        />,
+        <NotionRenderer blocks={[block]} resolvePageUrl={(id) => `/pages/${id}`} />,
       );
       const link = container.querySelector("a");
       expect(link?.getAttribute("href")).toBe("/pages/page-id-abc");
@@ -261,33 +244,23 @@ describe("NotionRenderer", () => {
         // biome-ignore lint/performance/noImgElement lint/a11y/useAltText: テスト用スタブ
         <img data-testid="custom-img" {...props} />
       );
-      const { container } = render(
-        <NotionRenderer blocks={[block]} Image={CustomImg} />,
-      );
-      expect(
-        container.querySelector("[data-testid='custom-img']"),
-      ).not.toBeNull();
+      const { container } = render(<NotionRenderer blocks={[block]} Image={CustomImg} />);
+      expect(container.querySelector("[data-testid='custom-img']")).not.toBeNull();
     });
 
     it("Link スロットを渡すと LinkToPage の a 要素が差し替えコンポーネントで描画される", () => {
       const block = linkToPageBlock("ltp2", "page-id-xyz");
-      const CustomLink = (
-        props: React.AnchorHTMLAttributes<HTMLAnchorElement>,
-      ) => <a data-testid="custom-link" {...props} />;
-      const { container } = render(
-        <NotionRenderer blocks={[block]} Link={CustomLink} />,
+      const CustomLink = (props: React.AnchorHTMLAttributes<HTMLAnchorElement>) => (
+        <a data-testid="custom-link" {...props} />
       );
-      expect(
-        container.querySelector("[data-testid='custom-link']"),
-      ).not.toBeNull();
+      const { container } = render(<NotionRenderer blocks={[block]} Link={CustomLink} />);
+      expect(container.querySelector("[data-testid='custom-link']")).not.toBeNull();
     });
   });
 
   describe("Code ブロック", () => {
     it("デフォルトは <pre> でソースを表示する", () => {
-      const { container } = render(
-        <NotionRenderer blocks={[codeBlock("c1", "const x = 1;")]} />,
-      );
+      const { container } = render(<NotionRenderer blocks={[codeBlock("c1", "const x = 1;")]} />);
       expect(container.querySelector("pre")).not.toBeNull();
       expect(container.textContent).toContain("const x = 1;");
     });
@@ -295,15 +268,7 @@ describe("NotionRenderer", () => {
     it("caption がある場合は <pre> パスでも表示する", () => {
       const { container } = render(
         <NotionRenderer
-          blocks={[
-            codeBlock(
-              "c1b",
-              "const x = 1;",
-              "typescript",
-              undefined,
-              "サンプル",
-            ),
-          ]}
+          blocks={[codeBlock("c1b", "const x = 1;", "typescript", undefined, "サンプル")]}
         />,
       );
       expect(container.textContent).toContain("サンプル");
@@ -312,9 +277,7 @@ describe("NotionRenderer", () => {
     it("__cachedHtml があれば dangerouslySetInnerHTML で描画する", () => {
       const html = '<div class="shiki"><span>highlighted</span></div>';
       const { container } = render(
-        <NotionRenderer
-          blocks={[codeBlock("c2", "let y = 2;", "typescript", html)]}
-        />,
+        <NotionRenderer blocks={[codeBlock("c2", "let y = 2;", "typescript", html)]} />,
       );
       expect(container.querySelector(".shiki")).not.toBeNull();
       expect(container.textContent).toContain("highlighted");
@@ -323,9 +286,7 @@ describe("NotionRenderer", () => {
     it("__cachedHtml + caption の両方を描画する", () => {
       const html = '<div class="shiki"><span>highlighted</span></div>';
       const { container } = render(
-        <NotionRenderer
-          blocks={[codeBlock("c3", "let z = 3;", "typescript", html, "注釈")]}
-        />,
+        <NotionRenderer blocks={[codeBlock("c3", "let z = 3;", "typescript", html, "注釈")]} />,
       );
       expect(container.querySelector(".shiki")).not.toBeNull();
       expect(container.textContent).toContain("注釈");
@@ -333,21 +294,15 @@ describe("NotionRenderer", () => {
 
     it("ヘッダーに言語ラベルとコピーボタンを出す", () => {
       const { container } = render(
-        <NotionRenderer
-          blocks={[codeBlock("c4", "const x = 1;", "typescript")]}
-        />,
+        <NotionRenderer blocks={[codeBlock("c4", "const x = 1;", "typescript")]} />,
       );
       expect(container.textContent).toContain("typescript");
-      expect(
-        container.querySelector('[data-slot="copy-button"]'),
-      ).not.toBeNull();
+      expect(container.querySelector('[data-slot="copy-button"]')).not.toBeNull();
     });
 
     it("fallback で行番号用の data-line を出す", () => {
       const { container } = render(
-        <NotionRenderer
-          blocks={[codeBlock("c5", "const a = 1;\nconst b = 2;", "typescript")]}
-        />,
+        <NotionRenderer blocks={[codeBlock("c5", "const a = 1;\nconst b = 2;", "typescript")]} />,
       );
       expect(container.querySelector("code[data-line-numbers]")).not.toBeNull();
       expect(container.querySelectorAll("[data-line]").length).toBe(2);
@@ -356,9 +311,7 @@ describe("NotionRenderer", () => {
 
   describe("Callout ブロック", () => {
     it("公式 Callout（Alert）で本文とアイコンを描画する", () => {
-      const { container } = render(
-        <NotionRenderer blocks={[callout("co1", "メモ本文", "💡")]} />,
-      );
+      const { container } = render(<NotionRenderer blocks={[callout("co1", "メモ本文", "💡")]} />);
       expect(container.querySelector('[role="alert"]')).not.toBeNull();
       expect(container.textContent).toContain("メモ本文");
       expect(container.textContent).toContain("💡");
@@ -406,11 +359,7 @@ describe("NotionRenderer", () => {
       table_of_contents: { color: "default" },
     } as unknown as NotionBlock;
 
-    const numbered = (
-      id: string,
-      text: string,
-      children?: NotionBlock[],
-    ): NotionBlock =>
+    const numbered = (id: string, text: string, children?: NotionBlock[]): NotionBlock =>
       ({
         object: "block",
         id,
@@ -462,9 +411,7 @@ describe("NotionRenderer", () => {
       const { container } = render(
         <NotionRenderer blocks={[heading("h-a", "heading_1", "Alpha"), toc]} />,
       );
-      const links = container.querySelectorAll(
-        "[aria-label='table of contents'] a",
-      );
+      const links = container.querySelectorAll("[aria-label='table of contents'] a");
       expect(links.length).toBe(1);
       expect(links[0]?.getAttribute("href")).toBe("#h-a");
       expect(links[0]?.textContent).toBe("Alpha");
@@ -482,10 +429,7 @@ describe("NotionRenderer", () => {
     it("LinkToPage が resolvePageTitle を反映する", () => {
       const block = linkToPageBlock("ltp", "page-x");
       const { container } = render(
-        <NotionRenderer
-          blocks={[block]}
-          resolvePageTitle={(id) => `Title:${id}`}
-        />,
+        <NotionRenderer blocks={[block]} resolvePageTitle={(id) => `Title:${id}`} />,
       );
       expect(container.textContent).toContain("Title:page-x");
     });
@@ -494,10 +438,7 @@ describe("NotionRenderer", () => {
   it("Context 経由で components が子ブロックに伝播する", () => {
     const parent = para("parent", "parent-text", [para("child", "child-text")]);
     const { container } = render(
-      <NotionRenderer
-        blocks={[parent]}
-        components={{ Paragraph: CustomParagraph }}
-      />,
+      <NotionRenderer blocks={[parent]} components={{ Paragraph: CustomParagraph }} />,
     );
     const customs = container.querySelectorAll("[data-testid='custom']");
     expect(customs.length).toBeGreaterThanOrEqual(2);

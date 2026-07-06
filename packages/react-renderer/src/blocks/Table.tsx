@@ -4,6 +4,7 @@ import type {
   TableBlockObjectResponse,
   TableRowBlockObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
+
 import {
   TableBody,
   TableCell,
@@ -20,10 +21,7 @@ function isTableRow(b: NotionBlock): b is TableRowBlockObjectResponse {
   return b.type === "table_row";
 }
 
-export function Table({
-  block,
-  className,
-}: BlockComponentProps<TableBlockObjectResponse>) {
+export function Table({ block, className }: BlockComponentProps<TableBlockObjectResponse>) {
   const rows = (block.children ?? []).filter(isTableRow);
   const hasHeaderRow = block.table.has_column_header && rows.length > 0;
   const headerCells = hasHeaderRow ? (rows[0]?.table_row.cells ?? []) : [];

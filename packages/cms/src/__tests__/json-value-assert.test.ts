@@ -1,11 +1,8 @@
 import { describe, expectTypeOf, it } from "vitest";
+
 import type { IndexEntry } from "../types/collection-index.js";
 import type { EntrySnapshot } from "../types/entry-snapshot.js";
-import type {
-  AssertJsonValue,
-  ExpectTrue,
-  IsJsonValue,
-} from "../types/json-value.js";
+import type { AssertJsonValue, ExpectTrue, IsJsonValue } from "../types/json-value.js";
 import type { ListResult } from "../types/query.js";
 
 type Snapshot = EntrySnapshot<{ title: string }>;
@@ -23,9 +20,7 @@ describe("JsonValue 互換性の型テスト", () => {
   });
 
   it("関数プロパティを持つ型は IsJsonValue が false になる", () => {
-    type _check = ExpectTrue<
-      IsJsonValue<NotSerializable> extends false ? true : never
-    >;
+    type _check = ExpectTrue<IsJsonValue<NotSerializable> extends false ? true : never>;
     expectTypeOf<IsJsonValue<NotSerializable>>().toEqualTypeOf<false>();
   });
 

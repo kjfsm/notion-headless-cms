@@ -30,8 +30,7 @@ export function decidePublication(
   }
   const published = collection.published ?? [];
   const accessible = collection.accessible ?? published;
-  const isAccessible =
-    statusValue !== undefined && accessible.includes(statusValue);
+  const isAccessible = statusValue !== undefined && accessible.includes(statusValue);
   const isListed = statusValue !== undefined && published.includes(statusValue);
   return { accessible: isAccessible, listed: isListed };
 }

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { deepEqualJson } from "../deep-equal-json.js";
 
 describe("deepEqualJson", () => {

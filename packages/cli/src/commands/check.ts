@@ -1,16 +1,13 @@
 import path from "node:path";
+
 import type { PropertyMap } from "@notion-headless-cms/cms";
 import { CMSError } from "@notion-headless-cms/cms";
+
 import type { SchemaDrift } from "../check.js";
 import { diffSchema } from "../check.js";
 import { loadConfig } from "../config-loader.js";
 import { createNotionCLIClient } from "../notion-client.js";
-import {
-  loadEnvFile,
-  makeReporter,
-  resolveDataSourceId,
-  resolveToken,
-} from "./shared.js";
+import { loadEnvFile, makeReporter, resolveDataSourceId, resolveToken } from "./shared.js";
 
 export interface CheckOptions {
   config?: string;
@@ -27,16 +24,9 @@ interface CheckResult {
   readonly drift: SchemaDrift;
 }
 
-function propertiesOf(
-  schemaModule: Record<string, unknown>,
-  name: string,
-): PropertyMap {
+function propertiesOf(schemaModule: Record<string, unknown>, name: string): PropertyMap {
   const exported = schemaModule[name];
-  if (
-    !exported ||
-    typeof exported !== "object" ||
-    !("properties" in exported)
-  ) {
+  if (!exported || typeof exported !== "object" || !("properties" in exported)) {
     throw new CMSError({
       code: "cli/schema_invalid",
       message: `[${name}] スキーマモジュールに defineCollection の export "${name}" が見つかりません。`,
@@ -54,17 +44,13 @@ export async function runCheck(opts: CheckOptions): Promise<void> {
   const reporter = makeReporter(opts);
   await loadEnvFile(opts.envFile, reporter);
 
-  const configPath = path.resolve(
-    process.cwd(),
-    opts.config ?? "nhc.config.ts",
-  );
+  const configPath = path.resolve(process.cwd(), opts.config ?? "nhc.config.ts");
   const config = await loadConfig(configPath);
 
   if (!config.schemaModule || Object.keys(config.collections).length === 0) {
     throw new CMSError({
       code: "cli/config_invalid",
-      message:
-        "nhc.config.ts に schemaModule と collections を定義してください。",
+      message: "nhc.config.ts に schemaModule と collections を定義してください。",
       context: { operation: "runCheck" },
     });
   }
@@ -75,8 +61,7 @@ export async function runCheck(opts: CheckOptions): Promise<void> {
   const schemaModulePath = path.resolve(process.cwd(), config.schemaModule);
   const { createJiti } = await import("jiti");
   const jiti = createJiti(import.meta.url);
-  const schemaModule =
-    await jiti.import<Record<string, unknown>>(schemaModulePath);
+  const schemaModule = await jiti.import<Record<string, unknown>>(schemaModulePath);
 
   const results: CheckResult[] = [];
   for (const [name, source] of Object.entries(config.collections)) {

@@ -4,6 +4,7 @@ import {
   memoryBlobStore,
   memoryDocStore,
 } from "@notion-headless-cms/cms";
+
 import { schema } from "../schema.js";
 
 const token = process.env.NOTION_TOKEN;

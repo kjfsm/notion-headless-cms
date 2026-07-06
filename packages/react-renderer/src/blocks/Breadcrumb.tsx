@@ -11,9 +11,7 @@ import { cn } from "../lib/utils";
 import type { BlockComponentProps } from "../types";
 
 // Notion API は breadcrumb で実際のパスを返さないため、最低限のプレースホルダ表示にとどめる。
-export function Breadcrumb({
-  className,
-}: Pick<BlockComponentProps, "className"> = {}) {
+export function Breadcrumb({ className }: Pick<BlockComponentProps, "className"> = {}) {
   return (
     <UiBreadcrumb className={cn("my-2", className)}>
       <BreadcrumbList>

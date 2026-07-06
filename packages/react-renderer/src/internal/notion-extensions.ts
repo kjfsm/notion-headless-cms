@@ -5,6 +5,7 @@ import type {
   EquationRichTextItemResponse,
   ImageBlockObjectResponse,
 } from "@notionhq/client/build/src/api-endpoints";
+
 import type { OgCardData } from "../embeds/OgCard.js";
 
 /**
@@ -25,10 +26,9 @@ export type EquationWithCachedHtml = EquationBlockObjectResponse["equation"] & {
 };
 
 /** rich_text 内の equation アイテム(インライン数式)に対する同上の拡張。 */
-export type EquationRichTextWithCachedHtml =
-  EquationRichTextItemResponse["equation"] & {
-    __cachedHtml?: string;
-  };
+export type EquationRichTextWithCachedHtml = EquationRichTextItemResponse["equation"] & {
+  __cachedHtml?: string;
+};
 
 /** 同期パイプライン(`resolveImageUrls`)が image ブロックに焼き込む画像寸法(CLS ゼロ化用)。 */
 export type ImageWithDimensions = ImageBlockObjectResponse["image"] & {

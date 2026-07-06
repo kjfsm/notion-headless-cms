@@ -1,6 +1,8 @@
 import path from "node:path";
+
 import { CMSError } from "@notion-headless-cms/cms";
 import { config as dotenvConfig } from "dotenv";
+
 import { fileExists } from "../fs-utils.js";
 import type { NotionCLIClient } from "../notion-client.js";
 
@@ -37,10 +39,7 @@ export function makeReporter(opts: ReporterOptions): Reporter {
  * --env-file 指定時はそのファイルを、未指定時は .dev.vars があれば自動ロードする。
  * process.env 既存値は上書きしない (dotenv のデフォルト挙動)。
  */
-export async function loadEnvFile(
-  envFile: string | undefined,
-  reporter: Reporter,
-): Promise<void> {
+export async function loadEnvFile(envFile: string | undefined, reporter: Reporter): Promise<void> {
   if (envFile) {
     const envFilePath = path.resolve(process.cwd(), envFile);
     if (!(await fileExists(envFilePath))) {
@@ -60,9 +59,7 @@ export async function loadEnvFile(
     dotenvConfig({ path: devVarsPath });
     reporter.info(`環境変数ファイルを自動検出: ${devVarsPath}`);
   } else {
-    reporter.debug(
-      ".dev.vars は見つかりませんでした (process.env のみ使用します)",
-    );
+    reporter.debug(".dev.vars は見つかりませんでした (process.env のみ使用します)");
   }
 }
 

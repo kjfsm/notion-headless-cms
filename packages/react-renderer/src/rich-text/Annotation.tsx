@@ -2,6 +2,7 @@
 
 import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
 import type { ReactNode } from "react";
+
 import { notionInlineColorClass } from "../lib/notion-color";
 
 type Annotations = RichTextItemResponse["annotations"];
@@ -21,11 +22,7 @@ export function Annotated({ annotations, href, children }: AnnotatedProps) {
   let node: ReactNode = children;
 
   if (annotations.code) {
-    node = (
-      <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.9em]">
-        {node}
-      </code>
-    );
+    node = <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.9em]">{node}</code>;
   } else {
     if (annotations.bold) node = <strong>{node}</strong>;
     if (annotations.italic) node = <em>{node}</em>;

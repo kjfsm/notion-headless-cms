@@ -1,4 +1,5 @@
 import { describe, expectTypeOf, it } from "vitest";
+
 import type { InferEntry, InferSchemaEntries } from "../types/collection.js";
 import { defineCollection, defineSchema } from "../types/collection.js";
 import { prop } from "../types/property.js";

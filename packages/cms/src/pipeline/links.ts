@@ -30,8 +30,7 @@ function collectMentionedPageIds(value: JsonValue, out: Set<string>): void {
       if (typeof page?.id === "string") out.add(page.id);
     }
   }
-  for (const value2 of Object.values(record))
-    collectMentionedPageIds(value2, out);
+  for (const value2 of Object.values(record)) collectMentionedPageIds(value2, out);
 }
 
 function linkToPageId(block: NormalizedBlock): string | null {

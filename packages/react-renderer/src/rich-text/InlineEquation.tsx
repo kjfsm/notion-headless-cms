@@ -18,10 +18,7 @@ export interface InlineEquationProps {
  * `displayMode: false` で組版した HTML に置換する。
  * `katex` が peer として入っていない場合はテキストのままフォールバックする。
  */
-export function InlineEquation({
-  expression,
-  cachedHtml,
-}: InlineEquationProps) {
+export function InlineEquation({ expression, cachedHtml }: InlineEquationProps) {
   const [html, setHtml] = useState<string | null>(cachedHtml ?? null);
 
   useEffect(() => {
@@ -30,7 +27,7 @@ export function InlineEquation({
     // tree-shaking で除外される。
     if (import.meta.env.SSR || cachedHtml) return;
     let cancelled = false;
-    (async () => {
+    void (async () => {
       try {
         const katex = (await import("katex")).default;
         const out = katex.renderToString(expression, {
@@ -56,9 +53,5 @@ export function InlineEquation({
     );
   }
 
-  return (
-    <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.9em]">
-      {expression}
-    </code>
-  );
+  return <code className="rounded bg-muted px-1 py-0.5 font-mono text-[0.9em]">{expression}</code>;
 }

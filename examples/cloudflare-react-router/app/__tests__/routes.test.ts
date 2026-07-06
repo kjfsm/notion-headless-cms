@@ -25,18 +25,14 @@ vi.mock("../lib/cms.js", () => ({
 const { ensureSynced } = await import("../lib/cms.js");
 const { loader: homeLoader } = await import("../routes/home.js");
 const { loader: postLoader } = await import("../routes/post.js");
-const { loader: apiCmsLoader, action: apiCmsAction } = await import(
-  "../routes/api.cms.js"
-);
+const { loader: apiCmsLoader, action: apiCmsAction } = await import("../routes/api.cms.js");
 const { action: warmAction } = await import("../routes/warm.js");
 
 const PARAGRAPH_BLOCK = {
   id: "b1",
   type: "paragraph",
   data: {
-    rich_text: [
-      { type: "text", plain_text: "内容", annotations: {}, href: null },
-    ],
+    rich_text: [{ type: "text", plain_text: "内容", annotations: {}, href: null }],
   },
 };
 
@@ -75,12 +71,8 @@ describe("home loader()", () => {
       total: 1,
     });
     const result = await homeLoader({ context: fakeContext } as never);
-    expect(
-      (result as { items: readonly { slug: string }[] }).items,
-    ).toHaveLength(1);
-    expect(
-      (result as { items: readonly { slug: string }[] }).items[0]?.slug,
-    ).toBe("hello");
+    expect((result as { items: readonly { slug: string }[] }).items).toHaveLength(1);
+    expect((result as { items: readonly { slug: string }[] }).items[0]?.slug).toBe("hello");
   });
 });
 

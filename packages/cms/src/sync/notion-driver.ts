@@ -1,8 +1,6 @@
-import type {
-  PageObjectResponse,
-  PartialPageObjectResponse,
-} from "@notionhq/client";
+import type { PageObjectResponse, PartialPageObjectResponse } from "@notionhq/client";
 import { isFullPage } from "@notionhq/client";
+
 import { CMSError } from "../errors.js";
 import { normalizeBlockTree } from "../pipeline/blocks.js";
 import { extractImageRefs, parseImageDimensions } from "../pipeline/images.js";
@@ -17,8 +15,8 @@ import { publishVersionUpdate } from "../realtime.js";
 import type { EntryStore } from "../store/entry-store.js";
 import type { IndexStore } from "../store/index-store.js";
 import type { BlobStore } from "../store/types.js";
-import type { CollectionDef } from "../types/collection.js";
 import type { IndexEntry } from "../types/collection-index.js";
+import type { CollectionDef } from "../types/collection.js";
 import type { EntrySnapshot, ImageMapEntry } from "../types/entry-snapshot.js";
 import type { JsonValue } from "../types/json-value.js";
 import type { Logger } from "../types/logger.js";
@@ -41,7 +39,7 @@ export interface DataSourceQueryResult {
  */
 export interface NotionClientLike {
   dataSources: {
-    query(args: {
+    query: (args: {
       data_source_id: string;
       sorts?: ReadonlyArray<{
         timestamp: "last_edited_time";
@@ -49,22 +47,22 @@ export interface NotionClientLike {
       }>;
       page_size?: number;
       start_cursor?: string;
-      // biome-ignore lint/suspicious/noExplicitAny: Notion API の filter オブジェクトはプロパティ種別ごとに形状が異なるため型消去する。
+      // Notion API の filter オブジェクトはプロパティ種別ごとに形状が異なるため型消去する。
       filter?: any;
-    }): Promise<DataSourceQueryResult>;
+    }) => Promise<DataSourceQueryResult>;
   };
   pages: {
-    retrieve(args: {
+    retrieve: (args: {
       page_id: string;
-    }): Promise<PageObjectResponse | PartialPageObjectResponse>;
+    }) => Promise<PageObjectResponse | PartialPageObjectResponse>;
   };
   blocks: {
     children: {
-      list(args: {
+      list: (args: {
         block_id: string;
         page_size?: number;
         start_cursor?: string;
-      }): Promise<BlockChildrenListResult>;
+      }) => Promise<BlockChildrenListResult>;
     };
   };
 }
@@ -119,13 +117,8 @@ function slugOf(
   const slugKey = def.slug as string;
   const propDef = def.properties[slugKey];
   if (!propDef) return null;
-  const raw = (page.properties as Record<string, unknown>)[
-    propDef.notion ?? slugKey
-  ];
-  const value = mapPropertyValue(
-    propDef.kind,
-    raw as Parameters<typeof mapPropertyValue>[1],
-  );
+  const raw = (page.properties as Record<string, unknown>)[propDef.notion ?? slugKey];
+  const value = mapPropertyValue(propDef.kind, raw as Parameters<typeof mapPropertyValue>[1]);
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
@@ -135,11 +128,11 @@ function slugOf(
  * フィルタ構築不能として null を返し、呼び出し側は素直にコールドスタートを諦める。
  */
 function buildSlugFilter(
-  // biome-ignore lint/suspicious/noExplicitAny: 型消去された CollectionDef を受け取る。
+  // 型消去された CollectionDef を受け取る。
   def: CollectionDef<any>,
   slug: string,
-  // biome-ignore lint/suspicious/noExplicitAny: Notion API の filter オブジェクトはプロパティ種別ごとに形状が異なるため型消去する。
-): any | null {
+  // Notion API の filter オブジェクトはプロパティ種別ごとに形状が異なるため型消去する。any が null を包含するため union にはしない。
+): any {
   if (!def.slug) return null;
   const slugKey = def.slug as string;
   const propDef = def.properties[slugKey];
@@ -167,13 +160,8 @@ function statusOf(
   if (!def.statusProperty) return null;
   const statusKey = def.statusProperty as string;
   const propDef = def.properties[statusKey];
-  const raw = (page.properties as Record<string, unknown>)[
-    propDef?.notion ?? statusKey
-  ];
-  const value = mapPropertyValue(
-    "status",
-    raw as Parameters<typeof mapPropertyValue>[1],
-  );
+  const raw = (page.properties as Record<string, unknown>)[propDef?.notion ?? statusKey];
+  const value = mapPropertyValue("status", raw as Parameters<typeof mapPropertyValue>[1]);
   return typeof value === "string" ? value : null;
 }
 
@@ -196,9 +184,7 @@ function isListed(def: CollectionDef<any>, status: string | null): boolean {
  * `SyncCoordinatorDeps`(coordinator.ts、無改修)の実装を 1 コレクション分だけ提供する。
  * 複数コレクションを束ねる合成は `multi-source.ts` が担う。
  */
-export function createCollectionDriver(
-  deps: CollectionDriverDeps,
-): CollectionDriver {
+export function createCollectionDriver(deps: CollectionDriverDeps): CollectionDriver {
   const { collection, def, client, rateLimiter, retry, logger } = deps;
   const imagesPath = deps.imagesPath ?? "/images";
   const fetchImpl = deps.fetchImpl ?? fetch;
@@ -228,14 +214,9 @@ export function createCollectionDriver(
   // null は「存在しないことを確認済み」、キー不在は「未読(upsert 側で読み直す)」。
   let chunkIndexCache = new Map<string, IndexEntry | null>();
 
-  type QueryArgs = Omit<
-    Parameters<NotionClientLike["dataSources"]["query"]>[0],
-    "data_source_id"
-  >;
+  type QueryArgs = Omit<Parameters<NotionClientLike["dataSources"]["query"]>[0], "data_source_id">;
 
-  async function queryDataSource(
-    args: QueryArgs,
-  ): Promise<DataSourceQueryResult> {
+  async function queryDataSource(args: QueryArgs): Promise<DataSourceQueryResult> {
     try {
       return await withRetry(
         () =>
@@ -262,15 +243,10 @@ export function createCollectionDriver(
     }
   }
 
-  async function retrieveByPageIdFallback(
-    pageId: string,
-  ): Promise<PageObjectResponse | null> {
+  async function retrieveByPageIdFallback(pageId: string): Promise<PageObjectResponse | null> {
     try {
       const page = await withRetry(
-        () =>
-          rateLimiter.schedule(() =>
-            client.pages.retrieve({ page_id: pageId }),
-          ),
+        () => rateLimiter.schedule(() => client.pages.retrieve({ page_id: pageId })),
         effectiveRetry,
       );
       return isFullPage(page) ? page : null;
@@ -279,10 +255,7 @@ export function createCollectionDriver(
     }
   }
 
-  async function resolveImage(ref: {
-    hash: string;
-    url: string;
-  }): Promise<ImageMapEntry> {
+  async function resolveImage(ref: { hash: string; url: string }): Promise<ImageMapEntry> {
     const key = `image/${ref.hash}`;
     const existing = await deps.blobs.head(key);
     if (existing) {
@@ -304,10 +277,7 @@ export function createCollectionDriver(
         hash: ref.hash,
         width: dims.width,
         height: dims.height,
-        contentType:
-          existing.contentType ??
-          dims.contentType ??
-          "application/octet-stream",
+        contentType: existing.contentType ?? dims.contentType ?? "application/octet-stream",
       };
     }
 
@@ -354,8 +324,7 @@ export function createCollectionDriver(
       hash: ref.hash,
       width: dims.width,
       height: dims.height,
-      contentType:
-        contentType ?? dims.contentType ?? "application/octet-stream",
+      contentType: contentType ?? dims.contentType ?? "application/octet-stream",
     };
   }
 
@@ -380,15 +349,9 @@ export function createCollectionDriver(
       images[ref.hash] = await resolveImage(ref);
     }
     const withImages = await resolveImageUrls(normalized, images, imagesPath);
-    const transformed = await runTransformStages(
-      withImages,
-      deps.transforms ?? [],
-    );
+    const transformed = await runTransformStages(withImages, deps.transforms ?? []);
 
-    const mappedProps = mapProperties(
-      def.properties,
-      page.properties,
-    ) as Record<string, JsonValue>;
+    const mappedProps = mapProperties(def.properties, page.properties) as Record<string, JsonValue>;
     const meta: Record<string, JsonValue> = {
       id: normalizePageId(page.id),
       slug,
@@ -425,12 +388,7 @@ export function createCollectionDriver(
       // 通知用の付加機能なので、ここで失敗しても同期そのものは失敗させない
       // (push 失敗のたびに「成功した同期」が failures に記録されるのを防ぐ)。
       try {
-        await publishVersionUpdate(
-          deps.realtime,
-          collection,
-          slug,
-          page.last_edited_time,
-        );
+        await publishVersionUpdate(deps.realtime, collection, slug, page.last_edited_time);
       } catch (err) {
         logger?.warn?.("realtime への publish に失敗しました", {
           operation: "syncEntry",
@@ -481,11 +439,7 @@ export function createCollectionDriver(
       chunkCache = nextChunkCache;
       chunkIndexCache = nextChunkIndexCache;
 
-      const nextCursor = stoppedEarly
-        ? null
-        : res.has_more
-          ? (res.next_cursor ?? null)
-          : null;
+      const nextCursor = stoppedEarly ? null : res.has_more ? (res.next_cursor ?? null) : null;
       return { changes, nextCursor };
     },
 
@@ -510,9 +464,7 @@ export function createCollectionDriver(
     },
 
     async syncEntry(change) {
-      const page =
-        chunkCache.get(change.slug) ??
-        (await retrieveByPageIdFallback(change.slug));
+      const page = chunkCache.get(change.slug) ?? (await retrieveByPageIdFallback(change.slug));
       if (!page) {
         throw new CMSError({
           code: "sync/notion_query_failed",
@@ -526,10 +478,7 @@ export function createCollectionDriver(
       if (!isAccessible(def, status)) {
         const slugForRemoval = rawSlug ?? page.id;
         await deps.entryStore.delete(collection, slugForRemoval);
-        const removed = await deps.indexStore.removeEntry(
-          collection,
-          slugForRemoval,
-        );
+        const removed = await deps.indexStore.removeEntry(collection, slugForRemoval);
         return { writes: removed.writes };
       }
       // slug プロパティを設定しているのに値が空 = 設定ミス（壊れた URL を生む）なので弾く。
@@ -547,9 +496,7 @@ export function createCollectionDriver(
         page,
         slug,
         status,
-        chunkIndexCache.has(slug)
-          ? (chunkIndexCache.get(slug) ?? null)
-          : undefined,
+        chunkIndexCache.has(slug) ? (chunkIndexCache.get(slug) ?? null) : undefined,
       );
       return { writes };
     },
@@ -596,12 +543,7 @@ export function createCollectionDriver(
         },
       );
 
-      const { snapshot } = await materializeAccessiblePage(
-        page,
-        resolvedSlug,
-        status,
-        undefined,
-      );
+      const { snapshot } = await materializeAccessiblePage(page, resolvedSlug, status, undefined);
       return snapshot;
     },
   };

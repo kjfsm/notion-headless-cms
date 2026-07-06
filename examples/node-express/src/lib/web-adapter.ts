@@ -1,9 +1,7 @@
 import { Readable } from "node:stream";
 import type { ReadableStream as NodeWebReadableStream } from "node:stream/web";
-import type {
-  Request as ExpressRequest,
-  Response as ExpressResponse,
-} from "express";
+
+import type { Request as ExpressRequest, Response as ExpressResponse } from "express";
 
 /**
  * Express (Node の `http.IncomingMessage`/`ServerResponse`) は Fetch API の
@@ -25,18 +23,13 @@ export function toWebRequest(req: ExpressRequest): Request {
   return new Request(url, {
     method: req.method,
     headers,
-    body: hasBody
-      ? (Readable.toWeb(req) as unknown as ReadableStream)
-      : undefined,
+    body: hasBody ? (Readable.toWeb(req) as unknown as ReadableStream) : undefined,
     // Node の fetch 実装は body がストリームの場合 duplex: "half" を要求する。
     duplex: hasBody ? "half" : undefined,
   } as RequestInit);
 }
 
-export async function sendWebResponse(
-  res: ExpressResponse,
-  webResponse: Response,
-): Promise<void> {
+export async function sendWebResponse(res: ExpressResponse, webResponse: Response): Promise<void> {
   res.status(webResponse.status);
   webResponse.headers.forEach((value, key) => {
     res.setHeader(key, value);
@@ -45,9 +38,7 @@ export async function sendWebResponse(
     res.end();
     return;
   }
-  const nodeStream = Readable.fromWeb(
-    webResponse.body as unknown as NodeWebReadableStream,
-  );
+  const nodeStream = Readable.fromWeb(webResponse.body as unknown as NodeWebReadableStream);
   await new Promise<void>((resolve, reject) => {
     nodeStream.on("error", reject);
     res.on("error", reject);

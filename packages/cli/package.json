@@ -3,36 +3,37 @@
   "version": "3.0.7",
   "description": "CLI tool for notion-headless-cms — schema drift check, scaffold, sync and doctor for @notion-headless-cms/cms",
   "keywords": [
-    "notion",
-    "headless-cms",
     "cli",
+    "headless-cms",
+    "notion",
     "typescript"
   ],
-  "license": "MIT",
   "homepage": "https://github.com/kjfsm/notion-headless-cms#readme",
   "bugs": {
     "url": "https://github.com/kjfsm/notion-headless-cms/issues"
   },
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/kjfsm/notion-headless-cms.git",
     "directory": "packages/cli"
   },
-  "type": "module",
   "bin": {
     "nhc": "./dist/cli.mjs"
   },
+  "files": [
+    "dist"
+  ],
+  "type": "module",
   "exports": {
     ".": {
       "types": "./dist/index.d.mts",
       "import": "./dist/index.mjs"
     }
   },
-  "files": [
-    "dist"
-  ],
-  "engines": {
-    "node": ">=24"
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   },
   "scripts": {
     "prepare": "pnpm build",
@@ -44,10 +45,6 @@
     "attw": "attw --pack . --profile esm-only",
     "release:local": "pnpm publish --no-provenance --no-git-checks"
   },
-  "publishConfig": {
-    "access": "public",
-    "provenance": true
-  },
   "dependencies": {
     "@notion-headless-cms/cms": "workspace:*",
     "@notionhq/client": "catalog:",
@@ -57,5 +54,8 @@
   },
   "devDependencies": {
     "@types/node": "catalog:"
+  },
+  "engines": {
+    "node": ">=24"
   }
 }

@@ -16,18 +16,18 @@ v2/v3 の2アーキテクチャ並存が、16パッケージ + 7 examples + docs
 
 ## パッケージ対応表
 
-| v2 パッケージ | v3 での相当API | 備考 |
-|---|---|---|
-| `@notion-headless-cms/client`（`createCMS`） | `@notion-headless-cms/cms`（`createCMS`） | 引数の形が全く異なる。下記「`createCMS` の書き換え」参照 |
-| `@notion-headless-cms/core` | `@notion-headless-cms/cms`（本体） | `CMSError`/`isCMSError`/`defineCollection`/`defineSchema` 等はすべて `cms` から import する |
-| `@notion-headless-cms/cache`（`/cloudflare`） | `@notion-headless-cms/cms/cloudflare`（`kvDocStore`/`r2BlobStore`） | SWR ではなく KV/R2 マテリアライズドレプリカへの参照に置き換わる |
-| `@notion-headless-cms/cache`（`/next`） | (なし) | Next.js ISR 連携は無い。`cms` は同期タイミングを自前で持つため `revalidateTag` 等は不要 |
-| `@notion-headless-cms/notion-source` / `notion-orm` | `@notion-headless-cms/cms`（`sync/` 内部実装） | ユーザーが直接触る API ではない。`schema` に `defineCollection`/`defineSchema` を書けば同期は自動 |
-| `@notion-headless-cms/fetch-blocks` / `fetch-markdown` | (なし。`cms` の同期パイプラインに統合) | ブロック取得は `find()`/`list()` が返す `entry.blocks` で完結する |
-| `@notion-headless-cms/markdown-html` / `block-html` | `@notion-headless-cms/cms/html`（`renderBlocksToHtml`） | Markdown 経由ではなく Notion ブロックを直接 HTML 化する |
-| `@notion-headless-cms/notion-katex` / `notion-shiki` | `createCMS({ transforms })` | 同期時に事前レンダーする拡張ステージとして統合済み |
-| `@notion-headless-cms/testing` | `@notion-headless-cms/cms/testing`（`runDocStoreContract` 等） | ストア契約テストのみ。DataSource のフェイクは無い（`cms` に DataSource 抽象自体が無いため） |
-| `@notion-headless-cms/validate` | (廃止。CLI 側の手動チェックに置き換え) | `nhc.config.ts` は TypeScript の型チェックと各コマンドの実行時チェックのみ |
+| v2 パッケージ                                          | v3 での相当API                                                      | 備考                                                                                              |
+| ------------------------------------------------------ | ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| `@notion-headless-cms/client`（`createCMS`）           | `@notion-headless-cms/cms`（`createCMS`）                           | 引数の形が全く異なる。下記「`createCMS` の書き換え」参照                                          |
+| `@notion-headless-cms/core`                            | `@notion-headless-cms/cms`（本体）                                  | `CMSError`/`isCMSError`/`defineCollection`/`defineSchema` 等はすべて `cms` から import する       |
+| `@notion-headless-cms/cache`（`/cloudflare`）          | `@notion-headless-cms/cms/cloudflare`（`kvDocStore`/`r2BlobStore`） | SWR ではなく KV/R2 マテリアライズドレプリカへの参照に置き換わる                                   |
+| `@notion-headless-cms/cache`（`/next`）                | (なし)                                                              | Next.js ISR 連携は無い。`cms` は同期タイミングを自前で持つため `revalidateTag` 等は不要           |
+| `@notion-headless-cms/notion-source` / `notion-orm`    | `@notion-headless-cms/cms`（`sync/` 内部実装）                      | ユーザーが直接触る API ではない。`schema` に `defineCollection`/`defineSchema` を書けば同期は自動 |
+| `@notion-headless-cms/fetch-blocks` / `fetch-markdown` | (なし。`cms` の同期パイプラインに統合)                              | ブロック取得は `find()`/`list()` が返す `entry.blocks` で完結する                                 |
+| `@notion-headless-cms/markdown-html` / `block-html`    | `@notion-headless-cms/cms/html`（`renderBlocksToHtml`）             | Markdown 経由ではなく Notion ブロックを直接 HTML 化する                                           |
+| `@notion-headless-cms/notion-katex` / `notion-shiki`   | `createCMS({ transforms })`                                         | 同期時に事前レンダーする拡張ステージとして統合済み                                                |
+| `@notion-headless-cms/testing`                         | `@notion-headless-cms/cms/testing`（`runDocStoreContract` 等）      | ストア契約テストのみ。DataSource のフェイクは無い（`cms` に DataSource 抽象自体が無いため）       |
+| `@notion-headless-cms/validate`                        | (廃止。CLI 側の手動チェックに置き換え)                              | `nhc.config.ts` は TypeScript の型チェックと各コマンドの実行時チェックのみ                        |
 
 ## `createCMS` の書き換え
 
@@ -52,7 +52,9 @@ import { createCMS, defineCollection, defineSchema } from "@notion-headless-cms/
 const posts = defineCollection({
   dataSourceId: "...",
   slug: "slug",
-  properties: { /* ... */ },
+  properties: {
+    /* ... */
+  },
   statusProperty: "status",
   published: ["公開済み"],
 });

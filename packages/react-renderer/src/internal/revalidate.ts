@@ -78,9 +78,7 @@ export function resolvePoll(poll: NotionPollOptions | undefined): {
   const basePath = poll.basePath ?? DEFAULT_CMS_BASE_PATH;
   const url =
     poll.url ??
-    (poll.collection && slug
-      ? `${basePath}/check/${poll.collection}/${slug}`
-      : undefined);
+    (poll.collection && slug ? `${basePath}/check/${poll.collection}/${slug}` : undefined);
   if (!url || version === undefined) return null;
   return {
     url,
@@ -142,10 +140,7 @@ interface CheckResponse {
 }
 
 /** `POST {check}/{collection}/{slug}?v=` を叩き、サーバーの Notion 突合結果を返す。 */
-const postCheck = async (
-  url: string,
-  version: string,
-): Promise<CheckResponse | null> => {
+const postCheck = async (url: string, version: string): Promise<CheckResponse | null> => {
   const sep = url.includes("?") ? "&" : "?";
   const res = await fetch(`${url}${sep}v=${encodeURIComponent(version)}`, {
     method: "POST",
@@ -210,16 +205,9 @@ export function useRevalidateEffect(
         if (document.visibilityState === "visible") run();
       };
       document.addEventListener("visibilitychange", handler);
-      cleanups.push(() =>
-        document.removeEventListener("visibilitychange", handler),
-      );
+      cleanups.push(() => document.removeEventListener("visibilitychange", handler));
     }
-    if (
-      checkUrl &&
-      checkVersion !== undefined &&
-      checkIntervalMs &&
-      checkIntervalMs > 0
-    ) {
+    if (checkUrl && checkVersion !== undefined && checkIntervalMs && checkIntervalMs > 0) {
       const id = setInterval(run, checkIntervalMs);
       cleanups.push(() => clearInterval(id));
     }

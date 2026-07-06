@@ -1,6 +1,7 @@
 "use client";
 
 import type { RichTextItemResponse } from "@notionhq/client/build/src/api-endpoints";
+
 import { RichText } from "./RichText";
 
 /** {@link Caption} の props。`variant` で figure / block 配下のスタイルを切り替える。 */

@@ -29,8 +29,16 @@ interface BlobStore {
   get(key: string): Promise<Uint8Array | null>;
   /** 本体とメタデータを 1 回の読み取りで返す任意メソッド。未実装なら get+head にフォールバックされる。 */
   getWithMetadata?(key: string): Promise<{ bytes: Uint8Array; contentType?: string } | null>;
-  put(key: string, value: Uint8Array, opts?: { contentType?: string; customMetadata?: Record<string, string> }): Promise<void>;
-  head(key: string): Promise<{ contentType?: string; size: number; customMetadata?: Record<string, string> } | null>;
+  put(
+    key: string,
+    value: Uint8Array,
+    opts?: { contentType?: string; customMetadata?: Record<string, string> },
+  ): Promise<void>;
+  head(key: string): Promise<{
+    contentType?: string;
+    size: number;
+    customMetadata?: Record<string, string>;
+  } | null>;
   delete(key: string): Promise<void>;
 }
 ```
@@ -64,7 +72,13 @@ export function redisDocStore(redis: RedisClientType, prefix = ""): DocStore {
 
 ```ts
 import type { BlobStore } from "@notion-headless-cms/cms";
-import { DeleteObjectCommand, GetObjectCommand, HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
+import {
+  DeleteObjectCommand,
+  GetObjectCommand,
+  HeadObjectCommand,
+  PutObjectCommand,
+  S3Client,
+} from "@aws-sdk/client-s3";
 
 export function s3BlobStore(s3: S3Client, bucket: string): BlobStore {
   const key = (k: string) => `blobs/${k}`;

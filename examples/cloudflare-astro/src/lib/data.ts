@@ -1,4 +1,5 @@
 import { renderBlocksToHtml } from "@notion-headless-cms/cms/html";
+
 import { ensureSynced, type makeCms } from "./cms.js";
 
 type CmsInstance = ReturnType<typeof makeCms>;

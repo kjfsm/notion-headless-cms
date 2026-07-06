@@ -9,9 +9,7 @@ function namespacedSlug(collection: string, slug: string): string {
   return `${collection}${SEPARATOR}${slug}`;
 }
 
-function splitNamespacedSlug(
-  namespaced: string,
-): { collection: string; slug: string } | null {
+function splitNamespacedSlug(namespaced: string): { collection: string; slug: string } | null {
   const idx = namespaced.indexOf(SEPARATOR);
   if (idx === -1) return null;
   return {
@@ -90,9 +88,7 @@ export interface MultiSourceOptions {
  *   契約のため、コレクションごとに独立したコーディネータを立てると予約を潰し合う。
  *   単一コーディネータ + 合成 deps なら レートリミッタも厳密に共有できる
  */
-export function createMultiSourceDeps(
-  opts: MultiSourceOptions,
-): SyncCoordinatorDeps {
+export function createMultiSourceDeps(opts: MultiSourceOptions): SyncCoordinatorDeps {
   const collectionKeys = Object.keys(opts.drivers);
 
   function driverFor(collection: string): CollectionDriver {

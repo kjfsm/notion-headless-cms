@@ -49,8 +49,7 @@ export function runDoctorChecks(input: DoctorInput): DoctorReport {
           name: "KV binding",
           status: "error",
           message: "KV namespace が見つかりません",
-          remediation:
-            "wrangler.toml に index 用 KV namespace の binding を追加してください",
+          remediation: "wrangler.toml に index 用 KV namespace の binding を追加してください",
         },
   );
 
@@ -65,8 +64,7 @@ export function runDoctorChecks(input: DoctorInput): DoctorReport {
           name: "R2 binding",
           status: "error",
           message: "R2 bucket が見つかりません",
-          remediation:
-            "wrangler.toml に entry 用 R2 bucket の binding を追加してください",
+          remediation: "wrangler.toml に entry 用 R2 bucket の binding を追加してください",
         },
   );
 
@@ -96,8 +94,7 @@ export function runDoctorChecks(input: DoctorInput): DoctorReport {
       : {
           name: "Webhook secret",
           status: "warn",
-          message:
-            "webhook secret が未設定です(反映が差分ポーリング頼みになり遅延します)",
+          message: "webhook secret が未設定です(反映が差分ポーリング頼みになり遅延します)",
           remediation:
             "Notion integration に webhook を登録し、secret を環境変数に設定してください",
         },
@@ -129,8 +126,7 @@ export function runDoctorChecks(input: DoctorInput): DoctorReport {
           name: "同期失敗",
           status: "warn",
           message: `直近の同期失敗が ${input.syncStats.failureCount} 件あります`,
-          remediation:
-            "nhc sync --verbose で再実行し、失敗詳細を確認してください",
+          remediation: "nhc sync --verbose で再実行し、失敗詳細を確認してください",
         }
       : {
           name: "同期失敗",
@@ -144,9 +140,7 @@ export function runDoctorChecks(input: DoctorInput): DoctorReport {
     const key = `${collection}/${slug}`;
     slugCounts.set(key, (slugCounts.get(key) ?? 0) + 1);
   }
-  const duplicates = [...slugCounts.entries()]
-    .filter(([, count]) => count > 1)
-    .map(([key]) => key);
+  const duplicates = [...slugCounts.entries()].filter(([, count]) => count > 1).map(([key]) => key);
   checks.push(
     duplicates.length === 0
       ? { name: "slug 重複", status: "ok", message: "slug の重複はありません" }
@@ -154,8 +148,7 @@ export function runDoctorChecks(input: DoctorInput): DoctorReport {
           name: "slug 重複",
           status: "error",
           message: `slug が重複しています: ${duplicates.join(", ")}`,
-          remediation:
-            "Notion 側で該当ページの slug プロパティを一意な値に修正してください",
+          remediation: "Notion 側で該当ページの slug プロパティを一意な値に修正してください",
         },
   );
 

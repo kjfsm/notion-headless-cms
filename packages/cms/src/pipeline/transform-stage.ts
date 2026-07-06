@@ -8,9 +8,7 @@ import type { NormalizedBlock } from "../types/entry-snapshot.js";
 export interface TransformStage {
   readonly name: string;
   /** blocks を受け取り、事前レンダー結果を焼き込んだ blocks を返す。 */
-  transform(
-    blocks: readonly NormalizedBlock[],
-  ): Promise<readonly NormalizedBlock[]>;
+  transform(blocks: readonly NormalizedBlock[]): Promise<readonly NormalizedBlock[]>;
   /** このステージが I/O を必要とする場合、事前に取得すべき URL 一覧を返す。 */
   collectFetchTargets?(blocks: readonly NormalizedBlock[]): readonly string[];
 }

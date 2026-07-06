@@ -19,9 +19,10 @@
  */
 
 import "dotenv/config";
-
 import { createHash } from "node:crypto";
+
 import { Client } from "@notionhq/client";
+
 import { schema } from "../src/schema.js";
 
 const postsDataSourceId = schema.collections.posts.dataSourceId;
@@ -36,16 +37,12 @@ const client = new Client({ auth: TOKEN });
 const YOUTUBE_URL = "https://www.youtube.com/watch?v=dQw4w9WgXcQ";
 const SAMPLE_BOOKMARK_URL = "https://github.com";
 const SAMPLE_EMBED_URL = "https://codepen.io/chriscoyier/pen/MWLEMOY";
-const SAMPLE_IMAGE_URL =
-  "https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d?w=1200";
-const SAMPLE_IMAGE_URL_2 =
-  "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200";
+const SAMPLE_IMAGE_URL = "https://images.unsplash.com/photo-1503023345310-bd7c1de61c7d?w=1200";
+const SAMPLE_IMAGE_URL_2 = "https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?w=1200";
 const SAMPLE_VIDEO_URL = "https://www.w3schools.com/html/mov_bbb.mp4";
-const SAMPLE_PDF_URL =
-  "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
+const SAMPLE_PDF_URL = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
 const SAMPLE_AUDIO_URL = "https://www.w3schools.com/html/horse.mp3";
-const SAMPLE_FILE_URL =
-  "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
+const SAMPLE_FILE_URL = "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf";
 const SAMPLE_EXTERNAL_ICON_URL = "https://www.notion.so/images/favicon.ico";
 
 async function resolveTestPageId(): Promise<string> {
@@ -62,10 +59,7 @@ async function resolveTestPageId(): Promise<string> {
     const props =
       (
         page as {
-          properties?: Record<
-            string,
-            { type?: string; rich_text?: { plain_text: string }[] }
-          >;
+          properties?: Record<string, { type?: string; rich_text?: { plain_text: string }[] }>;
         }
       ).properties ?? {};
     const slugProp = props.Slug;
@@ -100,10 +94,7 @@ async function clearChildren(pageId: string): Promise<void> {
         await client.blocks.delete({ block_id: block.id });
         total++;
       } catch (err) {
-        console.warn(
-          `既存ブロック ${block.id} の削除に失敗しました:`,
-          (err as Error).message,
-        );
+        console.warn(`既存ブロック ${block.id} の削除に失敗しました:`, (err as Error).message);
       }
     }
     cursor = res.has_more ? (res.next_cursor ?? undefined) : undefined;
@@ -111,16 +102,11 @@ async function clearChildren(pageId: string): Promise<void> {
   console.log(`既存ブロック ${total} 件を archive しました。`);
 }
 
-type Block = Parameters<
-  typeof client.blocks.children.append
->[0]["children"][number];
+type Block = Parameters<typeof client.blocks.children.append>[0]["children"][number];
 
 // rich_text 配列要素の型 (paragraph 変種を property キーで判別して逆引き。
 // `type?: "paragraph"` は optional なため `Extract<Block, { type: "paragraph" }>` は never になる)
-type RichText = Extract<
-  Block,
-  { paragraph: unknown }
->["paragraph"]["rich_text"][number];
+type RichText = Extract<Block, { paragraph: unknown }>["paragraph"]["rich_text"][number];
 
 // ApiColor は @notionhq/client の公式型 (公開 export には無いため API ドキュメント準拠で literal union を直書き)
 type ApiColor =
@@ -550,9 +536,7 @@ function buildBlocks(pageId: string, humanUserId: string | null): Block[] {
       type: "code",
       code: {
         rich_text: [
-          rt(
-            "export function greet(name: string): string {\n  return `Hello, ${name}!`;\n}",
-          ),
+          rt("export function greet(name: string): string {\n  return `Hello, ${name}!`;\n}"),
         ],
         language: "typescript",
         caption: [rt("TypeScript 例: caption 付き")],
@@ -579,11 +563,7 @@ function buildBlocks(pageId: string, humanUserId: string | null): Block[] {
       object: "block",
       type: "code",
       code: {
-        rich_text: [
-          rt(
-            'const greet = (name) => `Hello, ${name}!`;\nconsole.log(greet("World"));',
-          ),
-        ],
+        rich_text: [rt('const greet = (name) => `Hello, ${name}!`;\nconsole.log(greet("World"));')],
         language: "javascript",
       },
     },
@@ -592,9 +572,7 @@ function buildBlocks(pageId: string, humanUserId: string | null): Block[] {
       type: "code",
       code: {
         rich_text: [
-          rt(
-            "graph TD\n  A[Start] --> B{Decision}\n  B -->|Yes| C[Do it]\n  B -->|No| D[Skip]",
-          ),
+          rt("graph TD\n  A[Start] --> B{Decision}\n  B -->|Yes| C[Do it]\n  B -->|No| D[Skip]"),
         ],
         language: "mermaid",
       },
@@ -731,10 +709,7 @@ function buildBlocks(pageId: string, humanUserId: string | null): Block[] {
               cells: [
                 [rt("リッチセル", { bold: true })],
                 [rt("link", { link: "https://www.notion.so" })],
-                [
-                  rt("改行\nあり / "),
-                  { type: "equation", equation: { expression: "x^2" } },
-                ],
+                [rt("改行\nあり / "), { type: "equation", equation: { expression: "x^2" } }],
               ],
             },
           },
@@ -742,11 +717,7 @@ function buildBlocks(pageId: string, humanUserId: string | null): Block[] {
             object: "block",
             type: "table_row",
             table_row: {
-              cells: [
-                [rt("行ヘッダ 2", { bold: true })],
-                [rt("通常")],
-                [rt("通常")],
-              ],
+              cells: [[rt("行ヘッダ 2", { bold: true })], [rt("通常")], [rt("通常")]],
             },
           },
         ],
@@ -1125,13 +1096,7 @@ function buildBlocks(pageId: string, humanUserId: string | null): Block[] {
             object: "block",
             type: "table_row",
             table_row: {
-              cells: [
-                [rt("Col1")],
-                [rt("Col2")],
-                [rt("Col3")],
-                [rt("Col4")],
-                [rt("Col5")],
-              ],
+              cells: [[rt("Col1")], [rt("Col2")], [rt("Col3")], [rt("Col4")], [rt("Col5")]],
             },
           },
           {
@@ -1173,11 +1138,7 @@ function buildBlocks(pageId: string, humanUserId: string | null): Block[] {
   ];
 }
 
-async function appendInChunks(
-  pageId: string,
-  blocks: Block[],
-  after?: string,
-): Promise<number> {
+async function appendInChunks(pageId: string, blocks: Block[], after?: string): Promise<number> {
   // children.append は 1 回 100 件まで。`after` を渡すと指定ブロック直後に挿入できるが、
   // 100 件を超える場合は 2 回目以降は after なしの末尾追加になる (チャンク跨ぎ非対応)
   const CHUNK = 100;
@@ -1231,9 +1192,7 @@ function isHeading2(b: Block): boolean {
 }
 
 function headingTextOf(b: Block): string {
-  const h2 = (
-    b as { heading_2?: { rich_text: Array<{ text?: { content?: string } }> } }
-  ).heading_2;
+  const h2 = (b as { heading_2?: { rich_text: Array<{ text?: { content?: string } }> } }).heading_2;
   if (!h2) return "";
   return h2.rich_text.map((t) => t.text?.content ?? "").join("");
 }
@@ -1256,8 +1215,7 @@ function groupDesiredSections(blocks: Block[]): Section[] {
 type ExistingBlock = { id: string; type: string; [k: string]: unknown };
 
 function existingHeadingText(b: ExistingBlock): string {
-  const h2 = (b as { heading_2?: { rich_text: Array<{ plain_text: string }> } })
-    .heading_2;
+  const h2 = (b as { heading_2?: { rich_text: Array<{ plain_text: string }> } }).heading_2;
   if (!h2) return "";
   return h2.rich_text.map((t) => t.plain_text).join("");
 }
@@ -1314,17 +1272,12 @@ function buildFingerprintBlock(map: Record<string, string>): Block {
 
 function parseFingerprint(b: ExistingBlock): Record<string, string> | null {
   if (b.type !== "callout") return null;
-  const callout = (
-    b as { callout?: { rich_text: Array<{ plain_text: string }> } }
-  ).callout;
+  const callout = (b as { callout?: { rich_text: Array<{ plain_text: string }> } }).callout;
   if (!callout) return null;
   const text = callout.rich_text.map((t) => t.plain_text).join("");
   if (!text.startsWith(FINGERPRINT_MARKER)) return null;
   try {
-    return JSON.parse(text.slice(FINGERPRINT_MARKER.length).trim()) as Record<
-      string,
-      string
-    >;
+    return JSON.parse(text.slice(FINGERPRINT_MARKER.length).trim()) as Record<string, string>;
   } catch {
     return null;
   }
@@ -1357,9 +1310,7 @@ async function syncPage(pageId: string, allDesired: Block[]): Promise<void> {
 
   if (forceRebuild || !fpBlock || !existingFps) {
     console.log(
-      forceRebuild
-        ? "FORCE_REBUILD=1 → 全クリア + 再作成"
-        : "fingerprint 不在 → 全クリア + 再作成",
+      forceRebuild ? "FORCE_REBUILD=1 → 全クリア + 再作成" : "fingerprint 不在 → 全クリア + 再作成",
     );
     await clearChildren(pageId);
     const blocks = [buildFingerprintBlock(desiredFps), ...allDesired];
@@ -1378,16 +1329,12 @@ async function syncPage(pageId: string, allDesired: Block[]): Promise<void> {
     prefixLen < desiredSections.length &&
     prefixLen < existingSections.length &&
     desiredSections[prefixLen].title === existingSections[prefixLen].title &&
-    desiredFps[desiredSections[prefixLen].title] ===
-      existingFps[existingSections[prefixLen].title]
+    desiredFps[desiredSections[prefixLen].title] === existingFps[existingSections[prefixLen].title]
   ) {
     prefixLen++;
   }
 
-  if (
-    prefixLen === desiredSections.length &&
-    prefixLen === existingSections.length
-  ) {
+  if (prefixLen === desiredSections.length && prefixLen === existingSections.length) {
     console.log(`変更なし (${prefixLen} セクション一致) → スキップ`);
     return;
   }

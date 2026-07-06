@@ -33,8 +33,7 @@ async function walk(dir, out = []) {
   return out;
 }
 
-const IMPORT_RE =
-  /(?:import|export)\s+(?:[^;'"]*?\s+from\s+)?["']([^"']+)["']/g;
+const IMPORT_RE = /(?:import|export)\s+(?:[^;'"]*?\s+from\s+)?["']([^"']+)["']/g;
 
 /**
  * 同一パッケージ内の相対 import かどうかを判定する。
@@ -65,9 +64,7 @@ for (const pkg of pkgEntries) {
     for (const m of text.matchAll(IMPORT_RE)) {
       const spec = m[1];
       // 1. @notion-headless-cms/<other>/internal/... は無条件で違反
-      const scopedMatch = spec.match(
-        /^@notion-headless-cms\/([^/]+)\/internal(?:\/|$)/,
-      );
+      const scopedMatch = spec.match(/^@notion-headless-cms\/([^/]+)\/internal(?:\/|$)/);
       if (scopedMatch) {
         if (scopedMatch[1] !== importerPkg) {
           violations.push({

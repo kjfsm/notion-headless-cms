@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { createNodeSyncScheduler } from "../../sync/node-scheduler.js";
 import { getSyncStats } from "../stats.js";
 
@@ -21,9 +22,7 @@ describe("getSyncStats", () => {
       cursor: null,
       lastSyncAt: "2026-01-01T00:00:00.000Z",
       lastReconcileAt: null,
-      failures: [
-        { slug: "a", message: "boom", at: "2026-01-01T00:00:00.000Z" },
-      ],
+      failures: [{ slug: "a", message: "boom", at: "2026-01-01T00:00:00.000Z" }],
     });
     const stats = await getSyncStats(scheduler);
     expect(stats.lastSyncAt).toBe("2026-01-01T00:00:00.000Z");

@@ -2,10 +2,8 @@
 
 import { useCallback } from "react";
 import { useRevalidator } from "react-router";
-import {
-  type UseNotionRevalidateOptions,
-  useRevalidateEffect,
-} from "./internal/revalidate.js";
+
+import { type UseNotionRevalidateOptions, useRevalidateEffect } from "./internal/revalidate.js";
 
 export type {
   NotionPollOptions,
@@ -23,14 +21,12 @@ export type {
  *   useNotionRevalidate(); // マウント時 1 度
  *   useNotionRevalidate({ on: ["mount", "visibility"] });
  */
-export function useNotionRevalidate(
-  opts: UseNotionRevalidateOptions = {},
-): void {
+export function useNotionRevalidate(opts: UseNotionRevalidateOptions = {}): void {
   const { revalidate } = useRevalidator();
   // useRevalidator が返す revalidate は再描画ごとに別インスタンス。
   // useCallback で安定化しないと useRevalidateEffect の deps が毎回変わる。
   const stable = useCallback(() => {
-    revalidate();
+    void revalidate();
   }, [revalidate]);
   useRevalidateEffect(stable, opts);
 }

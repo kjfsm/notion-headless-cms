@@ -20,9 +20,7 @@ export interface HttpStatusError {
 
 function isHttpStatusError(err: unknown): err is HttpStatusError {
   return (
-    typeof err === "object" &&
-    err !== null &&
-    typeof (err as HttpStatusError).status === "number"
+    typeof err === "object" && err !== null && typeof (err as HttpStatusError).status === "number"
   );
 }
 
@@ -34,8 +32,7 @@ function isHttpStatusError(err: unknown): err is HttpStatusError {
 export async function withRetry<T>(
   fn: () => Promise<T>,
   config: RetryConfig = DEFAULT_RETRY_CONFIG,
-  sleep: (ms: number) => Promise<void> = (ms) =>
-    new Promise((resolve) => setTimeout(resolve, ms)),
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
 ): Promise<T> {
   let attempt = 0;
   for (;;) {
@@ -51,8 +48,7 @@ export async function withRetry<T>(
         throw err;
       }
       const base = config.baseDelayMs * 2 ** attempt;
-      const delayMs =
-        config.jitter === false ? base : base * (0.5 + Math.random() * 0.5);
+      const delayMs = config.jitter === false ? base : base * (0.5 + Math.random() * 0.5);
       attempt++;
       config.onRetry?.(attempt, status, delayMs);
       await sleep(delayMs);

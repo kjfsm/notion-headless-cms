@@ -28,9 +28,7 @@ const PARAGRAPH_BLOCK = {
   id: "b1",
   type: "paragraph",
   data: {
-    rich_text: [
-      { type: "text", plain_text: "内容", annotations: {}, href: null },
-    ],
+    rich_text: [{ type: "text", plain_text: "内容", annotations: {}, href: null }],
   },
 };
 
@@ -103,12 +101,7 @@ describe("POST /api/sync/kick", () => {
   beforeEach(() => vi.clearAllMocks());
 
   it("cms.sync.kick を呼ぶ", async () => {
-    const res = await app.request(
-      "/api/sync/kick",
-      { method: "POST" },
-      fakeEnv,
-      fakeCtx,
-    );
+    const res = await app.request("/api/sync/kick", { method: "POST" }, fakeEnv, fakeCtx);
     expect(res.status).toBe(200);
     expect(fakeCms.sync.kick).toHaveBeenCalledTimes(1);
   });

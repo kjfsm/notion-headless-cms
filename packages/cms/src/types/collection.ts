@@ -64,14 +64,11 @@ export function defineCollection<
   if ((config.published || config.accessible) && !config.statusProperty) {
     throw new CMSError({
       code: "schema/status_property_required",
-      message:
-        "published/accessible を指定する場合は statusProperty の指定が必須です",
+      message: "published/accessible を指定する場合は statusProperty の指定が必須です",
       context: { operation: "defineCollection" },
     });
   }
-  const statusDef = config.statusProperty
-    ? config.properties[config.statusProperty]
-    : undefined;
+  const statusDef = config.statusProperty ? config.properties[config.statusProperty] : undefined;
   if (statusDef && statusDef.kind !== "status") {
     throw new CMSError({
       code: "schema/status_property_required",
@@ -97,9 +94,7 @@ export interface SchemaDef<C extends CollectionMap = CollectionMap> {
 }
 
 /** `defineCollection` で作った複数のコレクションを 1 つのスキーマにまとめる。 */
-export function defineSchema<const C extends CollectionMap>(
-  collections: C,
-): SchemaDef<C> {
+export function defineSchema<const C extends CollectionMap>(collections: C): SchemaDef<C> {
   return { collections };
 }
 

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+
 import { createEntryStore } from "../../store/entry-store.js";
 import { createIndexStore } from "../../store/index-store.js";
 import { memoryBlobStore, memoryDocStore } from "../../store/memory.js";
@@ -7,9 +8,7 @@ import { createVersionedCacheLayer } from "../../store/versioned-cache.js";
 import type { EntrySnapshot } from "../../types/entry-snapshot.js";
 import { findEntry } from "../find.js";
 
-function snapshot(
-  overrides: Partial<EntrySnapshot> = {},
-): EntrySnapshot<{ title: string }> {
+function snapshot(overrides: Partial<EntrySnapshot> = {}): EntrySnapshot<{ title: string }> {
   return {
     collection: "posts",
     slug: "hello",
@@ -50,11 +49,7 @@ describe("findEntry", () => {
     const entryStore = createEntryStore(memoryBlobStore());
     const coldStartFetch = vi.fn().mockResolvedValue(snapshot());
 
-    const result = await findEntry(
-      { entryStore, indexStore, coldStartFetch },
-      "posts",
-      "hello",
-    );
+    const result = await findEntry({ entryStore, indexStore, coldStartFetch }, "posts", "hello");
     expect(result?.slug).toBe("hello");
     expect(coldStartFetch).toHaveBeenCalledWith("posts", "hello");
   });
@@ -62,11 +57,7 @@ describe("findEntry", () => {
   it("coldStartFetch が無い場合、未マテリアライズなら null を返す", async () => {
     const indexStore = createIndexStore(memoryDocStore());
     const entryStore = createEntryStore(memoryBlobStore());
-    const result = await findEntry(
-      { entryStore, indexStore },
-      "posts",
-      "hello",
-    );
+    const result = await findEntry({ entryStore, indexStore }, "posts", "hello");
     expect(result).toBeNull();
   });
 
@@ -82,11 +73,7 @@ describe("findEntry", () => {
     // entryStore.put を呼ばず、index だけ存在する不整合状態を作る。
     const warn = vi.fn();
 
-    const result = await findEntry(
-      { entryStore, indexStore, logger: { warn } },
-      "posts",
-      "hello",
-    );
+    const result = await findEntry({ entryStore, indexStore, logger: { warn } }, "posts", "hello");
 
     expect(result).toBeNull();
     expect(warn).toHaveBeenCalledWith(
@@ -125,12 +112,8 @@ describe("findEntry", () => {
     );
 
     const entryGetSpy = vi.spyOn(entryStore, "get");
-    const result = await findEntry(
-      { entryStore, indexStore, versionedCache },
-      "posts",
-      "hello",
-    );
-    expect((result?.meta as { title: string }).title).toBe("Cached");
+    const result = await findEntry({ entryStore, indexStore, versionedCache }, "posts", "hello");
+    expect((result!.meta as { title: string }).title).toBe("Cached");
     expect(entryGetSpy).not.toHaveBeenCalled();
   });
 
@@ -145,11 +128,7 @@ describe("findEntry", () => {
     });
     await entryStore.put(snapshot());
 
-    const result = await findEntry(
-      { entryStore, indexStore },
-      "posts",
-      "hello",
-    );
+    const result = await findEntry({ entryStore, indexStore }, "posts", "hello");
     expect(JSON.parse(JSON.stringify(result))).toEqual(result);
     expect(structuredClone(result)).toEqual(result);
   });

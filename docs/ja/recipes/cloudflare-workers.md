@@ -99,10 +99,7 @@ export interface Env {
   readonly SYNC_COORDINATOR: DurableObjectNamespace;
 }
 
-export function makeCms(
-  env: Env,
-  ctx: { waitUntil(p: Promise<unknown>): void },
-) {
+export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void }) {
   return createCMS({
     schema,
     stores: {
@@ -120,10 +117,7 @@ export function makeCms(
 ```ts
 // src/lib/do.ts
 import type { DurableObjectStateLike } from "@notion-headless-cms/cms";
-import {
-  createCMS,
-  createDurableObjectSyncScheduler,
-} from "@notion-headless-cms/cms";
+import { createCMS, createDurableObjectSyncScheduler } from "@notion-headless-cms/cms";
 import {
   createSyncCoordinatorDO,
   kvDocStore,
@@ -231,14 +225,16 @@ app.get("/ui/posts/:slug", async (c) => {
   const post = await cms.posts.find(c.req.param("slug"));
   if (!post) return c.html("<h1>404</h1>", 404);
   const content = renderBlocksToHtml(post.blocks, { links: post.links });
-  return c.html(html`<!doctype html>
-<html lang="ja">
-  <body>
-    <h1>${post.slug}</h1>
-    <article>${raw(content)}</article>
-    ${raw(revalidatorScript())}
-  </body>
-</html>`);
+  return c.html(
+    html`<!doctype html>
+      <html lang="ja">
+        <body>
+          <h1>${post.slug}</h1>
+          <article>${raw(content)}</article>
+          ${raw(revalidatorScript())}
+        </body>
+      </html>`,
+  );
 });
 ```
 

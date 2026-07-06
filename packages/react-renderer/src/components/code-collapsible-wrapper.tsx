@@ -1,13 +1,10 @@
 "use client";
 
 import * as React from "react";
+
 import { cn } from "../lib/utils.js";
 import { Button } from "./ui/button.js";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "./ui/collapsible.js";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible.js";
 import { Separator } from "./ui/separator.js";
 
 /**
@@ -30,11 +27,7 @@ export function CodeCollapsibleWrapper({
     >
       <CollapsibleTrigger asChild>
         <div className="absolute top-1.5 right-9 z-10 flex items-center">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 rounded-md px-2 text-muted-foreground"
-          >
+          <Button variant="ghost" size="sm" className="h-7 rounded-md px-2 text-muted-foreground">
             {isOpened ? "Collapse" : "Expand"}
           </Button>
           <Separator orientation="vertical" className="mx-1.5 h-4!" />

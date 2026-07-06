@@ -7,26 +7,31 @@ import {
   ScrollRestoration,
   useRouteError,
 } from "react-router";
+
 import "./app.css";
 
-function ErrorDetail({
-  err,
-  depth = 0,
-}: {
-  err: Record<string, unknown>;
-  depth?: number;
-}) {
-  const message = String(err.message ?? "");
-  const code = err.code != null ? String(err.code) : null;
-  const stack = err.stack != null ? String(err.stack) : null;
+/** 実体が string/number 以外の場合は Object の既定 toString ("[object Object]") にせず JSON 化する。 */
+function unknownToString(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (value == null) return "";
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return "";
+  }
+}
+
+function ErrorDetail({ err, depth = 0 }: { err: Record<string, unknown>; depth?: number }) {
+  const message = unknownToString(err.message ?? "");
+  const code = err.code != null ? unknownToString(err.code) : null;
+  const stack = err.stack != null ? unknownToString(err.stack) : null;
   const cause = err.cause as Record<string, unknown> | null | undefined;
   return (
     <div style={{ marginLeft: depth * 16 }}>
       {code && <p>コード: {code}</p>}
       <p>{message}</p>
-      {stack && (
-        <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.8em" }}>{stack}</pre>
-      )}
+      {stack && <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.8em" }}>{stack}</pre>}
       {cause && (
         <>
           <p>
@@ -100,13 +105,9 @@ export function ErrorBoundary() {
       </head>
       <body>
         <h1>エラーが発生しました</h1>
-        {code != null && <p>コード: {String(code)}</p>}
+        {code != null && <p>コード: {unknownToString(code)}</p>}
         <p>{message}</p>
-        {stack != null && (
-          <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.8em" }}>
-            {stack}
-          </pre>
-        )}
+        {stack != null && <pre style={{ whiteSpace: "pre-wrap", fontSize: "0.8em" }}>{stack}</pre>}
       </body>
     </html>
   );

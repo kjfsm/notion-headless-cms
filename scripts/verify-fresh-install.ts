@@ -20,9 +20,7 @@ let failed = false;
 for (const pkg of packages) {
   const distPath = path.join("packages", pkg, "dist");
   if (!fs.existsSync(distPath)) {
-    console.error(
-      `✗ packages/${pkg}/dist が存在しません。pnpm build を実行してください`,
-    );
+    console.error(`✗ packages/${pkg}/dist が存在しません。pnpm build を実行してください`);
     failed = true;
   } else {
     console.log(`✓ packages/${pkg}/dist`);

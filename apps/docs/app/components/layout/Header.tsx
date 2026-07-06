@@ -9,7 +9,7 @@ export function Header() {
       <div className="flex h-14 items-center px-6">
         <Link
           to="/"
-          className="mr-8 font-black tracking-tighter text-base text-gray-900 transition hover:text-purple-600"
+          className="mr-8 text-base font-black tracking-tighter text-gray-900 transition hover:text-purple-600"
         >
           NOTION-HEADLESS-CMS
         </Link>

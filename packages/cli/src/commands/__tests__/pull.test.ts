@@ -1,7 +1,9 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import type { CMSConfig } from "../../index.js";
 
 const loadConfigMock = vi.fn<() => Promise<CMSConfig>>();
@@ -42,9 +44,9 @@ describe("runPull", () => {
     loadConfigMock.mockResolvedValue({
       collections: {},
     } as CMSConfig);
-    await expect(runPull({ token: "tok", silent: true })).rejects.toMatchObject(
-      { code: "cli/config_invalid" },
-    );
+    await expect(runPull({ token: "tok", silent: true })).rejects.toMatchObject({
+      code: "cli/config_invalid",
+    });
   });
 
   it("dataSourceId 指定のコレクションを解決して雛形を出力する", async () => {
@@ -62,10 +64,7 @@ describe("runPull", () => {
 
     expect(resolveIdMock).not.toHaveBeenCalled();
     expect(retrieveDataSourceMock).toHaveBeenCalledWith("ds-posts");
-    const output = await fs.readFile(
-      path.join(tmpDir, "src/collections/posts.ts"),
-      "utf-8",
-    );
+    const output = await fs.readFile(path.join(tmpDir, "src/collections/posts.ts"), "utf-8");
     expect(output).toContain("defineCollection");
     expect(output).toContain('dataSourceId: "ds-posts"');
   });
@@ -88,10 +87,7 @@ describe("runPull", () => {
 
     await runPull({ token: "tok", silent: true });
 
-    const output = await fs.readFile(
-      path.join(tmpDir, "src/collections/posts.ts"),
-      "utf-8",
-    );
+    const output = await fs.readFile(path.join(tmpDir, "src/collections/posts.ts"), "utf-8");
     expect(output).toContain('title: prop.title("名前"),');
     expect(output).toContain('slug: prop.richText("URL"),');
   });
@@ -115,9 +111,9 @@ describe("runPull", () => {
     } as CMSConfig);
     resolveIdMock.mockResolvedValue(null);
 
-    await expect(runPull({ token: "tok", silent: true })).rejects.toMatchObject(
-      { code: "cli/notion_api_failed" },
-    );
+    await expect(runPull({ token: "tok", silent: true })).rejects.toMatchObject({
+      code: "cli/notion_api_failed",
+    });
   });
 
   it("既存ファイルは上書きしない(生成物の所有権はユーザー)", async () => {
@@ -128,18 +124,11 @@ describe("runPull", () => {
 
     const scaffoldDir = path.join(tmpDir, "src/collections");
     await fs.mkdir(scaffoldDir, { recursive: true });
-    await fs.writeFile(
-      path.join(scaffoldDir, "posts.ts"),
-      "// user edited\n",
-      "utf-8",
-    );
+    await fs.writeFile(path.join(scaffoldDir, "posts.ts"), "// user edited\n", "utf-8");
 
     await runPull({ token: "tok", silent: true });
 
-    const output = await fs.readFile(
-      path.join(scaffoldDir, "posts.ts"),
-      "utf-8",
-    );
+    const output = await fs.readFile(path.join(scaffoldDir, "posts.ts"), "utf-8");
     expect(output).toBe("// user edited\n");
   });
 
@@ -155,10 +144,7 @@ describe("runPull", () => {
       scaffoldDir: "custom/dir",
     });
 
-    const output = await fs.readFile(
-      path.join(tmpDir, "custom/dir/posts.ts"),
-      "utf-8",
-    );
+    const output = await fs.readFile(path.join(tmpDir, "custom/dir/posts.ts"), "utf-8");
     expect(output).toContain("defineCollection");
   });
 });

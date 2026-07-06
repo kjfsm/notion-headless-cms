@@ -1,6 +1,7 @@
 "use client";
 
 import { type ReactNode, useMemo } from "react";
+
 import { BlockSwitch } from "./BlockSwitch.js";
 import { NotionContext, useNotionContext } from "./context.js";
 import { groupListItems } from "./lib/group-list-items.js";
@@ -38,10 +39,7 @@ export function NotionBlocks({ blocks }: { blocks: NotionBlock[] }): ReactNode {
   const depth = ctx.listDepth ?? 0;
   const olClass = OL_STYLES[depth % OL_STYLES.length] ?? "list-decimal";
 
-  const nestedCtx = useMemo(
-    () => ({ ...ctx, listDepth: depth + 1 }),
-    [ctx, depth],
-  );
+  const nestedCtx = useMemo(() => ({ ...ctx, listDepth: depth + 1 }), [ctx, depth]);
 
   const groups = groupListItems(blocks);
   return (

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import type { VersionedCacheLike } from "../versioned-cache.js";
 import { createVersionedCacheLayer } from "../versioned-cache.js";
 
@@ -30,9 +31,7 @@ describe("createVersionedCacheLayer", () => {
   it("cache 未指定時は get が常に undefined(workers.dev 等 Cache API 無効環境のフォールバック)", async () => {
     const layer = createVersionedCacheLayer({});
     expect(await layer.get("posts", "hello", "v1")).toBeUndefined();
-    await expect(
-      layer.put("posts", "hello", "v1", new Response("ok")),
-    ).resolves.toBeUndefined();
+    await expect(layer.put("posts", "hello", "v1", new Response("ok"))).resolves.toBeUndefined();
   });
 
   it("cache 指定時は versioned key で put/get できる", async () => {
@@ -55,8 +54,6 @@ describe("createVersionedCacheLayer", () => {
   it("Cache API が例外を投げても fail-soft で無視する(読者パスは KV+R2 直読みで成立する)", async () => {
     const layer = createVersionedCacheLayer({ cache: throwingCache() });
     await expect(layer.get("posts", "hello", "v1")).resolves.toBeUndefined();
-    await expect(
-      layer.put("posts", "hello", "v1", new Response("ok")),
-    ).resolves.toBeUndefined();
+    await expect(layer.put("posts", "hello", "v1", new Response("ok"))).resolves.toBeUndefined();
   });
 });

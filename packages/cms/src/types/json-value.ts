@@ -34,10 +34,7 @@ export type IsJsonValue<T, D extends number = 8> = D extends never
       : T extends (...args: never[]) => unknown
         ? false
         : T extends object
-          ? { [K in keyof T]: IsJsonValue<T[K], Prev[D]> }[keyof T] extends
-              | true
-              | never
-              | undefined
+          ? { [K in keyof T]: IsJsonValue<T[K], Prev[D]> }[keyof T] extends true | undefined
             ? true
             : false
           : false;

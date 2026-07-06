@@ -46,7 +46,7 @@ const cms = createClient({
   sources: {
     notion: notionSource({
       schema,
-      token: process.env.NOTION_TOKEN!,                       // config にも書いた
+      token: process.env.NOTION_TOKEN!, // config にも書いた
       publishOptions: { posts: { publishedStatuses: ["公開済み"] } }, // config にも書ける
     }),
   },
@@ -63,9 +63,13 @@ const cms = createClient({
 
 ```ts
 const cms = createClient({
-  sources: { notion: notionSource({ /* ... */ }) },
+  sources: {
+    notion: notionSource({
+      /* ... */
+    }),
+  },
   renderer: notionMarkdownRenderer,
-  ...cloudflarePreset({ env, ctx }),   // spread で cache/swr/waitUntil が暗黙にマージ
+  ...cloudflarePreset({ env, ctx }), // spread で cache/swr/waitUntil が暗黙にマージ
 });
 ```
 
@@ -123,20 +127,20 @@ renderer: notionMarkdownRenderer,   // markdownFetcher を選んだら、これ�
 
 ## 3. 責務分割の確定表
 
-| 情報 | 住所 | 理由 |
-|---|---|---|
-| `dataSourceId` / `dbName` | **構造**（config→schema） | generate 時に Notion API で解決 |
-| `properties` + 型 | **構造** | generate 時に introspect |
-| `fieldMappings` | **構造** | codegen が TS フィールド名生成に使う |
-| `slugField` / `statusField` | **構造** | アイテム**型の導出入力**（config 以外に住所を持てない） |
-| status の options（許容値） | **構造（新規追加）** | generate 時に確定。`published`/`accessible` の型安全化に使う |
-| `notionToken`（generate 用） | **構造側 config に残す** | generate 時の introspect に必要 |
-| `token`（実行時） | **振る舞い**（createCMS） | ランタイムの env に依存 |
-| `published` / `accessible` | **振る舞い** | 公開ポリシー。config から**削除**して住所を 1 つに |
-| `content` モード | **振る舞い** | 取得・表現方法。DB 構造と直交（同一 schema を html/react で共用可） |
-| `imageProxyBase` | **振る舞い** | 配信パスの方針 |
-| `hooks` / `plugins` / `logger` / `rateLimiter` / `swr` | **振る舞い** | すべて実行時の関心事 |
-| `webhookSecret` | **グルー（handler）の引数** | リクエスト処理時の関心事。createCMS には入れない |
+| 情報                                                   | 住所                        | 理由                                                                |
+| ------------------------------------------------------ | --------------------------- | ------------------------------------------------------------------- |
+| `dataSourceId` / `dbName`                              | **構造**（config→schema）   | generate 時に Notion API で解決                                     |
+| `properties` + 型                                      | **構造**                    | generate 時に introspect                                            |
+| `fieldMappings`                                        | **構造**                    | codegen が TS フィールド名生成に使う                                |
+| `slugField` / `statusField`                            | **構造**                    | アイテム**型の導出入力**（config 以外に住所を持てない）             |
+| status の options（許容値）                            | **構造（新規追加）**        | generate 時に確定。`published`/`accessible` の型安全化に使う        |
+| `notionToken`（generate 用）                           | **構造側 config に残す**    | generate 時の introspect に必要                                     |
+| `token`（実行時）                                      | **振る舞い**（createCMS）   | ランタイムの env に依存                                             |
+| `published` / `accessible`                             | **振る舞い**                | 公開ポリシー。config から**削除**して住所を 1 つに                  |
+| `content` モード                                       | **振る舞い**                | 取得・表現方法。DB 構造と直交（同一 schema を html/react で共用可） |
+| `imageProxyBase`                                       | **振る舞い**                | 配信パスの方針                                                      |
+| `hooks` / `plugins` / `logger` / `rateLimiter` / `swr` | **振る舞い**                | すべて実行時の関心事                                                |
+| `webhookSecret`                                        | **グルー（handler）の引数** | リクエスト処理時の関心事。createCMS には入れない                    |
 
 > **注**: status options を schema に含めると、Notion 側で選択肢が変わるたび `nhc generate`
 > が必要になる（型と実体の drift）。これは properties 生成と同じ性質で許容範囲。
@@ -172,9 +176,9 @@ import { schema } from "./generated/nhc";
 import { createCMS } from "@notion-headless-cms";
 
 export const cms = createCMS({
-  schema,                                       // 構造（生成物）
-  token: process.env.NOTION_TOKEN!,             // 振る舞い
-  content: "html",                              // 単一決定で fetch戦略+renderer を内部結線
+  schema, // 構造（生成物）
+  token: process.env.NOTION_TOKEN!, // 振る舞い
+  content: "html", // 単一決定で fetch戦略+renderer を内部結線
   collections: { posts: { published: ["公開済み"] } },
 });
 ```
@@ -188,7 +192,7 @@ export const makeCms = (env: Env, ctx: ExecutionContext) =>
     schema,
     token: env.NOTION_TOKEN,
     content: "react",
-    runtime: cloudflare({ env, ctx }),          // preset の spread と cache配列を統一
+    runtime: cloudflare({ env, ctx }), // preset の spread と cache配列を統一
     collections: { posts: { published: ["公開済み"] } },
   });
 ```
@@ -205,11 +209,11 @@ export const makeCms = (env: Env, ctx: ExecutionContext) =>
 
 `...preset()` の spread と `cache` 配列を、単一の `runtime` フィールドに統一する。
 
-| 現行 | v2 `runtime` |
-|---|---|
-| `nodePreset()` → `{cache:[memoryCache], swr}` | `runtime` 省略 = node 既定（内部で memoryCache 配線） |
-| `cloudflarePreset({env,ctx})` → `{cache:[kv,r2], swr, waitUntil}` | `runtime: cloudflare({ env, ctx })` |
-| Next 直書き `cache:[nextCache(), memoryCache()]` | `runtime: next()` |
+| 現行                                                              | v2 `runtime`                                          |
+| ----------------------------------------------------------------- | ----------------------------------------------------- |
+| `nodePreset()` → `{cache:[memoryCache], swr}`                     | `runtime` 省略 = node 既定（内部で memoryCache 配線） |
+| `cloudflarePreset({env,ctx})` → `{cache:[kv,r2], swr, waitUntil}` | `runtime: cloudflare({ env, ctx })`                   |
+| Next 直書き `cache:[nextCache(), memoryCache()]`                  | `runtime: next()`                                     |
 
 設計上の決定:
 
@@ -251,9 +255,9 @@ react は `blocks` / `ogp`）。これにより「react モードなのに markd
 
 ```ts
 // content:"html"
-type HtmlItem<T>  = T & { html(): Promise<string>; markdown(): Promise<string> };
+type HtmlItem<T> = T & { html(): Promise<string>; markdown(): Promise<string> };
 // content:"react"
-type ReactItem<T> = T & { blocks(): Promise<NotionBlock[]> };   // undefined にならない
+type ReactItem<T> = T & { blocks(): Promise<NotionBlock[]> }; // undefined にならない
 ```
 
 - `content:"html"` のとき `.notionBlocks()` は**型に存在しない**（呼べない）。
@@ -265,9 +269,10 @@ type ReactItem<T> = T & { blocks(): Promise<NotionBlock[]> };   // undefined に
 `find()` / `list()` の戻り値型まで伝播させる方が推論が安定する。
 
 ```ts
-function createCMS<S extends Schema, M extends ContentMode = "html">(
-  opts: { schema: S; content?: M; /* ... */ },
-): CMSClient<S, M>;
+function createCMS<S extends Schema, M extends ContentMode = "html">(opts: {
+  schema: S;
+  content?: M; /* ... */
+}): CMSClient<S, M>;
 ```
 
 IDE 表示改善のため、アクセサ型に `HtmlItem` / `ReactItem` の別名 interface を与える。
@@ -325,11 +330,11 @@ IDE 表示改善のため、アクセサ型に `HtmlItem` / `ReactItem` の別�
 
 `pnpm add @notion-headless-cms` 1 つで動くことを目標にする。
 
-| 依存 | v2 方針 | 理由 / 注意 |
-|---|---|---|
-| `@notionhq/client` | **`dependencies` に畳む** | API 呼び出しの中核。range は `^5` 等緩めにし、メジャー追従ポリシーを明記 |
-| `zod` | dependencies に畳む | 利用側が直接使わないなら重複も実害小 |
-| `notion-to-md` | **動的 import / optional 維持を検討** | markdown 戦略専用。react ユーザーには不要 |
+| 依存               | v2 方針                               | 理由 / 注意                                                              |
+| ------------------ | ------------------------------------- | ------------------------------------------------------------------------ |
+| `@notionhq/client` | **`dependencies` に畳む**             | API 呼び出しの中核。range は `^5` 等緩めにし、メジャー追従ポリシーを明記 |
+| `zod`              | dependencies に畳む                   | 利用側が直接使わないなら重複も実害小                                     |
+| `notion-to-md`     | **動的 import / optional 維持を検討** | markdown 戦略専用。react ユーザーには不要                                |
 
 > Notion API は v5 で `data_sources` 概念が入ったように破壊的変更がある。dependencies に固定すると
 > ユーザーが先行更新できないため、version range の広さと追従ポリシーを RFC 実装時に明記する。
@@ -355,16 +360,16 @@ IDE 表示改善のため、アクセサ型に `HtmlItem` / `ReactItem` の別�
 
 ## 10. 移行の方向性（概略）
 
-| 現行 | v2 |
-|---|---|
+| 現行                                                                                                                   | v2                                                            |
+| ---------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
 | `createClient({ sources: { notion: notionSource({ schema, token, fetch, publishOptions }) }, renderer, ...preset() })` | `createCMS({ schema, token, content, runtime, collections })` |
-| `notionSource({ publishOptions: { posts: { publishedStatuses } } })` | `createCMS({ collections: { posts: { published } } })` |
-| `fetch: markdownFetcher()` + `renderer: notionMarkdownRenderer` | `content: "html"` |
-| `fetch: blocksFetcher()`（暗黙） + react-renderer | `content: "react"` |
-| `...nodePreset()` | `runtime` 省略（node 既定） |
-| `...cloudflarePreset({ env, ctx })` | `runtime: cloudflare({ env, ctx })` |
-| Next 直書き `cache:[nextCache(), memoryCache()]` | `runtime: next()` |
-| `@notion-headless-cms/{node,cloudflare,next}` | `@notion-headless-cms`（単一） |
+| `notionSource({ publishOptions: { posts: { publishedStatuses } } })`                                                   | `createCMS({ collections: { posts: { published } } })`        |
+| `fetch: markdownFetcher()` + `renderer: notionMarkdownRenderer`                                                        | `content: "html"`                                             |
+| `fetch: blocksFetcher()`（暗黙） + react-renderer                                                                      | `content: "react"`                                            |
+| `...nodePreset()`                                                                                                      | `runtime` 省略（node 既定）                                   |
+| `...cloudflarePreset({ env, ctx })`                                                                                    | `runtime: cloudflare({ env, ctx })`                           |
+| Next 直書き `cache:[nextCache(), memoryCache()]`                                                                       | `runtime: next()`                                             |
+| `@notion-headless-cms/{node,cloudflare,next}`                                                                          | `@notion-headless-cms`（単一）                                |
 
 詳細な移行手順（コードモッド含む）は別途 `docs/ja/migration/` に切り出す。
 
@@ -383,26 +388,26 @@ IDE 表示改善のため、アクセサ型に `HtmlItem` / `ReactItem` の別�
 
 ## 付録: この RFC が満たす目標との対応
 
-| ユーザーが定めた方針 | 本 RFC の対応箇所 |
-|---|---|
-| 単一の真実源（config 一元化） | §2 原則 1・2 / §3 確定表 / §9 |
-| DB 構造は config、それ以外は createCMS | §2 原則 2 / §3 確定表 |
-| パッケージ・選択肢の削減 | §4 単一 createCMS / §5 runtime 統一 / §7 集約 / §8 単一インストール |
-| 型安全・フットガン排除 | §6 content モードと型分岐 / §3 status options 型付け |
-| クリーンスレート v2（破壊的 OK） | §10 移行の方向性 |
+| ユーザーが定めた方針                   | 本 RFC の対応箇所                                                   |
+| -------------------------------------- | ------------------------------------------------------------------- |
+| 単一の真実源（config 一元化）          | §2 原則 1・2 / §3 確定表 / §9                                       |
+| DB 構造は config、それ以外は createCMS | §2 原則 2 / §3 確定表                                               |
+| パッケージ・選択肢の削減               | §4 単一 createCMS / §5 runtime 統一 / §7 集約 / §8 単一インストール |
+| 型安全・フットガン排除                 | §6 content モードと型分岐 / §3 status options 型付け                |
+| クリーンスレート v2（破壊的 OK）       | §10 移行の方向性                                                    |
 
 ---
 
 ## 実装状況（2026-06 時点）
 
-| 節 | 内容 | 状況 |
-|---|---|---|
-| §4 | 単一エントリ `createCMS` | ✅ v2.0 実装済み（#346, `@notion-headless-cms/client`） |
-| §5 | `runtime` 統一（node 既定 / `cloudflare()` / `next()`） | ✅ 実装済み（`/cloudflare` `/next` サブパス） |
-| §6 | `content: "html" \| "react"` モードと型分岐 | ✅ 実装済み（取得戦略+renderer を内部結線、`notionBlocks()` の undefined を型で排除） |
-| §8 | 単一インストール（`@notionhq/client` / `zod` / `notion-to-md` を deps 化） | ✅ 実装済み（`pnpm add @notion-headless-cms/client` で動く） |
-| §9 | CLI 生成物を schema データのみに / `nhc init` 雛形 | ✅ 実装済み |
-| §7 | 公開名を無印 `@notion-headless-cms` に集約 | ❌ 取り下げ（npm 名前規則違反: `@scope` 単体は不可・`@scope/name` 必須）。`@notion-headless-cms/client` を恒久公開名とする |
-| §11 | 残論点（型チェック時間ベンチ / `notion-to-md` の最終形態 / `imageProxyBase` 単一ソース化 / status options の generate 頻度） | ⬜ 1.0 前に決着させる |
+| 節  | 内容                                                                                                                         | 状況                                                                                                                       |
+| --- | ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| §4  | 単一エントリ `createCMS`                                                                                                     | ✅ v2.0 実装済み（#346, `@notion-headless-cms/client`）                                                                    |
+| §5  | `runtime` 統一（node 既定 / `cloudflare()` / `next()`）                                                                      | ✅ 実装済み（`/cloudflare` `/next` サブパス）                                                                              |
+| §6  | `content: "html" \| "react"` モードと型分岐                                                                                  | ✅ 実装済み（取得戦略+renderer を内部結線、`notionBlocks()` の undefined を型で排除）                                      |
+| §8  | 単一インストール（`@notionhq/client` / `zod` / `notion-to-md` を deps 化）                                                   | ✅ 実装済み（`pnpm add @notion-headless-cms/client` で動く）                                                               |
+| §9  | CLI 生成物を schema データのみに / `nhc init` 雛形                                                                           | ✅ 実装済み                                                                                                                |
+| §7  | 公開名を無印 `@notion-headless-cms` に集約                                                                                   | ❌ 取り下げ（npm 名前規則違反: `@scope` 単体は不可・`@scope/name` 必須）。`@notion-headless-cms/client` を恒久公開名とする |
+| §11 | 残論点（型チェック時間ベンチ / `notion-to-md` の最終形態 / `imageProxyBase` 単一ソース化 / status options の generate 頻度） | ⬜ 1.0 前に決着させる                                                                                                      |
 
 > 旧メタパッケージ（node / cloudflare / next）は v2.0 で廃止済み。移行は [`docs/ja/migration/`](../migration/) を参照。

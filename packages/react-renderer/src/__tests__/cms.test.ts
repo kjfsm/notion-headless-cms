@@ -1,5 +1,6 @@
 import type { NormalizedBlock } from "@notion-headless-cms/cms";
 import { describe, expect, it } from "vitest";
+
 import { denormalizeBlocks, toPageLinkMap } from "../cms.js";
 
 describe("denormalizeBlocks", () => {

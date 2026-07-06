@@ -1,4 +1,5 @@
 import { afterEach, describe, vi } from "vitest";
+
 import { kvDocStore, r2BlobStore } from "../cloudflare.js";
 import { runBlobStoreContract, runDocStoreContract } from "../contract.js";
 import { restKvNamespace, restR2Bucket } from "../rest.js";
@@ -15,21 +16,18 @@ function fakeCloudflareRestApi(): typeof fetch {
   const r2 = new Map<string, { bytes: Uint8Array; contentType?: string }>();
 
   return (async (input: RequestInfo | URL, init?: RequestInit) => {
-    const url = new URL(String(input));
+    const url = new URL(input instanceof Request ? input.url : input);
     const method = init?.method ?? "GET";
 
-    const kvValue = url.pathname.match(
-      /\/storage\/kv\/namespaces\/[^/]+\/values\/(.+)$/,
-    );
+    const kvValue = url.pathname.match(/\/storage\/kv\/namespaces\/[^/]+\/values\/(.+)$/);
     if (kvValue) {
       const key = decodeURIComponent(kvValue[1] as string);
       if (method === "GET") {
-        return kv.has(key)
-          ? new Response(kv.get(key))
-          : new Response(null, { status: 404 });
+        return kv.has(key) ? new Response(kv.get(key)) : new Response(null, { status: 404 });
       }
       if (method === "PUT") {
-        const value = String((init?.body as FormData).get("value"));
+        // restKvNamespace.put は常に文字列を append するため、File になり得ない
+        const value = (init!.body as FormData).get("value") as string;
         kv.set(key, value);
         return new Response(null, { status: 200 });
       }
@@ -42,10 +40,9 @@ function fakeCloudflareRestApi(): typeof fetch {
     if (url.pathname.match(/\/storage\/kv\/namespaces\/[^/]+\/keys$/)) {
       const prefix = url.searchParams.get("prefix") ?? "";
       const names = [...kv.keys()].filter((k) => k.startsWith(prefix)).sort();
-      return new Response(
-        JSON.stringify({ result: names.map((name) => ({ name })) }),
-        { status: 200 },
-      );
+      return new Response(JSON.stringify({ result: names.map((name) => ({ name })) }), {
+        status: 200,
+      });
     }
 
     const r2Object = url.pathname.match(/\/r2\/buckets\/[^/]+\/objects\/(.+)$/);
@@ -56,16 +53,12 @@ function fakeCloudflareRestApi(): typeof fetch {
         if (!obj) return new Response(null, { status: 404 });
         return new Response(obj.bytes as BodyInit, {
           status: 200,
-          headers: obj.contentType
-            ? { "content-type": obj.contentType }
-            : undefined,
+          headers: obj.contentType ? { "content-type": obj.contentType } : undefined,
         });
       }
       if (method === "PUT") {
         const body = init?.body as Uint8Array;
-        const contentType = (init?.headers as Record<string, string>)[
-          "content-type"
-        ];
+        const contentType = (init!.headers as Record<string, string>)["content-type"];
         r2.set(key, { bytes: body, contentType });
         return new Response(null, { status: 200 });
       }

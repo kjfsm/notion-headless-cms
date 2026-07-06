@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+
 import { createLeveledLogger } from "../logger.js";
 import type { Logger } from "../types/logger.js";
 

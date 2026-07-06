@@ -1,12 +1,9 @@
 import { render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import type { NotionBlock } from "../types.js";
 
-const codeBlock = (
-  source: string,
-  lang = "typescript",
-  cachedHtml?: string,
-): NotionBlock =>
+const codeBlock = (source: string, lang = "typescript", cachedHtml?: string): NotionBlock =>
   ({
     object: "block",
     id: "code-1",
@@ -55,9 +52,7 @@ describe("Code (クライアント遅延 shiki)", () => {
     }));
 
     const { Code: FreshCode } = await import("../blocks/Code.js");
-    const { container } = render(
-      <FreshCode block={codeBlock("const x = 1;") as never} />,
-    );
+    const { container } = render(<FreshCode block={codeBlock("const x = 1;") as never} />);
 
     // 水和前は素の <pre> フォールバック。
     expect(container.querySelector(".shiki")).toBeNull();
@@ -74,9 +69,7 @@ describe("Code (クライアント遅延 shiki)", () => {
     });
 
     const { Code: FreshCode } = await import("../blocks/Code.js");
-    const { container } = render(
-      <FreshCode block={codeBlock("const x = 1;") as never} />,
-    );
+    const { container } = render(<FreshCode block={codeBlock("const x = 1;") as never} />);
 
     await Promise.resolve();
     expect(container.querySelector(".shiki")).toBeNull();
@@ -92,9 +85,7 @@ describe("Code (クライアント遅延 shiki)", () => {
     const { Code: FreshCode } = await import("../blocks/Code.js");
     const html = '<pre class="shiki"><code>cached</code></pre>';
     const { container } = render(
-      <FreshCode
-        block={codeBlock("const x = 1;", "typescript", html) as never}
-      />,
+      <FreshCode block={codeBlock("const x = 1;", "typescript", html) as never} />,
     );
 
     expect(container.querySelector(".shiki")).not.toBeNull();

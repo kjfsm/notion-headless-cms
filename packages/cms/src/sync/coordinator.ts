@@ -102,9 +102,7 @@ function toJsonState(state: SyncState): Record<string, JsonValue> {
  * `SyncState` に変換する。`coordinator.ts`(`getState()`)と `query/stats.ts`
  * (`getSyncStats`)の両方で同じフォールバック処理が必要なため共有する。
  */
-export function parseSyncState(
-  raw: Record<string, JsonValue> | null,
-): SyncState {
+export function parseSyncState(raw: Record<string, JsonValue> | null): SyncState {
   return raw ? (raw as unknown as SyncState) : EMPTY_STATE;
 }
 
@@ -161,9 +159,7 @@ export class SyncCoordinatorCore {
     if (writes <= 0) return state;
     const date = this.now().slice(0, 10);
     const prev =
-      state.writeBudget && state.writeBudget.date === date
-        ? state.writeBudget
-        : { date, count: 0 };
+      state.writeBudget && state.writeBudget.date === date ? state.writeBudget : { date, count: 0 };
     const nextCount = prev.count + writes;
     const threshold = this.dailyWriteBudget * this.writeBudgetWarnRatio;
     if (prev.count <= threshold && nextCount > threshold) {
@@ -222,9 +218,7 @@ export class SyncCoordinatorCore {
       writes += result?.writes ?? 0;
     }
     const state = await this.getState();
-    await this.setState(
-      this.accumulateWrites({ ...state, lastReconcileAt: this.now() }, writes),
-    );
+    await this.setState(this.accumulateWrites({ ...state, lastReconcileAt: this.now() }, writes));
     return { removed };
   }
 
@@ -264,10 +258,7 @@ export class SyncCoordinatorCore {
     let changes: readonly EntryChange[];
     let nextCursor: string | null;
     try {
-      ({ changes, nextCursor } = await this.deps.listChanged(
-        state.cursor,
-        this.chunkSize,
-      ));
+      ({ changes, nextCursor } = await this.deps.listChanged(state.cursor, this.chunkSize));
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       this.deps.logger?.error?.("同期の listChanged に失敗しました", {

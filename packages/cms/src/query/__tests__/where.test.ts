@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import { evaluateWhere, sortByMeta } from "../where.js";
 
 describe("evaluateWhere", () => {
@@ -7,48 +8,23 @@ describe("evaluateWhere", () => {
   });
 
   it("equals", () => {
-    expect(
-      evaluateWhere(
-        { status: "published" },
-        { status: { equals: "published" } },
-      ),
-    ).toBe(true);
-    expect(
-      evaluateWhere({ status: "draft" }, { status: { equals: "published" } }),
-    ).toBe(false);
+    expect(evaluateWhere({ status: "published" }, { status: { equals: "published" } })).toBe(true);
+    expect(evaluateWhere({ status: "draft" }, { status: { equals: "published" } })).toBe(false);
   });
 
   it("contains / startsWith", () => {
-    expect(
-      evaluateWhere({ title: "Hello World" }, { title: { contains: "World" } }),
-    ).toBe(true);
-    expect(
-      evaluateWhere(
-        { title: "Hello World" },
-        { title: { startsWith: "Hello" } },
-      ),
-    ).toBe(true);
-    expect(
-      evaluateWhere(
-        { title: "Hello World" },
-        { title: { startsWith: "World" } },
-      ),
-    ).toBe(false);
+    expect(evaluateWhere({ title: "Hello World" }, { title: { contains: "World" } })).toBe(true);
+    expect(evaluateWhere({ title: "Hello World" }, { title: { startsWith: "Hello" } })).toBe(true);
+    expect(evaluateWhere({ title: "Hello World" }, { title: { startsWith: "World" } })).toBe(false);
   });
 
   it("has / hasAny / hasAll (multiSelect)", () => {
     const meta = { tags: ["tech", "life"] };
     expect(evaluateWhere(meta, { tags: { has: "tech" } })).toBe(true);
     expect(evaluateWhere(meta, { tags: { has: "food" } })).toBe(false);
-    expect(evaluateWhere(meta, { tags: { hasAny: ["food", "tech"] } })).toBe(
-      true,
-    );
-    expect(evaluateWhere(meta, { tags: { hasAll: ["tech", "life"] } })).toBe(
-      true,
-    );
-    expect(evaluateWhere(meta, { tags: { hasAll: ["tech", "food"] } })).toBe(
-      false,
-    );
+    expect(evaluateWhere(meta, { tags: { hasAny: ["food", "tech"] } })).toBe(true);
+    expect(evaluateWhere(meta, { tags: { hasAll: ["tech", "life"] } })).toBe(true);
+    expect(evaluateWhere(meta, { tags: { hasAll: ["tech", "food"] } })).toBe(false);
   });
 
   it("number 比較演算子", () => {
@@ -61,30 +37,16 @@ describe("evaluateWhere", () => {
 
   it("date 範囲演算子", () => {
     const meta = { publishedAt: "2026-06-01" };
-    expect(evaluateWhere(meta, { publishedAt: { after: "2026-01-01" } })).toBe(
-      true,
-    );
-    expect(evaluateWhere(meta, { publishedAt: { before: "2026-01-01" } })).toBe(
-      false,
-    );
-    expect(
-      evaluateWhere(meta, { publishedAt: { onOrAfter: "2026-06-01" } }),
-    ).toBe(true);
+    expect(evaluateWhere(meta, { publishedAt: { after: "2026-01-01" } })).toBe(true);
+    expect(evaluateWhere(meta, { publishedAt: { before: "2026-01-01" } })).toBe(false);
+    expect(evaluateWhere(meta, { publishedAt: { onOrAfter: "2026-06-01" } })).toBe(true);
   });
 
   it("in", () => {
-    expect(
-      evaluateWhere(
-        { status: "draft" },
-        { status: { in: ["draft", "review"] } },
-      ),
-    ).toBe(true);
-    expect(
-      evaluateWhere(
-        { status: "published" },
-        { status: { in: ["draft", "review"] } },
-      ),
-    ).toBe(false);
+    expect(evaluateWhere({ status: "draft" }, { status: { in: ["draft", "review"] } })).toBe(true);
+    expect(evaluateWhere({ status: "published" }, { status: { in: ["draft", "review"] } })).toBe(
+      false,
+    );
   });
 
   it("複数キーは AND 条件", () => {
@@ -113,11 +75,7 @@ describe("sortByMeta", () => {
 
   it("文字列降順", () => {
     const items = [{ v: "a" }, { v: "c" }, { v: "b" }];
-    const sorted = sortByMeta(
-      items,
-      [{ by: "v", direction: "desc" }],
-      (i) => i,
-    );
+    const sorted = sortByMeta(items, [{ by: "v", direction: "desc" }], (i) => i);
     expect(sorted.map((i) => i.v)).toEqual(["c", "b", "a"]);
   });
 

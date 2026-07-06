@@ -1,4 +1,5 @@
 import { data } from "react-router";
+
 import { defaultLocale, isLocale } from "../../lib/i18n/config";
 import { getDocEntry } from "../../lib/markdown/load";
 import { renderDocMarkdown } from "../../lib/markdown/render";
@@ -34,8 +35,7 @@ export async function loader({ params }: Route.LoaderArgs) {
 
   return {
     html,
-    title:
-      entry.frontmatter.title ?? deriveTitleFromBody(entry.body) ?? entry.slug,
+    title: entry.frontmatter.title ?? deriveTitleFromBody(entry.body) ?? entry.slug,
     description: entry.frontmatter.description ?? null,
     category: entry.frontmatter.category ?? null,
     filePath: entry.filePath,
@@ -53,9 +53,7 @@ export function meta({ data: loaderData }: Route.MetaArgs) {
   if (!loaderData) return [{ title: "Not Found" }];
   return [
     { title: `${loaderData.title} | notion-headless-cms` },
-    ...(loaderData.description
-      ? [{ name: "description", content: loaderData.description }]
-      : []),
+    ...(loaderData.description ? [{ name: "description", content: loaderData.description }] : []),
   ];
 }
 
@@ -66,23 +64,17 @@ export default function DocPage({ loaderData }: Route.ComponentProps) {
     <article>
       <header className="mb-10">
         {category && (
-          <p className="mb-4 font-mono text-xs uppercase tracking-widest text-purple-500">
+          <p className="mb-4 font-mono text-xs tracking-widest text-purple-500 uppercase">
             {category}
           </p>
         )}
-        <h1 className="mb-3 text-4xl font-black tracking-tighter text-gray-900">
-          {title}
-        </h1>
-        {description && (
-          <p className="text-base text-gray-500 leading-relaxed">
-            {description}
-          </p>
-        )}
+        <h1 className="mb-3 text-4xl font-black tracking-tighter text-gray-900">{title}</h1>
+        {description && <p className="text-base leading-relaxed text-gray-500">{description}</p>}
         <div className="mt-8 border-b border-gray-200" />
       </header>
       {/* rehype で生成した HTML を埋め込む。コンテンツソースは git 管理下の md なので XSS リスクなし。 */}
       <div
-        className="prose prose-neutral max-w-none pt-2 prose-headings:tracking-tighter prose-headings:font-bold prose-a:text-purple-600 prose-a:no-underline hover:prose-a:underline prose-code:text-purple-600 prose-code:before:content-[''] prose-code:after:content-['']"
+        className="prose max-w-none pt-2 prose-neutral prose-headings:font-bold prose-headings:tracking-tighter prose-a:text-purple-600 prose-a:no-underline hover:prose-a:underline prose-code:text-purple-600 prose-code:before:content-[''] prose-code:after:content-['']"
         // biome-ignore lint/security/noDangerouslySetInnerHtml: コンテンツは git 管理下の md。
         dangerouslySetInnerHTML={{ __html: html }}
       />

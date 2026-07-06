@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
 import { createOgpHandler, isUrlAllowed, parseOgpHtml } from "../ogp.js";
 
 function ogpRequest(url: string): Request {
@@ -119,9 +120,7 @@ describe("createOgpHandler", () => {
   it("SSRF ガードに引っかかる URL は fetch せず 400", async () => {
     const fetchImpl = vi.fn();
     const handler = createOgpHandler({ fetchImpl });
-    const res = await handler(
-      ogpRequest("http://169.254.169.254/latest/meta-data"),
-    );
+    const res = await handler(ogpRequest("http://169.254.169.254/latest/meta-data"));
     expect(res.status).toBe(400);
     expect(fetchImpl).not.toHaveBeenCalled();
   });
@@ -164,9 +163,7 @@ describe("createOgpHandler", () => {
   });
 
   it("HTTP エラーレスポンスも 502 扱いにする", async () => {
-    const fetchImpl = vi
-      .fn()
-      .mockResolvedValue(new Response("", { status: 404 }));
+    const fetchImpl = vi.fn().mockResolvedValue(new Response("", { status: 404 }));
     const handler = createOgpHandler({ fetchImpl });
     const res = await handler(ogpRequest("https://example.com/missing"));
     expect(res.status).toBe(502);

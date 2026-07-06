@@ -1,5 +1,6 @@
 import { render, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
 import { NotionContext } from "../context.js";
 import { useOgp } from "../embeds/useOgp.js";
 
@@ -25,9 +26,7 @@ describe("useOgp", () => {
     const fetchSpy = vi.fn();
     vi.stubGlobal("fetch", fetchSpy);
     render(
-      <NotionContext.Provider
-        value={{ components: {}, ogpEndpoint: "/api/cms/ogp" }}
-      >
+      <NotionContext.Provider value={{ components: {}, ogpEndpoint: "/api/cms/ogp" }}>
         <Probe url={null} />
       </NotionContext.Provider>,
     );
@@ -43,38 +42,25 @@ describe("useOgp", () => {
     vi.stubGlobal("fetch", fetchSpy);
 
     const { container } = render(
-      <NotionContext.Provider
-        value={{ components: {}, ogpEndpoint: "/api/cms/ogp" }}
-      >
+      <NotionContext.Provider value={{ components: {}, ogpEndpoint: "/api/cms/ogp" }}>
         <Probe url="https://example.com/article" />
       </NotionContext.Provider>,
     );
 
-    expect(fetchSpy).toHaveBeenCalledWith(
-      "/api/cms/ogp?url=https%3A%2F%2Fexample.com%2Farticle",
-    );
+    expect(fetchSpy).toHaveBeenCalledWith("/api/cms/ogp?url=https%3A%2F%2Fexample.com%2Farticle");
     await waitFor(() => {
-      expect(
-        container.querySelector('[data-testid="result"]')?.textContent,
-      ).toContain("Fetched");
+      expect(container.querySelector('[data-testid="result"]')?.textContent).toContain("Fetched");
     });
   });
 
   it("fetch が失敗しても例外を投げず undefined のまま", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockRejectedValue(new Error("network error")),
-    );
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("network error")));
     const { container } = render(
-      <NotionContext.Provider
-        value={{ components: {}, ogpEndpoint: "/api/cms/ogp" }}
-      >
+      <NotionContext.Provider value={{ components: {}, ogpEndpoint: "/api/cms/ogp" }}>
         <Probe url="https://example.com" />
       </NotionContext.Provider>,
     );
     await Promise.resolve();
-    expect(container.querySelector('[data-testid="result"]')?.textContent).toBe(
-      "none",
-    );
+    expect(container.querySelector('[data-testid="result"]')?.textContent).toBe("none");
   });
 });

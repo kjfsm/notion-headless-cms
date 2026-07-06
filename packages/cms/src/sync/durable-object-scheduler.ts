@@ -26,9 +26,7 @@ const STATE_KEY = "sync:state";
  * `options.createCMS` を呼び直して coordinator を再構築し、`alarm()` から
  * `kick()` を呼ぶことでエビクト後も継続処理できるようにしている。
  */
-export function createDurableObjectSyncScheduler(
-  state: DurableObjectStateLike,
-): SyncScheduler {
+export function createDurableObjectSyncScheduler(state: DurableObjectStateLike): SyncScheduler {
   return {
     async schedule(delayMs, _task) {
       await state.storage.setAlarm(Date.now() + delayMs);

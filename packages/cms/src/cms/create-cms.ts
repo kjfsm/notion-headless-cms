@@ -1,9 +1,7 @@
 import { Client } from "@notionhq/client";
+
 import { CMSError } from "../errors.js";
-import type {
-  HttpHandlerAdapter,
-  HttpHandlerOptions,
-} from "../http/handler.js";
+import type { HttpHandlerAdapter, HttpHandlerOptions } from "../http/handler.js";
 import { createFetchHandler } from "../http/handler.js";
 import type { OgpHandlerOptions } from "../http/ogp.js";
 import { createOgpHandler } from "../http/ogp.js";
@@ -22,6 +20,7 @@ import { createIndexStore } from "../store/index-store.js";
 import { memoryBlobStore, memoryDocStore } from "../store/memory.js";
 import type { BlobStore, DocStore } from "../store/types.js";
 import type { VersionedCacheLayer } from "../store/versioned-cache.js";
+import type { SyncScheduler } from "../sync-scheduler.js";
 import type { SyncState } from "../sync/coordinator.js";
 import { SyncCoordinatorCore } from "../sync/coordinator.js";
 import { createMultiSourceDeps } from "../sync/multi-source.js";
@@ -31,14 +30,8 @@ import { createCollectionDriver } from "../sync/notion-driver.js";
 import { createMemoizedPageIndex } from "../sync/page-index.js";
 import { createRateLimiter } from "../sync/rate-limiter.js";
 import type { RetryConfig } from "../sync/retry.js";
-import type { SyncScheduler } from "../sync-scheduler.js";
-import type {
-  CollectionDef,
-  CollectionMap,
-  InferEntry,
-  SchemaDef,
-} from "../types/collection.js";
 import type { IndexEntry } from "../types/collection-index.js";
+import type { CollectionDef, CollectionMap, InferEntry, SchemaDef } from "../types/collection.js";
 import type { EntrySnapshot } from "../types/entry-snapshot.js";
 import type { JsonValue } from "../types/json-value.js";
 import type { Logger, LogLevel } from "../types/logger.js";
@@ -147,10 +140,7 @@ export interface CreateCMSOptions<S extends SchemaDef> {
  * 既定インスタンス化された `EntrySnapshot`（Meta = JsonValue）から `meta` を上書きする
  * 交差型にすることで、その制約チェックを経由せずに済ませる。
  */
-export type CollectionEntrySnapshot<C extends CollectionDef> = Omit<
-  EntrySnapshot,
-  "meta"
-> & {
+export type CollectionEntrySnapshot<C extends CollectionDef> = Omit<EntrySnapshot, "meta"> & {
   readonly meta: InferEntry<C>;
 };
 
@@ -160,10 +150,7 @@ export type CollectionEntrySnapshot<C extends CollectionDef> = Omit<
  * ドライバ(`notion-driver.ts` の `syncEntry`)が index にも full meta を書き込むため、
  * この絞り込みは実データと一致する（`collection-index.ts` の不変条件コメント参照）。
  */
-export type CollectionIndexEntry<C extends CollectionDef> = Omit<
-  IndexEntry,
-  "meta"
-> & {
+export type CollectionIndexEntry<C extends CollectionDef> = Omit<IndexEntry, "meta"> & {
   readonly meta: InferEntry<C>;
 };
 
@@ -172,10 +159,8 @@ export interface CollectionHandle<C extends CollectionDef> {
    * slug でエントリを取得する。`slug` プロパティを設定していないコレクションでは
    * キーが Notion の page id になるため、`find(pageId)` で取得する。
    */
-  find(slug: string): Promise<CollectionEntrySnapshot<C> | null>;
-  list(
-    params?: ListParams<C["properties"]>,
-  ): Promise<ListResult<CollectionIndexEntry<C>>>;
+  find: (slug: string) => Promise<CollectionEntrySnapshot<C> | null>;
+  list: (params?: ListParams<C["properties"]>) => Promise<ListResult<CollectionIndexEntry<C>>>;
 }
 
 type CollectionHandles<C extends CollectionMap> = {
@@ -212,9 +197,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-function toRuntimeWhere(
-  value: unknown,
-): Record<string, Record<string, JsonValue>> | undefined {
+function toRuntimeWhere(value: unknown): Record<string, Record<string, JsonValue>> | undefined {
   if (!isPlainObject(value)) return undefined;
   const result: Record<string, Record<string, JsonValue>> = {};
   for (const [key, operators] of Object.entries(value)) {
@@ -225,9 +208,7 @@ function toRuntimeWhere(
   return result;
 }
 
-function isRuntimeSortInput(
-  value: unknown,
-): value is { by: string; direction: "asc" | "desc" } {
+function isRuntimeSortInput(value: unknown): value is { by: string; direction: "asc" | "desc" } {
   return (
     isPlainObject(value) &&
     typeof value.by === "string" &&
@@ -286,9 +267,7 @@ function toRuntimeListParams(params: unknown): ListRuntimeParams {
  * await cms.sync.kick();
  * ```
  */
-export function createCMS<const S extends SchemaDef>(
-  opts: CreateCMSOptions<S>,
-): CMS<S> {
+export function createCMS<const S extends SchemaDef>(opts: CreateCMSOptions<S>): CMS<S> {
   const collectionKeys = Object.keys(opts.schema.collections);
   for (const reserved of RESERVED_KEYS) {
     if (collectionKeys.includes(reserved)) {
@@ -370,10 +349,7 @@ export function createCMS<const S extends SchemaDef>(
       requestsPerSecond: opts.sync?.requestsPerSecond ?? 3,
     });
 
-    const drivers: Record<
-      string,
-      ReturnType<typeof createCollectionDriver>
-    > = {};
+    const drivers: Record<string, ReturnType<typeof createCollectionDriver>> = {};
     for (const collection of collectionKeys) {
       const def = opts.schema.collections[collection];
       if (!def) continue;

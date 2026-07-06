@@ -14,9 +14,7 @@ test("ドキュメント一覧 (/docs) が表示される", async ({ page }) => 
   await expect(page.locator("h1")).toContainText("ドキュメント");
 });
 
-test("クイックスタート (/docs/ja/quickstart) が表示される", async ({
-  page,
-}) => {
+test("クイックスタート (/docs/ja/quickstart) が表示される", async ({ page }) => {
   const response = await page.goto("/docs/ja/quickstart");
   expect(response?.status()).toBe(200);
   await expect(page.locator("article h1")).toBeVisible();

@@ -1,10 +1,4 @@
-import {
-  index,
-  layout,
-  prefix,
-  type RouteConfig,
-  route,
-} from "@react-router/dev/routes";
+import { index, layout, prefix, type RouteConfig, route } from "@react-router/dev/routes";
 
 // ルート方針:
 // - /              Notion 固定ページ DB の "home" を表示（ランディング）

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
+
 import type { IndexStore } from "../../store/index-store.js";
 import { createIndexStore } from "../../store/index-store.js";
 import { memoryDocStore } from "../../store/memory.js";
@@ -81,10 +82,7 @@ describe("buildPageIndex", () => {
       listed: true,
       meta: { id: "CCCCCCCC-CCCC-CCCC-CCCC-CCCCCCCCCCCC", value: 1 },
     });
-    const pageIndex = await buildPageIndex(
-      defineSchema({ dataOnly }),
-      indexStore,
-    );
+    const pageIndex = await buildPageIndex(defineSchema({ dataOnly }), indexStore);
     expect(pageIndex["cccccccccccccccccccccccccccccccc"]).toEqual({
       collection: "dataOnly",
       slug: "d1",
@@ -123,19 +121,14 @@ describe("createMemoizedPageIndex", () => {
     await pageIndex();
 
     // 3 回呼んでも実際の全件読み取りは 1 回だけ(コレクション数ぶん)。
-    expect(listAllEntries).toHaveBeenCalledTimes(
-      Object.keys(schema.collections).length,
-    );
+    expect(listAllEntries).toHaveBeenCalledTimes(Object.keys(schema.collections).length);
   });
 
   it("driverIndexStore 経由の書き込み(wrote:true)があればキャッシュを無効化する", async () => {
     const docs = memoryDocStore();
     const indexStore = createIndexStore(docs);
     const listAllEntries = spyListAllEntries(indexStore);
-    const { pageIndex, indexStore: driverIndexStore } = createMemoizedPageIndex(
-      schema,
-      indexStore,
-    );
+    const { pageIndex, indexStore: driverIndexStore } = createMemoizedPageIndex(schema, indexStore);
 
     await pageIndex();
     const firstCallCount = listAllEntries.mock.calls.length;
@@ -169,10 +162,7 @@ describe("createMemoizedPageIndex", () => {
     };
     await indexStore.upsertEntry("posts", entry);
     const listAllEntries = spyListAllEntries(indexStore);
-    const { pageIndex, indexStore: driverIndexStore } = createMemoizedPageIndex(
-      schema,
-      indexStore,
-    );
+    const { pageIndex, indexStore: driverIndexStore } = createMemoizedPageIndex(schema, indexStore);
 
     await pageIndex();
     const firstCallCount = listAllEntries.mock.calls.length;

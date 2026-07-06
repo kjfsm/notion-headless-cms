@@ -1,6 +1,7 @@
 "use client";
 
 import type { ToDoBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+
 import { Checkbox } from "../components/ui/checkbox.js";
 import { Label } from "../components/ui/label.js";
 import { notionBlockColorClass } from "../lib/notion-color.js";
@@ -9,20 +10,11 @@ import { NotionBlocks } from "../NotionBlocks.js";
 import { RichText } from "../rich-text/RichText.js";
 import type { BlockComponentProps } from "../types.js";
 
-export function ToDo({
-  block,
-  className,
-}: BlockComponentProps<ToDoBlockObjectResponse>) {
+export function ToDo({ block, className }: BlockComponentProps<ToDoBlockObjectResponse>) {
   const checked = block.to_do.checked;
   const id = `todo-${block.id}`;
   return (
-    <div
-      className={cn(
-        "my-1",
-        notionBlockColorClass(block.to_do.color),
-        className,
-      )}
-    >
+    <div className={cn("my-1", notionBlockColorClass(block.to_do.color), className)}>
       <Label htmlFor={id} className="items-start gap-2 leading-7 font-normal">
         <Checkbox
           id={id}
@@ -32,9 +24,7 @@ export function ToDo({
           className="mt-1.5 pointer-events-none"
           tabIndex={-1}
         />
-        <span
-          className={checked ? "text-muted-foreground line-through" : undefined}
-        >
+        <span className={checked ? "text-muted-foreground line-through" : undefined}>
           <RichText value={block.to_do.rich_text} />
         </span>
       </Label>

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+
 import type { DurableObjectStateLike } from "../durable-object-scheduler.js";
 import { createDurableObjectSyncScheduler } from "../durable-object-scheduler.js";
 

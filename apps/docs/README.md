@@ -39,32 +39,32 @@ Notion DB のプロパティを変更した場合は `app/schema.ts` を手動�
 
 2. **ビルド設定**（ダッシュボードの "Build configuration"）
 
-   | 項目 | 値 |
-   |---|---|
-   | Build command | `corepack enable && pnpm install --frozen-lockfile && pnpm build && pnpm --filter @notion-headless-cms/docs build` |
-   | Deploy command | `npx wrangler deploy` |
-   | Root directory | `apps/docs` |
-   | Node.js version | `24` |
-   | Build watch paths | `apps/docs/**` / `docs/**` / `packages/**` / `pnpm-workspace.yaml` / `pnpm-lock.yaml`（任意） |
+   | 項目              | 値                                                                                                                 |
+   | ----------------- | ------------------------------------------------------------------------------------------------------------------ |
+   | Build command     | `corepack enable && pnpm install --frozen-lockfile && pnpm build && pnpm --filter @notion-headless-cms/docs build` |
+   | Deploy command    | `npx wrangler deploy`                                                                                              |
+   | Root directory    | `apps/docs`                                                                                                        |
+   | Node.js version   | `24`                                                                                                               |
+   | Build watch paths | `apps/docs/**` / `docs/**` / `packages/**` / `pnpm-workspace.yaml` / `pnpm-lock.yaml`（任意）                      |
 
    Workers Builds の "Root directory" は `wrangler deploy` を実行する場所。`build` / `generate` コマンドはモノレポ上で `pnpm --filter` を使うためルートからの相対指定でも問題ない（pnpm が Root directory より上のワークスペースを認識する）。
 
 3. **環境変数とシークレット**（ダッシュボードの "Variables and Secrets"）
 
-   | 名前 | 種別 | 用途 |
-   |---|---|---|
-   | `NOTION_TOKEN` | Secret | `SyncCoordinatorDO` の Notion API 呼び出し |
+   | 名前                    | 種別   | 用途                                       |
+   | ----------------------- | ------ | ------------------------------------------ |
+   | `NOTION_TOKEN`          | Secret | `SyncCoordinatorDO` の Notion API 呼び出し |
    | `NOTION_WEBHOOK_SECRET` | Secret | `POST /api/cms/webhook` の署名検証（任意） |
 
    `NOTION_TOKEN` は Runtime（`SyncCoordinatorDO`）でのみ必要。
 
 4. **バインディング**（ダッシュボードの "Bindings"、もしくは `wrangler.toml`）
 
-   | バインディング | 種別 | 値 |
-   |---|---|---|
-   | `IMG_BUCKET` | R2 | `nhc-docs-site-cache`（事前作成: `wrangler r2 bucket create nhc-docs-site-cache`） |
-   | `DOC_CACHE` | KV | `wrangler kv namespace create DOC_CACHE` で作成した namespace ID を `wrangler.toml` に記入（`wrangler.toml` に必須バインディングとして既に宣言済み） |
-   | `SYNC_COORDINATOR` | Durable Object | `SyncCoordinatorDO`（`wrangler.toml` に宣言済み、追加設定不要） |
+   | バインディング     | 種別           | 値                                                                                                                                                   |
+   | ------------------ | -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `IMG_BUCKET`       | R2             | `nhc-docs-site-cache`（事前作成: `wrangler r2 bucket create nhc-docs-site-cache`）                                                                   |
+   | `DOC_CACHE`        | KV             | `wrangler kv namespace create DOC_CACHE` で作成した namespace ID を `wrangler.toml` に記入（`wrangler.toml` に必須バインディングとして既に宣言済み） |
+   | `SYNC_COORDINATOR` | Durable Object | `SyncCoordinatorDO`（`wrangler.toml` に宣言済み、追加設定不要）                                                                                      |
 
 5. **ブランチ設定**
    - Production branch: `main`

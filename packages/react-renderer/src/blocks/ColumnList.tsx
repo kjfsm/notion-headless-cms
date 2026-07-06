@@ -1,6 +1,7 @@
 "use client";
 
 import type { ColumnListBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
+
 import { cn } from "../lib/utils.js";
 import { NotionBlocks } from "../NotionBlocks.js";
 import type { BlockComponentProps } from "../types.js";

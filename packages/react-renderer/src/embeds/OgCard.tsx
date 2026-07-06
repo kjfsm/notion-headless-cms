@@ -1,6 +1,7 @@
 "use client";
 
 import type { ElementType } from "react";
+
 import { Card } from "../components/ui/card";
 import { useNotionContext } from "../context";
 
@@ -43,28 +44,17 @@ export function OgCard({ url, ogp }: OgCardProps) {
   const description = ogp?.description?.trim();
   const siteName = ogp?.siteName?.trim() || hostname(url);
   const image = ogp?.image;
-  const LinkComp = (LinkSlot ?? "a") as ElementType<
-    React.AnchorHTMLAttributes<HTMLAnchorElement>
-  >;
-  const Img = (ImageSlot ?? "img") as ElementType<
-    React.ImgHTMLAttributes<HTMLImageElement>
-  >;
+  const LinkComp = (LinkSlot ?? "a") as ElementType<React.AnchorHTMLAttributes<HTMLAnchorElement>>;
+  const Img = (ImageSlot ?? "img") as ElementType<React.ImgHTMLAttributes<HTMLImageElement>>;
 
   return (
-    <LinkComp
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="block no-underline"
-    >
+    <LinkComp href={url} target="_blank" rel="noopener noreferrer" className="block no-underline">
       {/* min-h でカード高さの最低値を保証し、本文は line-clamp + break-words で
           長文・長単語が overflow-hidden で見切れないようにする。Card 既定の
           gap-6 / py-6 を打ち消すため gap-0 / p-0 を明示。 */}
       <Card className="flex min-h-[6.5rem] flex-row items-stretch gap-0 overflow-hidden p-0 transition-colors hover:bg-muted/40">
         <div className="flex min-w-0 flex-1 flex-col gap-1 p-4">
-          <div className="line-clamp-2 break-words font-medium leading-snug">
-            {title}
-          </div>
+          <div className="line-clamp-2 break-words font-medium leading-snug">{title}</div>
           {description ? (
             <div className="line-clamp-2 break-words text-xs text-muted-foreground">
               {description}

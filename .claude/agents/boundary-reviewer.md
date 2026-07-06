@@ -39,8 +39,8 @@ grep -rE 'from ["'"'"']@notion-headless-cms/[^/]+/internal' packages
 
 各 `packages/<name>/package.json` の `dependencies` / `peerDependencies` を読み、`.claude/rules/package-boundaries.md` の依存方向図と照合:
 
-- `core` が上位（adapter-*, cache-*）を `dependencies` に含んでいないか
-- `source-notion` が adapter-* を参照していないか
+- `core` が上位（adapter-_, cache-_）を `dependencies` に含んでいないか
+- `source-notion` が adapter-\* を参照していないか
 - 逆転があれば指摘
 
 ## 出力フォーマット

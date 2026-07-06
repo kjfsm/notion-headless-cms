@@ -1,9 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  hmacSha256Hex,
-  timingSafeEqual,
-  verifyNotionSignature,
-} from "../webhook.js";
+
+import { hmacSha256Hex, timingSafeEqual, verifyNotionSignature } from "../webhook.js";
 
 describe("timingSafeEqual", () => {
   it("同じ文字列は true", () => {
@@ -26,9 +23,7 @@ describe("verifyNotionSignature", () => {
   });
 
   it("不正な署名は false", async () => {
-    expect(await verifyNotionSignature("s3cr3t", "body", "sha256=bogus")).toBe(
-      false,
-    );
+    expect(await verifyNotionSignature("s3cr3t", "body", "sha256=bogus")).toBe(false);
   });
 
   it("署名ヘッダ無しは false", async () => {

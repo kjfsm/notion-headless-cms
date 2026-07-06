@@ -36,10 +36,7 @@ function coerce(s: string): string | number | boolean | null {
   // 整数 / 浮動小数
   if (/^-?\d+(\.\d+)?$/.test(s)) return Number(s);
   // クォート除去
-  if (
-    (s.startsWith('"') && s.endsWith('"')) ||
-    (s.startsWith("'") && s.endsWith("'"))
-  ) {
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
     return s.slice(1, -1);
   }
   return s;

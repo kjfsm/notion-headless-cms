@@ -1,7 +1,3 @@
 import { defineWorkspace } from "vitest/config";
 
-export default defineWorkspace([
-  "packages/cli",
-  "packages/react-renderer",
-  "packages/cms",
-]);
+export default defineWorkspace(["packages/cli", "packages/react-renderer", "packages/cms"]);

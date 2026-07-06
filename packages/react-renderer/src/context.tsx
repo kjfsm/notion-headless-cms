@@ -1,11 +1,8 @@
 "use client";
 
-import type {
-  AnchorHTMLAttributes,
-  ElementType,
-  ImgHTMLAttributes,
-} from "react";
+import type { AnchorHTMLAttributes, ElementType, ImgHTMLAttributes } from "react";
 import { createContext, useContext } from "react";
+
 import type { ExtractedHeading } from "./lib/extract-headings.js";
 import type {
   BlockClassNames,

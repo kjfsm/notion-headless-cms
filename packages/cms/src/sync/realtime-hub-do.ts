@@ -20,9 +20,7 @@ const BROADCAST_PATH = "/__broadcast";
  * 購読リクエストの URL から `{ collection, slug? }` を取り出す。
  * `?collection=posts&slug=my-post`。collection が無ければ null（購読不可）。
  */
-export function parseSubscribeChannel(
-  url: URL,
-): { collection: string; slug?: string } | null {
+export function parseSubscribeChannel(url: URL): { collection: string; slug?: string } | null {
   const collection = url.searchParams.get("collection");
   if (!collection) return null;
   const slug = url.searchParams.get("slug") ?? undefined;
@@ -78,9 +76,7 @@ export interface DurableObjectRealtimeOptions {
  *   realtime: durableObjectRealtime({ namespace: env.REALTIME_HUB }),
  * });
  */
-export function durableObjectRealtime(
-  opts: DurableObjectRealtimeOptions,
-): RealtimeAdapter {
+export function durableObjectRealtime(opts: DurableObjectRealtimeOptions): RealtimeAdapter {
   const name = opts.name ?? "global";
   return {
     async publish(tag: string, payload: RealtimePayload): Promise<void> {
@@ -115,9 +111,7 @@ export interface ForwardRealtimeUpgradeOptions {
  * app.all("/api/cms/realtime", (c) =>
  *   forwardRealtimeUpgrade({ namespace: c.env.REALTIME_HUB, request: c.req.raw }));
  */
-export function forwardRealtimeUpgrade(
-  opts: ForwardRealtimeUpgradeOptions,
-): Promise<Response> {
+export function forwardRealtimeUpgrade(opts: ForwardRealtimeUpgradeOptions): Promise<Response> {
   const { namespace, request } = opts;
   const stub = namespace.get(namespace.idFromName(opts.name ?? "global"));
   return stub.fetch(request);
@@ -155,10 +149,7 @@ export class RealtimeHubDO {
         tag: string;
         payload: RealtimePayload;
       };
-      const delivered = broadcastToSockets(
-        this.state.getWebSockets(tag),
-        JSON.stringify(payload),
-      );
+      const delivered = broadcastToSockets(this.state.getWebSockets(tag), JSON.stringify(payload));
       return new Response(JSON.stringify({ ok: true, delivered }), {
         headers: { "content-type": "application/json" },
       });
@@ -174,9 +165,7 @@ export class RealtimeHubDO {
       const pair = new WebSocketPair();
       const client = pair[0];
       const server = pair[1];
-      this.state.acceptWebSocket(server, [
-        channelTag(channel.collection, channel.slug),
-      ]);
+      this.state.acceptWebSocket(server, [channelTag(channel.collection, channel.slug)]);
       // Response.webSocket は Workers ランタイム拡張（lib.dom の ResponseInit には無い）。
       return new Response(null, {
         status: 101,

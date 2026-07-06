@@ -1,4 +1,5 @@
 import type { BlockObjectResponse } from "@notionhq/client";
+
 import type { NormalizedBlock } from "../types/entry-snapshot.js";
 import type { JsonValue } from "../types/json-value.js";
 
@@ -32,15 +33,11 @@ export function normalizeBlock(block: FetchedBlock): NormalizedBlock {
     id: block.id,
     type: block.type,
     data: extractBlockData(block),
-    ...(children && children.length > 0
-      ? { children: children.map(normalizeBlock) }
-      : {}),
+    ...(children && children.length > 0 ? { children: children.map(normalizeBlock) } : {}),
   };
 }
 
-export function normalizeBlockTree(
-  blocks: readonly FetchedBlock[],
-): NormalizedBlock[] {
+export function normalizeBlockTree(blocks: readonly FetchedBlock[]): NormalizedBlock[] {
   return blocks.map(normalizeBlock);
 }
 

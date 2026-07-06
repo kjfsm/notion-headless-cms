@@ -5,10 +5,7 @@ import type { EntrySnapshot } from "../types/entry-snapshot.js";
 import type { JsonValue } from "../types/json-value.js";
 import type { Logger } from "../types/logger.js";
 
-export type ColdStartFetch = (
-  collection: string,
-  slug: string,
-) => Promise<EntrySnapshot | null>;
+export type ColdStartFetch = (collection: string, slug: string) => Promise<EntrySnapshot | null>;
 
 export interface FindDeps {
   readonly entryStore: EntryStore;
@@ -32,19 +29,12 @@ export async function findEntry<Meta extends JsonValue = JsonValue>(
   const indexed = await deps.indexStore.findEntry(collection, slug);
   if (!indexed) {
     return deps.coldStartFetch
-      ? ((await deps.coldStartFetch(
-          collection,
-          slug,
-        )) as EntrySnapshot<Meta> | null)
+      ? ((await deps.coldStartFetch(collection, slug)) as EntrySnapshot<Meta> | null)
       : null;
   }
 
   if (deps.versionedCache) {
-    const cached = await deps.versionedCache.get(
-      collection,
-      slug,
-      indexed.version,
-    );
+    const cached = await deps.versionedCache.get(collection, slug, indexed.version);
     if (cached) return (await cached.json()) as EntrySnapshot<Meta>;
   }
 
@@ -52,15 +42,13 @@ export async function findEntry<Meta extends JsonValue = JsonValue>(
   if (!snapshot) {
     // index にはあるが R2 に無い(同期タイミングのズレ・部分失敗)。運用者が検知できるよう
     // 警告した上で、コールドスタート経路が指定されていればそちらにフォールバックする。
-    deps.logger?.warn?.(
-      "index にあるが entry 本体が見つかりません(index/entry 不整合)",
-      { operation: "find", collection, slug },
-    );
+    deps.logger?.warn?.("index にあるが entry 本体が見つかりません(index/entry 不整合)", {
+      operation: "find",
+      collection,
+      slug,
+    });
     return deps.coldStartFetch
-      ? ((await deps.coldStartFetch(
-          collection,
-          slug,
-        )) as EntrySnapshot<Meta> | null)
+      ? ((await deps.coldStartFetch(collection, slug)) as EntrySnapshot<Meta> | null)
       : null;
   }
 

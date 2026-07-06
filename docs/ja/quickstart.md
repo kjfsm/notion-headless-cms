@@ -82,7 +82,7 @@ const { items } = await cms.posts.list();
 // スラッグで 1 件取得
 const post = await cms.posts.find("my-first-post");
 if (post) {
-  console.log(post.meta);   // コレクション固有のプロパティ値
+  console.log(post.meta); // コレクション固有のプロパティ値
   console.log(post.blocks); // 正規化済みブロック（本文）
 }
 ```
@@ -120,7 +120,11 @@ export const SyncCoordinatorDO = createSyncCoordinatorDO<Env>({
 ```ts
 // workers/cms.ts（読者用 stateless Worker。KV/R2 読み取りのみ）
 import { createCMS } from "@notion-headless-cms/cms";
-import { durableObjectSyncDelegate, kvDocStore, r2BlobStore } from "@notion-headless-cms/cms/cloudflare";
+import {
+  durableObjectSyncDelegate,
+  kvDocStore,
+  r2BlobStore,
+} from "@notion-headless-cms/cms/cloudflare";
 import { schema } from "../src/schema";
 
 export function getCMS(env: Env) {

@@ -2,30 +2,16 @@ import type { JsonValue } from "../types/json-value.js";
 
 type Operators = Record<string, JsonValue>;
 
-function evaluateOperator(
-  value: JsonValue | undefined,
-  op: string,
-  opValue: JsonValue,
-): boolean {
+function evaluateOperator(value: JsonValue | undefined, op: string, opValue: JsonValue): boolean {
   switch (op) {
     case "equals":
       return value === opValue;
     case "contains":
-      return (
-        typeof value === "string" &&
-        typeof opValue === "string" &&
-        value.includes(opValue)
-      );
+      return typeof value === "string" && typeof opValue === "string" && value.includes(opValue);
     case "startsWith":
-      return (
-        typeof value === "string" &&
-        typeof opValue === "string" &&
-        value.startsWith(opValue)
-      );
+      return typeof value === "string" && typeof opValue === "string" && value.startsWith(opValue);
     case "isEmpty":
-      return opValue === true
-        ? value == null || value === ""
-        : value != null && value !== "";
+      return opValue === true ? value == null || value === "" : value != null && value !== "";
     case "in":
       return Array.isArray(opValue) && opValue.includes(value as JsonValue);
     case "has":
@@ -43,53 +29,21 @@ function evaluateOperator(
         opValue.every((v) => (value as JsonValue[]).includes(v))
       );
     case "gt":
-      return (
-        typeof value === "number" &&
-        typeof opValue === "number" &&
-        value > opValue
-      );
+      return typeof value === "number" && typeof opValue === "number" && value > opValue;
     case "gte":
-      return (
-        typeof value === "number" &&
-        typeof opValue === "number" &&
-        value >= opValue
-      );
+      return typeof value === "number" && typeof opValue === "number" && value >= opValue;
     case "lt":
-      return (
-        typeof value === "number" &&
-        typeof opValue === "number" &&
-        value < opValue
-      );
+      return typeof value === "number" && typeof opValue === "number" && value < opValue;
     case "lte":
-      return (
-        typeof value === "number" &&
-        typeof opValue === "number" &&
-        value <= opValue
-      );
+      return typeof value === "number" && typeof opValue === "number" && value <= opValue;
     case "before":
-      return (
-        typeof value === "string" &&
-        typeof opValue === "string" &&
-        value < opValue
-      );
+      return typeof value === "string" && typeof opValue === "string" && value < opValue;
     case "after":
-      return (
-        typeof value === "string" &&
-        typeof opValue === "string" &&
-        value > opValue
-      );
+      return typeof value === "string" && typeof opValue === "string" && value > opValue;
     case "onOrBefore":
-      return (
-        typeof value === "string" &&
-        typeof opValue === "string" &&
-        value <= opValue
-      );
+      return typeof value === "string" && typeof opValue === "string" && value <= opValue;
     case "onOrAfter":
-      return (
-        typeof value === "string" &&
-        typeof opValue === "string" &&
-        value >= opValue
-      );
+      return typeof value === "string" && typeof opValue === "string" && value >= opValue;
     default:
       return true; // 未知の演算子キーは無視する(型で弾かれている前提)。
   }
@@ -119,13 +73,9 @@ export interface RuntimeSortInput {
   readonly direction: "asc" | "desc";
 }
 
-function compareValues(
-  a: JsonValue | undefined,
-  b: JsonValue | undefined,
-): number {
+function compareValues(a: JsonValue | undefined, b: JsonValue | undefined): number {
   if (typeof a === "number" && typeof b === "number") return a - b;
-  if (typeof a === "string" && typeof b === "string")
-    return a < b ? -1 : a > b ? 1 : 0;
+  if (typeof a === "string" && typeof b === "string") return a < b ? -1 : a > b ? 1 : 0;
   return 0;
 }
 

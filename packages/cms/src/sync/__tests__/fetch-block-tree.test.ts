@@ -1,9 +1,7 @@
 import type { BlockObjectResponse } from "@notionhq/client";
 import { describe, expect, it, vi } from "vitest";
-import type {
-  BlockChildrenListResult,
-  NotionBlocksClientLike,
-} from "../fetch-block-tree.js";
+
+import type { BlockChildrenListResult, NotionBlocksClientLike } from "../fetch-block-tree.js";
 import { fetchBlockTree } from "../fetch-block-tree.js";
 import type { RateLimiter } from "../rate-limiter.js";
 import { createRateLimiter } from "../rate-limiter.js";

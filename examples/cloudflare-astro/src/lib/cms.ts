@@ -5,6 +5,7 @@ import {
   memoryDocStore,
 } from "@notion-headless-cms/cms";
 import { kvDocStore, r2BlobStore } from "@notion-headless-cms/cms/cloudflare";
+
 import { schema } from "../schema.js";
 
 export interface Env {
@@ -22,10 +23,7 @@ export interface Env {
  * （examples/cloudflare-hono・cloudflare-react-router 参照）ほど厳密な
  * カーソル永続化はしないぶん、構成をシンプルに保てる）。
  */
-export function makeCms(
-  env: Env,
-  ctx: { waitUntil(p: Promise<unknown>): void },
-) {
+export function makeCms(env: Env, ctx: { waitUntil(p: Promise<unknown>): void }) {
   return createCMS({
     schema,
     notion: { token: env.NOTION_TOKEN },
@@ -45,9 +43,7 @@ export function makeCms(
  * cursor は isolate ごとの in-memory 状態のため、リクエストのたびに
  * cursor=null から再開する前提の設計）。
  */
-export async function ensureSynced(
-  cms: ReturnType<typeof makeCms>,
-): Promise<void> {
+export async function ensureSynced(cms: ReturnType<typeof makeCms>): Promise<void> {
   let state = await cms.sync.getState();
   do {
     await cms.sync.kick();
