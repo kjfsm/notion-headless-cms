@@ -2,7 +2,9 @@
 
 import type { EmbedBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
+import { EmbedFallback } from "../components/embed-fallback.js";
 import { AspectRatio } from "../components/ui/aspect-ratio.js";
+import { safeIframeSrc } from "../lib/safe-url.js";
 import { cn } from "../lib/utils";
 import { Caption } from "../rich-text/Caption";
 import type { BlockComponentProps } from "../types";
@@ -18,6 +20,9 @@ function toYoutubeEmbedUrl(url: string): string {
   return url;
 }
 
+// sandbox は allow-same-origin を含む。これは YouTube/Vimeo/Steam 等の正当な
+// third-party 埋め込みが自身のオリジンで cookie/localStorage を使うために必要で、
+// 実際の XSS ベクトルである src スキーム(javascript:/data:)は safeIframeSrc で弾く。
 const NOTION_SANDBOX =
   "allow-scripts allow-popups allow-top-navigation-by-user-activation allow-forms allow-same-origin allow-storage-access-by-user-activation allow-popups-to-escape-sandbox";
 
@@ -44,15 +49,22 @@ function resolveEmbedSize(url: string): {
 
 export function Embed({ block, className }: BlockComponentProps<EmbedBlockObjectResponse>) {
   const url = toYoutubeEmbedUrl(block.embed.url);
-  const size = resolveEmbedSize(url);
   const caption = <Caption value={block.embed.caption} />;
+
+  // 危険なスキーム(javascript:/data: 等)は iframe に載せず、リンクにフォールバックする。
+  const src = safeIframeSrc(url);
+  if (!src) {
+    return <EmbedFallback url={block.embed.url} caption={caption} className={className} />;
+  }
+
+  const size = resolveEmbedSize(url);
 
   if (size.ratio) {
     return (
       <figure className={cn("my-4", className)}>
         <AspectRatio ratio={size.ratio} className="overflow-hidden rounded-lg border">
           <iframe
-            src={url}
+            src={src}
             title="Embed"
             className="h-full w-full"
             sandbox={NOTION_SANDBOX}
@@ -68,7 +80,7 @@ export function Embed({ block, className }: BlockComponentProps<EmbedBlockObject
   return (
     <figure className={cn("my-4", className)}>
       <iframe
-        src={url}
+        src={src}
         title="Embed"
         width={size.width}
         height={size.height}

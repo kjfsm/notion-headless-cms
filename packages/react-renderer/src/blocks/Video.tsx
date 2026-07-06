@@ -2,9 +2,11 @@
 
 import type { VideoBlockObjectResponse } from "@notionhq/client/build/src/api-endpoints";
 
+import { EmbedFallback } from "../components/embed-fallback.js";
 import { AspectRatio } from "../components/ui/aspect-ratio";
 import { useNotionContext } from "../context";
 import { getFileUrl } from "../lib/notion-file";
+import { safeIframeSrc } from "../lib/safe-url.js";
 import { cn } from "../lib/utils";
 import { Caption } from "../rich-text/Caption";
 import type { BlockComponentProps } from "../types";
@@ -27,10 +29,14 @@ export function Video({ block, className }: BlockComponentProps<VideoBlockObject
   const { resolveImageUrl } = useNotionContext();
   const rawUrl = getFileUrl(block.video);
   const resolved = resolveImageUrl ? resolveImageUrl(rawUrl, block) : rawUrl;
-  const src = block.video.type === "external" ? toYoutubeEmbedUrl(resolved) : resolved;
   const caption = <Caption value={block.video.caption} />;
 
   if (block.video.type === "external") {
+    // 危険なスキームは iframe に載せず、リンクにフォールバックする。
+    const src = safeIframeSrc(toYoutubeEmbedUrl(resolved));
+    if (!src) {
+      return <EmbedFallback url={rawUrl} caption={caption} className={className} />;
+    }
     return (
       <figure className={cn("my-4", className)}>
         <AspectRatio ratio={16 / 9} className="overflow-hidden rounded-lg border">
@@ -48,9 +54,11 @@ export function Video({ block, className }: BlockComponentProps<VideoBlockObject
     );
   }
 
+  // file 種別は Notion ホストの署名付き URL(http(s))。`<video src>` は javascript: でも
+  // スクリプト実行しないため、iframe のようなスキーム制限は課さず素通しする。
   return (
     <figure className={cn("my-4", className)}>
-      <video src={src} controls className="w-full rounded-lg">
+      <video src={resolved} controls className="w-full rounded-lg">
         <track kind="captions" />
       </video>
       {caption}
