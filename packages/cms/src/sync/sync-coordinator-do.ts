@@ -43,9 +43,11 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 /**
  * Notion アクセスを直列化する同期エンジンを Durable Object として export するためのファクトリ
- * (#441/#443)。DO インスタンスは alarm 発火の間にエビクトされ得るため、`alarm()` は
- * `options.createCMS` を都度呼び直して CMS（と内部の SyncCoordinatorCore）を再構築する
- * （`durable-object-scheduler.ts` の設計コメント参照）。
+ * (#441/#443)。DO インスタンスは alarm 発火の間にエビクトされ得るが、`options.createCMS`
+ * (と内部の `SyncCoordinatorCore`)の再構築は `alarm()` 自体ではなくコンストラクタで
+ * 行う。エビクト後に DO ランタイムが新しいインスタンスを起こす際は必ずコンストラクタが
+ * 呼ばれるため、結果として再構築される（`durable-object-scheduler.ts` の設計コメント参照）。
+ * `alarm()` はその時点で保持している `#cms` を使って `kick()` を呼ぶだけ。
  *
  * 生成された DO クラスは内部エンドポイント（`POST /kick` `POST /webhook` `POST /reconcile`
  * `GET /state` `GET /stats`）を持つ。読者用の stateless Worker からは
@@ -116,7 +118,11 @@ export function createSyncCoordinatorDO<Env = unknown>(
       return new Response("Not Found", { status: 404 });
     }
 
-    /** Alarm 発火ごとに CMS を再構築して kick する(インスタンスがエビクトされていても続行できる)。 */
+    /**
+     * コンストラクタで構築済みの `#cms` を使って kick するだけ(CMS の再構築はしない)。
+     * エビクト後に DO ランタイムが新しいインスタンスを起こした場合は、その時点の
+     * コンストラクタ呼び出しで既に再構築が済んでいるため、続行できる。
+     */
     async alarm(): Promise<void> {
       await this.#cms.sync.kick();
     }

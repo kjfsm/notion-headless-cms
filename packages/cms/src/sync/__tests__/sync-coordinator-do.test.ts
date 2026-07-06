@@ -113,7 +113,7 @@ describe("createSyncCoordinatorDO", () => {
     expect(await res.json()).toEqual({ ok: false, error: "notion down" });
   });
 
-  it("alarm() は sync.kick を呼ぶ(DO エビクト後の再構築を想定し createCMS を都度呼ぶ)", async () => {
+  it("alarm() はコンストラクタで構築済みの CMS を使って sync.kick を呼ぶ(createCMS は再度呼ばない)", async () => {
     const cms = makeFakeCMS();
     const createCMSFn = vi.fn().mockReturnValue(cms);
     const DO = createSyncCoordinatorDO({ createCMS: createCMSFn });
