@@ -38,9 +38,8 @@ describe("runPull", () => {
     await fs.rm(tmpDir, { recursive: true, force: true });
   });
 
-  it("v3.collections 未定義なら CMSError(cli/config_invalid) を投げる", async () => {
+  it("collections 未定義なら CMSError(cli/config_invalid) を投げる", async () => {
     loadConfigMock.mockResolvedValue({
-      output: "x",
       collections: {},
     } as CMSConfig);
     await expect(runPull({ token: "tok", silent: true })).rejects.toMatchObject(
@@ -50,11 +49,7 @@ describe("runPull", () => {
 
   it("dataSourceId 指定のコレクションを解決して雛形を出力する", async () => {
     loadConfigMock.mockResolvedValue({
-      output: "x",
-      collections: {},
-      v3: {
-        collections: { posts: { databaseId: "ds-posts" } },
-      },
+      collections: { posts: { databaseId: "ds-posts" } },
     } as CMSConfig);
     retrieveDataSourceMock.mockResolvedValue(
       makeDataSource({
@@ -77,14 +72,10 @@ describe("runPull", () => {
 
   it("fieldMappings を指定すると生成コードに明示した識別子と notion 別名が反映される", async () => {
     loadConfigMock.mockResolvedValue({
-      output: "x",
-      collections: {},
-      v3: {
-        collections: {
-          posts: {
-            databaseId: "ds-posts",
-            fieldMappings: { 名前: "title", URL: "slug" },
-          },
+      collections: {
+        posts: {
+          databaseId: "ds-posts",
+          fieldMappings: { 名前: "title", URL: "slug" },
         },
       },
     } as CMSConfig);
@@ -107,9 +98,7 @@ describe("runPull", () => {
 
   it("dbName 指定は resolveId で dataSourceId に解決する", async () => {
     loadConfigMock.mockResolvedValue({
-      output: "x",
-      collections: {},
-      v3: { collections: { posts: { dbName: "ブログ記事DB" } } },
+      collections: { posts: { dbName: "ブログ記事DB" } },
     } as CMSConfig);
     resolveIdMock.mockResolvedValue("resolved-ds-id");
     retrieveDataSourceMock.mockResolvedValue(makeDataSource({}));
@@ -122,9 +111,7 @@ describe("runPull", () => {
 
   it("dbName が解決できなければ CMSError(cli/notion_api_failed) を投げる", async () => {
     loadConfigMock.mockResolvedValue({
-      output: "x",
-      collections: {},
-      v3: { collections: { posts: { dbName: "存在しないDB" } } },
+      collections: { posts: { dbName: "存在しないDB" } },
     } as CMSConfig);
     resolveIdMock.mockResolvedValue(null);
 
@@ -135,9 +122,7 @@ describe("runPull", () => {
 
   it("既存ファイルは上書きしない(生成物の所有権はユーザー)", async () => {
     loadConfigMock.mockResolvedValue({
-      output: "x",
-      collections: {},
-      v3: { collections: { posts: { databaseId: "ds-posts" } } },
+      collections: { posts: { databaseId: "ds-posts" } },
     } as CMSConfig);
     retrieveDataSourceMock.mockResolvedValue(makeDataSource({}));
 
@@ -160,9 +145,7 @@ describe("runPull", () => {
 
   it("--scaffold-dir で出力先を上書きできる", async () => {
     loadConfigMock.mockResolvedValue({
-      output: "x",
-      collections: {},
-      v3: { collections: { posts: { databaseId: "ds-posts" } } },
+      collections: { posts: { databaseId: "ds-posts" } },
     } as CMSConfig);
     retrieveDataSourceMock.mockResolvedValue(makeDataSource({}));
 

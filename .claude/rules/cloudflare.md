@@ -1,8 +1,6 @@
 ---
-description: Cloudflare Workers / R2 / KV 関連の実装慣行（cache の /cloudflare サブパス / cloudflarePreset / examples/cloudflare-*）
+description: Cloudflare Workers / R2 / KV 関連の実装慣行（cms の /cloudflare サブパス / examples/cloudflare-*）
 paths:
-  - "packages/cache/**"
-  - "packages/client/**"
   - "packages/cms/**"
   - "examples/cloudflare-*/**"
   - "**/wrangler.toml"
@@ -37,29 +35,11 @@ paths:
 
 ## このリポジトリの Cloudflare 対応
 
-Cloudflare 対応はランタイム専用のファクトリではなく、各パッケージの `/cloudflare` サブパスとして提供する。キャッシュ実装は `@notion-headless-cms/cache`（`/cloudflare` サブパス）に集約。現状:
+Cloudflare 対応はランタイム専用のファクトリではなく、`@notion-headless-cms/cms` の `/cloudflare` サブパスとして提供する。
 
-### `cloudflarePreset`（cache の /cloudflare サブパス）
+### @notion-headless-cms/cms/cloudflare（サブパス）
 
-- `createCMS({ schema, token, content, runtime: cloudflarePreset({ env, ctx }) })` で使う（`@notion-headless-cms/client/cloudflare`）
-- `env.DOC_CACHE` (KV) と `env.IMG_BUCKET` (R2) を自動検出
-- `ctx`（ExecutionContext）を渡すと SWR バックグラウンド更新が `waitUntil` で配線される
-- 詳細: `.claude/rules/cache.md` / `.claude/rules/package-boundaries.md`
-
-### cache（/cloudflare サブパス）
-
-- `r2Cache({ bucket })` / `kvCache({ namespace })` で `CacheAdapter` を返す
-- 構造型 `R2BucketLike` / `KVNamespaceLike` を受け取るため `@cloudflare/workers-types` に**実依存しない**
-- ユーザーは `env.IMG_BUCKET` / `env.DOC_CACHE` をそのまま渡せる（構造的サブタイプで互換）
-
-### @notion-headless-cms/client/cloudflare（サブパス）
-
-- `cloudflarePreset` を再 export（`createCMS({ runtime: cloudflarePreset({ env, ctx }) })` で使う）
-- `restKvNamespace` / `restKvCache` / `readRestKvEnv` — Node の warm スクリプトから KV REST API 経由で書き込む
-
-### @notion-headless-cms/cms/cloudflare（v3）
-
-v2 系の `cloudflarePreset` とは独立した、`@notion-headless-cms/cms`（v3）専用の Cloudflare 実装（`packages/cms/src/cloudflare.ts`）。
+`packages/cms/src/cloudflare.ts` に実装がある。
 
 - `kvDocStore(namespace)` / `r2BlobStore(bucket)` — KV をドキュメントインデックス、R2 をエントリ本体・画像バイナリのストアとして返す（`createCMS({ stores: { docs, blobs } })` に渡す）
 - `KVNamespaceLike` / `R2BucketLike` / `R2ObjectLike` — 構造型。`@cloudflare/workers-types` に実依存しない
@@ -71,7 +51,7 @@ v2 系の `cloudflarePreset` とは独立した、`@notion-headless-cms/cms`（v
 
 ### examples/cloudflare-*
 
-- `cloudflare-astro` / `cloudflare-hono` / `cloudflare-react-router` / `cloudflare-sveltekit`
+- `cloudflare-astro` / `cloudflare-hono` / `cloudflare-react-router`
 - `.dev.vars` で `NOTION_TOKEN` を設定（git 管理外）
 - `wrangler.toml` に R2 バケットと KV namespace を binding
 

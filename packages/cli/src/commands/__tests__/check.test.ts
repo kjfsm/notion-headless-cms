@@ -48,9 +48,8 @@ describe("runCheck", () => {
     await fs.rm(tmpDir, { recursive: true, force: true });
   });
 
-  it("v3.schemaModule 未定義なら CMSError(cli/config_invalid) を投げる", async () => {
+  it("schemaModule 未定義なら CMSError(cli/config_invalid) を投げる", async () => {
     loadConfigMock.mockResolvedValue({
-      output: "x",
       collections: {},
     } as CMSConfig);
     await expect(
@@ -60,12 +59,8 @@ describe("runCheck", () => {
 
   it("drift が無ければ exitCode を変更しない", async () => {
     loadConfigMock.mockResolvedValue({
-      output: "x",
-      collections: {},
-      v3: {
-        schemaModule: "src/schema.ts",
-        collections: { posts: { databaseId: "ds-posts" } },
-      },
+      schemaModule: "src/schema.ts",
+      collections: { posts: { databaseId: "ds-posts" } },
     } as CMSConfig);
     jitiImportMock.mockResolvedValue({
       posts: { properties: { title: { kind: "title" } } },
@@ -81,12 +76,8 @@ describe("runCheck", () => {
 
   it("drift があれば exitCode を 1 にする", async () => {
     loadConfigMock.mockResolvedValue({
-      output: "x",
-      collections: {},
-      v3: {
-        schemaModule: "src/schema.ts",
-        collections: { posts: { databaseId: "ds-posts" } },
-      },
+      schemaModule: "src/schema.ts",
+      collections: { posts: { databaseId: "ds-posts" } },
     } as CMSConfig);
     jitiImportMock.mockResolvedValue({
       posts: { properties: { title: { kind: "title" } } },
@@ -106,12 +97,8 @@ describe("runCheck", () => {
 
   it("--json 指定時は JSON で結果を出力する", async () => {
     loadConfigMock.mockResolvedValue({
-      output: "x",
-      collections: {},
-      v3: {
-        schemaModule: "src/schema.ts",
-        collections: { posts: { databaseId: "ds-posts" } },
-      },
+      schemaModule: "src/schema.ts",
+      collections: { posts: { databaseId: "ds-posts" } },
     } as CMSConfig);
     jitiImportMock.mockResolvedValue({
       posts: { properties: { title: { kind: "title" } } },
@@ -129,12 +116,8 @@ describe("runCheck", () => {
 
   it("スキーマモジュールに対応する export が無ければ CMSError(cli/schema_invalid) を投げる", async () => {
     loadConfigMock.mockResolvedValue({
-      output: "x",
-      collections: {},
-      v3: {
-        schemaModule: "src/schema.ts",
-        collections: { posts: { databaseId: "ds-posts" } },
-      },
+      schemaModule: "src/schema.ts",
+      collections: { posts: { databaseId: "ds-posts" } },
     } as CMSConfig);
     jitiImportMock.mockResolvedValue({});
 
@@ -145,12 +128,8 @@ describe("runCheck", () => {
 
   it("dbName が解決できなければ CMSError(cli/notion_api_failed) を投げる", async () => {
     loadConfigMock.mockResolvedValue({
-      output: "x",
-      collections: {},
-      v3: {
-        schemaModule: "src/schema.ts",
-        collections: { posts: { dbName: "存在しないDB" } },
-      },
+      schemaModule: "src/schema.ts",
+      collections: { posts: { dbName: "存在しないDB" } },
     } as CMSConfig);
     jitiImportMock.mockResolvedValue({
       posts: { properties: { title: { kind: "title" } } },

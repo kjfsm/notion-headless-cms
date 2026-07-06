@@ -14,8 +14,6 @@ catalog:
   dotenv: "^17.4.2"
   hono: "^4.12.21"
   katex: "^0.16.47"
-  linkedom: "^0.18.12"
-  "notion-to-md": "^3.1.9"
   react: "^19.2.6"
   react-dom: "^19.2.6"
   "rehype-stringify": "^10.0.1"
@@ -29,4 +27,3 @@ catalog:
   unified: "^11.0.5"
   vitest: "^4.1.8"
   wrangler: "^4.92.0"
-  zod: "^4.4.3"

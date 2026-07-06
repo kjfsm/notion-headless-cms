@@ -85,10 +85,6 @@
           {
             "type": "command",
             "command": ".claude/hooks/block-generated-and-dist.sh"
-          },
-          {
-            "type": "command",
-            "command": ".claude/hooks/block-core-forbidden-imports.sh"
           }
         ]
       },

@@ -47,8 +47,8 @@ pnpm -r --filter "./packages/*" exec --no-install attw --pack --profile node16
 各パッケージ `package.json` の `exports` に書かれているサブパスを手で試す:
 
 ```bash
-# 例: core の errors サブパス
-node --input-type=module -e "import * as e from '@notion-headless-cms/core/errors'; console.log(Object.keys(e))"
+# 例: cms 本体のエクスポート
+node --input-type=module -e "import * as e from '@notion-headless-cms/cms'; console.log(Object.keys(e))"
 ```
 
 ### 5. engines 整合

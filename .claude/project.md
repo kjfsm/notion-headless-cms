@@ -8,32 +8,17 @@
 ### パッケージ構成
 
 ```
-Notion DB
-  └─ notion-orm（Notion API 取得・Markdown 変換・fetchBlockTree。ユーザーは直接 import しない）
-       ├─ fetch-blocks（BlockObjectResponse ツリー取得 + React Renderer）
-       ├─ fetch-markdown（Notion Markdown API で本文取得）
-       ├─ markdown-html（Markdown → HTML、remark/rehype ベース）
-       ├─ react-renderer（BlockObjectResponse → React、shadcn/ui + Tailwind v4）
-       ├─ notion-source（CMSAdapter 実装。createCMS / createClient が内部で組み込む）
-       └─ core（CMS エンジン・キャッシュ・SWR・フック・nodePreset）
-            └─ cache（memory + サブパス /cloudflare（R2/KV + cloudflarePreset）/next（ISR））
-
-利用側の単一エントリ（これ 1 つ + サブパスで揃う）:
-  client（createCMS）/ client/cloudflare / client/next / client/react
+@notion-headless-cms/cms（Notion アクセス・同期・ストレージ・HTTP 配信を1パッケージに統合）
+  ├─ react-renderer（BlockObjectResponse → React、shadcn/ui + Tailwind v4）
+  └─ cli（introspect・スキーマ雛形生成・drift 検証・診断ツール = nhc）
 ```
 
-すべて `@notion-headless-cms/` スコープ。`cli` は別途 introspect・型生成ツール。
+すべて `@notion-headless-cms/` スコープ。`cms` が唯一の現行アーキテクチャで、他の
+workspace パッケージへの依存を持たない独立パッケージ（`react-renderer`/`cli` はいずれも
+`cms` にのみ依存する）。実運用での消費例: `euphoric-band-site`・`notion-portfolio-worker`
+（Cloudflare Workers + Durable Objects で完全マテリアライズド配信）。
 
-### v3（packages/cms）— もう一つの独立したパッケージファミリー
-
-上記の `client`/`core`/`cache`/`notion-source` 系（v2）とは**別に**、`@notion-headless-cms/cms`
-（v3）が Notion アクセス・同期・ストレージ・HTTP 配信を 1 パッケージに束ねた独立系として存在する。
-v2 を置き換えるものではなく、要件に応じてどちらを使うか選ぶ 2 つの現行アーキテクチャ。
-v2/v3 間に依存関係は無い（`packages/cms/package.json` は `core`/`cache`/`client`/`notion-source`
-のいずれにも依存しない）。実運用での消費例: `euphoric-band-site`（Cloudflare Workers + Durable
-Objects で完全マテリアライズド配信）。
-
-- **`createCMS`（v3）が作るもの**: KV/R2 上に構築されるマテリアライズドなコンテンツレプリカ。
+- **`createCMS` が作るもの**: KV/R2 上に構築されるマテリアライズドなコンテンツレプリカ。
   読み取り（`find`/`list`）は KV/R2 の参照だけで完結し、**リクエスト処理中に Notion API を一切呼ばない**。
   Notion との同期はリクエスト経路から切り離され、`notion`（トークン/クライアント）+ `scheduler` を
   渡してこのインスタンス自身に同期させるか、`syncDelegate` で外部（Durable Object 等）に丸ごと委譲する
@@ -47,16 +32,14 @@ Objects で完全マテリアライズド配信）。
   - `defineCollection`/`defineSchema` による TypeScript ファーストのスキーマ定義（codegen ではなく直接 TS で書き、育てる運用）
   - 公開ポリシーは `published`/`accessible`（`statusProperty` の値集合）で表現する。`published` は一覧（`list`）に載せるかどうか、`accessible` は個別取得（`find`）を許すかどうかで、両者は独立に指定できる（`accessible` 省略時は `published` にフォールバック）
   - 画像・内部リンク・プロパティの変換は**同期時**に行い、読み取り時は素の JSON を返すだけにする（読み取り経路を外部呼び出しゼロに保つため）
+- **`react-renderer` の位置づけ**: `cms` の正規化ブロックを React コンポーネントとして描画する共有インフラ。`/cms` サブパス（`denormalizeBlocks`/`toPageLinkMap`）が `cms` の `NormalizedBlock`/`EntrySnapshot.links` を react-renderer の内部形式へ橋渡しする
+- **`cli`（`nhc`）の位置づけ**: `nhc init`（雛形一式生成）/ `nhc pull`（スキーマ雛形の introspect 生成）/ `nhc check`（drift 検証、CI 向け）/ `nhc doctor`（binding・token・同期状態の診断）/ `nhc sync`（ローカル同期）を提供する補助 CLI
 
-詳細な API 面・モジュール構成は `.claude/rules/cms.md`、設計の「なぜ」は `docs/ja/architecture.md`
-の「packages/cms（v3）」節を参照。
+詳細な API 面・モジュール構成は `.claude/rules/cms.md`、設計の「なぜ」は `docs/ja/architecture.md` を参照。
 
 ### 核心設計原則
 
-- **core を Notion 固有知識から隔離**: `DataSourceAdapter` インターフェースのみ定義し、実装は `notion-orm` 側に置く。将来の Contentful 等への差し替えを可能にするため
-- **単一エントリ `createCMS`**: `@notion-headless-cms/client` の `createCMS({ schema, token, content, collections, runtime })` で `createClient` + `notionSource` + preset を 1 呼び出しに集約。`content: "html" | "react"` が取得戦略 + renderer を内部結線する。`createClient` / `notionSource` / `nodePreset` は client が re-export する escape hatch
-- **拡張可能な sources（module augmentation）**: core は空の `CMSSources` インターフェースを公開し、`@notion-headless-cms/notion-source` などのアダプターパッケージが `declare module "@notion-headless-cms/core" { interface CMSSources { notion?: CMSAdapter } }` で宣言マージしてキーを追加する（Fastify プラグインと同じパターン）。CLI は DB 構造（`schema`）のみを生成し、token / 公開ポリシー等の振る舞いは `createCMS` 側で組み立てる
-- **構造型による抽象化**: `R2BucketLike` など、型だけ定義してランタイムパッケージへの直接依存を排除（テスト容易性向上）
+- **構造型による抽象化**: `R2BucketLike`/`KVNamespaceLike` など、型だけ定義してランタイムパッケージへの直接依存を排除（テスト容易性向上）
 - **`internal/` は非公開**: `packages/*/src/internal/**` を他パッケージから import 禁止。公開したければ `src/index.ts` で re-export する（詳細: `.claude/rules/package-boundaries.md`）
 
 ### コードスタイル要点
@@ -68,7 +51,7 @@ Objects で完全マテリアライズド配信）。
 
 ### エラー処理
 
-すべて `CMSError` に統一。生の `Error` は throw しない。コードは `<namespace>/<kind>` の二段形式（例: `source/fetch_items_failed`, `cache/io_failed`）。詳細は `.claude/rules/error-handling.md`。
+すべて `CMSError` に統一。生の `Error` は throw しない。コードは `<namespace>/<kind>` の二段形式（例: `sync/notion_query_failed`, `store/rest_request_failed`）。詳細は `.claude/rules/error-handling.md`。
 
 ### SWR とキャッシュの注意点
 
@@ -78,7 +61,7 @@ Objects で完全マテリアライズド配信）。
 
 ### テスト
 
-vitest、coverage 閾値 70%。モックパターン（DataSource / renderer / R2 / fetch / fakeTimers）は `.claude/rules/testing.md` を参照。
+vitest、coverage 閾値 70%。モックパターン（KV/R2 fake / fetch / fakeTimers / CMSError 検証）は `.claude/rules/testing.md` を参照。
 
 ## 詳細ドキュメントの場所
 
@@ -130,7 +113,7 @@ rsync -a --delete .claude-next/ .claude/
 ```bash
 # 公開したいパッケージ dir 内で「直接」実行する
 pnpm --filter <パッケージ名> run release:local
-# 例: pnpm --filter @notion-headless-cms/client run release:local
+# 例: pnpm --filter @notion-headless-cms/cms run release:local
 ```
 
 - **`pnpm -r publish` / `pnpm --filter ... publish` で publish 自体を回さないこと**。再帰・フィルタ publish では `--no-provenance` が下層へ転送されず、`publishConfig.provenance: true` が優先されて `provider: null`（provenance はローカルでは生成不可）で失敗する（pnpm 既知挙動: pnpm/pnpm#6607・#11728）。**各パッケージ dir 内で直接 `pnpm publish` する形（= `release:local` を `--filter ... run` で呼ぶ）なら `--no-provenance` が効く**。

@@ -71,9 +71,9 @@ export interface ResolvedPageLink {
 
 /**
  * 正規化済み pageId → 解決済みリンクのプレーンマップ。
- * `@notion-headless-cms/core` の `buildPageLinkMap(cms)` で生成し、`NotionRenderer` の
- * `pageLinks` プロップに渡す。関数ではなくプレーンオブジェクトなので、loader / RSC の
- * シリアライズ境界を越えて渡せる（`resolvePageUrl` 関数プロップは越えられない）。
+ * `@notion-headless-cms/react-renderer/cms` の `toPageLinkMap(entry.links)` で生成し、
+ * `NotionRenderer` の `pageLinks` プロップに渡す。関数ではなくプレーンオブジェクトなので、
+ * loader / RSC のシリアライズ境界を越えて渡せる（`resolvePageUrl` 関数プロップは越えられない）。
  */
 export type PageLinkMap = Record<string, ResolvedPageLink>;
 

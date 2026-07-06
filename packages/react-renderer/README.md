@@ -8,7 +8,7 @@ UI プリミティブは [shadcn/ui](https://ui.shadcn.com/) (`new-york` style) 
 ## インストール
 
 ```bash
-pnpm add @notion-headless-cms/react-renderer @notion-headless-cms/notion-orm @notionhq/client react react-dom
+pnpm add @notion-headless-cms/react-renderer @notion-headless-cms/cms @notionhq/client react react-dom
 ```
 
 利用側プロジェクトに **Tailwind v4 のセットアップが必須**。エントリ CSS で `@import "tailwindcss"` の後に、本パッケージの既定テーマを 1 行読み込む:
@@ -207,13 +207,13 @@ import { MermaidCode } from "@notion-headless-cms/react-renderer/mermaid";
 > **prose は併用しない**。各ブロックは余白・サイズを自前で当てているため、
 > `@tailwindcss/typography` の `prose` を被せると二重適用で崩れる。
 
-## v3 との統合（`./v3` サブパス）
+## `@notion-headless-cms/cms` との統合（`./cms` サブパス）
 
-[`@notion-headless-cms/cms`](../cms)（#437 ゼロベース再設計）の `find()` は正規化済みブロック（`NormalizedBlock[]`、完全に JSON 互換）を返す。`react-renderer/v3` サブパスの変換関数を通せば、既存のブロックコンポーネント約 30 種を無改修のまま再利用できる。
+[`@notion-headless-cms/cms`](../cms) の `find()` は正規化済みブロック（`NormalizedBlock[]`、完全に JSON 互換）を返す。`react-renderer/cms` サブパスの変換関数を通せば、既存のブロックコンポーネント約 30 種を無改修のまま再利用できる。
 
 ```tsx
 import { NotionRenderer } from "@notion-headless-cms/react-renderer";
-import { denormalizeBlocks, toPageLinkMap } from "@notion-headless-cms/react-renderer/v3";
+import { denormalizeBlocks, toPageLinkMap } from "@notion-headless-cms/react-renderer/cms";
 
 const post = await cms.posts.find(slug);
 if (!post) return null;
@@ -226,9 +226,9 @@ return (
 );
 ```
 
-- `denormalizeBlocks(blocks)` — v3 の `NormalizedBlock[]` を既存コンポーネントが期待する `NotionBlock[]`（`BlockObjectResponse` 形状）へ変換する
-- `toPageLinkMap(links)` — v3 の `EntrySnapshot.links` を `NotionRenderer` の `pageLinks` プロップ形式に変換する（v2 の `buildPageLinkMap(cms)` 手動呼び出しが不要になる）
-- `Code` / `Equation` / `InlineEquation` / `Bookmark` / `LinkPreview` は、v3 側で事前レンダーされた `__cachedHtml` があればそれを優先描画し、無ければ従来通りクライアント側で shiki/katex を動的 import する
+- `denormalizeBlocks(blocks)` — `NormalizedBlock[]` を既存コンポーネントが期待する `NotionBlock[]`（`BlockObjectResponse` 形状）へ変換する
+- `toPageLinkMap(links)` — `EntrySnapshot.links` を `NotionRenderer` の `pageLinks` プロップ形式に変換する
+- `Code` / `Equation` / `InlineEquation` / `Bookmark` / `LinkPreview` は、同期時に事前レンダーされた `__cachedHtml` があればそれを優先描画し、無ければ従来通りクライアント側で shiki/katex を動的 import する
 
 ## Notion 更新の表示反映 (`/router`, `/next`)
 

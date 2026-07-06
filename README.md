@@ -3,7 +3,7 @@
 [![CI](https://github.com/kjfsm/notion-headless-cms/actions/workflows/ci.yml/badge.svg)](https://github.com/kjfsm/notion-headless-cms/actions/workflows/ci.yml)
 [![E2E Nightly](https://github.com/kjfsm/notion-headless-cms/actions/workflows/e2e-nightly.yml/badge.svg)](https://github.com/kjfsm/notion-headless-cms/actions/workflows/e2e-nightly.yml)
 [![codecov](https://codecov.io/gh/kjfsm/notion-headless-cms/graph/badge.svg?token=H5R9JTFXU1)](https://codecov.io/gh/kjfsm/notion-headless-cms)
-[![npm:core](https://img.shields.io/npm/v/@notion-headless-cms/core?label=core)](https://www.npmjs.com/package/@notion-headless-cms/core)
+[![npm:cms](https://img.shields.io/npm/v/@notion-headless-cms/cms?label=cms)](https://www.npmjs.com/package/@notion-headless-cms/cms)
 
 Notion をヘッドレス CMS として利用するための TypeScript ライブラリ群。Node.js・Next.js・Cloudflare Workers に対応。SWR キャッシュ・画像プロキシ・Webhook 受信を標準装備。
 

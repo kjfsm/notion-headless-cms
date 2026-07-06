@@ -1,12 +1,11 @@
 {
   "name": "@notion-headless-cms/cli",
   "version": "3.0.7",
-  "description": "CLI tool for notion-headless-cms — generates schema files from Notion databases",
+  "description": "CLI tool for notion-headless-cms — schema drift check, scaffold, sync and doctor for @notion-headless-cms/cms",
   "keywords": [
     "notion",
     "headless-cms",
     "cli",
-    "codegen",
     "typescript"
   ],
   "license": "MIT",
@@ -50,9 +49,7 @@
     "provenance": true
   },
   "dependencies": {
-    "@notion-headless-cms/core": "workspace:*",
     "@notion-headless-cms/cms": "workspace:*",
-    "@notion-headless-cms/validate": "workspace:*",
     "@notionhq/client": "catalog:",
     "commander": "^15.0.0",
     "dotenv": "catalog:",

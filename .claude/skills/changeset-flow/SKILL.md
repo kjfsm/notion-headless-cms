@@ -56,11 +56,11 @@ pnpm changeset
 
 ```md
 ---
-"@notion-headless-cms/core": patch
-"@notion-headless-cms/adapter-node": patch
+"@notion-headless-cms/cms": patch
+"@notion-headless-cms/cli": patch
 ---
 
-core の SWR キャッシュでキー衝突が発生する問題を修正。
+cms の同期処理で slug 衝突時のハンドリングを修正。
 ```
 
 ### 4. コミット

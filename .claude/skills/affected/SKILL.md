@@ -28,7 +28,7 @@ pnpm exec turbo run typecheck test --filter="...[origin/main]"
 ### パッケージを明示
 
 ```bash
-pnpm exec turbo run typecheck test --filter="@notion-headless-cms/core..."
+pnpm exec turbo run typecheck test --filter="@notion-headless-cms/cms..."
 ```
 
 末尾 `...` で「そのパッケージと依存先」を含める。逆向き（依存元）は `...^` を付ける。

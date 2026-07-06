@@ -1,10 +1,10 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { CMSError } from "@notion-headless-cms/core";
+import { CMSError } from "@notion-headless-cms/cms";
 import { loadConfig } from "../config-loader.js";
 import { fileExists } from "../fs-utils.js";
 import { createNotionCLIClient } from "../notion-client.js";
-import { generateCollectionScaffold } from "../v3/pull.js";
+import { generateCollectionScaffold } from "../pull.js";
 import {
   loadEnvFile,
   makeReporter,
@@ -23,9 +23,9 @@ export interface PullOptions {
 }
 
 /**
- * `nhc pull`: `nhc.config.ts` の `v3.collections` を introspect し、
- * `defineCollection` の雛形 TS コードを `v3.scaffoldDir` に出力する。
- * codegen（v2）と異なり生成物の所有権はユーザーに移るため、既存ファイルは上書きしない。
+ * `nhc pull`: `nhc.config.ts` の `collections` を introspect し、
+ * `defineCollection` の雛形 TS コードを `scaffoldDir` に出力する。
+ * 生成物の所有権はユーザーに移るため、既存ファイルは上書きしない。
  */
 export async function runPull(opts: PullOptions): Promise<void> {
   const reporter = makeReporter(opts);
@@ -38,12 +38,11 @@ export async function runPull(opts: PullOptions): Promise<void> {
   reporter.info(`設定ファイルを読み込み中: ${configPath}`);
   const config = await loadConfig(configPath);
 
-  const v3 = config.v3;
-  if (!v3 || Object.keys(v3.collections).length === 0) {
+  if (Object.keys(config.collections).length === 0) {
     throw new CMSError({
       code: "cli/config_invalid",
       message:
-        'nhc.config.ts に v3.collections を 1 件以上定義してください（例: v3: { collections: { posts: { dbName: "..." } } } ）。',
+        'nhc.config.ts に collections を 1 件以上定義してください（例: collections: { posts: { dbName: "..." } } ）。',
       context: { operation: "runPull" },
     });
   }
@@ -52,11 +51,11 @@ export async function runPull(opts: PullOptions): Promise<void> {
   const notionClient = createNotionCLIClient(token);
   const scaffoldDir = path.resolve(
     process.cwd(),
-    opts.scaffoldDir ?? v3.scaffoldDir ?? "src/collections",
+    opts.scaffoldDir ?? config.scaffoldDir ?? "src/collections",
   );
   await fs.mkdir(scaffoldDir, { recursive: true });
 
-  const entries = Object.entries(v3.collections);
+  const entries = Object.entries(config.collections);
   reporter.info(`${entries.length} 件のコレクションを解決中...`);
   let generated = 0;
   let skipped = 0;

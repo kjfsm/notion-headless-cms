@@ -1,10 +1,10 @@
 import path from "node:path";
 import type { PropertyMap } from "@notion-headless-cms/cms";
-import { CMSError } from "@notion-headless-cms/core";
+import { CMSError } from "@notion-headless-cms/cms";
+import type { SchemaDrift } from "../check.js";
+import { diffSchema } from "../check.js";
 import { loadConfig } from "../config-loader.js";
 import { createNotionCLIClient } from "../notion-client.js";
-import type { SchemaDrift } from "../v3/check.js";
-import { diffSchema } from "../v3/check.js";
 import {
   loadEnvFile,
   makeReporter,
@@ -47,7 +47,7 @@ function propertiesOf(
 }
 
 /**
- * `nhc check`: `v3.schemaModule`（ユーザーが書いた TS スキーマ）と実 Notion DB の
+ * `nhc check`: `schemaModule`（ユーザーが書いた TS スキーマ）と実 Notion DB の
  * drift を検証する(CI 用)。drift 検出時は非ゼロ終了コードを返す。
  */
 export async function runCheck(opts: CheckOptions): Promise<void> {
@@ -60,12 +60,11 @@ export async function runCheck(opts: CheckOptions): Promise<void> {
   );
   const config = await loadConfig(configPath);
 
-  const v3 = config.v3;
-  if (!v3?.schemaModule || Object.keys(v3.collections).length === 0) {
+  if (!config.schemaModule || Object.keys(config.collections).length === 0) {
     throw new CMSError({
       code: "cli/config_invalid",
       message:
-        "nhc.config.ts に v3.schemaModule と v3.collections を定義してください。",
+        "nhc.config.ts に schemaModule と collections を定義してください。",
       context: { operation: "runCheck" },
     });
   }
@@ -73,14 +72,14 @@ export async function runCheck(opts: CheckOptions): Promise<void> {
   const token = resolveToken(opts.token, config.notionToken, "runCheck");
   const notionClient = createNotionCLIClient(token);
 
-  const schemaModulePath = path.resolve(process.cwd(), v3.schemaModule);
+  const schemaModulePath = path.resolve(process.cwd(), config.schemaModule);
   const { createJiti } = await import("jiti");
   const jiti = createJiti(import.meta.url);
   const schemaModule =
     await jiti.import<Record<string, unknown>>(schemaModulePath);
 
   const results: CheckResult[] = [];
-  for (const [name, source] of Object.entries(v3.collections)) {
+  for (const [name, source] of Object.entries(config.collections)) {
     const properties = propertiesOf(schemaModule, name);
     const dataSourceId = await resolveDataSourceId(
       name,

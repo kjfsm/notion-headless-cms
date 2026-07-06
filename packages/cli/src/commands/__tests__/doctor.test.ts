@@ -72,7 +72,6 @@ describe("runDoctor", () => {
   it("wrangler.toml に binding が揃っていれば ok として報告する", async () => {
     await fs.writeFile(path.join(tmpDir, "wrangler.toml"), WRANGLER_TOML);
     loadConfigMock.mockResolvedValue({
-      output: "x",
       collections: {},
     } as CMSConfig);
     validateTokenMock.mockResolvedValue(true);
@@ -89,7 +88,6 @@ describe("runDoctor", () => {
 
   it("wrangler.toml が無ければ KV/R2/DO binding をすべて error として報告する", async () => {
     loadConfigMock.mockResolvedValue({
-      output: "x",
       collections: {},
     } as CMSConfig);
     validateTokenMock.mockResolvedValue(true);
@@ -112,7 +110,6 @@ describe("runDoctor", () => {
   it("token 検証が例外を投げても doctor 自体は失敗せず unknown として扱う", async () => {
     await fs.writeFile(path.join(tmpDir, "wrangler.toml"), WRANGLER_TOML);
     loadConfigMock.mockResolvedValue({
-      output: "x",
       collections: {},
     } as CMSConfig);
     validateTokenMock.mockRejectedValue(new Error("network down"));
@@ -131,7 +128,6 @@ describe("runDoctor", () => {
   it("--stats-url から同期統計を取得して報告する", async () => {
     await fs.writeFile(path.join(tmpDir, "wrangler.toml"), WRANGLER_TOML);
     loadConfigMock.mockResolvedValue({
-      output: "x",
       collections: {},
     } as CMSConfig);
     validateTokenMock.mockResolvedValue(true);
@@ -161,15 +157,11 @@ describe("runDoctor", () => {
     expect(failureCheck.message).toContain("2");
   });
 
-  it("v3.schemaModule の slug 重複を検出して error にする", async () => {
+  it("schemaModule の slug 重複を検出して error にする", async () => {
     await fs.writeFile(path.join(tmpDir, "wrangler.toml"), WRANGLER_TOML);
     loadConfigMock.mockResolvedValue({
-      output: "x",
-      collections: {},
-      v3: {
-        schemaModule: "src/schema.ts",
-        collections: { posts: { databaseId: "ds-posts" } },
-      },
+      schemaModule: "src/schema.ts",
+      collections: { posts: { databaseId: "ds-posts" } },
     } as CMSConfig);
     validateTokenMock.mockResolvedValue(true);
     jitiImportMock.mockResolvedValue({

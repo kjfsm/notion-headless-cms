@@ -1,5 +1,5 @@
 import path from "node:path";
-import { CMSError } from "@notion-headless-cms/core";
+import { CMSError } from "@notion-headless-cms/cms";
 import { config as dotenvConfig } from "dotenv";
 import { fileExists } from "../fs-utils.js";
 import type { NotionCLIClient } from "../notion-client.js";
@@ -87,7 +87,7 @@ export function resolveToken(
 }
 
 /**
- * v3 コレクション設定(`databaseId`/`dbName` のいずれか)から data_source_id を解決する。
+ * コレクション設定(`databaseId`/`dbName` のいずれか)から data_source_id を解決する。
  * `nhc pull`/`nhc check`/`nhc doctor` で共通。
  */
 export async function resolveDataSourceId(
@@ -101,7 +101,7 @@ export async function resolveDataSourceId(
   if (!source.dbName) {
     throw new CMSError({
       code: "cli/config_invalid",
-      message: `[${name}] v3.collections["${name}"] に databaseId または dbName のいずれかを指定してください。`,
+      message: `[${name}] collections["${name}"] に databaseId または dbName のいずれかを指定してください。`,
       context: { operation, collection: name },
     });
   }
