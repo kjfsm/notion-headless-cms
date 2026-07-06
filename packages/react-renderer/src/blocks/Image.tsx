@@ -9,6 +9,7 @@ import {
   DialogTrigger,
 } from "../components/ui/dialog.js";
 import { useNotionContext } from "../context";
+import type { ImageWithDimensions } from "../internal/notion-extensions.js";
 import { getFileUrl } from "../lib/notion-file";
 import { Caption } from "../rich-text/Caption";
 import type { BlockComponentProps } from "../types";
@@ -77,11 +78,7 @@ export function Image({
   >;
   // v3 パイプライン(resolveImageUrls)が焼き込む寸法。Notion API 本来の image オブジェクトには
   // 無いフィールドなので、存在する場合のみ CLS ゼロ化のため width/height を付与する。
-  const dimensions = (
-    block.image as unknown as {
-      _dimensions?: { width: number | null; height: number | null };
-    }
-  )._dimensions;
+  const dimensions = (block.image as ImageWithDimensions)._dimensions;
 
   // Notion 署名 URL は失効するため srcSet 化しない (resolveImageUrl で proxy 化された場合のみ意味がある)。
   // 「proxy 化されたかどうか」は src と rawUrl の比較で判定する。
