@@ -197,6 +197,38 @@ describe("SyncCoordinatorCore", () => {
     expect(callCount).toBe(2);
   });
 
+  it("reconcile と runChunk が並行に呼ばれても state の read-modify-write が競合しない(直列化)", async () => {
+    let resolveSync: (() => void) | undefined;
+    const gate = new Promise<void>((resolve) => {
+      resolveSync = resolve;
+    });
+    const deps: SyncCoordinatorDeps = {
+      listChanged: async () => ({ changes: [change("a")], nextCursor: null }),
+      listAllSlugs: async () => ["a"],
+      listIndexedSlugs: async () => ["a", "gone"],
+      syncEntry: async () => {
+        await gate; // kick 側の state 書き込みを reconcile 呼び出しより後まで遅らせる
+        return { writes: 3 };
+      },
+      removeEntry: async () => ({ writes: 5 }),
+      now: () => "2026-07-05T00:00:00.000Z",
+    };
+    const coordinator = new SyncCoordinatorCore(createNodeSyncScheduler(), deps);
+
+    const kickPromise = coordinator.kick(); // syncEntry の gate 待ちで setState 未実行のまま止まる
+    await Promise.resolve();
+    await Promise.resolve();
+    const reconcilePromise = coordinator.reconcile(); // 直列化されていれば kick 完了まで開始を待つ
+
+    resolveSync?.();
+    await Promise.all([kickPromise, reconcilePromise]);
+
+    const state = await coordinator.getState();
+    // 直列化されていれば両方の writes(3+5=8)が state に反映される。
+    // 競合すれば後勝ちで片方(3 または 5)だけが残ってしまう(lost update)。
+    expect(state.writeBudget).toEqual({ date: "2026-07-05", count: 8 });
+  });
+
   it("reconcile は削除が無ければ何もしない", async () => {
     const deps: SyncCoordinatorDeps = {
       listChanged: async () => ({ changes: [], nextCursor: null }),

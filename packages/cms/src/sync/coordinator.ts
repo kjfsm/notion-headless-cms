@@ -97,6 +97,10 @@ function toJsonState(state: SyncState): Record<string, JsonValue> {
  * - `runChunk` は再入防止ガード付き。実行中に webhook 等から再度呼ばれた場合は
  *   完了後にもう一度実行することで取りこぼしを防ぐ(同時実行による index-store への
  *   非アトミックな read-modify-write の競合を避ける)
+ * - `reconcile()` も `runChunk` と同じ直列化キュー(`queue`)に乗せて実行する。
+ *   どちらも index-store への read-modify-write を伴うため、素朴に並行実行すると
+ *   古い state を基点に両者が書き戻し合い、片方の変更が消える(lost update)。
+ *   `queue` はこの 2 つの操作の実行区間そのものを直列化することで競合を防ぐ。
  */
 export class SyncCoordinatorCore {
   private readonly chunkSize: number;
@@ -107,6 +111,8 @@ export class SyncCoordinatorCore {
   private readonly now: () => string;
   private running = false;
   private rerunRequested = false;
+  /** `runChunk`/`reconcile` の実行区間を直列化するキュー。 */
+  private queue: Promise<void> = Promise.resolve();
 
   constructor(
     private readonly scheduler: SyncScheduler,
@@ -174,6 +180,11 @@ export class SyncCoordinatorCore {
    * 復元されない点に注意。
    */
   async reconcile(): Promise<{ removed: readonly string[] }> {
+    // `runChunk` の実行区間と直列化するため、実行中のジョブがあればその完了を待ってから始める。
+    return this.runExclusive(() => this.reconcileOnce());
+  }
+
+  private async reconcileOnce(): Promise<{ removed: readonly string[] }> {
     const [allSlugs, indexedSlugs] = await Promise.all([
       this.deps.listAllSlugs(),
       this.deps.listIndexedSlugs(),
@@ -201,11 +212,25 @@ export class SyncCoordinatorCore {
     try {
       do {
         this.rerunRequested = false;
-        await this.runChunkOnce();
+        // `reconcile()` の実行区間と直列化するため、実際の処理はキューに乗せて実行する。
+        await this.runExclusive(() => this.runChunkOnce());
       } while (this.rerunRequested);
     } finally {
       this.running = false;
     }
+  }
+
+  /**
+   * `runChunk`/`reconcile` の実行区間そのものを直列化する。`queue` に繋ぐことで、
+   * 先行するジョブ(どちらの種類でも)が完了するまで `fn` の開始を遅らせる。
+   */
+  private runExclusive<T>(fn: () => Promise<T>): Promise<T> {
+    const result = this.queue.then(fn, fn);
+    this.queue = result.then(
+      () => undefined,
+      () => undefined,
+    );
+    return result;
   }
 
   private async runChunkOnce(): Promise<void> {
