@@ -39,7 +39,11 @@ function MermaidSvg({ source }: { source: string }) {
     void (async () => {
       try {
         const mermaid = (await import("mermaid")).default;
-        mermaid.initialize({ startOnLoad: false, securityLevel: "loose" });
+        // securityLevel は "strict" にする。mermaid 内部で DOMPurify による
+        // ラベル HTML のサニタイズとクリックハンドラの無効化が行われるため、source は
+        // Notion 編集者が任意に書けるものの、下の dangerouslySetInnerHTML への
+        // 格納型 XSS 経路が塞がれる。"loose" は HTML/クリックを許すため使わない。
+        mermaid.initialize({ startOnLoad: false, securityLevel: "strict" });
         const id = `mermaid-${reactId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
         const { svg } = await mermaid.render(id, source);
         if (!cancelled) setSvg(svg);
@@ -62,7 +66,7 @@ function MermaidSvg({ source }: { source: string }) {
   return (
     <div
       className="my-3 flex justify-center"
-      // biome-ignore lint/security/noDangerouslySetInnerHtml: mermaid 由来 SVG
+      // biome-ignore lint/security/noDangerouslySetInnerHtml: securityLevel "strict" で mermaid が DOMPurify サニタイズ済みの SVG
       dangerouslySetInnerHTML={{ __html: svg }}
     />
   );
