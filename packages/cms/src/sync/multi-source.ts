@@ -1,4 +1,5 @@
 import { CMSError } from "../errors.js";
+import type { Logger } from "../types/logger.js";
 import type { EntryChange, SyncCoordinatorDeps } from "./coordinator.js";
 import type { CollectionDriver } from "./notion-driver.js";
 
@@ -26,14 +27,45 @@ interface MultiCursor {
   readonly nc: string | null;
 }
 
+function isMultiCursor(value: unknown): value is MultiCursor {
+  if (!value || typeof value !== "object") return false;
+  const c = (value as Record<string, unknown>).c;
+  const nc = (value as Record<string, unknown>).nc;
+  return typeof c === "string" && (nc === null || typeof nc === "string");
+}
+
+/**
+ * 破損・旧フォーマットの cursor（ストレージ移行等）を検知したら先頭から同期を
+ * やり直す。ここで例外を投げると `coordinator.ts` の fail-soft が同じ壊れた
+ * cursor を読んで再スケジュールし続け、同期が永久にブリックしてしまうため。
+ */
 function parseCursor(
   cursor: string | null,
   collectionKeys: readonly string[],
+  logger?: Logger,
 ): MultiCursor {
-  if (!cursor) {
-    return { c: collectionKeys[0] ?? "", nc: null };
+  const fresh = (): MultiCursor => ({ c: collectionKeys[0] ?? "", nc: null });
+  if (!cursor) return fresh();
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(cursor);
+  } catch (err) {
+    logger?.warn?.("cursor の解析に失敗したため先頭から同期をやり直します", {
+      operation: "multiSourceDeps",
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return fresh();
   }
-  return JSON.parse(cursor) as MultiCursor;
+
+  if (!isMultiCursor(parsed)) {
+    logger?.warn?.("cursor の形式が不正なため先頭から同期をやり直します", {
+      operation: "multiSourceDeps",
+    });
+    return fresh();
+  }
+
+  return parsed;
 }
 
 function serializeCursor(cursor: MultiCursor | null): string | null {
@@ -43,6 +75,7 @@ function serializeCursor(cursor: MultiCursor | null): string | null {
 export interface MultiSourceOptions {
   /** schema のコレクションキー順に消化する(合成カーソルの巡回順)。 */
   readonly drivers: Readonly<Record<string, CollectionDriver>>;
+  readonly logger?: Logger;
 }
 
 /**
@@ -78,7 +111,7 @@ export function createMultiSourceDeps(
     async listChanged(cursor, limit) {
       if (collectionKeys.length === 0) return { changes: [], nextCursor: null };
 
-      let current = parseCursor(cursor, collectionKeys);
+      let current = parseCursor(cursor, collectionKeys, opts.logger);
       const changes: EntryChange[] = [];
 
       while (changes.length < limit) {

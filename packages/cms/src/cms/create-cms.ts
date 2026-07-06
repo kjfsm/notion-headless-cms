@@ -360,7 +360,7 @@ export function createCMS<const S extends SchemaDef>(
       };
     }
 
-    const multiSourceDeps = createMultiSourceDeps({ drivers });
+    const multiSourceDeps = createMultiSourceDeps({ drivers, logger });
     const coordinator = new SyncCoordinatorCore(scheduler, {
       ...multiSourceDeps,
       chunkSize: opts.sync?.chunkSize,

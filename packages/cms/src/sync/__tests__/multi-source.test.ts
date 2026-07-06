@@ -93,6 +93,34 @@ describe("createMultiSourceDeps", () => {
     expect(second.nextCursor).toBeNull();
   });
 
+  it("cursor が壊れている(JSON.parse 失敗)場合は先頭から同期をやり直す", async () => {
+    const posts = makeFakeDriver({
+      changes: [{ slug: "a", lastEditedTime: "t1" }],
+    });
+    const warn = vi.fn();
+    const deps = createMultiSourceDeps({
+      drivers: { posts: posts.driver },
+      logger: { warn },
+    });
+
+    // 旧フォーマット(素の Notion カーソル文字列)や破損値を想定した不正 JSON。
+    const result = await deps.listChanged("not-json{{", 10);
+
+    expect(result.changes).toEqual([{ slug: "posts:a", lastEditedTime: "t1" }]);
+    expect(warn).toHaveBeenCalled();
+  });
+
+  it("cursor の形式が不正(想定外の shape)な場合も先頭から同期をやり直す", async () => {
+    const posts = makeFakeDriver({
+      changes: [{ slug: "a", lastEditedTime: "t1" }],
+    });
+    const deps = createMultiSourceDeps({ drivers: { posts: posts.driver } });
+
+    const result = await deps.listChanged(JSON.stringify({ foo: "bar" }), 10);
+
+    expect(result.changes).toEqual([{ slug: "posts:a", lastEditedTime: "t1" }]);
+  });
+
   it("コレクション境界を跨いで limit ちょうどで打ち切ると次コレクション先頭のカーソルを返す", async () => {
     const posts = makeFakeDriver({
       changes: [{ slug: "a", lastEditedTime: "t1" }],
