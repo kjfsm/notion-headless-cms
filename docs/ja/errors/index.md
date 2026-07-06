@@ -1,303 +1,173 @@
 ---
 title: エラーコード一覧
-description: CMSError の組み込みエラーコードと原因・例・対処
+description: CMSError の組み込みエラーコードと原因・対処
 category: APIリファレンス
 order: 99
 ---
 
 # エラーコード一覧
 
-`@notion-headless-cms/core` の `CMSError` は `code` フィールドに `<namespace>/<kind>` 形式の識別子を持つ。
-本ドキュメントは 27 個の組み込みコードについて、**原因 / 典型例 / 対処** をまとめる。
+`@notion-headless-cms/cms` の `CMSError` は `code` フィールドに `<namespace>/<kind>` 形式の識別子を持つ。
+本ドキュメントは現行アーキテクチャ（`packages/cms`）の組み込みエラーコード（`schema/` `store/` `handler/` `sync/` `cli/`、計 18 個）について、**原因 / 対処** をまとめる。
 
 ```ts
-import { isCMSError, matchCMSError } from "@notion-headless-cms/core";
+import { isCMSError, isCMSErrorInNamespace, matchCMSError } from "@notion-headless-cms/cms";
 
 try {
   await cms.posts.find(slug);
 } catch (err) {
   if (isCMSError(err)) {
-    console.error(err.format()); // message + nextSteps + docsUrl が整形される
+    console.error(err.code, err.message, err.context);
   }
 }
 ```
 
-`err.format()` を呼ぶと `nextSteps` と `docsUrl` が自動で付与されたメッセージが得られる（組み込みコードは既定値あり）。
-詳細な API は [`api/cms-methods.md#エラーハンドリング`](../api/cms-methods.md#エラーハンドリング) を参照。
+- `isCMSError(err)` — `CMSError` かどうかの判定
+- `isCMSErrorInNamespace(err, "sync/")` — 名前空間で分岐したいとき
+- `err.is(code)` / `err.inNamespace(ns)` — 上記の糖衣構文（インスタンスメソッド）
+- `matchCMSError(err, handlers)` — コードごとにハンドラを割り当てて分岐
+
+`context.operation` には発生箇所の処理名が、コレクション/スラッグに紐づくエラーには `context.collection` / `context.slug` も入る。
+
+> `handler/*` の 3 コードは `cms.fetch(request)`（webhook / OGP エンドポイント）が返す JSON レスポンスボディの `code` フィールドとして現れる（`throw` される `CMSError` ではない）。それ以外（`schema/` `store/` `sync/` `cli/`）は `CMSError` として `throw` される。
 
 ---
 
-## core/
+## schema/
 
-### core-config_invalid
+`defineCollection`/`defineSchema` や `createCMS` の呼び出し時、スキーマ・設定の不整合を検知して投げられる。
 
-**原因**: `createClient` の必須オプション不足 / 構成不整合（token 未設定、`sources` 空、`slugField` 未指定 など）。
+### schema/status_property_required
 
-**例**:
+**原因**: `defineCollection({ published, accessible })` を指定したのに `statusProperty` を省略した。または `statusProperty` に指定したプロパティが `status` 型ではない。
 
-```ts
-// sources が空
-createClient({ sources: {} });
-// → CMSError(core/config_invalid): "createClient: sources に少なくとも 1 つのコレクションを指定してください。"
-```
+**対処**: `statusProperty` に Notion 側の status プロパティのキーを指定する。`published`/`accessible` が不要なら両方とも省略する（設定が黙って無視される経路を作らない設計のため、必須化されている）。
 
-**対処**:
+### schema/reserved_collection_name
 
-- `createClient({ sources: { notion: notionSource({ schema, token }) } })` の形を守る
-- `nhc generate` で `schema` を生成してから import する
-- token は `process.env.NOTION_TOKEN` か `env(...)` 経由でセットする
+**原因**: コレクション名が `createCMS` の戻り値のトップレベル API 名（`sync` / `fetch` / `scheduled`）と衝突している。または `":"` を含む（`multi-source.ts` の namespaced slug が `collection:slug` 形式で合成するため、コレクション名に `":"` があると衝突しうる）。
 
-### core-schema_invalid
+**対処**: コレクション名を別名にリネームする。
 
-**原因**: CLI 生成物の schema 型と core 側の期待が一致していない。古い schema を import している。
+### schema/notion_config_missing
 
-**対処**: `nhc generate` を実行し直す。`generated/nhc.schema.ts` の `defineSchema` / `PropertyMap` が最新形式か確認。
+**原因**: `syncDelegate` を指定していないのに `notion.client` / `notion.token` のどちらも指定していない（ローカルで同期エンジンを組み立てるにはどちらか必須）。
 
-### core-notion_orm_missing
+**対処**: `notion: { token: process.env.NOTION_TOKEN }`（または `notion.client`）を渡すか、Durable Object 等に同期を委譲する `syncDelegate` を指定する。
 
-**原因**: `@notion-headless-cms/notion-orm` の動的 import に失敗。インストール漏れ / バンドラ設定の問題。
+### schema/scheduler_missing
 
-**対処**:
+**原因**: `syncDelegate` 未指定時にローカル同期用の `scheduler` が解決できない場合に投げられる予約コード。現バージョンでは `scheduler` 省略時に `createNodeSyncScheduler()` へ自動フォールバックするため通常は発生しない。
 
-- `pnpm add @notion-headless-cms/notion-orm`
-- 利用ランタイムが ESM 動的 import をサポートしているか確認
-
-### core-sort_unsupported_type
-
-**原因**: `list({ sort: { by, dir } })` の `by` フィールドが string / number 以外。
-
-**対処**: ソート対象を string / number に正規化するか、別フィールドを使う。
+**対処**: 独自の `scheduler` 実装を渡している場合はその実装を確認する。
 
 ---
 
-## webhook/
+## store/
 
-### webhook-signature_invalid
+KV/R2 への REST 経由アクセス（`nhc sync` の warm 経路など、`@notion-headless-cms/cms/cloudflare` の `restKvNamespace`/`restR2Bucket`）で発生する。
 
-**原因**: Notion から受信した webhook の HMAC 署名と `webhookSecret` が一致しない。
+### store/rest_request_failed
 
-**対処**:
+**原因**: Cloudflare REST API 経由の KV/R2 の GET/PUT/DELETE/LIST リクエストが失敗（認証エラー・レート制限・ネットワーク等）。
 
-- Notion 管理画面で発行された secret と `createNextHandler(cms, { webhookSecret })` が一致しているか確認
-- プロキシ / WAF がリクエストボディを改変していないか確認
+**対処**: `accountId` / `apiToken` / `namespaceId`（KV）・`bucketName`（R2）が正しいか、トークンに該当リソースへの権限があるかを確認する。
 
-### webhook-payload_invalid
+### store/rest_env_missing
 
-**原因**: Webhook ペイロードが期待した JSON 構造でない。
+**原因**: REST 経由アクセスに必要な環境変数が未設定。`readRestEnv()` が期待するのは `CLOUDFLARE_ACCOUNT_ID` / `KV_NAMESPACE_ID` / `R2_BUCKET_NAME` / `CLOUDFLARE_API_TOKEN` の 4 つ。
 
-**対処**: リクエストボディが JSON かつ `DataSource.parseWebhook` の期待形式と一致しているか確認。
-
-### webhook-unknown_collection
-
-**原因**: Webhook が指す collection が `createClient` で登録されていない。
-
-**対処**: `sources` または `collections` に collection 名を追加するか、Webhook URL の `?collection=` パラメータを正しいものに直す。
-
-### webhook-not_implemented
-
-**原因**: 対象 collection の `DataSource` に `parseWebhook` が実装されていない。
-
-**対処**: `parseWebhook` を実装するか、Webhook を使わず `cms.invalidate()` で手動失効する運用に変える。
+**対処**: 上記 4 変数を設定するか、`readRestEnv(env)` に明示的なオブジェクトを渡す。
 
 ---
 
 ## handler/
 
-### handler-unknown_collection
+`cms.fetch(request)`（webhook / OGP エンドポイント）が返す JSON レスポンスの `code` として現れる。
 
-**原因**: `cms.handler()` のルート（`POST {basePath}/check/:collection/:slug`）が指す collection が `createCMS` の `collections` に登録されていない。
+### handler/signature_invalid
 
-**対処**: ポーリング / チェック URL が登録済みのコレクション名を指しているか確認し、必要なら `collections` に追加する。
+**原因**: Notion から受信した webhook の `X-Notion-Signature` と `createCMS({ webhookSecret })` の値が一致しない（HTTP 401）。
 
----
+**対処**: Notion 側で発行された webhook secret と `webhookSecret` が一致しているか確認する。プロキシ / WAF がリクエストボディを改変していないかも確認する。
 
-### handler-version_unsupported
+### handler/ogp_url_forbidden
 
-**原因**: `versions` / `check` ルートを要素コレクション（`kind: "data"`）に対して呼んだ。要素コレクションは本文・更新検知バージョンを持たないため、これらのエンドポイントに非対応（HTTP 400）。
+**原因**: OGP エンドポイント（`GET {routes}/ogp?url=...`）への `url` パラメータが未指定・不正な URL・SSRF ガード（内部アドレス等の許可されない宛先）に抵触（HTTP 400）。
 
-**対処**: 要素コレクションは `list()` / `get(id)` のみで利用する。URL ルーティングや更新検知ポーリングが必要なら、そのコレクションを `kind: "page"` にして `slugField` を設定する。
+**対処**: 外部公開 URL のみを渡す。プライベート IP・localhost 等は仕様上ブロックされる。
 
----
+### handler/ogp_fetch_failed
 
-## source/
+**原因**: OGP 対象 URL への fetch 自体が失敗、またはレスポンスが失敗ステータス（HTTP 502）。
 
-### source-fetch_items_failed
-
-**原因**: `DataSource.list()` 失敗。主に Notion API トークン / 権限 / ネットワーク。
-
-**典型例**:
-
-- インテグレーションが DB に接続されていない
-- token がリボーク済み
-- Notion API の rate limit 超過
-
-**対処**:
-
-1. `NOTION_TOKEN` を再発行 / 確認
-2. 対象 DB をインテグレーションに接続（Notion DB → … → Connections）
-3. `rateLimiter.maxRetries` / `baseDelayMs` を調整
-
-### source-fetch_item_failed
-
-**原因**: `findByProp` / `find(slug)` で 1 件取得に失敗。
-
-**対処**: slug プロパティが一意か、対象ページがインテグレーションに共有されているか確認。
-
-### source-load_markdown_failed
-
-**原因**: ブロック → Markdown 変換中に失敗。`notion-to-md` の例外 / 未対応ブロック / アーカイブページなど。
-
-**対処**:
-
-- ページがアーカイブされていないか確認
-- 未対応ブロック (video / file 等) を含むなら fetch 戦略を `markdownFetcher()` に切り替える
-
-### source-load_blocks_failed
-
-**原因**: Notion ブロックツリー取得に失敗。
-
-**対処**: ページが削除 / アーカイブされていないか、rate limit に当たっていないかを確認。
-
-### source-blocks_unsupported
-
-**原因**: `markdownFetcher()` 等、`loadNotionBlocks` を提供しない fetch 戦略を選んでいるのに `react-renderer` 経由でブロックツリーを要求した。
-
-**対処**:
-
-- react-renderer を使う場合は fetch 戦略を `fetchBlockTree()` に変更する
-- もしくは markdown 経路の HTML レンダリングに切り替える
+**対処**: 対象 URL がネットワークから到達可能か、レスポンスを返しているかを確認する。
 
 ---
 
-## cache/
+## sync/
 
-### cache-io_failed
+Notion 同期処理（`SyncCoordinatorCore` / `notion-driver.ts`）中に投げられる。
 
-**原因**: document / image キャッシュの read / write 失敗。R2 / KV / メモリのいずれか。
+### sync/notion_query_failed
 
-**典型例**:
+**原因**: Notion API 呼び出し失敗。差分クエリ（`dataSources.query`）の失敗、または slug に対応する Notion ページが見つからない場合など。
 
-- `env.DOC_CACHE` (KV) / `env.IMG_BUCKET` (R2) の binding が未設定
-- `wrangler.toml` の binding 名と createClient へ渡した env が不一致
+**対処**: `NOTION_TOKEN` の有効性・対象 DB がインテグレーションに接続されているかを確認する。Notion API のレートリミット（〜3 req/s）に当たっている場合は `sync.requestsPerSecond` や retry 設定を見直す。
 
-**対処**:
+### sync/slug_missing
 
-- `wrangler.toml` を確認し binding 名を揃える
-- 一時的な R2 / KV 障害なら次回 SWR で自己回復する
+**原因**: `slug` を持つコレクション（`defineCollection({ slug: "..." })`）なのに、対象ページの slug プロパティが空。
 
-### cache-image_fetch_failed
+**対処**: Notion 側で該当ページの slug プロパティに値を設定する。`slug` を省略した設定値コレクションであれば発生しない（page id をキーにするため）。
 
-**原因**: Notion の署名付き画像 URL の取得に失敗。
+### sync/image_fetch_failed
 
-**対処**:
+**原因**: 同期時のブロック内画像 fetch がリトライ上限まで失敗した（Notion の署名付き画像 URL は短時間で失効するため、取得タイミングによっては再試行が必要）。
 
-- Notion 画像 URL は約 1 時間で失効する。`fetchAndCacheImage` 経由で SHA256 ハッシュキャッシュに永続化する設計を守る
-- Worker / Node のアウトバウンドネットワーク許可を確認
+**対処**: 一時的な失敗であれば次回同期で自己回復する。恒常的に発生する場合はネットワーク到達性・retry 設定を確認する。
 
-### cache-image_invalid_content_type
+### sync/unknown_collection
 
-**原因**: 画像レスポンスの Content-Type が image/* でない。
+**原因**: webhook 等が指す collection 名が `schema` の `collections` に登録されていない。
 
-**対処**: ブラウザで URL を直接開き image/* を返すかを確認。プロキシ / CDN が Content-Type を書き換えていないか確認。
-
----
-
-## renderer/
-
-### renderer-failed
-
-**原因**: Markdown → HTML 変換時の例外。remark / rehype プラグインの組み合わせ問題が多い。
-
-**対処**:
-
-- 利用中の remark / rehype プラグインを 1 つずつ外して再現を切り分ける
-- `markdownFetcher()` を使っている場合は renderer に `notionMarkdownRenderer` を指定する
-
----
-
-## swr/
-
-SWR バックグラウンド更新中の失敗。`onError` フック / logger に出るがリクエスト本体は失敗しない（古いキャッシュは返らないが、次回 read で再試行される）。
-
-### swr-item_check_failed
-
-**原因**: `check(slug, version)` の差分検出中に Notion API が失敗した。
-
-**対処**: 通常は無視可。恒常的に発生する場合は `source-fetch_item_failed` と同じ要領で原因を切り分ける。
-
-### swr-list_check_failed
-
-**原因**: SWR バックグラウンドのリスト差分チェック失敗。
-
-**対処**: rate limit が近いなら `rateLimiter.maxConcurrent` を絞る。
-
-### swr-content_rebuild_failed
-
-**原因**: SWR バックグラウンドの本文再生成失敗（renderer / loadMarkdown のいずれか）。
-
-**対処**: `cms.posts.find(slug, { bypassCache: true })` で再現を確認し、必要なら renderer / fetch 戦略を見直す。
+**対処**: `defineSchema` にコレクションを追加するか、参照元（webhook URL の `?collection=` パラメータ等）を正しいコレクション名に直す。
 
 ---
 
 ## cli/
 
-### cli-config_invalid
+`nhc` サブコマンド（`init` / `pull` / `check` / `doctor` / `sync`）が throw する。
 
-**原因**: `nhc.config.ts` の `defineConfig()` 内容不整合。
+### cli/config_invalid
 
-**典型例**:
+**原因**: `nhc.config.ts` の `defineConfig()` の内容不整合（`collections` が空、`dbName`/`databaseId` のどちらも未指定など）。
 
-```ts
-// collections が空
-export default defineConfig({ notionToken: env("NOTION_TOKEN"), collections: {} });
-// → CMSError(cli/config_invalid)
-```
+**対処**: `collections` に最低 1 件のエントリを追加し、`dbName` または `databaseId` を指定する。
 
-**対処**: `collections` に最低 1 件のエントリを追加し、`databaseId` または `dbName` を指定する。
+### cli/schema_invalid
 
-### cli-config_load_failed
+**原因**: `schemaModule`（`nhc check` が読むユーザー定義スキーマ）とマッピングの不整合。または Notion DB のプロパティ型が CLI 対応外。
 
-**原因**: 設定ファイルの動的評価 (`jiti`) が失敗。構文エラー / 拡張子付き import の欠落など。
+**対処**: `schemaModule` の `defineCollection` が実 Notion DB のプロパティと一致しているか確認し、必要なら `fieldMappings` を追加する。
 
-**対処**: 該当ファイルを `tsc --noEmit` でエラーが出ないか確認。ESM では `import "./x.js"` のように拡張子を付ける。
+### cli/init_failed
 
-### cli-schema_invalid
+**原因**: `nhc init` のテンプレート生成失敗（既存ファイルとの衝突・書き込み権限不足など）。
 
-**原因**: Notion DB のプロパティ型が CLI 対応外。または schema 出力時の型不整合。
+**対処**: `--force` を付けて既存ファイルを上書きするか、別の出力先パスを指定する。親ディレクトリの書き込み権限を確認する。
 
-**対処**:
+### cli/notion_api_failed
 
-- 対応型: `title / richText / select / status / multiSelect / date / number / checkbox / url`
-- 未対応プロパティをスキップするか、Notion 側で型を変える
-
-### cli-generate_failed
-
-**原因**: `nhc generate` 処理中の失敗（ファイル I/O / 内部例外）。
-
-**対処**: `nhc generate --verbose` で詳細スタックを確認。出力先の書き込み権限を確認。
-
-### cli-init_failed
-
-**原因**: `nhc init` のテンプレ生成失敗。既存ファイル衝突 / 書き込み権限。
-
-**対処**: `--force` を付与するか、別パスを指定する。親ディレクトリの書き込み権限を確認。
-
-### cli-notion_api_failed
-
-**原因**: CLI が Notion API を呼んだときの失敗（DB 解決 / DataSource 取得）。
-
-**典型例**:
-
-- `dbName: "ブログ記事DB"` で完全一致する DB が見つからない（インテグレーション未接続、名前の前後空白）
-- token が無効
+**原因**: CLI が Notion API を呼んだときの失敗（DB 解決・introspect・drift 検証）。典型例は `dbName` に完全一致する DB が見つからない（インテグレーション未接続・前後の空白違い）、または token が無効。
 
 **対処**:
 
-1. インテグレーションに DB が接続されているか確認
-2. DB 名の完全一致 (前後空白 / 全角半角) を確認
-3. `nhc generate --verbose` で Notion API レスポンスの status / code を確認
+1. インテグレーションに対象 DB が接続されているか確認する（DB の「接続先」設定）
+2. `dbName` の完全一致（前後空白・全角半角）を確認する
+3. `--verbose` を付けて Notion API レスポンスの status / code を確認する
 
-### cli-env_file_not_found
+### cli/env_file_not_found
 
 **原因**: `--env-file <path>` で指定したファイルが存在しない。
 
@@ -305,18 +175,10 @@ export default defineConfig({ notionToken: env("NOTION_TOKEN"), collections: {} 
 
 ---
 
-## cloudflare/
-
-### cloudflare-warm_env_missing
-
-**原因**: `readRestKvEnv()`（KV プリウォーム用）が必要な環境変数を見つけられない。`CLOUDFLARE_ACCOUNT_ID` / `KV_NAMESPACE_ID` / `CLOUDFLARE_API_TOKEN` のいずれかが未設定。
-
-**対処**: warm スクリプト実行時に 3 つの環境変数をすべて渡す（`.dev.vars` 経由でも可）。`readRestKvEnv(env)` に明示的なオブジェクトを渡して上書きすることもできる。
-
----
-
 ## サードパーティ拡張
 
 `CMSErrorCode = BuiltInCMSErrorCode | (string & {})` のため、任意の文字列コードを定義できる。サードパーティアダプタは `<package-namespace>/<kind>` 形式（例: `cache-redis/connection_failed`）を使う。
 
-サードパーティコードでも `CMSError` を直接 throw する際に `docsUrl` / `nextSteps` を渡せば `format()` の出力に反映される。
+## 追加時の手順
+
+新しい組み込みエラーコードを追加する場合は `packages/cms/src/errors.ts` の `BuiltInCMSErrorCode` に追加し、本ドキュメントにも追記する（`.claude/rules/error-handling.md` 参照）。

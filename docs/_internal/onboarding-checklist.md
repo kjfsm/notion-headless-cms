@@ -8,15 +8,19 @@ v1.0 リリース前に最低 1 名（社外推奨）で実測すること。
 - pnpm
 - Notion アカウント
 
+> **注記（v2 廃止に伴う更新）**: このリポジトリの現行アーキテクチャは `@notion-headless-cms/cms`
+> のみ（v2 系 13 パッケージは削除済み）。v3 にはスキーマ codegen（`nhc generate`）が無く、
+> `defineCollection`/`defineSchema` を手書きする運用になったため、手順を現行 API に合わせて
+> 更新した。
+
 ## 手順
 
-- [ ] 1. `pnpm add @notion-headless-cms/client @notion-headless-cms/cli` (目標: 30秒)
+- [ ] 1. `pnpm add @notion-headless-cms/cms @notionhq/client` (目標: 30秒)
 - [ ] 2. Notion インテグレーション作成 → データベースに接続 (目標: 2分)
 - [ ] 3. `NOTION_TOKEN` を環境変数に設定 (目標: 15秒)
-- [ ] 4. `nhc.config.ts` を作成 (目標: 30秒、README コピペ)
-- [ ] 5. `npx nhc generate` でスキーマ生成 (目標: 20秒)
-- [ ] 6. `cms.ts` を 6 行作成 (目標: 30秒、README コピペ)
-- [ ] 7. `console.log(await cms.posts.list())` 実行 (目標: 10秒)
+- [ ] 4. `schema.ts` に `defineCollection`/`defineSchema` を数行で手書き (目標: 30秒、README コピペ)
+- [ ] 5. `cms.ts` に `createCMS({ schema, notion: { token } })` を作成 (目標: 30秒、README コピペ)
+- [ ] 6. `console.log(await cms.posts.list())` 実行 (目標: 10秒)
 
 合計目標: 5 分以内
 

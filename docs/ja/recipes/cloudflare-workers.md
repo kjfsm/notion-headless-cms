@@ -1,265 +1,323 @@
 ---
 title: Cloudflare Workers
-description: Workers + R2 + KV の構成
+description: Workers + R2 + KV + Durable Object の構成
 category: レシピ
 order: 3
 ---
 
 # Cloudflare Workers + R2 + KV レシピ
 
+Notion アクセス（同期）を Durable Object に一元化し、読者用の stateless Worker は KV/R2 を
+読むだけにする「完全マテリアライズド」構成。読者リクエスト処理中は Notion API を一切呼ばない
+（`@notion-headless-cms/cms` の北極星）。完全に動く実装は
+[`examples/cloudflare-hono/`](../../../examples/cloudflare-hono/) にある。
+
+DO を使わずシンプルに始めたい場合は Worker isolate 内スケジューラで完結する構成
+（[`react-router.md`](./react-router.md)）も参照。
+
 ## インストール
 
 ```bash
-pnpm add @notion-headless-cms/core @notion-headless-cms/notion-source \
-  @notion-headless-cms/cache \
-  @notionhq/client zod \
-  unified remark-parse remark-gfm remark-rehype rehype-stringify
+pnpm add @notion-headless-cms/cms @notionhq/client
 pnpm add -D @notion-headless-cms/cli
 ```
 
-## スキーマ生成
+## スキーマ定義
 
-```bash
-npx nhc init
-# nhc.config.ts を編集
-NOTION_TOKEN=secret_xxx npx nhc generate
+```ts
+// src/schema.ts
+import { defineCollection, defineSchema, prop } from "@notion-headless-cms/cms";
+
+const posts = defineCollection({
+  dataSourceId: "d8221462-5ae9-8396-bdac-8731f4ef685a",
+  slug: "slug",
+  properties: {
+    title: prop.title(),
+    slug: prop.richText(),
+    status: prop.status(["下書き", "編集中", "公開済み"] as const),
+    publishedAt: prop.date(),
+    author: prop.select(),
+  },
+  statusProperty: "status",
+  published: ["公開済み"],
+  accessible: ["下書き", "編集中", "公開済み"],
+});
+
+export const schema = defineSchema({ posts });
 ```
 
-生成された `nhc.schema.ts` を Workers から読み込む。
-
-## wrangler.toml の設定
-
-推奨 binding 名は `DOC_CACHE` (KV) と `IMG_BUCKET` (R2)。
+## wrangler.toml
 
 ```toml
+name = "my-app"
+main = "src/index.ts"
+compatibility_date = "2026-04-22"
+compatibility_flags = ["nodejs_compat"]
+
 [[kv_namespaces]]
 binding = "DOC_CACHE"
 id = "xxxxxxxxxxxxxxxxxxxx"
 
 [[r2_buckets]]
 binding = "IMG_BUCKET"
-bucket_name = "nhc-images"
-```
+bucket_name = "my-app-cache"
 
-## シークレット
+# Notion アクセスを直列化する同期エンジン（SyncCoordinatorDO）。
+# 読者リクエストは KV/R2 を読むだけで、Notion API 呼び出しは DO に一元化する。
+[[durable_objects.bindings]]
+name = "SYNC_COORDINATOR"
+class_name = "SyncCoordinatorDO"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["SyncCoordinatorDO"]
+```
 
 ```bash
 wrangler secret put NOTION_TOKEN
 ```
 
-## Workers のコード
+## 読者用 Worker インスタンス
 
-`cache` グループに `kvCache` / `r2Cache` を役割別に渡すと、KV を document、R2 を image に割り当てつつ `waitUntil` を配線できる。
+読者用の stateless Worker は KV/R2 の読み取り（`find`/`list`）だけを行い、Notion API への
+直列アクセスは DO に一元化する（`syncDelegate` 経由で転送する）。
 
 ```ts
-import { createCMS, memoryCache } from "@notion-headless-cms/client";
-import { kvCache, r2Cache } from "@notion-headless-cms/client/cloudflare";
-import { schema } from "./generated/nhc.schema";
+// src/lib/cms.ts
+import { createCMS } from "@notion-headless-cms/cms";
+import {
+  durableObjectSyncDelegate,
+  kvDocStore,
+  r2BlobStore,
+} from "@notion-headless-cms/cms/cloudflare";
+import { schema } from "../schema.js";
 
-interface Env {
-  NOTION_TOKEN: string;
-  DOC_CACHE?: KVNamespace;
-  IMG_BUCKET?: R2Bucket;
+export interface Env {
+  readonly NOTION_TOKEN: string;
+  readonly DOC_CACHE: KVNamespace;
+  readonly IMG_BUCKET: R2Bucket;
+  readonly SYNC_COORDINATOR: DurableObjectNamespace;
 }
 
-function makeCms(env: Env, ctx: ExecutionContext) {
+export function makeCms(
+  env: Env,
+  ctx: { waitUntil(p: Promise<unknown>): void },
+) {
   return createCMS({
-    notion: {
-      schema,
-      token: env.NOTION_TOKEN,
-      collections: { posts: { published: ["公開済み"] } },
+    schema,
+    stores: {
+      docs: kvDocStore(env.DOC_CACHE),
+      blobs: r2BlobStore(env.IMG_BUCKET),
     },
-    render: { content: "html" },
-    cache: {
-      // KV を document、R2 を image に割り当てる。
-      // DOC_CACHE は optional 型なので未設定時は memoryCache() へフォールバック。
-      document: env.DOC_CACHE ? kvCache({ namespace: env.DOC_CACHE }) : memoryCache(),
-      image: r2Cache({ bucket: env.IMG_BUCKET }),
-      // webhook で即時反映する構成では push が主経路。裏 SWR チェックはフォールバックなので
-      // recheck を長め（5 分）にして Notion API 消費を抑える（既定 30 秒は webhook なし基準）。
-      swr: { recheckWindowMs: 300_000 },
-      // waitUntil を渡さないと SWR の bg 更新が打ち切られて古いキャッシュが残る。
-      waitUntil: (p) => ctx.waitUntil(p),
-    },
+    syncDelegate: durableObjectSyncDelegate({ namespace: env.SYNC_COORDINATOR }),
+    waitUntil: (p: Promise<unknown>) => ctx.waitUntil(p),
   });
 }
-
-export default {
-  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
-    const cms = makeCms(env, ctx);
-    const url = new URL(request.url);
-
-    // 画像配信 (core の handler でまとめてさばく)
-    if (url.pathname.startsWith("/api/images/")) {
-      return cms.handler()(request);
-    }
-
-    // 一覧
-    if (url.pathname === "/posts") {
-      return Response.json(await cms.posts.list());
-    }
-
-    // 単一アイテム
-    const slug = url.pathname.replace("/posts/", "");
-    const post = await cms.posts.find(slug);
-    if (!post) return new Response("Not Found", { status: 404 });
-
-    return new Response(await post.html(), {
-      headers: { "Content-Type": "text/html; charset=utf-8" },
-    });
-  },
-};
 ```
 
-## content モードと subrequest 制限の選び方
-
-Cloudflare Workers **Free プラン**は 1 invocation あたり 50 サブリクエストの上限がある。
-`content` モードはこの制限に直結するので、ページ規模で選ぶ。
-
-| content | 取得戦略 | Notion API 消費 | 向き |
-|---|---|---|---|
-| `"html"` | Markdown export API（1 リクエスト） | **ページあたり 1** | 大きい / ネストが深いページ、CF Free |
-| `"react"` | blocks.children.list（再帰） | ブロック階層に比例（数十〜） | React 高忠実度描画、Paid / 小〜中ページ |
-
-- まず `content: "html"` を既定にし、React で callout / column / embed を厳密に描画したいときだけ `"react"` にする。
-- `"react"` で大きなページを扱い subrequest が逼迫するなら、**KV プリウォーム**（`@notion-headless-cms/client/cloudflare` の `restKvCache` / `readRestKvEnv`）を併用し、Workers は KV（内部リクエスト）だけ読む構成にする。
-- カスタムブロックハンドラや OGP・並列度（`concurrency`）の調整が必要なら、escape hatch（`createClient` + `notionSource({ fetch: blocksFetcher({ concurrency, blocks, ogp }) })`）で個別に組み立てる。既定 `concurrency` は 3（Notion の 3 req/s に合わせた値）。
-
-## キャッシュ戦略: 永続キャッシュ + 更新検知
-
-`swr.staleBlockMs` は**指定せず既定に任せる**のが推奨。Notion webhook secret（`notion.webhookSecret`）を設定して push 経路を稼働させると `staleBlockMs` の既定が無期限になり、キャッシュは常に即表示される（更新は webhook で届くため、古さによるブロッキング再取得が起きない）。
-
-- KV キャッシュは期限なしで永続させる。
-- リクエスト時はキャッシュを即時返却し、`waitUntil` 経由でバックグラウンドで Notion の `lastEditedTime` と照合する（照会は `recheckWindowMs`（既定 30 秒）で coalescing され、短時間に集中するアクセスは 1 回にまとまる）。
-- 差分があれば KV を差し替え、コンテンツキャッシュを無効化する。
-- 差分が無ければ何もしない（無駄な fetch なし）。
-
-`staleBlockMs` を短く入れると閾値超過時にブロッキング再取得が走るため、変更が無くても遅延の原因になる（webhook 稼働時は既定の無期限のままでよい）。
-
-## クライアント側の表示更新
-
-Notion を更新したとき、画面を**静かに切り替える**には:
-
-### React Router v7
-
-React で描画する場合（loader + `<Renderer>` + `<NotionRevalidator>`）は専用レシピにまとめた。
-→ [`react-router.md`](./react-router.md)
-
-### Hono / Astro / Express など素 HTML
-
-`notionRevalidatorScript()` をテンプレートに埋め込む。タブ可視化で `location.reload()` する `<script>` 文字列を返す。
+## Durable Object（Notion アクセスの一元化）
 
 ```ts
-import { raw, html as h } from "hono/html";
-import { notionRevalidatorScript } from "@notion-headless-cms/core/html";
-
-c.html(h`<!doctype html>...
-  ${raw(notionRevalidatorScript())}
-  </body></html>`);
-```
-
-```astro
----
-import { notionRevalidatorScript } from "@notion-headless-cms/core/html";
----
-<Fragment set:html={notionRevalidatorScript()} />
-```
-
-サーバ側の `waitUntil` が前回訪問時に KV を最新化済みなので、再ロード時は新内容が即時返る。クエリも別 API への fetch も発生しない。
-
-## 個別の binding をカスタマイズしたい場合
-
-`createCMS` の `cache` グループの代わりに、低レベル `createClient` でアダプタ配列を直接組み立てることもできる。
-
-```ts
+// src/lib/do.ts
+import type { DurableObjectStateLike } from "@notion-headless-cms/cms";
 import {
-  cloudflareCache,
-  kvCache,
-  r2Cache,
-} from "@notion-headless-cms/cache/cloudflare";
+  createCMS,
+  createDurableObjectSyncScheduler,
+} from "@notion-headless-cms/cms";
+import {
+  createSyncCoordinatorDO,
+  kvDocStore,
+  r2BlobStore,
+} from "@notion-headless-cms/cms/cloudflare";
+import { schema } from "../schema.js";
+import type { Env } from "./cms.js";
 
-createClient({
-  sources: { notion: notionSource({ schema, token: env.NOTION_TOKEN }) },
-  // KV + R2 のショートカット (prefix 指定可)
-  cache: cloudflareCache(
-    { docCache: env.DOC_CACHE, imgBucket: env.IMG_BUCKET },
-    { prefix: "blog:" },
-  ),
-  // または個別に:
-  // cache: [kvCache({ namespace: env.MY_KV }), r2Cache({ bucket: env.MY_R2 })],
-  waitUntil: (p) => ctx.waitUntil(p),
+/**
+ * DO インスタンスは alarm 発火の間にエビクトされ得るため、`createCMS` は
+ * DO の constructor で毎回呼び直す設計（`createSyncCoordinatorDO` 参照）。
+ */
+export const SyncCoordinatorDO = createSyncCoordinatorDO<Env>({
+  createCMS: (state: DurableObjectStateLike, env: Env) =>
+    createCMS({
+      schema,
+      notion: { token: env.NOTION_TOKEN },
+      stores: {
+        docs: kvDocStore(env.DOC_CACHE),
+        blobs: r2BlobStore(env.IMG_BUCKET),
+      },
+      scheduler: createDurableObjectSyncScheduler(state),
+    }),
 });
 ```
 
-binding が未設定なら該当アダプタは省略され、キャッシュなしで動作する。
+## Workers エントリ（Hono）
+
+```ts
+// src/index.ts
+import { Hono } from "hono";
+import { type Env, makeCms } from "./lib/cms.js";
+import posts from "./routes/posts.js";
+
+export { SyncCoordinatorDO } from "./lib/do.js";
+
+const app = new Hono<{ Bindings: Env }>();
+
+app.route("/posts", posts);
+
+// 手動 kick 用のメンテナンスエンドポイント（初回コールドスタート時や動作確認用）。
+// 本来は Notion webhook（/api/cms/webhook 経由）が SyncCoordinatorDO を起動する。
+app.post("/api/sync/kick", (c) => {
+  const cms = makeCms(c.env, c.executionCtx);
+  c.executionCtx.waitUntil(cms.sync.kick());
+  return c.json({ ok: true });
+});
+
+// 画像プロキシ・webhook・OGP を cms.fetch() 1 つにまとめて配信する。
+app.all("/api/cms/*", (c) => makeCms(c.env, c.executionCtx).fetch(c.req.raw));
+
+export default app;
+```
+
+```ts
+// src/routes/posts.ts
+import { renderBlocksToHtml } from "@notion-headless-cms/cms/html";
+import { Hono } from "hono";
+import type { Env } from "../lib/cms.js";
+import { makeCms } from "../lib/cms.js";
+
+const posts = new Hono<{ Bindings: Env }>();
+
+posts.get("/", async (c) => {
+  const { items } = await makeCms(c.env, c.executionCtx).posts.list();
+  return c.json({ items });
+});
+
+posts.get("/:slug", async (c) => {
+  const cms = makeCms(c.env, c.executionCtx);
+  const post = await cms.posts.find(c.req.param("slug"));
+  if (!post) return c.json({ error: "Not Found" }, 404);
+  const html = renderBlocksToHtml(post.blocks, { links: post.links });
+  return c.json({
+    html,
+    item: { id: post.meta.id, slug: post.slug, status: post.meta.status },
+  });
+});
+
+export default posts;
+```
+
+## content の選び方: HTML か React か
+
+`post.blocks` はどちらのレンダラにも渡せる正規化済みプレーンデータ。React を使わない構成
+（Hono の JSON API・RSS・メール本文など）は `./html` サブパスの `renderBlocksToHtml()`、
+React ベースのフレームワークなら `@notion-headless-cms/react-renderer` の `<NotionRenderer>`
+を使う（詳細な比較は [`../choosing-a-renderer.md`](../choosing-a-renderer.md)）。React 版の
+使い方は [`react-router.md`](./react-router.md) を参照。
+
+## HTML ページを描画する（React を使わない場合）
+
+Hono の `hono/html` で素の HTML を組み立てつつ、タブ可視化のたびに `location.reload()` する
+スクリプトを埋め込むと、DO 側が裏で同期し終えた最新スナップショットが再取得される。
+
+```ts
+import { html, raw } from "hono/html";
+
+function revalidatorScript(): string {
+  return '<script>document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")location.reload()});</script>';
+}
+
+app.get("/ui/posts/:slug", async (c) => {
+  const cms = makeCms(c.env, c.executionCtx);
+  const post = await cms.posts.find(c.req.param("slug"));
+  if (!post) return c.html("<h1>404</h1>", 404);
+  const content = renderBlocksToHtml(post.blocks, { links: post.links });
+  return c.html(html`<!doctype html>
+<html lang="ja">
+  <body>
+    <h1>${post.slug}</h1>
+    <article>${raw(content)}</article>
+    ${raw(revalidatorScript())}
+  </body>
+</html>`);
+});
+```
+
+Astro など他のテンプレートエンジンでも同じスクリプト文字列を埋め込むだけでよい。React を
+使う場合は `<NotionRevalidator>`（[`react-router.md`](./react-router.md) 参照）がこれと
+同等の役割を担う。
+
+## Webhook によるキャッシュ更新
+
+`createCMS({ webhookSecret })` を設定すると `cms.fetch()` が `POST {routes}/webhook` を自動で
+マウントする。Notion integration の Webhooks 設定でこの URL を登録すると、ページ更新イベントで
+DO の同期がキックされる。
+
+1. デプロイ後、Notion の integration 設定 → Webhooks で
+   `https://<site>/api/cms/webhook`（`routes` に合わせる）を登録する。
+2. Notion が一度だけ送る `verification_token` を、エンドポイントのレスポンス本文
+   （`{ verification_token }` を echo）または `wrangler tail` のログで確認する。
+3. その値を `wrangler secret put NOTION_WEBHOOK_SECRET` に設定し、`createCMS({ webhookSecret: env.NOTION_WEBHOOK_SECRET })`
+   に渡す（Notion UI 側の Verify にも同じ値を貼って有効化する。再デプロイで反映）。
+4. 対象 DB のページを編集すると、署名検証（`X-Notion-Signature`）を通った webhook が
+   `sync.onWebhook()` を呼び、debounce（既定 3 秒、`sync.debounceMs` で調整可）後に差分同期が走る。
+
+## Cron Trigger による削除検知（reconcile）
+
+Notion 側で削除されたページの検知は webhook では拾えないため、Cron Trigger で定期的に
+`cms.scheduled()` を呼び、全件突合（`reconcile()`）を行う。
+
+```toml
+# wrangler.toml
+[triggers]
+crons = ["0 18 * * *"]  # 毎日 UTC 18:00（JST 3:00）
+```
+
+```ts
+// src/index.ts に追記
+export default {
+  fetch: app.fetch,
+  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    ctx.waitUntil(makeCms(env, ctx).scheduled());
+  },
+} satisfies ExportedHandler<Env>;
+```
+
+## 画像プロキシの配線に注意
+
+Notion 画像 URL は期限付きのため、同期時に SHA256 ハッシュキーで R2 に永続保存し、block 内の
+URL を `{imagesPath}/{hash}`（既定 `/images/{hash}`）へ焼き込む。読者側の `cms.fetch()` は
+`{routes}/images/:hash`（既定 `routes` は `/api/cms`）で配信するため、**同期側とバケする URL
+の prefix を一致させる必要がある**。
+
+同期・読者を同じ `createCMS()` インスタンス（1 プロセス構成、DO を使わない構成）で行う場合は
+両方とも既定値のままでよい。DO のように**同期側と読者側を別の `createCMS()` インスタンスに
+分ける場合**は、DO 側（焼き込み側）の `imagesPath` を読者側の実配信パス
+（`{routes}/images`、既定なら `/api/cms/images`）に明示的に合わせる。
+
+```ts
+// src/lib/do.ts の createCMS に追記
+createCMS({
+  schema,
+  notion: { token: env.NOTION_TOKEN },
+  stores: { docs: kvDocStore(env.DOC_CACHE), blobs: r2BlobStore(env.IMG_BUCKET) },
+  scheduler: createDurableObjectSyncScheduler(state),
+  imagesPath: "/api/cms/images", // 読者側 routes("/api/cms") + imagesPath("/images" 既定) と一致させる
+});
+```
 
 ## キャッシュなしで動かす（ローカル開発）
 
-`.dev.vars` に `NOTION_TOKEN` だけ書けば `wrangler dev` で動く。
-KV / R2 binding が未設定でも、`document` を `memoryCache()` にフォールバックさせておけば（上記 `makeCms` の例）メモリキャッシュで起動でき、例外にはならない。
+`.dev.vars` に `NOTION_TOKEN` だけ書けば `wrangler dev` で動く。KV/R2 binding が無くても
+`stores` を省略すれば in-memory ストアにフォールバックし、例外にはならない（永続化はされない）。
 
 ```
 # .dev.vars
 NOTION_TOKEN=secret_xxx
 ```
 
-## Webhook によるキャッシュ無効化
+## 関連
 
-`cms.handler({ webhookSecret })` にリクエストを投げると、DataSource の `parseWebhook` が `{ collection, slug? }` を返し、該当スコープが `cache.invalidate()` される。`notion-source` には既定の `parseWebhook` 実装が入っている。
-
-ルートは `POST {basePath}/revalidate/:collection`（既定 `basePath` なら `/revalidate/posts`）。collection は URL から決まる。
-
-```ts
-const handler = cms.handler({ webhookSecret: env.NOTION_WEBHOOK_SECRET });
-// POST /api/revalidate/posts?secret=xxx
-if (url.pathname.startsWith("/api/revalidate/")) {
-  return handler(request);
-}
-```
-
-`notion-source` の既定 `parseWebhook` の挙動:
-
-- **シークレット検証**: `webhookSecret` を渡した場合、リクエストは `?secret=<値>` クエリ / `X-Webhook-Secret` ヘッダ / `Authorization: Bearer <値>` のいずれかで一致させる。Notion の Automation Webhook は送信先 URL を自由に設定できるためクエリが実用的。不一致は `webhook/signature_invalid`（401）。
-- **対象の絞り込み**: リクエスト body が `{ "slug": "..." }` を含めばそのスラッグだけ、無ければコレクション全体を無効化する。不正な JSON は `webhook/payload_invalid`（400）。
-- **独自方式**: Notion の HMAC 署名検証など別方式が必要なら、`DataSource.parseWebhook` を自前実装で差し替える。
-
-## Notion 公式 webhook で「ページ更新時」に自動ウォーム（初回アクセス高速化）
-
-キャッシュが空のコールドスタートは Notion API を同期で叩くため初回が遅い。**Notion の integration「Webhooks」（無料プランでも利用可）**を使うと、ページ更新イベントを受けて該当ページだけをサーバー側で温め直せる。`createCMS` に検証トークンを渡すだけで `cms.handler()` が `POST {basePath}/notion-webhook` を自動マウントする。
-
-```ts
-const cms = createCMS({
-  notion: {
-    schema,
-    token: env.NOTION_TOKEN,
-    collections: { posts: { published: ["公開済み"] } },
-    webhookSecret: env.NOTION_WEBHOOK_SECRET, // ← これだけで /notion-webhook が有効化
-  },
-  render: { content: "react" },
-  cache: {
-    document: kvCache({ namespace: env.DOC_CACHE }),
-    image: r2Cache({ bucket: env.IMG_BUCKET }),
-    waitUntil: (p) => ctx.waitUntil(p), // 応答後にウォームを完走させる
-  },
-});
-// 既に cms.handler() を /api/* 等に配線していれば追加コードは不要
-```
-
-セットアップ手順:
-
-1. デプロイ後、Notion の integration 設定 → Webhooks で `https://<site>/api/cms/notion-webhook`（`basePath` に合わせる）を登録する。
-2. Notion が一度だけ送る `verification_token` を、エンドポイントのレスポンス本文（`{ verification_token }` を echo）または `wrangler tail` のログで確認する。
-3. その値を `wrangler secret put NOTION_WEBHOOK_SECRET` に設定し、Notion UI 側の Verify に貼って有効化する（再デプロイで反映）。
-4. 対象 DB のページを編集すると `page.content_updated` 等が届き、`entity.id` → slug を `findById`（`pages.retrieve` + parent data source 一致チェック）で解決して `cache.prime()` 相当の単件ウォームが走る。
-
-> 公式 webhook の payload は page id のみ（slug を含まない）。`findById` で fresh に解決するため、一覧キャッシュが stale でも新規公開ページを取りこぼさない。デプロイ直後の「一度も編集していない既存ページ」は対象外なので、必要なら `cms.<collection>.cache.warm()` で一度シードする。
-
-## 画像配信ルート
-
-Notion 画像 URL は期限付きのため、core 側で SHA256 ハッシュキーに変換して R2 に永続保存する。レンダリング後の HTML 内の `<img>` は `/api/images/<hash>` に書き換わるので、同じハッシュを提供するルートを用意する。
-
-`cms.handler()` がこれを自動でさばくため、ほぼ何も書かなくてよい。
-
-## 構造型による型依存
-
-`cloudflareCache` / `cloudflarePreset` が受ける binding は構造型 (`R2BucketLike` / `KVNamespaceLike`) を要求するため、`@cloudflare/workers-types` への実依存はない。テストではモックに差し替え可能。
+- 動作する完全な例: [`examples/cloudflare-hono/`](../../../examples/cloudflare-hono/)
+- React Router（DO 無しの最小構成、React 描画）: [`react-router.md`](./react-router.md)
+- レンダラの選び方: [`../choosing-a-renderer.md`](../choosing-a-renderer.md)
+- CMS メソッド一覧: [`../api/cms-methods.md`](../api/cms-methods.md)

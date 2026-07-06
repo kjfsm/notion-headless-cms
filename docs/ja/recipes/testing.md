@@ -1,152 +1,180 @@
 ---
-title: テスト (fake source / fake cache)
-description: @notion-headless-cms/testing で Notion API を叩かずに CMSClient を検証する
+title: テスト
+description: Notion API を叩かずに @notion-headless-cms/cms を検証する
 category: レシピ
 order: 7
 ---
 
-# テスト用ユーティリティ (`@notion-headless-cms/testing`)
+# テストレシピ
 
-Notion API / 永続キャッシュ / 実 renderer を一切起動せずに `createClient` と同じ public API で
-ユニットテストを書くためのヘルパー集。
+`@notion-headless-cms/cms` は Notion 用の DataSource 抽象を持たない（Notion 専用設計）ため、
+v2 にあった `@notion-headless-cms/testing` の `createFixtureClient()` / `fakeRenderer` のような
+「CMS 全体を丸ごと差し替えるフィクスチャ」は存在しない。代わりに 2 つの現実的なテスト戦略がある。
 
-## インストール
+1. **`notion.client` にフェイクの Notion クライアントを渡し、in-memory ストアで `createCMS` を丸ごと動かす**（統合テスト向け）
+2. **自作の `DocStore`/`BlobStore` 実装を `./testing` サブパスの契約テストで検証する**（カスタムストレージ向け、[`custom-cache.md`](./custom-cache.md) 参照）
 
-```bash
-pnpm add -D @notion-headless-cms/testing
-```
+## 1. フェイク Notion クライアント + in-memory ストアで `createCMS` を検証する
 
-devDependency にのみ入れる。ランタイム依存は `@notion-headless-cms/core` のみで、`notion-orm` / `@notionhq/client` / `markdown-html` を要求しない。
-
-## 提供する API
-
-| 関数 | 役割 |
-|---|---|
-| `createFakeNotionSource({ items })` | 任意の items 配列から `CMSAdapter` を組み立てる |
-| `createFakeCache()` | doc + image 両方を担当する in-memory `CacheAdapter` (内部状態を `dump()` で覗ける) |
-| `createFixtureClient({ items })` | 上記 2 つを内部で組み合わせた `createClient` ラッパ |
-| `fakeRenderer` | `(markdown) => `<article>${markdown}</article>`` を返す最小 renderer |
-
-## 最小例 — list と find
+`notion.client` は `NotionClientLike`（`dataSources.query` / `pages.retrieve` /
+`blocks.children.list` の 3 メソッドだけを要求する構造型）を受け取る。`@notionhq/client` の
+`Client` を new せず、テスト用のフェイクをそのまま渡せる。
 
 ```ts
-import { describe, expect, it } from "vitest";
-import { createFixtureClient } from "@notion-headless-cms/testing";
+import type { PageObjectResponse } from "@notionhq/client";
+import { describe, expect, it, vi } from "vitest";
+import {
+  createCMS,
+  createNodeSyncScheduler,
+  defineCollection,
+  defineSchema,
+  memoryBlobStore,
+  memoryDocStore,
+  prop,
+} from "@notion-headless-cms/cms";
+import type { NotionClientLike } from "@notion-headless-cms/cms";
+
+const posts = defineCollection({
+  dataSourceId: "ds-posts",
+  slug: "slug",
+  properties: {
+    title: prop.title(),
+    slug: prop.richText(),
+    status: prop.status(["draft", "published"] as const),
+  },
+  statusProperty: "status",
+  published: ["published"],
+});
+
+const schema = defineSchema({ posts });
+
+function richText(text: string) {
+  return [{ type: "text", plain_text: text, text: { content: text } }];
+}
+
+function notionPage(opts: {
+  id: string;
+  slug: string;
+  title: string;
+  status: string;
+}): PageObjectResponse {
+  return {
+    object: "page",
+    id: opts.id,
+    url: `https://notion.so/${opts.id}`,
+    last_edited_time: "2026-01-01T00:00:00.000Z",
+    properties: {
+      title: { type: "title", title: richText(opts.title) },
+      slug: { type: "rich_text", rich_text: richText(opts.slug) },
+      status: { type: "status", status: { name: opts.status } },
+    },
+  } as unknown as PageObjectResponse;
+}
+
+function makeFakeClient(pages: PageObjectResponse[]): NotionClientLike {
+  return {
+    dataSources: {
+      query: vi.fn(async () => ({
+        results: pages,
+        next_cursor: null,
+        has_more: false,
+      })),
+    },
+    pages: { retrieve: vi.fn().mockRejectedValue(new Error("not found")) },
+    blocks: {
+      children: {
+        list: vi
+          .fn()
+          .mockResolvedValue({ results: [], next_cursor: null, has_more: false }),
+      },
+    },
+  };
+}
 
 describe("posts", () => {
   it("list / find が公開済みアイテムを返す", async () => {
-    const cms = createFixtureClient({
-      items: [
-        { id: "1", slug: "hello", title: "Hi", lastEditedTime: "2024-01-01", status: "公開済み" },
-        { id: "2", slug: "draft", title: "Draft", lastEditedTime: "2024-01-02", status: "下書き" },
-      ],
-      collections: {
-        posts: {
-          items: /* ↑ items を再指定するときは collections を使う */ [],
-          publishedStatuses: ["公開済み"],
-        },
+    const cms = createCMS({
+      schema,
+      notion: {
+        client: makeFakeClient([
+          notionPage({ id: "1", slug: "hello", title: "Hi", status: "published" }),
+          notionPage({ id: "2", slug: "draft", title: "Draft", status: "draft" }),
+        ]),
       },
+      stores: { docs: memoryDocStore(), blobs: memoryBlobStore() },
+      scheduler: createNodeSyncScheduler(),
     });
-    const list = await cms.posts.list();
-    expect(list.map((it) => it.slug)).toEqual(["hello"]);
+
+    // kick() は 1 チャンク（既定 2 件）だけ処理する設計なので、cursor が尽きるまで回す。
+    let state = await cms.sync.getState();
+    do {
+      await cms.sync.kick();
+      state = await cms.sync.getState();
+    } while (state.cursor !== null);
+
+    const { items } = await cms.posts.list();
+    expect(items.map((item) => item.slug)).toEqual(["hello"]);
+
+    const found = await cms.posts.find("hello");
+    expect(found?.meta.title).toBe("Hi");
   });
 });
 ```
 
-> `items` と `collections` は択一。`items` のみ指定すると `posts` という単一コレクションになる。
+`stores` を省略すると in-memory（`memoryDocStore()`/`memoryBlobStore()`）にフォールバックするため、
+明示しなくても同じ結果になる。ただし複数テストで状態を共有したくない場合はテストごとに
+`createCMS()` を呼び直す（in-memory ストアはインスタンスごとに独立している）。
 
-## 複数コレクション
+## 2. HTTP ハンドラのテスト（`cms.fetch()`）
 
-```ts
-import { createFixtureClient } from "@notion-headless-cms/testing";
-
-const cms = createFixtureClient({
-  collections: {
-    posts: { items: postItems, publishedStatuses: ["公開済み"] },
-    news: { items: newsItems, publishedStatuses: ["published"] },
-  },
-});
-```
-
-## 自前で source / cache / renderer を組み合わせる
-
-`createClient` を直接呼んで個別の helper を組み合わせることもできる。
-キャッシュ書き込みの中身を assertion したいときに便利。
+`cms.fetch(request)` は Web 標準の `Request`/`Response` を受け取るだけなので、実サーバーを
+立てずに直接呼べる。
 
 ```ts
-import { createClient } from "@notion-headless-cms/core";
-import {
-  createFakeNotionSource,
-  createFakeCache,
-  fakeRenderer,
-} from "@notion-headless-cms/testing";
+import { describe, expect, it } from "vitest";
+import { cms } from "../lib/cms.js";
 
-const cache = createFakeCache();
-
-const cms = createClient({
-  sources: { notion: createFakeNotionSource({ items: samplePosts }) },
-  cache: [cache],
-  renderer: fakeRenderer,
-});
-
-await cms.posts.list();
-
-// cache 内のキー数を検証
-const dump = cache.dump();
-expect(dump.lists.size).toBe(1);
-expect(dump.metas.size).toBe(samplePosts.length);
-```
-
-## SWR の TTL 切れ挙動を検証する
-
-`vi.useFakeTimers()` と組み合わせれば、TTL 切れ後のブロッキング再取得を観察できる。
-
-```ts
-import { beforeEach, afterEach, expect, it, vi } from "vitest";
-import { createFixtureClient, createFakeNotionSource } from "@notion-headless-cms/testing";
-
-beforeEach(() => vi.useFakeTimers());
-afterEach(() => vi.useRealTimers());
-
-it("staleBlockMs 超過で再取得が走る", async () => {
-  let version = 1;
-  const items = () => [
-    { id: "1", slug: "x", title: `v${version}`, lastEditedTime: `2024-01-0${version}` },
-  ];
-  const adapter = createFakeNotionSource({ items: items() });
-  // 元の adapter.collections.posts.source.list を差し替えて呼び出し回数を数える
-  const listSpy = vi.spyOn(adapter.collections.posts!.source, "list");
-
-  const cms = createFixtureClient({
-    sources: { notion: adapter },
-    // recheckWindowMs: 0 で coalescing を無効化し、staleBlockMs で挙動を検証
-    swr: { recheckWindowMs: 0, staleBlockMs: 1_000 },
+describe("画像プロキシ", () => {
+  it("存在しないハッシュは 404", async () => {
+    const res = await cms.fetch(
+      new Request("http://localhost/api/cms/images/does-not-exist"),
+    );
+    expect(res.status).toBe(404);
   });
-
-  await cms.posts.list();
-  expect(listSpy).toHaveBeenCalledTimes(1);
-
-  // staleBlockMs 以内 → 即キャッシュ表示
-  vi.advanceTimersByTime(500);
-  await cms.posts.list();
-  expect(listSpy).toHaveBeenCalledTimes(1);
-
-  // staleBlockMs 超過 → ブロッキング再取得
-  vi.advanceTimersByTime(1_500);
-  await cms.posts.list();
-  expect(listSpy).toHaveBeenCalledTimes(2);
 });
 ```
 
-詳細は [`api/cms-methods.md#swr-stale-while-revalidate-のキャッシュ挙動`](../api/cms-methods.md#swr-stale-while-revalidate-のキャッシュ挙動) を参照。
+Webhook のテストは `X-Notion-Signature` の HMAC-SHA256 署名を自前で計算して付与するか、
+`verification_token` を含む素の JSON ボディ（署名不要）でハンドシェイクだけを検証する。
+
+## 3. 自作 `DocStore`/`BlobStore` を契約テストで検証する
+
+Redis / S3 など独自ストレージに差し替えた場合は、`@notion-headless-cms/cms/testing`
+（`vitest` 依存の専用エントリ。汎用 `.` エントリからは import しない設計）の
+`runDocStoreContract()` / `runBlobStoreContract()` に自分の実装ファクトリを渡すだけで、
+memory/file/Cloudflare 実装と同じ挙動を保証できる。
+
+```ts
+import { describe } from "vitest";
+import { runDocStoreContract } from "@notion-headless-cms/cms/testing";
+import { redisDocStore } from "../redis-doc-store.js";
+
+describe("redisDocStore", () => {
+  runDocStoreContract({
+    factory: () => redisDocStore(testRedisClient),
+  });
+});
+```
+
+詳細な実装例は [`custom-cache.md`](./custom-cache.md) を参照。
 
 ## CI で何をモックして何をモックしないか
 
 | レイヤ | テスト戦略 |
 |---|---|
-| `DataSource` (= Notion API) | **必ず fake**。実 token を使うテストは CI でスキップする |
-| `CacheAdapter` | `createFakeCache()` で in-memory に置く |
-| `RendererFn` | `fakeRenderer` (markdown-html を import しなくて済む) |
-| `cms.handler()` のルーティング | `Request` / `Response` を直接組み立てて assertion する |
+| Notion API (`notion.client`) | **必ずフェイク**。実 token を使うテストは CI でスキップする |
+| `DocStore`/`BlobStore` | 独自実装は契約テスト（上記 2）、それ以外は `memoryDocStore()`/`memoryBlobStore()` |
+| `cms.fetch()` のルーティング | `Request`/`Response` を直接組み立てて assertion する |
 
-実 Notion API を叩く E2E テストが必要な場合は、`examples/*` ディレクトリで `nhc generate` 後に動作確認するか、CI 上では token が無い環境を前提に skip する。
+実 Notion API を叩く E2E テストが必要な場合は `examples/*` ディレクトリを参照し、CI 上では
+`NOTION_TOKEN` が無い環境を前提に skip する（`examples/*/e2e/*.spec.ts` が Playwright での実例）。

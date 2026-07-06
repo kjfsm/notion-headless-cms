@@ -74,15 +74,8 @@
    `kvCache` / `r2Cache` の import に置き換える。
 4. `cache.swr`（`recheckWindowMs` / `staleBlockMs`。旧 `ttlMs` は廃止）や `cache.waitUntil` も `cache` グループの中で指定する。旧 `ttlMs` を使っていた場合はブロック閾値 `staleBlockMs` に読み替える（webhook 稼働時は既定の無期限に任せるのが推奨）。
 
-## v1.0.0 で削除予定
-
-- [`createNotionCollection({ blocks, ogp, enrichers })` → `content: blocksFetcher({...})`](./blocks-ogp-enrichers.md)
-
-## 他システムからの移行
-
-- [Contentful → @notion-headless-cms (DataSourceAdapter 自作)](./contentful.md)
-
 ## 関連
 
-- バージョン整列方針: 詳細は `docs/ja/release/1.0-checklist.md` (準備中)
-- 破壊的変更の追跡: 各パッケージの `CHANGELOG.md`
+- バージョン整列方針: 詳細は [`1.0-checklist.md`](./1.0-checklist.md)（歴史的記録）
+- 破壊的変更の追跡: 各パッケージの `CHANGELOG.md`（当時公開されていたパッケージのものは
+  npm 上に残るが、`@notion-headless-cms/cms` への一本化に伴い当リポジトリからは削除済み）

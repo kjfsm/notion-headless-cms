@@ -1,84 +1,167 @@
 ---
 title: Next.js App Router
-description: Next.js で nhc を使う
+description: Next.js で @notion-headless-cms/cms を使う
 category: レシピ
 order: 1
 ---
 
 # Next.js App Router レシピ
 
+Vercel の serverless/edge 関数上で `@notion-headless-cms/cms` を動かす構成。完全に動く実装は
+[`examples/vercel-nextjs/`](../../../examples/vercel-nextjs/) にある。
+
+このレシピのゴール:
+
+- `createCMS()` インスタンスをモジュールスコープで遅延構築し、`cms.posts.find()` / `list()` を Server Component から呼ぶ
+- `cms.fetch()` を catch-all route にマウントして画像プロキシ・OGP・Webhook を配信する
+- `<NotionRevalidator>` で Notion 更新時に画面を静かに切り替える
+
 ## インストール
 
 ```bash
-pnpm add @notion-headless-cms/client @notion-headless-cms/cache \
-  @notionhq/client zod notion-to-md
+pnpm add @notion-headless-cms/cms @notion-headless-cms/react-renderer @notionhq/client
 pnpm add -D @notion-headless-cms/cli
 ```
 
-## スキーマ生成
+## スキーマ定義
 
-```bash
-npx nhc init
-# nhc.config.ts を編集
-NOTION_TOKEN=secret_xxx npx nhc generate
+v3 は codegen ではなく TypeScript ファーストでスキーマを書く（`nhc pull` は雛形を一度だけ生成する補助コマンド。以降は直接編集して育てる）。
+
+```ts
+// app/schema.ts
+import { defineCollection, defineSchema, prop } from "@notion-headless-cms/cms";
+
+const posts = defineCollection({
+  dataSourceId: process.env.NOTION_DATA_SOURCE_ID ?? "",
+  slug: "slug",
+  properties: {
+    title: prop.title("名前"),
+    slug: prop.richText("URL"),
+    status: prop.status(["下書き", "編集中", "公開済み"] as const, "ステータス"),
+    publishedAt: prop.date("公開日"),
+    author: prop.select(undefined, "著者"),
+  },
+  statusProperty: "status",
+  published: ["公開済み"],
+  accessible: ["下書き", "編集中", "公開済み"],
+});
+
+export const schema = defineSchema({ posts });
 ```
 
 ## CMS インスタンスの作成
 
 ```ts
 // app/lib/cms.ts
-import { createCMS, memoryCache } from "@notion-headless-cms/client";
-import { nextCache } from "@notion-headless-cms/client/next";
-import { schema } from "@/app/generated/nhc.schema";
+import {
+  createCMS,
+  createNodeSyncScheduler,
+  memoryBlobStore,
+  memoryDocStore,
+} from "@notion-headless-cms/cms";
+import { schema } from "@/app/schema";
 
-// document は Next.js の unstable_cache + revalidateTag、image は in-process メモリ。
-export const cms = createCMS({
-  notion: {
-    schema,
-    token: process.env.NOTION_TOKEN!,
-    collections: {
-      posts: { published: ["公開済み"] },
-    },
-  },
-  render: { content: "html" },
-  cache: {
-    document: nextCache({ revalidate: 300, tags: ["posts"] }),
-    image: memoryCache(),
-  },
-});
+/**
+ * Vercel の serverless/edge 関数はインスタンス間でメモリを共有しないため、
+ * in-memory store は永続しない（コールドスタートのたびに再同期が必要）。
+ * KV/R2 相当の永続ストレージを使いたい場合は Vercel KV/Blob 向けの
+ * DocStore/BlobStore 実装に差し替える（`custom-cache.md` 参照）。
+ */
+type Cms = ReturnType<typeof createCMS<typeof schema>>;
+
+let instance: Cms | undefined;
+
+/**
+ * `next build` はルートハンドラの静的解析のためモジュールを import する
+ * （実行はしない）。トップレベルで `createCMS()` を呼ぶと、`NOTION_TOKEN` が
+ * 無いビルド環境（CI 等）でその import だけでビルドが失敗する。
+ * 構築を実際に使う時点まで遅延することでこれを避ける。
+ */
+export function getCms(): Cms {
+  if (!instance) {
+    instance = createCMS({
+      schema,
+      notion: { token: process.env.NOTION_TOKEN ?? "" },
+      stores: { docs: memoryDocStore(), blobs: memoryBlobStore() },
+      scheduler: createNodeSyncScheduler(),
+      webhookSecret: process.env.REVALIDATE_SECRET,
+    });
+  }
+  return instance;
+}
+
+let syncing: Promise<void> | null = null;
+
+/** `kick()` は 1 チャンク（既定 2 件）だけ処理する設計なので、cursor が尽きるまで手動で回す。 */
+export async function ensureSynced(): Promise<Cms> {
+  const cms = getCms();
+  if (!syncing) {
+    syncing = (async () => {
+      let state = await cms.sync.getState();
+      do {
+        await cms.sync.kick();
+        state = await cms.sync.getState();
+      } while (state.cursor !== null);
+    })();
+  }
+  await syncing;
+  return cms;
+}
 ```
 
-`nextCache` は `unstable_cache` でラップするため `document` キャッシュを担当し、
-`memoryCache` を `image` に割り当てて画像キャッシュを担う。役割別に明示して渡す。
-
-## ページ一覧（Server Component）
+## 一覧ページ（Server Component）
 
 ```tsx
-// app/posts/page.tsx
-import { cms } from "@/lib/cms";
+// app/page.tsx
+import { NotionRevalidator } from "@notion-headless-cms/react-renderer/next";
+import Link from "next/link";
+import { ensureSynced } from "@/app/lib/cms";
 
 export const revalidate = 300;
 
-export default async function PostsPage() {
-  const posts = await cms.posts.list();
+export default async function HomePage() {
+  const cms = await ensureSynced();
+  const { items } = await cms.posts.list();
   return (
-    <ul>
-      {posts.map((post) => (
-        <li key={post.slug}>{post.slug}</li>
-      ))}
-    </ul>
+    <main>
+      {/* ハイドレーション後に router.refresh() を呼び、更新済みデータを別 fetch なしで取り込む */}
+      <NotionRevalidator />
+      <h1>記事一覧</h1>
+      <ul>
+        {items.map((post) => (
+          <li key={post.slug}>
+            <Link href={`/posts/${post.slug}`}>{post.slug}</Link>
+          </li>
+        ))}
+      </ul>
+    </main>
   );
 }
 ```
 
-## 静的生成（generateStaticParams）
+## 静的生成（generateStaticParams）と記事ページ
 
 ```tsx
 // app/posts/[slug]/page.tsx
-import { cms } from "@/lib/cms";
+import { NotionRenderer } from "@notion-headless-cms/react-renderer";
+import {
+  denormalizeBlocks,
+  toPageLinkMap,
+} from "@notion-headless-cms/react-renderer/cms";
+import { NotionRevalidator } from "@notion-headless-cms/react-renderer/next";
+import { notFound } from "next/navigation";
+import { ensureSynced } from "@/app/lib/cms";
+
+export const revalidate = 300;
 
 export async function generateStaticParams() {
-  return cms.posts.params();
+  try {
+    const cms = await ensureSynced();
+    const { items } = await cms.posts.list();
+    return items.map((item) => ({ slug: item.slug }));
+  } catch {
+    return [];
+  }
 }
 
 export default async function PostPage({
@@ -87,70 +170,91 @@ export default async function PostPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const post = await cms.posts.find(slug);
-  if (!post) return <div>Not Found</div>;
-  const html = await post.html();
-  return (
-    <article>
-      <h1>{post.slug}</h1>
-      {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Notion レンダリング結果を表示 */}
-      <div dangerouslySetInnerHTML={{ __html: html }} />
-    </article>
-  );
-}
-```
-
-## クライアント側の表示更新
-
-Notion を更新したとき、画面を**静かに切り替える**には `<NotionRevalidator />` を Server Component に置くだけ。内部で `useRouter().refresh()` を呼び、現ルートの Server Component を再評価して RSC ストリーム差分で UI を更新する。クエリも別 API fetch も発生しない。
-
-```tsx
-// app/posts/[slug]/page.tsx
-import { NotionRevalidator } from "@notion-headless-cms/client/react";
-import { cms } from "@/lib/cms";
-
-export default async function Page({ params }) {
-  const { slug } = await params;
+  const cms = await ensureSynced();
   const post = await cms.posts.find(slug);
   if (!post) notFound();
+
   return (
     <article>
       <NotionRevalidator />
       <h1>{post.slug}</h1>
-      {/* ... */}
+      <NotionRenderer
+        blocks={denormalizeBlocks(post.blocks)}
+        pageLinks={toPageLinkMap(post.links)}
+        ogpEndpoint="/api/cms/ogp"
+      />
     </article>
   );
 }
 ```
 
-既定トリガーは mount と visibility（タブ可視化・再フォーカス）。`on` を明示すれば片方だけにもできる（`<NotionRevalidator on="visibility" />` / `<NotionRevalidator on="mount" />`）。連続インターバルは既定なしで、`poll.intervalMs` を明示したときだけ加わる。
+`post.blocks` は同期時に画像 URL 解決・リンク解決まで済んだプレーンな `NormalizedBlock[]`。
+`denormalizeBlocks()` で `react-renderer` が期待する `BlockObjectResponse` 形状に変換し、
+`toPageLinkMap(post.links)` で内部リンクの href を `pageLinks` に渡すだけでよい。
 
 ## 画像配信・Webhook の統合ルート
 
-```ts
-// app/api/cms/[...route]/route.ts
-import { cms } from "@/lib/cms";
-import { createNextHandler } from "@notion-headless-cms/client/next";
+`cms.fetch()` が画像プロキシ（`GET /api/cms/images/:hash`）・OGP（`GET /api/cms/ogp`）・
+Webhook（`POST /api/cms/webhook`）をまとめて配信する。
 
-export const { GET, POST } = createNextHandler(cms, {
-  webhookSecret: process.env.REVALIDATE_SECRET,
-});
+```ts
+// app/api/cms/[...path]/route.ts
+// catch-all route。images/ogp を cms.fetch() 1 本に委譲する。
+// webhook は revalidatePath も呼びたいため、より具体的な
+// app/api/cms/webhook/route.ts が Next.js のルーティング優先順位でこちらより優先される。
+import { getCms } from "@/app/lib/cms";
+
+export async function GET(request: Request) {
+  return getCms().fetch(request);
+}
+
+export async function POST(request: Request) {
+  return getCms().fetch(request);
+}
 ```
 
-`createNextHandler` は画像プロキシ (`GET /api/cms/images/:hash`) と
-Webhook 受信 (`POST /api/cms/revalidate`) をまとめて処理する。
-Notion に変更があった際に `POST /api/cms/revalidate` を
-`Authorization: Bearer <secret>` で叩くと、該当コレクション / slug の
-キャッシュ規約タグ (`nhc:col:<name>` / `nhc:col:<name>:slug:<slug>`) が
-`revalidateTag()` される。
+Webhook 受信時に ISR キャッシュも掃きたい場合は、専用ルートを 1 つ追加して `revalidatePath` を呼ぶ。
 
-## cache tag の命名規則
+```ts
+// app/api/cms/webhook/route.ts
+// cms.fetch() が署名検証 + debounce 付き同期キックを内部で処理する。sync は
+// debounce（既定 3 秒）後に非同期で走るため、Vercel の serverless 関数が
+// レスポンス送信後すぐ終了しないよう next/server の after() で少し待ってから
+// ISR キャッシュを掃く。
+import { revalidatePath } from "next/cache";
+import { after } from "next/server";
+import { getCms } from "@/app/lib/cms";
 
-`nextCache` の `invalidate` は以下の規約タグで `revalidateTag` を呼ぶ:
+export async function POST(request: Request) {
+  const response = await getCms().fetch(request);
+  if (response.ok) {
+    after(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 3500));
+      revalidatePath("/");
+      revalidatePath("/posts/[slug]", "page");
+    });
+  }
+  return response;
+}
+```
 
-- `{ collection: "posts" }` → `nhc:col:posts`
-- `{ collection: "posts", slug: "abc" }` → `nhc:col:posts:slug:abc:meta` と `nhc:col:posts:slug:abc:content`
-- `"all"` → `nextCache({ tags })` で指定したユーザー定義タグを全て
+Notion 側の integration「Webhooks」で `https://<site>/api/cms/webhook` を登録し、
+`createCMS({ webhookSecret })` に同じシークレットを渡すと、ページ更新時に `cms.fetch()` が
+署名検証 → 同期キックまで面倒を見る（詳細は [`cloudflare-workers.md`](./cloudflare-workers.md) の
+「Webhook によるキャッシュ無効化」を参照。仕組みは Next.js でも共通）。
 
-Next.js の `fetch` や `unstable_cache` 側で同じ規約タグを付与すれば、
-投稿の更新時に該当ページだけを再生成できる。
+## 環境変数
+
+```
+# .env
+NOTION_TOKEN=secret_xxx
+NOTION_DATA_SOURCE_ID=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+REVALIDATE_SECRET=your-secret-here
+```
+
+## 関連
+
+- 動作する完全な例: [`examples/vercel-nextjs/`](../../../examples/vercel-nextjs/)
+- Cloudflare Workers（KV/R2/DO で永続化する構成）: [`cloudflare-workers.md`](./cloudflare-workers.md)
+- レンダラの選び方: [`../choosing-a-renderer.md`](../choosing-a-renderer.md)
+- CMS メソッド一覧: [`../api/cms-methods.md`](../api/cms-methods.md)

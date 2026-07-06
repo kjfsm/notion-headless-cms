@@ -13,16 +13,9 @@
 
 <!-- 影響を受けるパッケージをチェック -->
 
-- [ ] `@notion-headless-cms/core`
-- [ ] `@notion-headless-cms/notion-source`
-- [ ] `@notion-headless-cms/notion-orm`
-- [ ] `@notion-headless-cms/cache`
-- [ ] `@notion-headless-cms/markdown-html`
-- [ ] `@notion-headless-cms/block-html`
+- [ ] `@notion-headless-cms/cms`
 - [ ] `@notion-headless-cms/react-renderer`
-- [ ] `@notion-headless-cms/client`
 - [ ] `@notion-headless-cms/cli`
-- [ ] `@notion-headless-cms/testing`
 - [ ] docs のみ
 - [ ] examples のみ
 - [ ] CI / 設定のみ

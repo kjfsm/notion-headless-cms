@@ -1,13 +1,15 @@
 ---
 title: CLI ツール (nhc)
-description: スキーマ生成と運用の CLI ガイド
+description: nhc init/pull/check/doctor/sync のガイド
 category: ガイド
 order: 2
 ---
 
 # CLI ツール（nhc）
 
-`@notion-headless-cms/cli` は Notion データベースを introspect して TypeScript スキーマファイルを自動生成する CLI ツール。Prisma の `prisma db pull` に相当するワークフローを Notion に対して実現する。
+`@notion-headless-cms/cli` は `@notion-headless-cms/cms` を使うプロジェクト向けの補助 CLI。
+
+現行アーキテクチャ（v3, `packages/cms`）はスキーマ本体を codegen ではなく **TypeScript ファースト**（`defineCollection`/`defineSchema`）で書き、育てる運用にしている。CLI は「Notion DB を introspect して雛形コードを出す」「TS スキーマと実 DB の drift を検証する」「binding や同期状態を診断する」という橋渡し役に徹し、スキーマそのものを生成し続けることはしない。
 
 ## インストール
 
@@ -18,372 +20,235 @@ pnpm add -D @notion-headless-cms/cli
 ## ワークフロー概要
 
 ```
-nhc init          →  nhc.config.ts テンプレートを生成
-↓ （DB 名 / ID を設定）
-nhc generate      →  Notion DB を introspect して nhc.schema.ts を生成（DB 構造のみ）
-↓
-createClient({ sources: { notion: notionSource({ schema, token, publishOptions }) }, cache, ... })
+nhc init    →  nhc.config.ts・wrangler.toml・src/schema.ts・Hono マウントコード一式を生成
+↓ （wrangler.toml の binding、schema.ts の dataSourceId、nhc.config.ts の dbName を実値に差し替え）
+nhc pull    →  Notion DB を introspect し、defineCollection の雛形を scaffoldDir に出力
+↓ （雛形を見ながら schema.ts を仕上げる。以降は手で育てる）
+nhc check   →  schema.ts と実 Notion DB の drift を検証（CI に組み込む）
+nhc doctor  →  binding・webhook secret・token・同期状態・slug 重複を診断
+nhc sync    →  ローカルファイルストアへの同期を手動 kick（初回動作確認用）
 ```
 
-## `nhc init` — 設定ファイルの生成
+## `nhc init` — プロジェクト一式の生成
 
 ```bash
 npx nhc init
 ```
 
-カレントディレクトリに `nhc.config.ts` のテンプレートを生成する。
+カレントディレクトリに `nhc.config.ts` に加え、`wrangler.toml`・`src/schema.ts`・Hono マウントコード一式（`src/lib/do.ts`・`src/lib/cms.ts`・`src/index.ts`）を生成する。`examples/cloudflare-hono` と同じ配線（読者用 stateless Worker + Notion 同期を担う Durable Object）を再現する、実働可能なフルスタック雛形になっている。
 
 ```
-オプション:
-  -o, --output <path>    出力先ファイルパス（デフォルト: nhc.config.ts）
-  -t, --template <name>  ランタイム別テンプレート（デフォルト: node）
-  -f, --force            既存ファイルを上書きする
-  -s, --silent           ログ出力を抑制する
+Options:
+  -o, --output <path>    nhc.config.ts の出力先 (デフォルト: nhc.config.ts)
+  -f, --force            既存ファイルを上書き
 ```
 
-### `--template` でランタイムに合わせる
+既存ファイルは上書きしない（生成物の所有権はユーザーに移る）。同じ理由で `nhc init` を再実行しても、書き換え済みのファイルは壊れない。作り直したい場合のみ `--force` を付ける。
 
-`--template` を指定すると、ランタイムに合った `output` パスと「次のステップ」（追加すべき依存・
-binding・対応する example への導線）を出力する。
+生成される `wrangler.toml` には KV namespace（既定 binding 名 `DOC_INDEX`）・R2 bucket（`ENTRY_BUCKET`）・Durable Object（`SyncCoordinatorDO` / binding `SYNC_COORDINATOR`）・日次 cron trigger が一通り雛形として入る。`REPLACE_WITH_...` になっている ID / bucket 名を実際の値に差し替える。
 
-| テンプレート | 想定 | `output` |
-|---|---|---|
-| `node`（既定） | Node.js (Express / Hono など) | `src/generated/nhc.schema.ts` |
-| `cloudflare-react-router` | Workers + React Router v7 | `./app/generated/nhc.ts` |
-| `cloudflare-hono` | Workers + Hono | `./src/generated/nhc.ts` |
-| `next` | Next.js App Router | `./app/generated/nhc.ts` |
-| `cloudflare-v3` | Workers + Hono、v3（`@notion-headless-cms/cms`） | — (`v3.schemaModule` 参照) |
-
-```bash
-npx nhc init --template cloudflare-react-router
-# → app/generated/nhc.ts 向けの config と、CF Workers + RR のセットアップ手順を表示
-```
-
-> フルスタックの雛形（ルート・`wrangler.toml`・`workers/app.ts` など）が欲しい場合は、対応する
-> `examples/*` をコピーするのが早い。`--template` はその入口（config と手順）を用意する。
-> **`cloudflare-v3` のみ例外**で、`nhc.config.ts` に加え `wrangler.toml`・`src/schema.ts`・
-> `src/lib/do.ts`・`src/lib/cms.ts`・`src/index.ts` まで実働するフルスタック雛形を生成する
-> （`examples/cloudflare-hono` と同じ配線。既存ファイルは上書きしない）。
-
-生成されるテンプレート:
-
-```ts
-import "dotenv/config";
-import { defineConfig, env } from "@notion-headless-cms/cli";
-
-export default defineConfig({
-  notionToken: env("NOTION_TOKEN"),
-  output: "src/generated/nhc.schema.ts",
-  collections: {
-    posts: {
-      // dbName で Notion DB を検索して ID を自動解決します
-      dbName: "ブログ記事DB",
-      // databaseId を直接指定することもできます (databaseId が優先されます)
-      // databaseId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-      publishedStatuses: ["公開済み"],
-      // accessibleStatuses: ["下書き", "公開済み"],
-      // slugField: "slug",     // デフォルト
-      // statusField: "status", // デフォルト
-      // 日本語など ASCII 変換できないプロパティ名は明示マッピング必須
-      // fieldMappings: { "タイトル": "title", "カテゴリ": "category" },
-    },
-  },
-});
-```
-
-## `nhc generate` — スキーマの生成
-
-```bash
-NOTION_TOKEN=secret_xxx npx nhc generate
-```
-
-`nhc.config.ts` を読み込み、各 Notion DB を introspect してスキーマファイルを生成する。
-
-```
-オプション:
-  -c, --config <path>    設定ファイルのパス（デフォルト: nhc.config.ts）
-  -t, --token <token>    Notion API トークン（省略時は NOTION_TOKEN 環境変数）
-  --env-file <path>      任意の env ファイルから読み込み（未指定なら .dev.vars を自動検出）
-  -s, --silent           ログ出力を抑制する
-```
-
-Notion インテグレーショントークンの取得: [Notion Developers](https://www.notion.so/my-integrations)
-
-> Notion インテグレーションに対象 DB への「コンテンツの読み取り」権限が必要。DB の「接続先」からインテグレーションを追加すること。
+生成される `src/schema.ts` は最小の `posts` コレクション 1 つだけを持つ雛形。`dataSourceId` は `REPLACE_WITH_DATA_SOURCE_ID` のプレースホルダになっているため、対象 DB を用意してから `nhc pull` で実プロパティに合わせて仕上げるか、手で `dataSourceId` を書き換える。
 
 ## `nhc.config.ts` の設定
 
-### `CollectionGenConfig`
+`defineConfig()` で設定を定義し、`default export` する。
 
 ```ts
-collections: {
-  posts: {
-    dbName: "ブログ記事DB",            // Notion DB 名（完全一致）
-    // databaseId: "xxx-yyy-zzz",     // dbName の代わりに直接指定可
-    // kind: "page",                  // 既定。URL ルーティングするページ
-    publishedStatuses: ["公開済み"],   // 備忘録（生成物には埋め込まれない）
-    accessibleStatuses: ["下書き", "公開済み"],
-    slugField: "slug",                // デフォルト "slug"
-    statusField: "status",            // デフォルト "status"
-    fieldMappings: { "タイトル": "title" }, // 日本語プロパティの明示マッピング
+import { defineConfig, env } from "@notion-headless-cms/cli";
+
+export default defineConfig({
+  notionToken: env("NOTION_TOKEN"),
+  schemaModule: "src/schema.ts", // nhc check が読む、ユーザーが書いた TS スキーマ
+  scaffoldDir: "src/collections", // nhc pull の出力先。既定 "src/collections"
+  collections: {
+    posts: {
+      dbName: "ブログ記事DB", // または { databaseId: "..." }
+      // 日本語などのプロパティ名は明示マッピングしておくと nhc pull の出力が
+      // 読みやすい識別子になり、nhc check の照合にも使われる
+      fieldMappings: { 名前: "title", URL: "slug", ステータス: "status" },
+    },
   },
-}
+});
 ```
-
-> **重要**: `publishedStatuses` / `accessibleStatuses` を `nhc.config.ts` に書いても、生成ファイルには埋め込まれない（DB 構造のみが出力される）。実際の公開ステータスは `notionSource({ publishOptions })` で指定する。
-
-### ページコレクションと要素（データ）コレクション（`kind`）
-
-コレクションには 2 種類ある。
-
-| `kind` | 用途 | クライアント API | slug |
-|---|---|---|---|
-| `"page"`（既定） | URL ルーティングする記事・固定ページ | `find(slug)` / `list()` / `params()` / 本文（`html()` 等） | 必須（`slugField`） |
-| `"data"` | URL を持たない要素（設定値一覧・選択肢リストなど） | `list()` / `get(id)` / `cache.invalidate()` のみ | 不要 |
-
-```ts
-collections: {
-  posts: { dbName: "ブログ記事DB" },              // kind: "page"（既定）
-  settings: { dbName: "サイト設定DB", kind: "data" }, // URL を持たない要素
-}
-```
-
-- 要素コレクションは Notion DB に slug プロパティを用意する必要がない。`cms.settings.list()` で全件、`cms.settings.get(id)` で 1 件取得する。
-- 生成されるアイテム型から `slug` は除去されるため、`cms.settings.find(...)` / `.params()` / `item.slug` はコンパイルエラーになる（ページとの誤用を型で防ぐ）。
-- 内部のキャッシュ identity はページが slug、要素が Notion ページ ID。
-- Notion DB の表示名は `await cms.settings.getDbName()` で取得できる（ページコレクションも同様に `await cms.posts.getDbName()`）。schema には埋め込まず、初回呼び出し時に Notion API で `data_source` を取得して解決し、以降はキャッシュした値を返す。手書き schema で `dbName` を明示した場合はその値を返し API を叩かない。DataSource が未対応の場合は `undefined`。
 
 ### `notionToken` / `env()`
 
-`notionToken` は CLI が Notion API を叩く際のトークン。遅延評価ヘルパー `env("NAME")` を渡すのが推奨。
+`env(name)` は Prisma の `env()` と同じ発想の遅延評価ヘルパー。設定を評価した時点では値を解決せず throw もしない。各コマンド実行時にトークンが無ければ初めてエラーになる。`.dev.vars` を自動検出するため、Cloudflare Workers プロジェクトでも追加設定なしで動く。
 
-```ts
-import { defineConfig, env } from "@notion-headless-cms/cli";
+優先順位は次の通り。
 
-export default defineConfig({
-  notionToken: env("NOTION_TOKEN"),
-  collections: { /* ... */ },
-  output: "src/generated/nhc.schema.ts",
-});
-```
+1. `--env-file <path>` で明示指定したファイル
+2. `process.env`
+3. `.dev.vars`（カレントディレクトリ）
 
-`env()` は `process.env[name]` を評価するが、設定評価時には throw せず、`nhc generate` 実行時にトークン不在ならエラーになる。`.dev.vars` を自動検出するため Cloudflare Workers プロジェクトでも追加設定不要。
+### `CollectionSourceConfig`
 
-### 複数 DB の設定例
-
-```ts
-import "dotenv/config";
-import { defineConfig, env } from "@notion-headless-cms/cli";
-
-export default defineConfig({
-  notionToken: env("NOTION_TOKEN"),
-  output: "src/generated/nhc.schema.ts",
-  collections: {
-    posts: { dbName: "ブログ記事DB", publishedStatuses: ["公開済み"] },
-    news: {
-      databaseId: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
-      publishedStatuses: ["公開済み"],
-    },
-    members: {
-      dbName: "メンバーDB",
-      fieldMappings: { 氏名: "fullName", 所属: "department" },
-    },
-  },
-});
-```
-
-## プロパティ型マッピング
-
-| Notion プロパティ型 | TypeScript 型 | フィールド型 |
+| フィールド | 必須 | 説明 |
 |---|---|---|
-| `title` | `string \| null`（`slugField` 指定時は `string`） | `"title"` |
-| `rich_text` | `string \| null` | `"richText"` |
-| `select` | `string \| null` | `"select"` |
-| `status` | `"値1" \| "値2" \| ... \| null`（literal union） | `"status"` |
-| `multi_select` | `string[]` | `"multiSelect"` |
-| `date` | `string \| null` | `"date"` |
-| `number` | `number \| null` | `"number"` |
-| `checkbox` | `boolean` | `"checkbox"` |
-| `url` | `string \| null` | `"url"` |
-| それ以外 | — | スキップ（コメント付きで記録） |
+| `dbName` | (`databaseId` 未指定時) | Notion DB 名（完全一致で検索） |
+| `databaseId` | (`dbName` 未指定時) | Notion DB ID（指定時は `dbName` より優先） |
+| `fieldMappings` | – | `{ Notion プロパティ名: TS フィールド名 }` の明示マッピング |
 
-> `select` 型はユーザーが自由に選択肢を追加できるため `string | null` のままにする。`status` 型（ワークフロー状態）のみ literal union を生成する。
+## `nhc pull` — DB を introspect して雛形を出力
 
-### 日本語プロパティ名の扱い
-
-ASCII に変換できないプロパティ名（日本語など）は `fieldMappings` で TypeScript フィールド名を明示する必要がある。未指定の場合はエラーになる。
-
-```ts
-fieldMappings: {
-  "タイトル": "title",
-  "カテゴリ": "category",
-  "公開日時": "publishedAt",
-}
+```bash
+NOTION_TOKEN=secret_xxx npx nhc pull
 ```
 
-## 生成ファイルの構造
+`nhc.config.ts` の `collections` の各 DB を introspect し、`defineCollection` の雛形 TS コードを `scaffoldDir`（既定 `src/collections`）に出力する。
 
-`nhc generate` が生成する `nhc.schema.ts` は以下の構造になる。
-
-```ts
-// このファイルは nhc generate により自動生成されました。手動編集は nhc generate で上書きされます。
-import type { PropertyMap } from "@notion-headless-cms/core";
-import type { SchemaMap } from "@notion-headless-cms/notion-source";
-
-// =============================================================
-// posts  (ブログ記事DB)
-// Notion DB ID: abc-123-def-456
-// =============================================================
-
-export const postsDataSourceId = "abc-123-def-456";
-
-export const postsProperties = {
-  slug: { type: "richText" as const, notion: "URL" },
-  status: { type: "status" as const, notion: "ステータス" },
-  // ...
-} as const satisfies PropertyMap;
-
-export interface Post {
-  id: string;
-  lastEditedTime: string;
-  slug: string;
-  status: "公開済み" | "下書き" | null;
-  // ...
-}
-
-// =============================================================
-// Schema 集約 (notionSource() に渡す)
-// =============================================================
-export const schema = {
-  posts: {
-    dataSourceId: postsDataSourceId,
-    properties: postsProperties,
-    slugField: "slug",
-    statusField: "status",
-  },
-} as const satisfies SchemaMap;
+```
+Options:
+  -c, --config <path>       設定ファイルパス (デフォルト: nhc.config.ts)
+  -t, --token <token>       Notion API トークン (省略時は NOTION_TOKEN)
+  --env-file <path>         任意の env ファイル (未指定なら .dev.vars 自動検出)
+  --scaffold-dir <path>     雛形の出力先ディレクトリ (既定: scaffoldDir または src/collections)
+  -s, --silent              ログ抑制
 ```
 
-### 生成ファイルは編集不要
+既存ファイルは上書きしない。`nhc init`/`nhc pull` の生成物はいずれも一度作ったら手で育てていくものという扱いで、ライブラリ側が黙って上書きすることはない。
 
-生成した `nhc.schema.ts` は **触らなくてよい**。ランタイム設定（トークン・公開ステータス・キャッシュ等）はすべて `createClient` 側で組み立てる。
+### プロパティ型のマッピング
 
-## CMS クライアントでの利用
+| Notion プロパティ型 | 生成される呼び出し |
+|---|---|
+| `title` | `prop.title()` |
+| `rich_text` | `prop.richText()` |
+| `select` | `prop.select([...options] as const)` |
+| `status` | `prop.status([...options] as const)` |
+| `multi_select` | `prop.multiSelect([...options] as const)` |
+| `date` | `prop.date()` |
+| `number` | `prop.number()` |
+| `checkbox` | `prop.checkbox()` |
+| `url` | `prop.url()` |
+| `formula` / `rollup` | `prop.formula("string", ...)` / `prop.rollup("string", ...)`（結果型を確認するコメント付き） |
+| `relation` / `people` / `files` / `unique_id` / `created_time` / `last_edited_by` | 対応する `prop.*()` |
+| それ以外の未対応型 | コメントアウトされた行として出力（手動対応を促す） |
 
-生成した `schema` を `notionSource()` に渡し、`createClient({ sources })` で組み込む。
+### 識別子の自動変換と非 ASCII フォールバック
 
-```ts
-import { createClient, memoryCache } from "@notion-headless-cms/core";
-import { notionSource } from "@notion-headless-cms/notion-source";
-import { schema } from "./generated/nhc.schema";
+Notion プロパティ名は camelCase の TS 識別子に自動変換される（例: `"公開日時"` のような ASCII に変換できない名前を除く）。`fieldMappings` で明示していないプロパティが対象。
 
-const cms = createClient({
-  sources: {
-    notion: notionSource({
-      schema,
-      token: process.env.NOTION_TOKEN!,
-      publishOptions: {
-        posts: { publishedStatuses: ["公開済み"] },
-      },
-    }),
-  },
-  cache: [memoryCache()],
-  swr: { recheckWindowMs: 30_000, staleBlockMs: 5 * 60_000 },
-});
+非 ASCII のみで構成される名前（日本語プロパティ名など）は正規化すると空文字列になるため、プロパティ種別ベースのフォールバック識別子（`unnamedTitle` / `unnamedRichText` / `unnamedSelect` / `unnamedStatus` / `unnamedMultiSelect` / `unnamedDate` / `unnamedNumber` / `unnamedCheckbox` / `unnamedUrl` など）に自動フォールバックする。同じフォールバック名が複数プロパティで衝突する場合は連番（`unnamedSelect2` など）が付く。
 
-// posts は CollectionClient<Post> として推論される
-const posts = await cms.posts.list();
-const post = await cms.posts.find("my-post-slug");
-```
-
-Cloudflare Workers の場合:
+生成された識別子が実際の Notion プロパティ名と異なる場合（`fieldMappings` 指定時・非 ASCII フォールバック時・大文字小文字違いなど）は、`prop.*()` の末尾引数に実名が自動で渡される（`prop.title("名前")` のように）。これが `packages/cms` 側の別名解決の仕組みで、スキーマのキー名と Notion 側の表示名を分離できる。
 
 ```ts
-import { cloudflareCache } from "@notion-headless-cms/cache/cloudflare";
-import { createClient } from "@notion-headless-cms/core";
-import { notionSource } from "@notion-headless-cms/notion-source";
-import { schema } from "./generated/nhc.schema";
-
-export default {
-  async fetch(req: Request, env: Env): Promise<Response> {
-    const cms = createClient({
-      sources: {
-        notion: notionSource({
-          schema,
-          token: env.NOTION_TOKEN,
-          publishOptions: { posts: { publishedStatuses: ["公開済み"] } },
-        }),
-      },
-      cache: cloudflareCache(env),
-    });
-    return Response.json(await cms.posts.list());
-  },
-};
-```
-
-詳細は [マルチソースレシピ](./recipes/multi-source.md) と [Cloudflare Workers レシピ](./recipes/cloudflare-workers.md) を参照。
-
-## `nhc pull` / `nhc check`（v3, #437）
-
-v3（`@notion-headless-cms/cms` の `defineCollection`/`defineSchema`）は codegen ではなく
-TS ファーストでスキーマを書く。`nhc pull`/`nhc check` は `nhc.config.ts` の `v3` セクションを
-読み、Notion DB の introspect 結果と TS スキーマを橋渡しする補助コマンド。
-
-```ts
-// nhc.config.ts（既存の v2 設定に v3 セクションを追加できる）
-export default defineConfig({
-  notionToken: env("NOTION_TOKEN"),
-  output: "src/generated/nhc.ts", // v2 を使わない場合も型上は必須
-  collections: {},
-  v3: {
-    schemaModule: "src/schema.ts", // nhc check が読む、ユーザーが書いた TS スキーマ
-    scaffoldDir: "src/collections", // nhc pull の出力先。既定 "src/collections"
-    collections: {
-      posts: {
-        dbName: "ブログ記事DB", // または { databaseId: "..." }
-        // 日本語などのプロパティ名は明示マッピングしておく（先に書いてから pull する運用）。
-        // 未指定のプロパティは種別ベースの識別子（unnamedTitle 等）に自動フォールバックする。
-        fieldMappings: { 名前: "title", URL: "slug", ステータス: "status" },
-      },
-    },
+// 生成例（fieldMappings 未指定・日本語プロパティ名のみの DB）
+export const posts = defineCollection({
+  dataSourceId: "abc-123-def-456",
+  slug: "unnamedRichText",
+  properties: {
+    /** 元のプロパティ名: "名前" */
+    unnamedTitle: prop.title("名前"),
+    /** 元のプロパティ名: "URL" */
+    unnamedRichText: prop.richText("URL"),
   },
 });
 ```
 
-- `nhc pull` — `v3.collections` の各 DB を introspect し、`defineCollection` の雛形 TS コードを
-  `v3.scaffoldDir` に出力する。**既存ファイルは上書きしない**（生成物の所有権はユーザーに移る。
-  v2 の「生成物コミット + 手編集禁止」運用とは異なる）。スキーマのプロパティキーは実際の
-  Notion プロパティ名と一致している必要があるため（`raw[key]` で直接引く実装）、キーが実名と
-  異なる場合（`fieldMappings` 指定時・非 ASCII 名のフォールバック時・英語名でも大文字小文字が
-  異なる時など）は `prop.title("実名")` のように末尾引数へ実名を渡した状態で生成される
-- `nhc check` — `v3.schemaModule` からユーザーの TS スキーマを読み込み、実 Notion DB との
-  drift（プロパティ追加・削除・型変更・options 変更）を検証する。drift があれば非ゼロ終了する
-  （CI 向け）。`--json` で機械可読な出力も可能。`fieldMappings` は `nhc pull` と同じ解決順で
-  照合キーの決定に使われる
+`fieldMappings` を先に書いておけば、こうした読みにくい `unnamed*` 系の識別子ではなく意図した名前（`title`/`slug` 等）で生成される。
+
+## `nhc check` — スキーマと実 DB の drift 検証
+
+```bash
+NOTION_TOKEN=secret_xxx npx nhc check --json
+```
+
+`schemaModule` で指定した TS スキーマファイルを読み込み、実 Notion DB との drift を検証する。検出できる drift の種類:
+
+| `kind` | 意味 |
+|---|---|
+| `added` | Notion 側に新しいプロパティが増えた（スキーマ未定義） |
+| `removed` | スキーマにあるプロパティが Notion 側から無くなった |
+| `type_changed` | プロパティの型が変わった（例: `select` → `multi_select`） |
+| `options_changed` | `select`/`status`/`multi_select` の選択肢が追加・削除・変更された |
+
+drift が 1 件でもあれば非ゼロ終了する（CI 向け）。`fieldMappings` は `nhc pull` と同じ解決順（`fieldMappings` → 自動識別子 → 実名そのまま）で照合キーを決定するため、DB 側の表示名を変えても `fieldMappings` を直すだけで追随できる。
+
+```
+Options:
+  -c, --config <path>       設定ファイルパス (デフォルト: nhc.config.ts)
+  -t, --token <token>       Notion API トークン (省略時は NOTION_TOKEN)
+  --env-file <path>         任意の env ファイル
+  --json                    機械可読な JSON で結果を出力
+  -s, --silent              ログ抑制
+```
+
+CI では `npx nhc check --json` の終了コードで drift の有無を判定し、`--json` の出力を PR コメント等に転記する運用が想定されている。
+
+## `nhc doctor` — 稼働環境の診断
+
+```bash
+npx nhc doctor
+```
+
+binding 宣言（`wrangler.toml`）・webhook secret・token 権限・同期状態・slug 重複を診断し、`ok` / `warn` / `error` のステータス付きチェック結果を出す。
+
+```
+Options:
+  -c, --config <path>          設定ファイルパス (デフォルト: nhc.config.ts)
+  -t, --token <token>          Notion API トークン (省略時は NOTION_TOKEN)
+  --env-file <path>            任意の env ファイル
+  --wrangler-config <path>     wrangler 設定ファイルのパス (デフォルト: wrangler.toml)
+  --stats-url <url>            デプロイ済み Worker の同期統計エンドポイント URL (任意)
+  --json                       機械可読な JSON で結果を出力
+  -s, --silent                 ログ抑制
+```
+
+チェック項目:
+
+- **KV binding** / **R2 binding** / **Durable Object binding** — `wrangler.toml` に必要な binding が揃っているか（欠けていれば `error`）
+- **Webhook secret** — 未設定なら `warn`（反映が差分ポーリング頼みになり遅延するため）
+- **Notion token** — `--stats-url` 等から到達できる場合に有効性を検証。検証できない場合は `warn`
+- **同期失敗** — 直近の同期失敗件数（`--stats-url` の同期統計から取得。1 件以上で `warn`）
+- **slug 重複** — コレクション内で同じ slug を持つエントリが無いか（重複があれば `error`）
+
+`--stats-url` にデプロイ済み Worker の統計エンドポイント（`cms.fetch()` が配信する同期統計 API）を渡すと、token 検証・同期失敗チェックの精度が上がる。省略時はローカルで判定できる範囲（binding 宣言・slug 重複等）のみ診断する。
+
+## `nhc sync` — ローカル同期の手動 kick
+
+```bash
+npx nhc sync
+```
+
+`schemaModule` の全コレクションをローカルファイルストア（`cacheDir`）へ同期する。動作確認・初回の疎通確認のための経路で、KV/R2 への実書き込みは行わない。CLI プロセス内で `cursor` が尽きるまで同期をループ実行し、完了してからプロセスを終了する（Worker 側の chunked sync のような自己継続待ちはしない）。
+
+```
+Options:
+  -c, --config <path>       設定ファイルパス (デフォルト: nhc.config.ts)
+  -t, --token <token>       Notion API トークン (省略時は NOTION_TOKEN)
+  --env-file <path>         任意の env ファイル
+  --cache-dir <path>        マテリアライズ先のローカルディレクトリ (デフォルト: .nhc-cache)
+  --json                    機械可読な JSON で結果を出力
+  -s, --silent              ログ抑制
+```
+
+## 共通オプション
+
+すべてのコマンドは `--verbose`（詳細ログ）・`--debug`（スタックトレース）を共通でサポートする。
 
 ```bash
 npx nhc pull
 npx nhc check --json
+npx nhc doctor
+npx nhc sync --verbose
 ```
-
-## 環境変数
-
-| 変数名 | 説明 |
-|---|---|
-| `NOTION_TOKEN` | Notion インテグレーションのシークレットキー（必須） |
-
-`nhc generate` は DB の書き込みを一切行わない。読み取り専用で動作する。
 
 ## エラーコード
 
-CLI が throw するエラーは `CMSError` の `cli/*` 名前空間で分類される:
+CLI が throw するエラーは `CMSError`（`@notion-headless-cms/cms`）の `cli/*` 名前空間で分類される。詳細は [エラーコード一覧](./errors/index.md#cli) を参照。
 
 - `cli/config_invalid` — `nhc.config.ts` の内容不整合
-- `cli/config_load_failed` — 設定ファイル読み込み失敗
-- `cli/schema_invalid` — スキーマ/マッピング不整合（生成時の検証エラー）
-- `cli/generate_failed` — `nhc generate` の処理失敗
-- `cli/init_failed` — `nhc init` の処理失敗
+- `cli/schema_invalid` — スキーマ/マッピング不整合
+- `cli/init_failed` — `nhc init` 処理失敗
 - `cli/notion_api_failed` — Notion API 呼び出し失敗
-- `cli/env_file_not_found` — `--env-file` で指定されたファイルが存在しない
+- `cli/env_file_not_found` — `--env-file` 指定ファイルが存在しない
 
 `isCMSErrorInNamespace(err, "cli/")` で分岐できる。
+
+## 関連ドキュメント
+
+- [クイックスタート](./quickstart.md)
+- [エラーコード一覧](./errors/index.md)
+- [`packages/cli/README.md`](../../packages/cli/README.md) — パッケージ本体の簡潔なリファレンス
