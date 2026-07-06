@@ -1,17 +1,6 @@
-import type {
-  SyncFailure,
-  SyncState,
-  WriteBudgetState,
-} from "../sync/coordinator.js";
+import type { SyncFailure, WriteBudgetState } from "../sync/coordinator.js";
+import { parseSyncState } from "../sync/coordinator.js";
 import type { SyncScheduler } from "../sync-scheduler.js";
-
-const EMPTY_STATE: SyncState = {
-  cursor: null,
-  lastSyncAt: null,
-  lastReconcileAt: null,
-  failures: [],
-  writeBudget: null,
-};
 
 export interface SyncStats {
   readonly lastSyncAt: string | null;
@@ -29,8 +18,7 @@ export interface SyncStats {
 export async function getSyncStats(
   scheduler: SyncScheduler,
 ): Promise<SyncStats> {
-  const raw = await scheduler.getState();
-  const state = raw ? (raw as unknown as SyncState) : EMPTY_STATE;
+  const state = parseSyncState(await scheduler.getState());
   return {
     lastSyncAt: state.lastSyncAt,
     lastReconcileAt: state.lastReconcileAt,

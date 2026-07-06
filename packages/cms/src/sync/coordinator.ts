@@ -36,7 +36,8 @@ export interface SyncState {
   readonly writeBudget?: WriteBudgetState | null;
 }
 
-const EMPTY_STATE: SyncState = {
+/** `SyncState` 未設定時の既定値。`query/stats.ts` の `getSyncStats` とも共有する。 */
+export const EMPTY_STATE: SyncState = {
   cursor: null,
   lastSyncAt: null,
   lastReconcileAt: null,
@@ -94,6 +95,17 @@ export interface SyncCoordinatorDeps {
 
 function toJsonState(state: SyncState): Record<string, JsonValue> {
   return state as unknown as Record<string, JsonValue>;
+}
+
+/**
+ * `SyncScheduler.getState()` の生データ(`Record<string, JsonValue> | null`)を
+ * `SyncState` に変換する。`coordinator.ts`(`getState()`)と `query/stats.ts`
+ * (`getSyncStats`)の両方で同じフォールバック処理が必要なため共有する。
+ */
+export function parseSyncState(
+  raw: Record<string, JsonValue> | null,
+): SyncState {
+  return raw ? (raw as unknown as SyncState) : EMPTY_STATE;
 }
 
 /**
@@ -166,8 +178,7 @@ export class SyncCoordinatorCore {
   }
 
   async getState(): Promise<SyncState> {
-    const raw = await this.scheduler.getState();
-    return raw ? (raw as unknown as SyncState) : EMPTY_STATE;
+    return parseSyncState(await this.scheduler.getState());
   }
 
   private async setState(state: SyncState): Promise<void> {
