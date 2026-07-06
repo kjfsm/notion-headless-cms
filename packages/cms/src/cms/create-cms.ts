@@ -208,19 +208,54 @@ function resolveClient(notion: CreateCMSNotionOptions): NotionClientLike {
   });
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function toRuntimeWhere(
+  value: unknown,
+): Record<string, Record<string, JsonValue>> | undefined {
+  if (!isPlainObject(value)) return undefined;
+  const result: Record<string, Record<string, JsonValue>> = {};
+  for (const [key, operators] of Object.entries(value)) {
+    if (isPlainObject(operators)) {
+      result[key] = operators as Record<string, JsonValue>;
+    }
+  }
+  return result;
+}
+
+function isRuntimeSortInput(
+  value: unknown,
+): value is { by: string; direction: "asc" | "desc" } {
+  return (
+    isPlainObject(value) &&
+    typeof value.by === "string" &&
+    (value.direction === "asc" || value.direction === "desc")
+  );
+}
+
+function toRuntimeSort(value: unknown): ListRuntimeParams["sort"] {
+  if (!Array.isArray(value)) return undefined;
+  const sort = value.filter(isRuntimeSortInput);
+  return sort.length > 0 ? sort : undefined;
+}
+
+/**
+ * `list()` は公開 API では `ListParams<C["properties"]>` という厳密な型を持つが、
+ * `createCMS<S>` 内部では `C` が未解決の型変数のため一度 `unknown` へ型消去して
+ * 受け取る(`CollectionEntrySnapshot` と同じ理由、`create-cms.ts` 冒頭コメント参照)。
+ * ここで無検証にキャストし直すと、型システムの外から(あるいは JS から直接)不正な
+ * 形状を渡された場合に `evaluateWhere`/`sortByMeta` へ壊れたデータが伝播するため、
+ * 最低限の形状チェックを行い、合致しないフィールドは無視して安全側にフォールバックする。
+ */
 function toRuntimeListParams(params: unknown): ListRuntimeParams {
-  if (!params || typeof params !== "object") return {};
-  const p = params as {
-    where?: unknown;
-    sort?: unknown;
-    cursor?: string;
-    limit?: number;
-  };
+  if (!isPlainObject(params)) return {};
   return {
-    where: p.where as Record<string, Record<string, JsonValue>> | undefined,
-    sort: p.sort as ListRuntimeParams["sort"],
-    cursor: p.cursor,
-    limit: p.limit,
+    where: toRuntimeWhere(params.where),
+    sort: toRuntimeSort(params.sort),
+    cursor: typeof params.cursor === "string" ? params.cursor : undefined,
+    limit: typeof params.limit === "number" ? params.limit : undefined,
   };
 }
 
