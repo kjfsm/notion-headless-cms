@@ -26,7 +26,7 @@ jobs:
   canary:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           # snapshot バージョン名の {commit} 解決に必要
           fetch-depth: 0
@@ -41,7 +41,7 @@ jobs:
           cache: "pnpm"
 
       # CI でビルド済みの turbo キャッシュを引き継いで高速化
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         with:
           path: .turbo
           key: ${{ runner.os }}-turbo-refs/heads/main-${{ github.sha }}

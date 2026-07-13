@@ -36,7 +36,7 @@ jobs:
       startsWith(github.event.head_commit.message, 'Version Packages')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
           # デフォルトの GITHUB_TOKEN で作成した PR は他ワークフロー (release-dry-run.yml など)
@@ -55,7 +55,7 @@ jobs:
           cache: "pnpm"
 
       # CI でビルド済みの turbo キャッシュを引き継いで高速化
-      - uses: actions/cache@v5
+      - uses: actions/cache@v6
         with:
           path: .turbo
           key: ${{ runner.os }}-turbo-refs/heads/main-${{ github.sha }}
