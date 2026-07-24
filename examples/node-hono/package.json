@@ -13,7 +13,7 @@
     "test:e2e": "PLAYWRIGHT_HTML_OPEN=never playwright test e2e/navigation.spec.ts"
   },
   "dependencies": {
-    "@hono/node-server": "^2.0.3",
+    "@hono/node-server": "^2.0.10",
     "@notion-headless-cms/cms": "workspace:*",
     "hono": "catalog:"
   },
