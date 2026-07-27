@@ -8,7 +8,7 @@ allowBuilds:
 catalog:
   "@notionhq/client": "^5.21.0"
   "@playwright/test": "^1.60.0"
-  "@types/node": "^25.9.3"
+  "@types/node": "^26.1.1"
   "@types/react": "^19.2.14"
   "@types/react-dom": "^19.2.3"
   dotenv: "^17.4.2"
@@ -23,7 +23,7 @@ catalog:
   shiki: "^4.0.2"
   tailwindcss: "^4.3.0"
   tsx: "^4.22.2"
-  typescript: "^6.0.3"
+  typescript: "^7.0.2"
   unified: "^11.0.5"
   vitest: "^4.1.8"
   wrangler: "^4.92.0"
