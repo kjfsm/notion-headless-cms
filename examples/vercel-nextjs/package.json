@@ -20,7 +20,7 @@
     "@notion-headless-cms/react-renderer": "workspace:*",
     "@notionhq/client": "catalog:",
     "katex": "catalog:",
-    "next": "^16.2.6",
+    "next": "^16.2.11",
     "react": "catalog:",
     "react-dom": "catalog:",
     "shiki": "catalog:"
