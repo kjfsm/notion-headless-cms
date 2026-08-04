@@ -25,8 +25,8 @@ catalogs:
       specifier: ^17.4.2
       version: 17.4.2
     hono:
-      specifier: ^4.12.21
-      version: 4.12.25
+      specifier: ^4.12.34
+      version: 4.13.0
     katex:
       specifier: ^0.16.47
       version: 0.16.47
@@ -282,7 +282,7 @@ importers:
         version: link:../../packages/cms
       hono:
         specifier: 'catalog:'
-        version: 4.12.25
+        version: 4.13.0
     devDependencies:
       '@playwright/test':
         specifier: 'catalog:'
@@ -421,13 +421,13 @@ importers:
     dependencies:
       '@hono/node-server':
         specifier: ^2.0.3
-        version: 2.0.4(hono@4.12.25)
+        version: 2.0.4(hono@4.13.0)
       '@notion-headless-cms/cms':
         specifier: workspace:*
         version: link:../../packages/cms
       hono:
         specifier: 'catalog:'
-        version: 4.12.25
+        version: 4.13.0
     devDependencies:
       '@playwright/test':
         specifier: 'catalog:'
@@ -5286,6 +5286,10 @@ packages:
     resolution: {integrity: sha512-2NFaIyNVgJmBs/ecmtGzlmluTFs5cHEWGTdu0t1HBwYzoGXOL5nUQBRMXsXWla5i4KkG//QMzVP88m1+I3fdAQ==}
     engines: {node: '>=16.9.0'}
 
+  hono@4.13.0:
+    resolution: {integrity: sha512-jhunvfHWxd7J5EFfSgH4xsYJzSe/lfqbUCxiyyeaQasUsXeEHXtzVid+7EOGByc5JnFa23SSFL3Y2RV/z1T+eQ==}
+    engines: {node: '>=16.9.0'}
+
   hookable@6.1.1:
     resolution: {integrity: sha512-U9LYDy1CwhMCnprUfeAZWZGByVbhd54hwepegYTK7Pi5NvqEj63ifz5z+xukznehT7i6NIZRu89Ay1AZmRsLEQ==}
 
@@ -8567,9 +8571,9 @@ snapshots:
     dependencies:
       hono: 4.12.25
 
-  '@hono/node-server@2.0.4(hono@4.12.25)':
+  '@hono/node-server@2.0.4(hono@4.13.0)':
     dependencies:
-      hono: 4.12.25
+      hono: 4.13.0
 
   '@humanfs/core@0.19.2':
     dependencies:
@@ -12208,6 +12212,8 @@ snapshots:
   highlight.js@10.7.3: {}
 
   hono@4.12.25: {}
+
+  hono@4.13.0: {}
 
   hookable@6.1.1: {}
 
