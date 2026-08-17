@@ -26,21 +26,21 @@ jobs:
     if: startsWith(github.head_ref, 'changeset-release/')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
       # pnpm のバージョンは package.json の packageManager フィールドから自動検出させる
       - uses: pnpm/action-setup@v6
 
-      - uses: actions/setup-node@v6
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
           registry-url: "https://registry.npmjs.org"
           cache: "pnpm"
 
       # Version PR 専用ジョブのため常に PR 文脈で走る。save は行わず restore のみ。
-      - uses: actions/cache/restore@v5
+      - uses: actions/cache/restore@v6
         with:
           path: .turbo
           key: ${{ runner.os }}-turbo-${{ github.ref }}-${{ github.sha }}
