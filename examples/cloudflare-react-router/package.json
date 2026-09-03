@@ -22,7 +22,7 @@
     "katex": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "react-router": "^7.15.1",
+    "react-router": "^7.18.2",
     "shiki": "catalog:"
   },
   "devDependencies": {
